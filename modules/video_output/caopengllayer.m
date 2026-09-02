@@ -44,6 +44,24 @@
 #import <OpenGL/OpenGL.h>
 #import <dlfcn.h>
 
+#ifndef kCGLOGLPVersion_GL4_1_Core
+# ifdef kCGLOGLPVersion_GL4_Core
+#  define kCGLOGLPVersion_GL4_1_Core kCGLOGLPVersion_GL4_Core
+# else
+#  define kCGLOGLPVersion_GL4_1_Core ((CGLOpenGLProfile)0x4100)
+# endif
+#endif
+
+#ifndef kCGLOGLPVersion_GL3_2_Core
+# ifdef kCGLOGLPVersion_3_2_Core
+#  define kCGLOGLPVersion_GL3_2_Core kCGLOGLPVersion_3_2_Core
+# elif defined(kCGLOGLPVersion_GL3_Core)
+#  define kCGLOGLPVersion_GL3_2_Core kCGLOGLPVersion_GL3_Core
+# else
+#  define kCGLOGLPVersion_GL3_2_Core ((CGLOpenGLProfile)0x3200)
+# endif
+#endif
+
 #include "opengl/renderer.h"
 #include "opengl/vout_helper.h"
 
@@ -191,51 +209,85 @@ static GLint vlc_SearchGLRendererId() {
  * one that works on the given hardware.
  * \return CGLContextObj or NULL in case of error
  */
-static CGLContextObj vlc_CreateCGLContext(void)
+static CGLContextObj vlc_CreateCGLContext(vlc_gl_t *gl)
 {
     CGLError err;
     GLint npix = 0;
-    CGLPixelFormatObj pix;
+    CGLPixelFormatObj pix = NULL;
     CGLContextObj ctx;
 
     GLint renderer_id = vlc_SearchGLRendererId();
 
-    CGLPixelFormatAttribute attribs[17] = {
-        kCGLPFAAllRenderers,
-        kCGLPFAAllowOfflineRenderers,
-        kCGLPFADoubleBuffer,
-        kCGLPFAAccelerated,
-        kCGLPFANoRecovery,
-        kCGLPFAColorSize, 64,
-        kCGLPFAAlphaSize, 16,
-        kCGLPFADepthSize, 24,
-
-        // Enable automatic graphics switching support, important on Macs
-        // with dedicated GPUs, as it allows to not always use the dedicated
-        // GPU which has more power consumption
-        kCGLPFASupportsAutomaticGraphicsSwitching,
-        0
+    static const struct {
+        CGLOpenGLProfile profile;
+        const char *name;
+        bool has_profile;
+    } profiles[] = {
+        { (CGLOpenGLProfile)kCGLOGLPVersion_GL4_1_Core, "OpenGL 4.1 Core", true },
+        { (CGLOpenGLProfile)kCGLOGLPVersion_GL3_2_Core, "OpenGL 3.2 Core", true },
+        { (CGLOpenGLProfile)0, "Legacy OpenGL", false },
     };
 
-    // A low power renderer was found, ask to use it.
-    if (renderer_id != -1) {
-        attribs[10] = kCGLPFARendererID;
-        attribs[11] = renderer_id;
-        attribs[12] = 0;
-    }
-    err = CGLChoosePixelFormat(attribs, &pix, &npix);
-    if (err != kCGLNoError || pix == NULL) {
-        // Fallback to standard 24-bit color
-        attribs[5] = kCGLPFAColorSize;
-        attribs[6] = 24;
-        attribs[7] = kCGLPFAAlphaSize;
-        attribs[8] = 8;
-        err = CGLChoosePixelFormat(attribs, &pix, &npix);
-        if (err != kCGLNoError || pix == NULL) {
-            return NULL;
+    static const struct {
+        int color_size;
+        int alpha_size;
+    } color_depths[] = {
+        { 64, 16 },
+        { 24, 8 },
+    };
+
+    const char *success_profile = NULL;
+    int success_color = 0;
+    int success_alpha = 0;
+
+    for (size_t p = 0; p < ARRAY_SIZE(profiles); p++) {
+        for (size_t c = 0; c < ARRAY_SIZE(color_depths); c++) {
+            CGLPixelFormatAttribute attribs[20];
+            size_t i = 0;
+
+            if (profiles[p].has_profile) {
+                attribs[i++] = kCGLPFAOpenGLProfile;
+                attribs[i++] = (CGLPixelFormatAttribute)profiles[p].profile;
+            }
+
+            attribs[i++] = kCGLPFAAllRenderers;
+            attribs[i++] = kCGLPFAAllowOfflineRenderers;
+            attribs[i++] = kCGLPFADoubleBuffer;
+            attribs[i++] = kCGLPFAAccelerated;
+            attribs[i++] = kCGLPFANoRecovery;
+            attribs[i++] = kCGLPFAColorSize;
+            attribs[i++] = (CGLPixelFormatAttribute)color_depths[c].color_size;
+            attribs[i++] = kCGLPFAAlphaSize;
+            attribs[i++] = (CGLPixelFormatAttribute)color_depths[c].alpha_size;
+            attribs[i++] = kCGLPFADepthSize;
+            attribs[i++] = 24;
+
+            // Enable automatic graphics switching support, important on Macs
+            // with dedicated GPUs, as it allows to not always use the dedicated
+            // GPU which has more power consumption
+            attribs[i++] = kCGLPFASupportsAutomaticGraphicsSwitching;
+
+            // A low power renderer was found, ask to use it.
+            if (renderer_id != -1) {
+                attribs[i++] = kCGLPFARendererID;
+                attribs[i++] = (CGLPixelFormatAttribute)renderer_id;
+            }
+
+            attribs[i++] = 0;
+
+            err = CGLChoosePixelFormat(attribs, &pix, &npix);
+            if (err == kCGLNoError && pix != NULL) {
+                success_profile = profiles[p].name;
+                success_color = color_depths[c].color_size;
+                success_alpha = color_depths[c].alpha_size;
+                goto found;
+            }
         }
     }
 
+    return NULL;
+
+found:
     err = CGLCreateContext(pix, NULL, &ctx);
     if (err != kCGLNoError || ctx == NULL) {
         CGLDestroyPixelFormat(pix);
@@ -243,6 +295,12 @@ static CGLContextObj vlc_CreateCGLContext(void)
     }
 
     CGLDestroyPixelFormat(pix);
+
+    if (gl != NULL) {
+        msg_Dbg(gl, "Created CGL context with %s profile, %d-bit color (%d-bit alpha)",
+                success_profile, success_color, success_alpha);
+    }
+
     return ctx;
 }
 
@@ -634,7 +692,7 @@ static int Open (vout_display_t *vd,
     _gl = gl;
     _isHDR = NO;
 
-    _context = vlc_CreateCGLContext();
+    _context = vlc_CreateCGLContext(gl);
     if (_context == NULL) {
         msg_Err(_gl, "Failure to create CGL context!");
         return nil;
