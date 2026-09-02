@@ -34,6 +34,10 @@
 #include <vlc_cpu.h>
 #include <assert.h>
 
+#if defined(__aarch64__)
+# include <arm_neon.h>
+#endif
+
 #include "copy.h"
 static void CopyPlane(uint8_t *dst, size_t dst_pitch,
                       const uint8_t *src, size_t src_pitch,
@@ -609,6 +613,310 @@ static void SSE_Copy420_P_to_SP(picture_t *dst, const uint8_t *src[static 3],
 #undef COPY64
 #endif /* CAN_COMPILE_SSE2 */
 
+#if defined(__aarch64__)
+/*
+ * ARM64 NEON implementations for semi-planar (NV12/P010) <-> planar (I420/I420_10L) conversion.
+ *
+ * Layout details:
+ * - Semi-planar chroma (NV12/P010) stores interleaved U/V pairs: [U0, V0, U1, V1, ...].
+ * - For 16-bit P010, each component is a 16-bit word in host byte order (little-endian on ARM64).
+ *   `vld2q_u16` loads 8 interleaved UV pairs (16 uint16_t = 32 bytes) from memory and de-interleaves
+ *   them into two registers: val[0] = 8 U elements, val[1] = 8 V elements.
+ *   `vst2q_u16` takes val[0] (U) and val[1] (V) and interleaves them into memory as [U0, V0, U1, V1, ...].
+ * - For 8-bit NV12, `vld2q_u8` loads 16 interleaved UV pairs (32 bytes) and splits them into
+ *   val[0] = 16 U elements and val[1] = 16 V elements; `vst2q_u8` interleaves them back.
+ *
+ * CPU feature detection:
+ * - ARMv8-A / AArch64 mandates Advanced SIMD (NEON) support, so on __aarch64__ NEON paths
+ *   are selected unconditionally at compile time without any runtime vlc_CPU() check.
+ */
+
+static void NEON_CopyPlane16(uint8_t *dst, size_t dst_pitch,
+                             const uint8_t *src, size_t src_pitch,
+                             unsigned height, int bitshift)
+{
+    const size_t copy_pitch = __MIN(src_pitch, dst_pitch);
+    const size_t num_pixels = copy_pitch / 2;
+    const int16x8_t vshift = vdupq_n_s16(-bitshift);
+
+    for (unsigned y = 0; y < height; y++)
+    {
+        const uint16_t *src16 = (const uint16_t *) src;
+        uint16_t *dst16 = (uint16_t *) dst;
+        size_t x = 0;
+
+        if (bitshift == 0)
+        {
+            for (; x + 7 < num_pixels; x += 8)
+                vst1q_u16(&dst16[x], vld1q_u16(&src16[x]));
+            for (; x < num_pixels; x++)
+                dst16[x] = src16[x];
+        }
+        else if (bitshift > 0)
+        {
+            for (; x + 7 < num_pixels; x += 8)
+                vst1q_u16(&dst16[x], vshlq_u16(vld1q_u16(&src16[x]), vshift));
+            for (; x < num_pixels; x++)
+                dst16[x] = src16[x] >> (bitshift & 0xf);
+        }
+        else
+        {
+            for (; x + 7 < num_pixels; x += 8)
+                vst1q_u16(&dst16[x], vshlq_u16(vld1q_u16(&src16[x]), vshift));
+            for (; x < num_pixels; x++)
+                dst16[x] = src16[x] << ((-bitshift) & 0xf);
+        }
+
+        src += src_pitch;
+        dst += dst_pitch;
+    }
+}
+
+static void NEON_SplitPlanes16(uint8_t *dstu, size_t dstu_pitch,
+                               uint8_t *dstv, size_t dstv_pitch,
+                               const uint8_t *src, size_t src_pitch,
+                               unsigned height, int bitshift)
+{
+    const size_t copy_pitch = __MIN(__MIN(src_pitch / 4, dstu_pitch / 2), dstv_pitch / 2);
+    const int16x8_t vshift = vdupq_n_s16(-bitshift);
+
+    for (unsigned y = 0; y < height; y++)
+    {
+        const uint16_t *src_row = (const uint16_t *) src;
+        uint16_t *dstu_row = (uint16_t *) dstu;
+        uint16_t *dstv_row = (uint16_t *) dstv;
+        size_t x = 0;
+
+        if (bitshift == 0)
+        {
+            for (; x + 7 < copy_pitch; x += 8)
+            {
+                uint16x8x2_t uv = vld2q_u16(&src_row[2 * x]);
+                vst1q_u16(&dstu_row[x], uv.val[0]);
+                vst1q_u16(&dstv_row[x], uv.val[1]);
+            }
+            for (; x < copy_pitch; x++)
+            {
+                dstu_row[x] = src_row[2 * x + 0];
+                dstv_row[x] = src_row[2 * x + 1];
+            }
+        }
+        else if (bitshift > 0)
+        {
+            for (; x + 7 < copy_pitch; x += 8)
+            {
+                uint16x8x2_t uv = vld2q_u16(&src_row[2 * x]);
+                uv.val[0] = vshlq_u16(uv.val[0], vshift);
+                uv.val[1] = vshlq_u16(uv.val[1], vshift);
+                vst1q_u16(&dstu_row[x], uv.val[0]);
+                vst1q_u16(&dstv_row[x], uv.val[1]);
+            }
+            for (; x < copy_pitch; x++)
+            {
+                dstu_row[x] = src_row[2 * x + 0] >> (bitshift & 0xf);
+                dstv_row[x] = src_row[2 * x + 1] >> (bitshift & 0xf);
+            }
+        }
+        else
+        {
+            for (; x + 7 < copy_pitch; x += 8)
+            {
+                uint16x8x2_t uv = vld2q_u16(&src_row[2 * x]);
+                uv.val[0] = vshlq_u16(uv.val[0], vshift);
+                uv.val[1] = vshlq_u16(uv.val[1], vshift);
+                vst1q_u16(&dstu_row[x], uv.val[0]);
+                vst1q_u16(&dstv_row[x], uv.val[1]);
+            }
+            for (; x < copy_pitch; x++)
+            {
+                dstu_row[x] = src_row[2 * x + 0] << ((-bitshift) & 0xf);
+                dstv_row[x] = src_row[2 * x + 1] << ((-bitshift) & 0xf);
+            }
+        }
+
+        src += src_pitch;
+        dstu += dstu_pitch;
+        dstv += dstv_pitch;
+    }
+}
+
+static void NEON_InterleavePlanes16(uint8_t *dst, size_t dst_pitch,
+                                    const uint8_t *srcu, size_t srcu_pitch,
+                                    const uint8_t *srcv, size_t srcv_pitch,
+                                    unsigned height, int bitshift)
+{
+    const size_t copy_pitch = __MIN(__MIN(srcu_pitch / 2, srcv_pitch / 2), dst_pitch / 4);
+    const int16x8_t vshift = vdupq_n_s16(-bitshift);
+
+    for (unsigned y = 0; y < height; y++)
+    {
+        const uint16_t *srcu_row = (const uint16_t *) srcu;
+        const uint16_t *srcv_row = (const uint16_t *) srcv;
+        uint16_t *dst_row = (uint16_t *) dst;
+        size_t x = 0;
+
+        if (bitshift == 0)
+        {
+            for (; x + 7 < copy_pitch; x += 8)
+            {
+                uint16x8x2_t uv;
+                uv.val[0] = vld1q_u16(&srcu_row[x]);
+                uv.val[1] = vld1q_u16(&srcv_row[x]);
+                vst2q_u16(&dst_row[2 * x], uv);
+            }
+            for (; x < copy_pitch; x++)
+            {
+                dst_row[2 * x + 0] = srcu_row[x];
+                dst_row[2 * x + 1] = srcv_row[x];
+            }
+        }
+        else if (bitshift > 0)
+        {
+            for (; x + 7 < copy_pitch; x += 8)
+            {
+                uint16x8x2_t uv;
+                uv.val[0] = vshlq_u16(vld1q_u16(&srcu_row[x]), vshift);
+                uv.val[1] = vshlq_u16(vld1q_u16(&srcv_row[x]), vshift);
+                vst2q_u16(&dst_row[2 * x], uv);
+            }
+            for (; x < copy_pitch; x++)
+            {
+                dst_row[2 * x + 0] = srcu_row[x] >> (bitshift & 0xf);
+                dst_row[2 * x + 1] = srcv_row[x] >> (bitshift & 0xf);
+            }
+        }
+        else
+        {
+            for (; x + 7 < copy_pitch; x += 8)
+            {
+                uint16x8x2_t uv;
+                uv.val[0] = vshlq_u16(vld1q_u16(&srcu_row[x]), vshift);
+                uv.val[1] = vshlq_u16(vld1q_u16(&srcv_row[x]), vshift);
+                vst2q_u16(&dst_row[2 * x], uv);
+            }
+            for (; x < copy_pitch; x++)
+            {
+                dst_row[2 * x + 0] = srcu_row[x] << ((-bitshift) & 0xf);
+                dst_row[2 * x + 1] = srcv_row[x] << ((-bitshift) & 0xf);
+            }
+        }
+
+        srcu += srcu_pitch;
+        srcv += srcv_pitch;
+        dst += dst_pitch;
+    }
+}
+
+static void NEON_SplitPlanes8(uint8_t *dstu, size_t dstu_pitch,
+                              uint8_t *dstv, size_t dstv_pitch,
+                              const uint8_t *src, size_t src_pitch,
+                              unsigned height)
+{
+    const size_t copy_pitch = __MIN(__MIN(src_pitch / 2, dstu_pitch), dstv_pitch);
+
+    for (unsigned y = 0; y < height; y++)
+    {
+        const uint8_t *src_row = src;
+        uint8_t *dstu_row = dstu;
+        uint8_t *dstv_row = dstv;
+        size_t x = 0;
+
+        for (; x + 15 < copy_pitch; x += 16)
+        {
+            uint8x16x2_t uv = vld2q_u8(&src_row[2 * x]);
+            vst1q_u8(&dstu_row[x], uv.val[0]);
+            vst1q_u8(&dstv_row[x], uv.val[1]);
+        }
+        for (; x < copy_pitch; x++)
+        {
+            dstu_row[x] = src_row[2 * x + 0];
+            dstv_row[x] = src_row[2 * x + 1];
+        }
+
+        src += src_pitch;
+        dstu += dstu_pitch;
+        dstv += dstv_pitch;
+    }
+}
+
+static void NEON_InterleavePlanes8(uint8_t *dst, size_t dst_pitch,
+                                   const uint8_t *srcu, size_t srcu_pitch,
+                                   const uint8_t *srcv, size_t srcv_pitch,
+                                   unsigned height)
+{
+    const size_t copy_pitch = __MIN(__MIN(srcu_pitch, srcv_pitch), dst_pitch / 2);
+
+    for (unsigned y = 0; y < height; y++)
+    {
+        const uint8_t *srcu_row = srcu;
+        const uint8_t *srcv_row = srcv;
+        uint8_t *dst_row = dst;
+        size_t x = 0;
+
+        for (; x + 15 < copy_pitch; x += 16)
+        {
+            uint8x16x2_t uv;
+            uv.val[0] = vld1q_u8(&srcu_row[x]);
+            uv.val[1] = vld1q_u8(&srcv_row[x]);
+            vst2q_u8(&dst_row[2 * x], uv);
+        }
+        for (; x < copy_pitch; x++)
+        {
+            dst_row[2 * x + 0] = srcu_row[x];
+            dst_row[2 * x + 1] = srcv_row[x];
+        }
+
+        srcu += srcu_pitch;
+        srcv += srcv_pitch;
+        dst += dst_pitch;
+    }
+}
+
+static void NEON_Copy420_SP_to_P(picture_t *dst, const uint8_t *src[static 2],
+                                 const size_t src_pitch[static 2], unsigned height)
+{
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, 0);
+    NEON_SplitPlanes8(dst->p[1].p_pixels, dst->p[1].i_pitch,
+                      dst->p[2].p_pixels, dst->p[2].i_pitch,
+                      src[1], src_pitch[1], (height + 1) / 2);
+}
+
+static void NEON_Copy420_16_SP_to_P(picture_t *dst, const uint8_t *src[static 2],
+                                    const size_t src_pitch[static 2], unsigned height,
+                                    int bitshift)
+{
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, bitshift);
+    NEON_SplitPlanes16(dst->p[1].p_pixels, dst->p[1].i_pitch,
+                       dst->p[2].p_pixels, dst->p[2].i_pitch,
+                       src[1], src_pitch[1], (height + 1) / 2, bitshift);
+}
+
+static void NEON_Copy420_P_to_SP(picture_t *dst, const uint8_t *src[static 3],
+                                 const size_t src_pitch[static 3], unsigned height)
+{
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, 0);
+    NEON_InterleavePlanes8(dst->p[1].p_pixels, dst->p[1].i_pitch,
+                           src[U_PLANE], src_pitch[U_PLANE],
+                           src[V_PLANE], src_pitch[V_PLANE],
+                           (height + 1) / 2);
+}
+
+static void NEON_Copy420_16_P_to_SP(picture_t *dst, const uint8_t *src[static 3],
+                                    const size_t src_pitch[static 3], unsigned height,
+                                    int bitshift)
+{
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, bitshift);
+    NEON_InterleavePlanes16(dst->p[1].p_pixels, dst->p[1].i_pitch,
+                            src[U_PLANE], src_pitch[U_PLANE],
+                            src[V_PLANE], src_pitch[V_PLANE],
+                            (height + 1) / 2, bitshift);
+}
+#endif /* defined(__aarch64__) */
+
 static void CopyPlane(uint8_t *dst, size_t dst_pitch,
                       const uint8_t *src, size_t src_pitch,
                       unsigned height, int bitshift)
@@ -616,6 +924,9 @@ static void CopyPlane(uint8_t *dst, size_t dst_pitch,
     const size_t copy_pitch = __MIN(src_pitch, dst_pitch);
     if (bitshift != 0)
     {
+#if defined(__aarch64__)
+        NEON_CopyPlane16(dst, dst_pitch, src, src_pitch, height, bitshift);
+#else
         for (unsigned y = 0; y < height; y++)
         {
             uint16_t *dst16 = (uint16_t *) dst;
@@ -630,6 +941,7 @@ static void CopyPlane(uint8_t *dst, size_t dst_pitch,
             src += src_pitch;
             dst += dst_pitch;
         }
+#endif
     }
     else if (src_pitch == dst_pitch)
         memcpy(dst, src, copy_pitch * height);
@@ -741,9 +1053,14 @@ void Copy420_SP_to_P(picture_t *dst, const uint8_t *src[static 2],
                      const copy_cache_t *cache)
 {
     ASSERT_2PLANES;
-#ifdef CAN_COMPILE_SSE2
+#if defined(__aarch64__)
+    VLC_UNUSED(cache);
+    /* ARMv8-A / AArch64 mandates NEON support, so no runtime CPU check is required */
+    return NEON_Copy420_SP_to_P(dst, src, src_pitch, height);
+#elif defined(CAN_COMPILE_SSE2)
     if (vlc_CPU_SSE2())
         return SSE_Copy420_SP_to_P(dst, src, src_pitch, height, 1, 0, cache);
+    VLC_UNUSED(cache);
 #else
     VLC_UNUSED(cache);
 #endif
@@ -762,9 +1079,14 @@ void Copy420_16_SP_to_P(picture_t *dst, const uint8_t *src[static 2],
     ASSERT_2PLANES;
     assert(bitshift >= -6 && bitshift <= 6 && (bitshift % 2 == 0));
 
-#ifdef CAN_COMPILE_SSE3
+#if defined(__aarch64__)
+    VLC_UNUSED(cache);
+    /* ARMv8-A / AArch64 mandates NEON support, so no runtime CPU check is required */
+    return NEON_Copy420_16_SP_to_P(dst, src, src_pitch, height, bitshift);
+#elif defined(CAN_COMPILE_SSE3)
     if (vlc_CPU_SSSE3())
         return SSE_Copy420_SP_to_P(dst, src, src_pitch, height, 2, bitshift, cache);
+    VLC_UNUSED(cache);
 #else
     VLC_UNUSED(cache);
 #endif
@@ -817,9 +1139,14 @@ void Copy420_P_to_SP(picture_t *dst, const uint8_t *src[static 3],
                      const copy_cache_t *cache)
 {
     ASSERT_3PLANES;
-#ifdef CAN_COMPILE_SSE2
+#if defined(__aarch64__)
+    (void) cache;
+    /* ARMv8-A / AArch64 mandates NEON support, so no runtime CPU check is required */
+    return NEON_Copy420_P_to_SP(dst, src, src_pitch, height);
+#elif defined(CAN_COMPILE_SSE2)
     if (vlc_CPU_SSE2())
         return SSE_Copy420_P_to_SP(dst, src, src_pitch, height, 1, 0, cache);
+    (void) cache;
 #else
     (void) cache;
 #endif
@@ -848,9 +1175,14 @@ void Copy420_16_P_to_SP(picture_t *dst, const uint8_t *src[static 3],
 {
     ASSERT_3PLANES;
     assert(bitshift >= -6 && bitshift <= 6 && (bitshift % 2 == 0));
-#ifdef CAN_COMPILE_SSE2
+#if defined(__aarch64__)
+    (void) cache;
+    /* ARMv8-A / AArch64 mandates NEON support, so no runtime CPU check is required */
+    return NEON_Copy420_16_P_to_SP(dst, src, src_pitch, height, bitshift);
+#elif defined(CAN_COMPILE_SSE2)
     if (vlc_CPU_SSSE3())
         return SSE_Copy420_P_to_SP(dst, src, src_pitch, height, 2, bitshift, cache);
+    (void) cache;
 #else
     (void) cache;
 #endif
@@ -1110,13 +1442,18 @@ int main(void)
     alarm(10);
 
 #ifndef COPY_TEST_NOOPTIM
-#ifdef CAN_COMPILE_SSE2
+#if defined(CAN_COMPILE_SSE2)
     if (!vlc_CPU_SSE2())
-#endif
     {
         fprintf(stderr, "WARNING: could not test SSE\n");
         return 77;
     }
+#elif !defined(__aarch64__)
+    {
+        fprintf(stderr, "WARNING: could not test SSE\n");
+        return 77;
+    }
+#endif
 #endif
 
     for (size_t i = 0; i < NB_CONVS; ++i)

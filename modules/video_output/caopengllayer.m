@@ -73,6 +73,7 @@
 - (void)displayFromVout;
 - (void)vlcClose;
 - (void)markReady;
+- (void)updateDynamicRangeWithHeadroom:(CGFloat)headroom isHDR:(BOOL)isHDR;
 @end
 
 /**
@@ -92,6 +93,7 @@
 
     CGLContextObj _context; // The CGL context managed by us
     CGLContextObj _context_previous; // The previously current CGL context, if any
+    BOOL _isHDR;
 }
 
 - (instancetype)init:(vlc_gl_t *)gl;
@@ -100,6 +102,8 @@
 - (int)lockContext;
 - (void)unlockContext;
 - (void)swap;
+- (void)setHDR:(BOOL)isHDR;
+- (void)updateDynamicRangeProperties;
 @end
 
 typedef struct vout_display_sys_t {
@@ -523,10 +527,34 @@ static int Open (vout_display_t *vd,
             return ret;
         }
 
+        if (fmt->mastering.max_luminance == 0 && vd->source->mastering.max_luminance != 0)
+            fmt->mastering = vd->source->mastering;
+        if (fmt->lighting.MaxCLL == 0 && vd->source->lighting.MaxCLL != 0)
+            fmt->lighting = vd->source->lighting;
+
+        if (fmt->mastering.max_luminance > 0) {
+            msg_Dbg(vd, "HDR mastering display: primaries [R: %.4f, %.4f, G: %.4f, %.4f, B: %.4f, %.4f], white point [%.4f, %.4f], min/max luminance [%u, %u]",
+                    fmt->mastering.primaries[4] / 50000.0, fmt->mastering.primaries[5] / 50000.0,
+                    fmt->mastering.primaries[0] / 50000.0, fmt->mastering.primaries[1] / 50000.0,
+                    fmt->mastering.primaries[2] / 50000.0, fmt->mastering.primaries[3] / 50000.0,
+                    fmt->mastering.white_point[0] / 50000.0, fmt->mastering.white_point[1] / 50000.0,
+                    fmt->mastering.min_luminance, fmt->mastering.max_luminance);
+        }
+        if (fmt->lighting.MaxCLL > 0 || fmt->lighting.MaxFALL > 0) {
+            msg_Dbg(vd, "HDR content light level: MaxCLL %u cd/m², MaxFALL %u cd/m²",
+                    fmt->lighting.MaxCLL, fmt->lighting.MaxFALL);
+        }
+
+        bool is_hdr = (fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
+                       fmt->transfer == TRANSFER_FUNC_HLG ||
+                       vd->source->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
+                       vd->source->transfer == TRANSFER_FUNC_HLG);
+
         dispatch_sync(dispatch_get_main_queue(), ^{
 
             __weak VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)sys->gl->sys;
             __weak VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)[view layer];
+            [view setHDR:is_hdr];
             sys->cfg = *vd->cfg;
 
             vout_display_PlacePicture(&sys->place, vd->source, &vd->cfg->display);
@@ -604,6 +632,7 @@ static int Open (vout_display_t *vd,
     if (self == nil)
         return nil;
     _gl = gl;
+    _isHDR = NO;
 
     _context = vlc_CreateCGLContext();
     if (_context == NULL) {
@@ -629,7 +658,74 @@ static int Open (vout_display_t *vd,
 
     self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     self.wantsLayer = YES;
+
+    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+    [nc addObserver:self
+           selector:@selector(screenParametersDidChange:)
+               name:NSApplicationDidChangeScreenParametersNotification
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(windowDidChangeScreen:)
+               name:NSWindowDidChangeScreenNotification
+             object:nil];
+
     return self;
+}
+
+- (void)viewDidMoveToWindow
+{
+    [super viewDidMoveToWindow];
+    [self updateDynamicRangeProperties];
+}
+
+- (void)screenParametersDidChange:(NSNotification *)notification
+{
+    [self updateDynamicRangeProperties];
+}
+
+- (void)windowDidChangeScreen:(NSNotification *)notification
+{
+    if (notification.object == nil || notification.object == self.window) {
+        [self updateDynamicRangeProperties];
+    }
+}
+
+- (void)setHDR:(BOOL)isHDR
+{
+    _isHDR = isHDR;
+    [self updateDynamicRangeProperties];
+}
+
+- (void)updateDynamicRangeProperties
+{
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self updateDynamicRangeProperties];
+        });
+        return;
+    }
+
+    NSScreen *screen = self.window.screen;
+    if (screen == nil) {
+        screen = [NSScreen mainScreen];
+    }
+
+    CGFloat headroom = 1.0;
+    if (screen != nil) {
+        if (@available(macOS 10.15, *)) {
+            if ([screen respondsToSelector:@selector(maximumExtendedDynamicRangeColorComponentValue)]) {
+                headroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+            }
+        }
+    }
+    if (headroom < 1.0) {
+        headroom = 1.0;
+    }
+
+    VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)self.layer;
+    if (layer != nil && [layer isKindOfClass:[VLCCAOpenGLLayer class]]) {
+        [layer updateDynamicRangeWithHeadroom:headroom isHDR:_isHDR];
+    }
 }
 
 - (int)lockContext {
@@ -693,6 +789,10 @@ static int Open (vout_display_t *vd,
  */
 - (void)vlcClose
 {
+    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+    [nc removeObserver:self name:NSApplicationDidChangeScreenParametersNotification object:nil];
+    [nc removeObserver:self name:NSWindowDidChangeScreenNotification object:nil];
+
     VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)[self layer];
     [layer vlcClose];
 
@@ -704,7 +804,10 @@ static int Open (vout_display_t *vd,
         // calls to MakeCurrent/ReleaseCurrent.
         assert(_context_previous == NULL);
     }
-    CGLReleaseContext(_context);
+    if (_context != NULL) {
+        CGLReleaseContext(_context);
+        _context = NULL;
+    }
 
     dispatch_async(dispatch_get_main_queue(), ^{
         // Remove vout subview from container
@@ -713,6 +816,18 @@ static int Open (vout_display_t *vd,
         }
         [self removeFromSuperview];
     });
+}
+
+- (void)dealloc
+{
+    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+    [nc removeObserver:self name:NSApplicationDidChangeScreenParametersNotification object:nil];
+    [nc removeObserver:self name:NSWindowDidChangeScreenNotification object:nil];
+
+    if (_context != NULL) {
+        CGLReleaseContext(_context);
+        _context = NULL;
+    }
 }
 
 - (void)viewWillStartLiveResize
@@ -793,9 +908,53 @@ shouldInheritContentsScale:(CGFloat)newScale
         }
 #endif
         [CATransaction unlock];
+
+        NSScreen *screen = [NSScreen mainScreen];
+        CGFloat headroom = 1.0;
+        if (screen != nil) {
+            if (@available(macOS 10.15, *)) {
+                if ([screen respondsToSelector:@selector(maximumExtendedDynamicRangeColorComponentValue)]) {
+                    headroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+                }
+            }
+        }
+        if (headroom < 1.0) {
+            headroom = 1.0;
+        }
+        [self updateDynamicRangeWithHeadroom:headroom isHDR:NO];
     }
 
     return self;
+}
+
+- (void)updateDynamicRangeWithHeadroom:(CGFloat)headroom isHDR:(BOOL)isHDR
+{
+    [CATransaction lock];
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
+    if (@available(macOS 10.15, *)) {
+        if ([self respondsToSelector:@selector(setWantsExtendedDynamicRangeContent:)]) {
+            self.wantsExtendedDynamicRangeContent = YES;
+        }
+    }
+#endif
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+    if (@available(macOS 14.0, *)) {
+        if ([self respondsToSelector:@selector(setPreferredDynamicRange:)]) {
+            self.preferredDynamicRange = isHDR ? CADynamicRangeHigh : CADynamicRangeStandard;
+        }
+        if ([self respondsToSelector:@selector(setContentsHeadroom:)]) {
+            self.contentsHeadroom = headroom;
+        }
+    }
+#endif
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
+    if (@available(macOS 15.0, *)) {
+        if ([self respondsToSelector:@selector(setToneMapMode:)]) {
+            self.toneMapMode = isHDR ? CAToneMapModeIfSupported : CAToneMapModeAutomatic;
+        }
+    }
+#endif
+    [CATransaction unlock];
 }
 
 - (void)markReady {

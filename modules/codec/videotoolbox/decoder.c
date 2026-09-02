@@ -50,6 +50,10 @@
 #import <sys/sysctl.h>
 #import <mach/machine.h>
 
+#ifndef kCMVideoCodecType_AV1
+#define kCMVideoCodecType_AV1 'av01'
+#endif
+
 #define VT_ALIGNMENT 16
 #define VT_RESTART_MAX 1
 
@@ -75,6 +79,9 @@ static void Drain(decoder_t *p_dec, bool flush);
 static void DecoderCallback(void *, void *, OSStatus, VTDecodeInfoFlags,
                             CVPixelBufferRef, CMTime, CMTime);
 static Boolean deviceSupportsHEVC();
+#if defined(__aarch64__)
+static Boolean deviceSupportsAV1();
+#endif
 static bool deviceSupports42010bitRendering();
 static Boolean deviceSupportsAdvancedProfiles();
 static Boolean deviceSupportsAdvancedLevels();
@@ -156,16 +163,29 @@ static OSType GetBestChroma(uint8_t i_chroma_format, uint8_t i_depth_luma,
             if (deviceSupportsHEVC() && deviceSupports42010bitRendering())
                 return kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange;
 
-           /* Force BGRA output (and let VT handle the tone mapping) since the
-            * Apple openGL* implementation can't handle 16 bit textures. This
-            * is the case for iOS and some macOS devices (ones that are not
-            * handling HEVC). */
+           /* Force BGRA output (and let VT handle the tone mapping) since legacy
+            * OpenGL (caopengllayer at priority 300) cannot handle 10/16-bit textures.
+            * This is the case for iOS and older macOS devices not supporting HEVC/Metal. */
             return kCVPixelFormatType_32BGRA;
         }
         else if (i_depth_luma > 10 && i_depth_chroma > 10)
         {
-            /* XXX: The apple openGL implementation doesn't support 12 or 16
-             * bit rendering */
+            /* For >10-bit content (e.g. 12-bit / 16-bit HEVC Main 12), samplebufferdisplay
+             * (AVSampleBufferDisplayLayer) is now the default video output on macOS and does
+             * not use OpenGL (caopengllayer at priority 300 is the only OpenGL path left).
+             *
+             * The ideal target for 4:2:0 >10-bit would be a 16-bit biplanar format such as
+             * kCVPixelFormatType_420YpCbCr16BiPlanarVideoRange. However, VLC lacks a corresponding
+             * CVPX fourcc (e.g. VLC_CODEC_CVPX_P016) in include/vlc_fourcc.h and
+             * modules/video_chroma/cvpx.c to carry 16-bit CVPixelBuffers across the pipeline.
+             *
+             * TODO: Add VLC_CODEC_CVPX_P016 across VLC when 16-bit CVPX pipeline support is added.
+             *
+             * In the meantime, fall back to the 10-bit P010 format (kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange)
+             * where supported, preserving HDR precision far better than crushing to 8-bit 32BGRA. */
+            if (deviceSupportsHEVC() && deviceSupports42010bitRendering())
+                return kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange;
+
             return kCVPixelFormatType_32BGRA;
         }
     }
@@ -797,6 +817,18 @@ static CFDictionaryRef CopyDecoderExtradataMPEG4(decoder_t *p_dec)
         return NULL; /* MPEG4 without esds ? */
 }
 
+#if defined(__aarch64__)
+static CFDictionaryRef CopyDecoderExtradataAV1(decoder_t *p_dec)
+{
+    if (p_dec->fmt_in->i_extra)
+        return ExtradataInfoCreate(CFSTR("av1C"),
+                                   p_dec->fmt_in->p_extra,
+                                   p_dec->fmt_in->i_extra);
+    else
+        return NULL;
+}
+#endif
+
 /* !Codec Specific */
 
 static void DrainDPBLocked(decoder_t *p_dec, bool flush)
@@ -928,6 +960,22 @@ static CMVideoCodecType CodecPrecheck(decoder_t *p_dec)
                 return 0;
             }
             return kCMVideoCodecType_HEVC;
+
+#if defined(__aarch64__)
+        case VLC_CODEC_AV1:
+            if (!p_dec->fmt_in->i_extra)
+            {
+                msg_Dbg(p_dec, "Demuxer provided no extradata for AV1 (av1C required)");
+                return 0;
+            }
+            if (!deviceSupportsAV1())
+            {
+                msg_Dbg(p_dec, "Device does not support hardware AV1 decoding");
+                return 0;
+            }
+            msg_Dbg(p_dec, "Using hardware AV1 decoder");
+            return kCMVideoCodecType_AV1;
+#endif
 
         case VLC_CODEC_MP4V:
         {
@@ -1216,7 +1264,13 @@ static int StartVideoToolbox(decoder_t *p_dec)
          p_dec->fmt_in->video.primaries == COLOR_PRIMARIES_BT2020 ||
          p_dec->fmt_in->video.i_chroma == VLC_CODEC_I420_10L ||
          p_dec->fmt_in->video.i_chroma == VLC_CODEC_I420_10B ||
+         p_dec->fmt_in->video.i_chroma == VLC_CODEC_I420_12L ||
+         p_dec->fmt_in->video.i_chroma == VLC_CODEC_I420_12B ||
+         p_dec->fmt_in->video.i_chroma == VLC_CODEC_I420_16L ||
+         p_dec->fmt_in->video.i_chroma == VLC_CODEC_I420_16B ||
          p_dec->fmt_in->video.i_chroma == VLC_CODEC_P010 ||
+         p_dec->fmt_in->video.i_chroma == VLC_CODEC_P012 ||
+         p_dec->fmt_in->video.i_chroma == VLC_CODEC_P016 ||
          p_dec->fmt_in->video.i_chroma == VLC_CODEC_CVPX_P010 ||
          (p_dec->fmt_in->i_codec == VLC_CODEC_HEVC && p_dec->fmt_in->i_profile == 2)))
     {
@@ -1226,8 +1280,12 @@ static int StartVideoToolbox(decoder_t *p_dec)
     if (p_sys->i_cvpx_format != 0)
     {
         OSType chroma = htonl(p_sys->i_cvpx_format);
-        msg_Warn(p_dec, "forcing output chroma (kCVPixelFormatType): %4.4s",
-            (const char *) &chroma);
+        if (p_sys->b_cvpx_format_forced)
+            msg_Warn(p_dec, "forcing output chroma (kCVPixelFormatType): %4.4s",
+                (const char *) &chroma);
+        else
+            msg_Dbg(p_dec, "chosen output chroma (kCVPixelFormatType): %4.4s",
+                (const char *) &chroma);
         cfdict_set_int32(destinationPixelBufferAttributes,
                          kCVPixelBufferPixelFormatTypeKey,
                          p_sys->i_cvpx_format);
@@ -1458,6 +1516,12 @@ static int OpenDecoder(vlc_object_t *p_this)
             p_sys->pf_copy_extradata = CopyDecoderExtradataMPEG4;
             break;
 
+#if defined(__aarch64__)
+        case kCMVideoCodecType_AV1:
+            p_sys->pf_copy_extradata = CopyDecoderExtradataAV1;
+            break;
+#endif
+
         default:
             p_sys->pf_copy_extradata = NULL;
             break;
@@ -1498,6 +1562,16 @@ static Boolean deviceSupportsHEVC()
     else
         return false;
 }
+
+#if defined(__aarch64__)
+static Boolean deviceSupportsAV1()
+{
+    if (__builtin_available(macOS 14.0, iOS 17.0, tvOS 17.0, *))
+        return VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1);
+    else
+        return false;
+}
+#endif
 
 static bool deviceSupports42010bitRendering()
 {

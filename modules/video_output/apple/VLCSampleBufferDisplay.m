@@ -37,11 +37,24 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
+#import <QuartzCore/QuartzCore.h>
 
 #include "../../codec/vt_utils.h"
 #include "vlc_pip_controller.h"
 
 #import <VideoToolbox/VideoToolbox.h>
+
+/*
+ * ITU-R Report BT.2408 specifies 203 cd/m^2 (nits) as the reference level for
+ * diffuse white in HDR production (e.g. PQ/HLG subtitles and graphics).
+ * Standard SDR nominal peak white is 100 cd/m^2.
+ * When EDR headroom H > 1.0, the display allows highlights up to H * SDR white.
+ * To keep subtitle white comfortable and aligned with SDR reference white rather
+ * than glaring at peak display brightness, we adapt subtitle layer opacity/luminance
+ * by scaling with (ITU_BT2408_REFERENCE_WHITE_NITS / (SDR_NOMINAL_WHITE_NITS * headroom)).
+ */
+#define ITU_BT2408_REFERENCE_WHITE_NITS 203.0f
+#define SDR_NOMINAL_WHITE_NITS          100.0f
 
 #if __is_target_os(ios)
 #define IS_VT_ROTATION_API_AVAILABLE __IPHONE_OS_VERSION_MAX_ALLOWED >= 160000
@@ -490,8 +503,13 @@ static void DeleteCVPXConverter( filter_t * p_converter )
 static pip_controller_t * CreatePipController( vout_display_t *vd, void *cbs_opaque );
 static void DeletePipController( pip_controller_t * pipcontroller );
 
-#pragma mark -
-@class VLCSampleBufferSubpicture, VLCSampleBufferDisplay;
+#pragma mark - Class Interfaces
+
+@class VLCSampleBufferSubpictureRegion;
+@class VLCSampleBufferSubpicture;
+@class VLCSampleBufferSubpictureView;
+@class VLCSampleBufferDisplayView;
+@class VLCSampleBufferDisplay;
 
 @interface VLCSampleBufferSubpictureRegion: NSObject
 @property (nonatomic, weak) VLCSampleBufferSubpicture *subpicture;
@@ -500,28 +518,56 @@ static void DeletePipController( pip_controller_t * pipcontroller );
 @property (nonatomic) CGFloat    alpha;
 @end
 
-@implementation VLCSampleBufferSubpictureRegion
-- (void)dealloc {
-    CGImageRelease(_image);
-}
-@end
-
-#pragma mark -
-
 @interface VLCSampleBufferSubpicture: NSObject
 @property (nonatomic, weak) VLCSampleBufferDisplay *sys;
 @property (nonatomic) NSArray<VLCSampleBufferSubpictureRegion *> *regions;
 @property (nonatomic) int64_t order;
 @end
 
-@implementation VLCSampleBufferSubpicture
-
-@end
-
-#pragma mark -
-
 @interface VLCSampleBufferSubpictureView: VLCView
 - (void)drawSubpicture:(VLCSampleBufferSubpicture *)subpicture;
+@end
+
+@interface VLCSampleBufferDisplayView: VLCView <CALayerDelegate>
+@property (nonatomic, weak) VLCSampleBufferDisplay *sys;
+- (AVSampleBufferDisplayLayer *)displayLayer;
+@end
+
+@interface VLCSampleBufferDisplay: NSObject
+{
+    @public
+    filter_t *converter;
+}
+    @property (nonatomic, readonly, weak) VLCView *window;
+    @property (nonatomic, readonly) vout_display_t *vd;
+    @property (nonatomic) VLCSampleBufferDisplayView *displayView;
+    @property (nonatomic) AVSampleBufferDisplayLayer *displayLayer;
+    @property (nonatomic) VLCSampleBufferSubpictureView *spuView;
+    @property (nonatomic) VLCSampleBufferSubpicture *subpicture;
+    @property (nonatomic) id<VLCPixelBufferRotationContext> rotationContext;
+    @property (nonatomic) float userHeadroom;
+    @property (nonatomic) CGFloat currentHeadroom;
+    @property (nonatomic) bool warnedToneMapFallback;
+
+    @property (nonatomic, readonly) pip_controller_t *pipcontroller;
+
+    - (instancetype)init NS_UNAVAILABLE;
+    + (instancetype)new NS_UNAVAILABLE;
+    - (instancetype)initWithVoutDisplay:(vout_display_t *)vd;
+    - (void)placeVideo:(vout_display_place_t)newPlace;
+    - (void)updateDynamicRangeAndHeadroom;
+@end
+
+#pragma mark - Class Implementations
+
+@implementation VLCSampleBufferSubpictureRegion
+- (void)dealloc {
+    CGImageRelease(_image);
+}
+@end
+
+@implementation VLCSampleBufferSubpicture
+
 @end
 
 @implementation VLCSampleBufferSubpictureView
@@ -536,6 +582,16 @@ static void DeletePipController( pip_controller_t * pipcontroller );
 #if TARGET_OS_OSX
     self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     self.wantsLayer = YES;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
+    if (@available(macOS 10.15, *)) {
+        self.layer.wantsExtendedDynamicRangeContent = NO;
+    }
+#endif
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+    if (@available(macOS 14.0, *)) {
+        self.layer.contentsHeadroom = 1.0;
+    }
+#endif
 #else
     self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.backgroundColor = [UIColor clearColor];
@@ -586,12 +642,6 @@ static void DeletePipController( pip_controller_t * pipcontroller );
 
 @end
 
-#pragma mark -
-
-@interface VLCSampleBufferDisplayView: VLCView <CALayerDelegate>
-- (AVSampleBufferDisplayLayer *)displayLayer;
-@end
-
 @implementation VLCSampleBufferDisplayView
 
 - (instancetype)init {
@@ -626,9 +676,15 @@ static void DeletePipController( pip_controller_t * pipcontroller );
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
     if (@available(macOS 14.0, *)) {
         layer.preferredDynamicRange = CADynamicRangeHigh;
-        NSScreen *screen = [NSScreen mainScreen];
+        NSScreen *screen = self.window.screen ?: [NSScreen mainScreen];
+        CGFloat headroom = 1.0;
         if (screen && screen.maximumExtendedDynamicRangeColorComponentValue > 1.0) {
-            layer.contentsHeadroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+            headroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+        } else if (screen && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0) {
+            headroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
+        }
+        if (headroom > 1.0) {
+            layer.contentsHeadroom = headroom;
         }
     }
 #endif
@@ -652,12 +708,8 @@ static void DeletePipController( pip_controller_t * pipcontroller );
 
 - (void)viewDidMoveToWindow {
     [super viewDidMoveToWindow];
-    if (self.window) {
-        if (@available(macOS 10.15, *)) {
-            self.window.colorSpace = [NSColorSpace extendedSRGBColorSpace];
-            self.window.contentView.wantsLayer = YES;
-            self.window.contentView.layer.wantsExtendedDynamicRangeContent = YES;
-        }
+    if (self.window && _sys) {
+        [_sys updateDynamicRangeAndHeadroom];
     }
 }
 
@@ -688,29 +740,6 @@ shouldInheritContentsScale:(CGFloat)newScale
     return YES;
 }
 
-@end
-
-#pragma mark -
-
-@interface VLCSampleBufferDisplay: NSObject
-{
-    @public
-    filter_t *converter;
-}
-    @property (nonatomic, readonly, weak) VLCView *window;
-    @property (nonatomic, readonly) vout_display_t *vd;
-    @property (nonatomic) VLCSampleBufferDisplayView *displayView;
-    @property (nonatomic) AVSampleBufferDisplayLayer *displayLayer;
-    @property (nonatomic) VLCSampleBufferSubpictureView *spuView;
-    @property (nonatomic) VLCSampleBufferSubpicture *subpicture;
-    @property (nonatomic) id<VLCPixelBufferRotationContext> rotationContext;
-
-    @property (nonatomic, readonly) pip_controller_t *pipcontroller;
-
-    - (instancetype)init NS_UNAVAILABLE;
-    + (instancetype)new NS_UNAVAILABLE;
-    - (instancetype)initWithVoutDisplay:(vout_display_t *)vd;
-    - (void)placeVideo:(vout_display_place_t)newPlace;
 @end
 
 @implementation VLCSampleBufferDisplay
@@ -749,6 +778,8 @@ shouldInheritContentsScale:(CGFloat)newScale
     _pipcontroller = CreatePipController(vd, (__bridge void *)self);
 
     _vd = vd;
+    _currentHeadroom = 1.0;
+    _warnedToneMapFallback = false;
 
     return self;
 }
@@ -799,6 +830,7 @@ shouldInheritContentsScale:(CGFloat)newScale
         VLCView *window = sys.window;
 
         displayView = [[VLCSampleBufferDisplayView alloc] init];
+        displayView.sys = sys;
         spuView = [VLCSampleBufferSubpictureView new];
         [window addSubview:displayView];
         [window addSubview:spuView];
@@ -806,36 +838,174 @@ shouldInheritContentsScale:(CGFloat)newScale
         displayView.frame = [sys frameForPlace:&place];
         [spuView setFrame:[window bounds]];
 
-        if (@available(macOS 10.15, *)) {
-            window.wantsLayer = YES;
-            window.layer.wantsExtendedDynamicRangeContent = YES;
-            displayView.wantsLayer = YES;
-            displayView.layer.wantsExtendedDynamicRangeContent = YES;
-            if (@available(macOS 14.0, *)) {
-                displayView.layer.preferredDynamicRange = CADynamicRangeHigh;
-                NSScreen *screen = [NSScreen mainScreen];
-                if (screen && screen.maximumExtendedDynamicRangeColorComponentValue > 1.0) {
-                    displayView.layer.contentsHeadroom = screen.maximumExtendedDynamicRangeColorComponentValue;
-                }
-            }
-            if (@available(macOS 15.0, *)) {
-                displayView.layer.toneMapMode = CAToneMapModeIfSupported;
-            }
-            if (window.window) {
-                window.window.colorSpace = [NSColorSpace extendedSRGBColorSpace];
-                window.window.contentView.wantsLayer = YES;
-                window.window.contentView.layer.wantsExtendedDynamicRangeContent = YES;
-            }
-        }
-
         sys.displayView = displayView;
         sys.spuView = spuView;
         @synchronized(sys.displayLayer) {
             sys.displayLayer = displayView.displayLayer;
         }
+
+        [sys updateDynamicRangeAndHeadroom];
         [sys observeDisplayLayerFailures];
+        [sys setupScreenObservers];
         [sys preparePictureInPicture];
     });
+}
+
+- (void)setupScreenObservers {
+#if TARGET_OS_OSX
+    NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
+
+    [notificationCenter addObserver:self
+                           selector:@selector(screenParametersDidChange:)
+                               name:NSApplicationDidChangeScreenParametersNotification
+                             object:nil];
+
+    [notificationCenter addObserver:self
+                           selector:@selector(windowDidChangeScreen:)
+                               name:NSWindowDidChangeScreenNotification
+                             object:nil];
+
+    [notificationCenter addObserver:self
+                           selector:@selector(windowDidChangeScreenProfile:)
+                               name:NSWindowDidChangeScreenProfileNotification
+                             object:nil];
+#endif
+}
+
+#if TARGET_OS_OSX
+- (void)screenParametersDidChange:(NSNotification *)notification {
+    [self updateDynamicRangeAndHeadroom];
+}
+
+- (void)windowDidChangeScreen:(NSNotification *)notification {
+    [self updateDynamicRangeAndHeadroom];
+}
+
+- (void)windowDidChangeScreenProfile:(NSNotification *)notification {
+    [self updateDynamicRangeAndHeadroom];
+}
+#endif
+
+- (void)updateDynamicRangeAndHeadroom {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self updateDynamicRangeAndHeadroom];
+        });
+        return;
+    }
+
+    if (!_displayView)
+        return;
+
+#if TARGET_OS_OSX
+    vout_display_t *vd = _vd;
+    int hdr_mode = var_InheritInteger(vd, "macosx-hdr-mode");
+
+    NSWindow *nswindow = self.window.window ?: self.displayView.window;
+    NSScreen *screen = nswindow.screen ?: [NSScreen mainScreen];
+
+    CGFloat screenHeadroom = 1.0;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
+    if (@available(macOS 10.15, *)) {
+        if (screen) {
+            screenHeadroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+            if (screenHeadroom <= 1.0 && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0) {
+                screenHeadroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
+            }
+        }
+    }
+#endif
+
+    CGFloat effectiveHeadroom;
+    if (_userHeadroom > 0.0f) {
+        effectiveHeadroom = (CGFloat)_userHeadroom;
+    } else {
+        effectiveHeadroom = (screenHeadroom > 1.0) ? screenHeadroom : 1.0;
+    }
+    _currentHeadroom = effectiveHeadroom;
+
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+
+    if (hdr_mode == 2 || hdr_mode == 3) {
+        /* Mode 2 (Tone-map to SDR) or Mode 3 (Disable HDR): configure layer for SDR presentation */
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
+        if (@available(macOS 10.15, *)) {
+            self.window.layer.wantsExtendedDynamicRangeContent = NO;
+            self.displayView.layer.wantsExtendedDynamicRangeContent = NO;
+            if (nswindow) {
+                nswindow.contentView.layer.wantsExtendedDynamicRangeContent = NO;
+            }
+        }
+#endif
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+        if (@available(macOS 14.0, *)) {
+            self.displayView.layer.preferredDynamicRange = CADynamicRangeStandard;
+            self.displayView.layer.contentsHeadroom = 1.0;
+        }
+#endif
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
+        if (@available(macOS 15.0, *)) {
+            self.displayView.layer.toneMapMode = CAToneMapModeAutomatic;
+        }
+#endif
+    } else {
+        /* Mode 0 (Auto) or Mode 1 (Force HDR): enable EDR display pipeline */
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
+        if (@available(macOS 10.15, *)) {
+            self.window.wantsLayer = YES;
+            self.window.layer.wantsExtendedDynamicRangeContent = YES;
+            self.displayView.wantsLayer = YES;
+            self.displayView.layer.wantsExtendedDynamicRangeContent = YES;
+            if (nswindow) {
+                nswindow.colorSpace = [NSColorSpace extendedSRGBColorSpace];
+                nswindow.contentView.wantsLayer = YES;
+                nswindow.contentView.layer.wantsExtendedDynamicRangeContent = YES;
+            }
+        }
+#endif
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+        if (@available(macOS 14.0, *)) {
+            self.displayView.layer.preferredDynamicRange = CADynamicRangeHigh;
+            if (effectiveHeadroom > 1.0) {
+                self.displayView.layer.contentsHeadroom = effectiveHeadroom;
+            } else {
+                self.displayView.layer.contentsHeadroom = 1.0;
+            }
+        }
+#endif
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
+        if (@available(macOS 15.0, *)) {
+            self.displayView.layer.toneMapMode = CAToneMapModeIfSupported;
+        }
+#endif
+    }
+
+    /* Subtitle layer tagging and luminance adaptation (Defect 4) */
+    if (self.spuView) {
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
+        if (@available(macOS 10.15, *)) {
+            self.spuView.layer.wantsExtendedDynamicRangeContent = NO;
+        }
+#endif
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+        if (@available(macOS 14.0, *)) {
+            self.spuView.layer.contentsHeadroom = 1.0;
+        }
+#endif
+        CGFloat factor = 1.0;
+        if (hdr_mode != 2 && hdr_mode != 3 && effectiveHeadroom > 1.0) {
+            factor = (CGFloat)(ITU_BT2408_REFERENCE_WHITE_NITS / (SDR_NOMINAL_WHITE_NITS * effectiveHeadroom));
+            if (factor > 1.0)
+                factor = 1.0;
+            else if (factor < 0.15)
+                factor = 0.15;
+        }
+        self.spuView.layer.opacity = (float)factor;
+    }
+
+    [CATransaction commit];
+#endif
 }
 
 - (void)observeDisplayLayerFailures {
@@ -899,15 +1069,46 @@ shouldInheritContentsScale:(CGFloat)newScale
     _pipcontroller = NULL;
 }
 
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 @end
 
 #pragma mark -
 #pragma mark Module functions
 
+static int EdrHeadroomCallback(vlc_object_t *obj, char const *name,
+                               vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    float val = cur.f_float;
+    if (val > 0.0f && val < 1.0f)
+        val = 1.0f;
+    sys.userHeadroom = val;
+    msg_Dbg(sys.vd, "EDR headroom updated via variable callback: %.2f%s",
+            val, (val > 0.0f) ? " (user override)" : " (auto screen peak)");
+    [sys updateDynamicRangeAndHeadroom];
+    return VLC_SUCCESS;
+}
+
+static int HdrModeCallback(vlc_object_t *obj, char const *name,
+                           vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev); VLC_UNUSED(cur);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    [sys updateDynamicRangeAndHeadroom];
+    return VLC_SUCCESS;
+}
+
 static void Close(vout_display_t *vd)
 {
     VLCSampleBufferDisplay *sys;
     sys = (__bridge_transfer VLCSampleBufferDisplay*)vd->sys;
+
+    var_DelCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)sys);
+    var_DelCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)sys);
 
     DeleteCVPXConverter(sys->converter);
 
@@ -997,15 +1198,42 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         render_fmt.lighting = vd->fmt->lighting;
 
     int hdr_mode = var_InheritInteger(vd, "macosx-hdr-mode");
-    if (hdr_mode == 1) { /* Force HDR */
+    switch (hdr_mode) {
+    case 1: /* Force Native EDR / HDR */
         if (render_fmt.transfer != TRANSFER_FUNC_HLG)
             render_fmt.transfer = TRANSFER_FUNC_SMPTE_ST2084;
         render_fmt.primaries = COLOR_PRIMARIES_BT2020;
         render_fmt.space = COLOR_SPACE_BT2020;
-    } else if (hdr_mode == 3) { /* Disable HDR */
+        break;
+    case 2: /* Tone-map to SDR */
+#if TARGET_OS_OSX && (__MAC_OS_X_VERSION_MAX_ALLOWED >= 140000)
+        if (@available(macOS 14.0, *)) {
+            /* On macOS 14+, the compositor handles tone-mapping to SDR via
+             * CADynamicRangeStandard and CAToneMapModeAutomatic on the layer.
+             * Keep the true PQ/HLG/BT.2020 tagging on the CVPixelBuffer so the
+             * compositor has the true dynamic range metadata to compress. */
+            break;
+        }
+#endif
+        /* On older macOS where layer dynamic range controls are not available,
+         * fall back to retagging as BT.709 so the user gets an SDR presentation. */
+        if (!sys.warnedToneMapFallback) {
+            msg_Warn(vd, "Hardware tone mapping to SDR is unsupported on this OS version (< macOS 14); falling back to BT.709 retagging");
+            sys.warnedToneMapFallback = true;
+        }
         render_fmt.transfer = TRANSFER_FUNC_BT709;
         render_fmt.primaries = COLOR_PRIMARIES_BT709;
         render_fmt.space = COLOR_SPACE_BT709;
+        break;
+    case 3: /* Disable HDR */
+        render_fmt.transfer = TRANSFER_FUNC_BT709;
+        render_fmt.primaries = COLOR_PRIMARIES_BT709;
+        render_fmt.space = COLOR_SPACE_BT709;
+        break;
+    case 0: /* Auto */
+    default:
+        /* Auto mode preserves original color space and metadata for native display EDR/tonemapping */
+        break;
     }
 
     /* Ensure color properties and HDR metadata are attached for CoreMedia / ColorSync / EDR pipeline */
@@ -1085,7 +1313,10 @@ static void UpdateSubpictureRegions(vout_display_t *vd,
         return;
 
     NSMutableArray *regions = [NSMutableArray new];
-    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    if (!space) {
+        space = CGColorSpaceCreateDeviceRGB();
+    }
     const struct subpicture_region_rendered *r;
     vlc_vector_foreach(r, &subpicture->regions) {
         CFIndex length = r->p_picture->format.i_height * r->p_picture->p->i_pitch;
@@ -1115,7 +1346,9 @@ static void UpdateSubpictureRegions(vout_display_t *vd,
         CGDataProviderRelease(provider);
         CFRelease(data);
     }
-    CGColorSpaceRelease(space);
+    if (space) {
+        CGColorSpaceRelease(space);
+    }
 
     sys.subpicture.regions = regions;
 }
@@ -1316,6 +1549,23 @@ static int Open (vout_display_t *vd,
 
         sys->converter = converter;
 
+        float user_headroom = var_InheritFloat(vd, "macosx-edr-headroom");
+        if (user_headroom > 0.0f && user_headroom < 1.0f)
+            user_headroom = 1.0f;
+        sys.userHeadroom = user_headroom;
+
+        if (user_headroom > 0.0f) {
+            msg_Dbg(vd, "EDR headroom initialized to user override: %.2f", user_headroom);
+        } else {
+            msg_Dbg(vd, "EDR headroom initialized to auto (display peak)");
+        }
+
+        var_Create(vd, "macosx-edr-headroom", VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)sys);
+
+        var_Create(vd, "macosx-hdr-mode", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)sys);
+
         vd->sys = (__bridge_retained void*)sys;
 
         static const struct vlc_display_operations ops = {
@@ -1357,7 +1607,7 @@ static int Open (vout_display_t *vd,
 
 #define EDR_HEADROOM_TEXT N_("EDR Headroom Scaling")
 #define EDR_HEADROOM_LONGTEXT N_( \
-    "Controls the extended dynamic range brightness scaling factor (0.0 for auto screen headroom).")
+    "Controls the extended dynamic range brightness scaling factor (0.0 for auto screen headroom, >= 1.0 to force specific headroom).")
 
 static const int hdr_mode_values[] = { 0, 1, 2, 3 };
 static const char *const hdr_mode_names[] = {
