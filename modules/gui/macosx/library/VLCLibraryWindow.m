@@ -323,6 +323,13 @@ static int ShowController(vlc_object_t * __unused p_this,
 
 - (void)displayLibraryView:(NSView *)view
 {
+    /* Library views are held weakly by their controllers, so they are already
+     * gone when the window is being torn down. There is nothing to display
+     * then. */
+    if (view == nil) {
+        return;
+    }
+
     view.translatesAutoresizingMaskIntoConstraints = NO;
     if ([self.libraryTargetView.subviews containsObject:self.loadingOverlayView]) {
         self.libraryTargetView.subviews = @[view, self.loadingOverlayView];
@@ -690,10 +697,17 @@ static int ShowController(vlc_object_t * __unused p_this,
     } else {
         [self hideControlsBarImmediately];
     }
-    [self updateArtworkButtonEnabledState];
+    /* Closing the video output is also part of interface termination, at which
+     * point the player is being destroyed and must no longer be queried. The
+     * window is going away with it, so there is no appearance left to update.
+     * Note that VLCMain.sharedInstance is already nil at that point, so its
+     * isTerminating would just return NO: ask getIntf() instead. */
+    if (getIntf() != NULL && !VLCMain.sharedInstance.isTerminating) {
+        [self updateArtworkButtonEnabledState];
 
-    if (!self.playQueueController.playerController.currentMediaIsAudioOnly) {
-        [self configureArtworkButtonLiveVideoView];
+        if (!self.playQueueController.playerController.currentMediaIsAudioOnly) {
+            [self configureArtworkButtonLiveVideoView];
+        }
     }
 
     self.splitViewController.mainVideoModeEnabled = NO;

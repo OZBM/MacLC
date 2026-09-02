@@ -92,6 +92,9 @@ static void WindowDisable(vlc_window_t *p_wnd)
         VLCVideoOutputProvider *voutProvider = VLCMain.sharedInstance.voutProvider;
 
         dispatch_async(dispatch_get_main_queue(), ^{
+            if (getIntf() == NULL) {
+                return;
+            }
             [voutProvider removeVoutForDisplay:[NSValue valueWithPointer:p_wnd]];
         });
     }
@@ -104,6 +107,9 @@ static void WindowResize(vlc_window_t *p_wnd,
         VLCVideoOutputProvider *voutProvider = VLCMain.sharedInstance.voutProvider;
 
         dispatch_async(dispatch_get_main_queue(), ^{
+            if (getIntf() == NULL) {
+                return;
+            }
             [voutProvider setNativeVideoSize:NSMakeSize(i_width, i_height)
                           forWindow:p_wnd];
         });
@@ -123,6 +129,9 @@ static void WindowSetState(vlc_window_t *p_wnd, unsigned i_state)
             i_cocoa_level = NSStatusWindowLevel;
 
         dispatch_async(dispatch_get_main_queue(), ^{
+            if (getIntf() == NULL) {
+                return;
+            }
             [voutProvider setWindowLevel:i_cocoa_level forWindow:p_wnd];
         });
 
@@ -133,7 +142,12 @@ static const char windowed;
 
 static void WindowSetFullscreen(vlc_window_t *p_wnd, const char *psz_id)
 {
-    if (var_InheritBool(getIntf(), "video-wallpaper")) {
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf == NULL) {
+        return;
+    }
+
+    if (var_InheritBool(p_intf, "video-wallpaper")) {
         msg_Dbg(p_wnd, "Ignore fullscreen event as video-wallpaper is on");
         return;
     }
@@ -145,6 +159,9 @@ static void WindowSetFullscreen(vlc_window_t *p_wnd, const char *psz_id)
         VLCVideoOutputProvider *voutProvider = VLCMain.sharedInstance.voutProvider;
 
         dispatch_async(dispatch_get_main_queue(), ^{
+            if (getIntf() == NULL) {
+                return;
+            }
             [voutProvider setFullscreen:i_full
                           forWindow:p_wnd
                           withAnimation:b_animation];
@@ -298,9 +315,16 @@ static int WindowFloatOnTop(vlc_object_t *obj,
 
 - (VLCVideoWindowCommon *)setupMainLibraryVideoWindow
 {
-    VLCMain *mainInstance = VLCMain.sharedInstance;
+    VLCLibraryWindow * const libraryWindow = VLCMain.sharedInstance.libraryWindow;
+    /* The library window is only created once the application finished
+     * launching. A video output can be requested before that, in which case
+     * there is no window to embed the video into. */
+    if (libraryWindow == nil) {
+        return nil;
+    }
+
     b_mainWindowHasVideo = YES;
-    return mainInstance.libraryWindow;
+    return libraryWindow;
 }
 
 - (VLCVideoWindowCommon *)setupDetachedVideoWindow
@@ -358,7 +382,13 @@ static int WindowFloatOnTop(vlc_object_t *obj,
 
     BOOL isEmbedded = var_InheritBool(getIntf(), "embedded-video") && !b_mainWindowHasVideo;
     if (isEmbedded) {
-        return [self setupMainLibraryVideoWindow];
+        VLCVideoWindowCommon * const libraryVideoWindow =
+            [self setupMainLibraryVideoWindow];
+        /* Fall through to a detached window if the library window is not
+         * available (yet). */
+        if (libraryVideoWindow != nil) {
+            return libraryVideoWindow;
+        }
     }
 
     return [self setupDetachedVideoWindow];
@@ -417,6 +447,14 @@ static int WindowFloatOnTop(vlc_object_t *obj,
 - (void)setupVideoOutputForVideoWindow:(VLCVideoWindowCommon *)videoWindow
                          withVlcWindow:(vlc_window_t *)p_wnd
 {
+    if (videoWindow == nil) {
+        intf_thread_t * const p_intf = getIntf();
+        if (p_intf != NULL) {
+            msg_Err(p_intf, "No video window available for video output");
+        }
+        return;
+    }
+
     VLCVoutView * const voutView = videoWindow.videoViewController.voutView;
 
     videoWindow.alphaValue = config_GetFloat("macosx-opaqueness");
@@ -558,8 +596,10 @@ static int WindowFloatOnTop(vlc_object_t *obj,
             // If `embeddedVideoPlaybackActive` is already `NO`, the user navigated back
             // while playback was ongoing - `disableVideoPlaybackAppearance` was already
             // called at that point, so nothing more to do here.
-        
-            if (((VLCLibraryWindow *)videoWindow).embeddedVideoPlaybackActive) {
+            // This block is run asynchronously, so the interface may be gone by
+            // now, together with the player the appearance update relies on.
+            if (getIntf() != NULL
+                && ((VLCLibraryWindow *)videoWindow).embeddedVideoPlaybackActive) {
                 [(VLCLibraryWindow *)videoWindow disableVideoPlaybackAppearance];
             }
         } else {

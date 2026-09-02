@@ -290,7 +290,12 @@ static void extensionDialogCallback(extension_dialog_t *p_ext_dialog,
 
 - (void)dealloc
 {
-    vlc_dialog_provider_set_ext_callback(getIntf(), NULL, NULL);
+    /* This object can outlive the interface, in which case there is no
+     * provider left to unregister from. */
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf != NULL) {
+        vlc_dialog_provider_set_ext_callback(p_intf, NULL, NULL);
+    }
 }
 
 - (void)performEventWithObject:(NSValue *)objectValue ofType:(const char*)type

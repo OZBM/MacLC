@@ -274,8 +274,13 @@ static const struct vlc_playlist_callbacks playlist_callbacks = {
                                                                name:NSWorkspaceWillSleepNotification
                                                              object:nil];
 
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf == NULL) {
+        return;
+    }
+
     // respect playlist-autostart
-    if (var_GetBool(getIntf(), "playlist-autostart")) {
+    if (var_GetBool(p_intf, "playlist-autostart")) {
         if ([self.playQueueModel numberOfPlayQueueItems] > 0) {
             [self startPlayQueue];
         }

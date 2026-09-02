@@ -205,9 +205,15 @@ static void updateProgressCallback(void *p_data,
 
 - (void)dealloc
 {
-    msg_Dbg(getIntf(), "Deinitializing dialog provider");
+    /* This object can outlive the interface, in which case there is no
+     * provider left to unregister from. */
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf == NULL) {
+        return;
+    }
 
-    intf_thread_t *p_intf = getIntf();
+    msg_Dbg(p_intf, "Deinitializing dialog provider");
+
     vlc_dialog_provider_set_callbacks(p_intf, NULL, NULL);
     vlc_dialog_provider_set_error_callback(p_intf, NULL, NULL);
 }

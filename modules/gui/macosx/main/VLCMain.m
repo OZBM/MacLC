@@ -236,6 +236,11 @@ void CloseIntf (vlc_object_t *p_this)
             }
             [VLCMain killInstance];
         }
+        /* The interface object is destroyed as soon as this callback returns.
+         * Clear the global so that getIntf() reports the interface as gone
+         * instead of handing out a dangling pointer to work that is still
+         * queued on the main thread. */
+        p_interface_thread = NULL;
         vlc_preparser_Delete(p_network_preparser);
         [NSApp stop:nil];
         NSEvent* event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
