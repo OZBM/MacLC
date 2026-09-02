@@ -181,6 +181,10 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
                                        scale * meta->dovi_rpu->source_max_pq);
     }
 
+    if (meta->hdr10plus) {
+        vlc_placebo_HdrMetadata(meta->hdr10plus, &frame_in->color.hdr);
+    }
+
     GLint value;
     vt->GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &value);
     GLuint final_draw_framebuffer = value; /* as GLuint */

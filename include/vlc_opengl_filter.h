@@ -46,6 +46,8 @@ struct vlc_gl_input_meta {
     vlc_tick_t pts;
     unsigned plane;
     const vlc_video_dovi_metadata_t *dovi_rpu;
+    /** HDR10+ dynamic metadata for the input picture, if any */
+    const vlc_video_hdr_dynamic_metadata_t *hdr10plus;
     video_orientation_t orientation;
 };
 

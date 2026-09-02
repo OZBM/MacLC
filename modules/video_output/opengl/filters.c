@@ -142,6 +142,11 @@ struct vlc_gl_filters {
         /** Dolby Vision RPU metadata for the last picture, if any */
         vlc_video_dovi_metadata_t dovi_rpu;
         int has_dovi;
+
+        /** HDR10+ dynamic metadata for the last picture, if any */
+        vlc_video_hdr_dynamic_metadata_t hdr10plus;
+        int has_hdr10plus;
+        bool hdr10plus_logged;
     } pic;
 
     struct vlc_gl_extension_vt extension_vt;
@@ -176,6 +181,8 @@ vlc_gl_filters_New(struct vlc_gl_t *gl, const struct vlc_gl_api *api,
     memset(&filters->viewport, 0, sizeof(filters->viewport));
     filters->pic.pts = VLC_TICK_INVALID;
     filters->pic.has_dovi = 0;
+    filters->pic.has_hdr10plus = 0;
+    filters->pic.hdr10plus_logged = false;
 
     vlc_gl_LoadExtensionFunctions(filters->gl, &filters->extension_vt);
 
@@ -542,6 +549,18 @@ vlc_gl_filters_UpdatePicture(struct vlc_gl_filters *filters,
                sizeof(filters->pic.dovi_rpu));
     }
 
+    struct vlc_ancillary *hdr10plus =
+        picture_GetAncillary(picture, VLC_ANCILLARY_ID_HDR10PLUS);
+    filters->pic.has_hdr10plus = !!hdr10plus;
+    if (hdr10plus) {
+        if (!filters->pic.hdr10plus_logged) {
+            msg_Dbg(filters->gl, "Using HDR10+ dynamic metadata");
+            filters->pic.hdr10plus_logged = true;
+        }
+        memcpy(&filters->pic.hdr10plus, vlc_ancillary_GetData(hdr10plus),
+               sizeof(filters->pic.hdr10plus));
+    }
+
     struct vlc_gl_filter_priv *first_filter =
         vlc_list_first_entry_or_null(&filters->list, struct vlc_gl_filter_priv,
                                      node);
@@ -566,6 +585,7 @@ vlc_gl_filters_Draw(struct vlc_gl_filters *filters)
         .pts = filters->pic.pts,
         .plane = 0,
         .dovi_rpu = filters->pic.has_dovi ? &filters->pic.dovi_rpu : NULL,
+        .hdr10plus = filters->pic.has_hdr10plus ? &filters->pic.hdr10plus : NULL,
     };
 
     struct vlc_gl_picture direct_pic;
