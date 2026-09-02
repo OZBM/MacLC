@@ -548,6 +548,17 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) float userHeadroom;
     @property (nonatomic) CGFloat currentHeadroom;
     @property (nonatomic) bool warnedToneMapFallback;
+    @property (nonatomic) const char *effectivePdrStr;
+    @property (nonatomic) const char *effectiveTmmStr;
+    @property (nonatomic) const char *effectiveEdrStr;
+    @property (nonatomic) float effectiveHeadroomVal;
+    @property (nonatomic) BOOL hasLoggedEffectiveConfig;
+    @property (nonatomic) CGFloat lastSubtitleScale;
+    @property (nonatomic) BOOL hasComputedSubtitleScale;
+    @property (nonatomic) BOOL warnedWantsEDRUnavailable;
+    @property (nonatomic) BOOL warnedPdrUnavailable;
+    @property (nonatomic) BOOL warnedTmmUnavailable;
+    @property (nonatomic) BOOL warnedScreenHeadroomUnavailable;
 
     @property (nonatomic, readonly) pip_controller_t *pipcontroller;
 
@@ -780,6 +791,17 @@ shouldInheritContentsScale:(CGFloat)newScale
     _vd = vd;
     _currentHeadroom = 1.0;
     _warnedToneMapFallback = false;
+    _effectivePdrStr = "None";
+    _effectiveTmmStr = "None";
+    _effectiveEdrStr = "None";
+    _effectiveHeadroomVal = 1.0f;
+    _hasLoggedEffectiveConfig = NO;
+    _lastSubtitleScale = 1.0;
+    _hasComputedSubtitleScale = NO;
+    _warnedWantsEDRUnavailable = NO;
+    _warnedPdrUnavailable = NO;
+    _warnedTmmUnavailable = NO;
+    _warnedScreenHeadroomUnavailable = NO;
 
     return self;
 }
@@ -857,32 +879,47 @@ shouldInheritContentsScale:(CGFloat)newScale
 
     [notificationCenter addObserver:self
                            selector:@selector(screenParametersDidChange:)
-                               name:NSApplicationDidChangeScreenParametersNotification
-                             object:nil];
+                                name:NSApplicationDidChangeScreenParametersNotification
+                              object:nil];
 
     [notificationCenter addObserver:self
                            selector:@selector(windowDidChangeScreen:)
-                               name:NSWindowDidChangeScreenNotification
-                             object:nil];
+                                name:NSWindowDidChangeScreenNotification
+                              object:nil];
 
     [notificationCenter addObserver:self
                            selector:@selector(windowDidChangeScreenProfile:)
-                               name:NSWindowDidChangeScreenProfileNotification
-                             object:nil];
+                                name:NSWindowDidChangeScreenProfileNotification
+                              object:nil];
 #endif
 }
 
 #if TARGET_OS_OSX
 - (void)screenParametersDidChange:(NSNotification *)notification {
+    CGFloat prevHeadroom = _currentHeadroom;
     [self updateDynamicRangeAndHeadroom];
+    if (fabs(_currentHeadroom - prevHeadroom) > 0.001f) {
+        msg_Dbg(_vd, "Screen parameters changed notification: EDR headroom re-evaluated from %.2f to %.2f",
+                (float)prevHeadroom, (float)_currentHeadroom);
+    }
 }
 
 - (void)windowDidChangeScreen:(NSNotification *)notification {
+    CGFloat prevHeadroom = _currentHeadroom;
     [self updateDynamicRangeAndHeadroom];
+    if (fabs(_currentHeadroom - prevHeadroom) > 0.001f) {
+        msg_Dbg(_vd, "Window did change screen notification: EDR headroom re-evaluated from %.2f to %.2f",
+                (float)prevHeadroom, (float)_currentHeadroom);
+    }
 }
 
 - (void)windowDidChangeScreenProfile:(NSNotification *)notification {
+    CGFloat prevHeadroom = _currentHeadroom;
     [self updateDynamicRangeAndHeadroom];
+    if (fabs(_currentHeadroom - prevHeadroom) > 0.001f) {
+        msg_Dbg(_vd, "Window did change screen profile notification: EDR headroom re-evaluated from %.2f to %.2f",
+                (float)prevHeadroom, (float)_currentHeadroom);
+    }
 }
 #endif
 
@@ -913,6 +950,16 @@ shouldInheritContentsScale:(CGFloat)newScale
                 screenHeadroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
             }
         }
+    } else {
+        if (!_warnedScreenHeadroomUnavailable) {
+            msg_Warn(vd, "NSScreen.maximumExtendedDynamicRangeColorComponentValue unavailable (< macOS 10.15); defaulting screen headroom to 1.0");
+            _warnedScreenHeadroomUnavailable = YES;
+        }
+    }
+#else
+    if (!_warnedScreenHeadroomUnavailable) {
+        msg_Warn(vd, "SDK max allowed < macOS 10.15; defaulting screen headroom to 1.0");
+        _warnedScreenHeadroomUnavailable = YES;
     }
 #endif
 
@@ -927,6 +974,11 @@ shouldInheritContentsScale:(CGFloat)newScale
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
 
+    const char *applied_pdr = "None";
+    const char *applied_tmm = "None";
+    const char *applied_edr = "None";
+    float applied_headroom = 1.0f;
+
     if (hdr_mode == 2 || hdr_mode == 3) {
         /* Mode 2 (Tone-map to SDR) or Mode 3 (Disable HDR): configure layer for SDR presentation */
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
@@ -936,19 +988,69 @@ shouldInheritContentsScale:(CGFloat)newScale
             if (nswindow) {
                 nswindow.contentView.layer.wantsExtendedDynamicRangeContent = NO;
             }
+            applied_edr = "off";
+        } else {
+            if (!_warnedWantsEDRUnavailable) {
+                msg_Warn(vd, "CALayer.wantsExtendedDynamicRangeContent unavailable (< macOS 10.15); standard layer SDR rendering used");
+                _warnedWantsEDRUnavailable = YES;
+            }
+            applied_edr = "unsupported (< macOS 10.15)";
         }
+#else
+        if (!_warnedWantsEDRUnavailable) {
+            msg_Warn(vd, "SDK max allowed < macOS 10.15; standard layer SDR rendering used");
+            _warnedWantsEDRUnavailable = YES;
+        }
+        applied_edr = "unsupported (< macOS 10.15)";
 #endif
+
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
         if (@available(macOS 14.0, *)) {
             self.displayView.layer.preferredDynamicRange = CADynamicRangeStandard;
             self.displayView.layer.contentsHeadroom = 1.0;
+            applied_pdr = "Standard";
+            applied_headroom = 1.0f;
+        } else {
+            if (!_warnedPdrUnavailable) {
+                msg_Warn(vd, "CALayer.preferredDynamicRange/contentsHeadroom unavailable (< macOS 14); falling back to buffer retagging in render path");
+                _warnedPdrUnavailable = YES;
+            }
+            applied_pdr = "unsupported (< macOS 14)";
         }
+#else
+        if (!_warnedPdrUnavailable) {
+            msg_Warn(vd, "SDK max allowed < macOS 14; falling back to buffer retagging in render path");
+            _warnedPdrUnavailable = YES;
+        }
+        applied_pdr = "unsupported (< macOS 14)";
 #endif
+
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
         if (@available(macOS 15.0, *)) {
             self.displayView.layer.toneMapMode = CAToneMapModeAutomatic;
+            applied_tmm = "Automatic";
+        } else {
+            if (!_warnedTmmUnavailable) {
+                msg_Warn(vd, "CALayer.toneMapMode unavailable (< macOS 15); relying on CADynamicRangeStandard for compositor tone-mapping");
+                _warnedTmmUnavailable = YES;
+            }
+            applied_tmm = "unsupported (< macOS 15)";
         }
+#else
+        if (!_warnedTmmUnavailable) {
+            msg_Warn(vd, "SDK max allowed < macOS 15; relying on CADynamicRangeStandard for compositor tone-mapping");
+            _warnedTmmUnavailable = YES;
+        }
+        applied_tmm = "unsupported (< macOS 15)";
 #endif
+
+        if (hdr_mode == 2) {
+            msg_Dbg(vd, "HDR mode 2 (tone-map to SDR): preferredDynamicRange=%s, toneMapMode=%s, contentsHeadroom=%.2f, EDR %s",
+                    applied_pdr, applied_tmm, applied_headroom, applied_edr);
+        } else {
+            msg_Dbg(vd, "HDR mode 3 (disable HDR): preferredDynamicRange=%s, toneMapMode=%s, contentsHeadroom=%.2f, EDR %s",
+                    applied_pdr, applied_tmm, applied_headroom, applied_edr);
+        }
     } else {
         /* Mode 0 (Auto) or Mode 1 (Force HDR): enable EDR display pipeline */
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
@@ -962,8 +1064,22 @@ shouldInheritContentsScale:(CGFloat)newScale
                 nswindow.contentView.wantsLayer = YES;
                 nswindow.contentView.layer.wantsExtendedDynamicRangeContent = YES;
             }
+            applied_edr = "on";
+        } else {
+            if (!_warnedWantsEDRUnavailable) {
+                msg_Warn(vd, "CALayer.wantsExtendedDynamicRangeContent/extendedSRGBColorSpace unavailable (< macOS 10.15); display remains standard dynamic range");
+                _warnedWantsEDRUnavailable = YES;
+            }
+            applied_edr = "unsupported (< macOS 10.15)";
         }
+#else
+        if (!_warnedWantsEDRUnavailable) {
+            msg_Warn(vd, "SDK max allowed < macOS 10.15; display remains standard dynamic range");
+            _warnedWantsEDRUnavailable = YES;
+        }
+        applied_edr = "unsupported (< macOS 10.15)";
 #endif
+
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
         if (@available(macOS 14.0, *)) {
             self.displayView.layer.preferredDynamicRange = CADynamicRangeHigh;
@@ -972,14 +1088,56 @@ shouldInheritContentsScale:(CGFloat)newScale
             } else {
                 self.displayView.layer.contentsHeadroom = 1.0;
             }
+            applied_pdr = "High";
+            applied_headroom = (float)self.displayView.layer.contentsHeadroom;
+        } else {
+            if (!_warnedPdrUnavailable) {
+                msg_Warn(vd, "CALayer.preferredDynamicRange/contentsHeadroom unavailable (< macOS 14); relying on wantsExtendedDynamicRangeContent");
+                _warnedPdrUnavailable = YES;
+            }
+            applied_pdr = "unsupported (< macOS 14)";
         }
+#else
+        if (!_warnedPdrUnavailable) {
+            msg_Warn(vd, "SDK max allowed < macOS 14; relying on wantsExtendedDynamicRangeContent");
+            _warnedPdrUnavailable = YES;
+        }
+        applied_pdr = "unsupported (< macOS 14)";
 #endif
+
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
         if (@available(macOS 15.0, *)) {
             self.displayView.layer.toneMapMode = CAToneMapModeIfSupported;
+            applied_tmm = "IfSupported";
+        } else {
+            if (!_warnedTmmUnavailable) {
+                msg_Warn(vd, "CALayer.toneMapMode unavailable (< macOS 15); relying on CADynamicRangeHigh");
+                _warnedTmmUnavailable = YES;
+            }
+            applied_tmm = "unsupported (< macOS 15)";
         }
+#else
+        if (!_warnedTmmUnavailable) {
+            msg_Warn(vd, "SDK max allowed < macOS 15; relying on CADynamicRangeHigh");
+            _warnedTmmUnavailable = YES;
+        }
+        applied_tmm = "unsupported (< macOS 15)";
 #endif
+
+        if (hdr_mode == 1) {
+            msg_Dbg(vd, "HDR mode 1 (force EDR/HDR): preferredDynamicRange=%s, toneMapMode=%s, contentsHeadroom=%.2f, EDR %s",
+                    applied_pdr, applied_tmm, applied_headroom, applied_edr);
+        } else {
+            msg_Dbg(vd, "HDR mode 0 (auto): preferredDynamicRange=%s, toneMapMode=%s, contentsHeadroom=%.2f, EDR %s",
+                    applied_pdr, applied_tmm, applied_headroom, applied_edr);
+        }
     }
+
+    _effectivePdrStr = applied_pdr;
+    _effectiveTmmStr = applied_tmm;
+    _effectiveEdrStr = applied_edr;
+    _effectiveHeadroomVal = applied_headroom;
+    _hasLoggedEffectiveConfig = NO;
 
     /* Subtitle layer tagging and luminance adaptation (Defect 4) */
     if (self.spuView) {
@@ -1000,6 +1158,12 @@ shouldInheritContentsScale:(CGFloat)newScale
                 factor = 1.0;
             else if (factor < 0.15)
                 factor = 0.15;
+        }
+        if (fabs(_lastSubtitleScale - factor) > 0.001f || !_hasComputedSubtitleScale) {
+            msg_Dbg(vd, "Subtitle reference-white scale factor computed: %.3f (derived from headroom %.2f, reference white %.0f nits)",
+                    (float)factor, (float)effectiveHeadroom, ITU_BT2408_REFERENCE_WHITE_NITS);
+            _lastSubtitleScale = factor;
+            _hasComputedSubtitleScale = YES;
         }
         self.spuView.layer.opacity = (float)factor;
     }
@@ -1218,7 +1382,7 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         /* On older macOS where layer dynamic range controls are not available,
          * fall back to retagging as BT.709 so the user gets an SDR presentation. */
         if (!sys.warnedToneMapFallback) {
-            msg_Warn(vd, "Hardware tone mapping to SDR is unsupported on this OS version (< macOS 14); falling back to BT.709 retagging");
+            msg_Warn(vd, "Hardware tone mapping (CADynamicRangeStandard) unavailable on this OS version (< macOS 14); falling back to BT.709 buffer retagging");
             sys.warnedToneMapFallback = true;
         }
         render_fmt.transfer = TRANSFER_FUNC_BT709;
@@ -1239,6 +1403,39 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
     /* Ensure color properties and HDR metadata are attached for CoreMedia / ColorSync / EDR pipeline */
     cvpx_attach_mapped_color_properties(pixelBuffer, &render_fmt);
     cvpx_attach_hdr_metadata(pixelBuffer, &render_fmt);
+
+    if (!sys.hasLoggedEffectiveConfig) {
+        const char *transfer_name = "unknown";
+        switch (render_fmt.transfer) {
+            case TRANSFER_FUNC_BT709: transfer_name = "BT.709"; break;
+            case TRANSFER_FUNC_SMPTE_ST2084: transfer_name = "SMPTE ST 2084 (PQ)"; break;
+            case TRANSFER_FUNC_HLG: transfer_name = "ARIB STD-B67 (HLG)"; break;
+            case TRANSFER_FUNC_SRGB: transfer_name = "sRGB"; break;
+            case TRANSFER_FUNC_LINEAR: transfer_name = "Linear"; break;
+            default: transfer_name = "other"; break;
+        }
+
+        const char *primaries_name = "unknown";
+        switch (render_fmt.primaries) {
+            case COLOR_PRIMARIES_BT709: primaries_name = "BT.709"; break;
+            case COLOR_PRIMARIES_BT2020: primaries_name = "BT.2020"; break;
+            case COLOR_PRIMARIES_DCI_P3: primaries_name = "DCI-P3"; break;
+            default: primaries_name = "other"; break;
+        }
+
+        const char *space_name = "unknown";
+        switch (render_fmt.space) {
+            case COLOR_SPACE_BT709: space_name = "BT.709"; break;
+            case COLOR_SPACE_BT2020: space_name = "BT.2020"; break;
+            case COLOR_SPACE_BT601: space_name = "BT.601"; break;
+            default: space_name = "other"; break;
+        }
+
+        msg_Dbg(vd, "Applied effective display & buffer configuration: preferredDynamicRange=%s, contentsHeadroom=%.2f, toneMapMode=%s, wantsEDR=%s, buffer[transfer=%s, primaries=%s, matrix=%s]",
+                sys.effectivePdrStr ?: "None", sys.effectiveHeadroomVal, sys.effectiveTmmStr ?: "None", sys.effectiveEdrStr ?: "None",
+                transfer_name, primaries_name, space_name);
+        sys.hasLoggedEffectiveConfig = YES;
+    }
 
     id aspectRatio = @{
         (__bridge NSString*)kCVImageBufferPixelAspectRatioHorizontalSpacingKey:
