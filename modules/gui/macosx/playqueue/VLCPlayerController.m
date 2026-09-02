@@ -128,6 +128,7 @@ const CGFloat VLCVolumeDefault = 1.;
 - (void)updateTime:(vlc_tick_t)time forceUpdate:(BOOL)force;
 - (void)currentMediaItemChanged:(input_item_t *)newMediaItem;
 - (void)stateChanged:(enum vlc_player_state)state;
+- (void)cancelPlaybackHasTruelyEndedTimer;
 - (void)errorChanged:(enum vlc_player_error)error;
 - (void)newBufferingValue:(float)bufferValue;
 - (void)newRateValue:(float)rateValue;
@@ -719,8 +720,11 @@ static int BossCallback(vlc_object_t *p_this,
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
 {
-    libvlc_int_t *libvlc = vlc_object_instance(getIntf());
-    var_DelCallback(libvlc, "intf-boss", BossCallback, (__bridge void *)self);
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf != NULL) {
+        libvlc_int_t *libvlc = vlc_object_instance(p_intf);
+        var_DelCallback(libvlc, "intf-boss", BossCallback, (__bridge void *)self);
+    }
 
     [self onPlaybackHasTruelyEnded:nil];
     [_remoteControlService unsubscribeFromRemoteCommands];
@@ -950,10 +954,7 @@ static int BossCallback(vlc_object_t *p_this,
 
     /* we seem to start (over), don't start other players */
     if (_playerState != VLC_PLAYER_STATE_STOPPED) {
-        if (_playbackHasTruelyEndedTimer) {
-            [_playbackHasTruelyEndedTimer invalidate];
-            _playbackHasTruelyEndedTimer = nil;
-        }
+        [self cancelPlaybackHasTruelyEndedTimer];
     }
 
     [_defaultNotificationCenter postNotificationName:VLCPlayerStateChanged
@@ -967,9 +968,7 @@ static int BossCallback(vlc_object_t *p_this,
 
     /* schedule a timer to restart iTunes / Spotify because we are done here */
     if (_playerState == VLC_PLAYER_STATE_STOPPED) {
-        if (_playbackHasTruelyEndedTimer) {
-            [_playbackHasTruelyEndedTimer invalidate];
-        }
+        [self cancelPlaybackHasTruelyEndedTimer];
         _playbackHasTruelyEndedTimer = [NSTimer scheduledTimerWithTimeInterval:0.5
                                                                         target:self
                                                                       selector:@selector(onPlaybackHasTruelyEnded:)
@@ -983,19 +982,36 @@ static int BossCallback(vlc_object_t *p_this,
     }
 }
 
+// Cancels the pending playback-has-truly-ended timer, if any.
+// The run loop retains scheduled timers, so the timer must be invalidated and
+// not merely released: an armed timer would otherwise still fire during or
+// after interface teardown, when the interface object is already gone.
+- (void)cancelPlaybackHasTruelyEndedTimer
+{
+    [_playbackHasTruelyEndedTimer invalidate];
+    _playbackHasTruelyEndedTimer = nil;
+}
+
 // Called when playback has truly ended and likely no subsequent media will start playing
 - (void)onPlaybackHasTruelyEnded:(id)sender
 {
-    msg_Dbg(getIntf(), "Playback has been ended");
+    [self cancelPlaybackHasTruelyEndedTimer];
+
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf != NULL) {
+        msg_Dbg(p_intf, "Playback has been ended");
+    }
 
     [self resumeOtherAudioPlaybackApps];
-    _playbackHasTruelyEndedTimer = nil;
     _currentMedia = nil;
 }
 
 - (void)stopOtherAudioPlaybackApps
 {
     intf_thread_t *p_intf = getIntf();
+    if (p_intf == NULL)
+        return;
+
     int64_t controlOtherPlayers = var_InheritInteger(p_intf, "macosx-control-itunes");
     if (controlOtherPlayers <= 0)
         return;
@@ -1045,7 +1061,7 @@ static int BossCallback(vlc_object_t *p_this,
 - (void)resumeOtherAudioPlaybackApps
 {
     intf_thread_t *p_intf = getIntf();
-    if (var_InheritInteger(p_intf, "macosx-control-itunes") > 1) {
+    if (p_intf != NULL && var_InheritInteger(p_intf, "macosx-control-itunes") > 1) {
         if (@available(macOS 10.15, *)) {
             iTunesApplication *appleMusic = self.appleMusicApp;
             if (appleMusic != nil &&
