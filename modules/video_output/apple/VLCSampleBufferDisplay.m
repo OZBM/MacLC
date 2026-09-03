@@ -49,12 +49,20 @@
  * diffuse white in HDR production (e.g. PQ/HLG subtitles and graphics).
  * Standard SDR nominal peak white is 100 cd/m^2.
  * When EDR headroom H > 1.0, the display allows highlights up to H * SDR white.
- * To keep subtitle white comfortable and aligned with SDR reference white rather
- * than glaring at peak display brightness, we adapt subtitle layer opacity/luminance
- * by scaling with (ITU_BT2408_REFERENCE_WHITE_NITS / (SDR_NOMINAL_WHITE_NITS * headroom)).
+ *
+ * Rather than a hard cliff where factor = 203 / (100 * H) is clamped to 1.0
+ * (which leaves headroom 1.0 <= H <= 2.03 completely unattenuated and causes an
+ * abrupt drop beyond 2.03), we apply a smooth, monotonic luminance transfer:
+ *   factor = ITU_BT2408_REFERENCE_WHITE_NITS /
+ *            (ITU_BT2408_REFERENCE_WHITE_NITS + SDR_NOMINAL_WHITE_NITS * (headroom - 1.0)).
+ * This ensures factor == 1.0 when headroom <= 1.0 (pure SDR), decreases continuously
+ * and monotonically as headroom rises, and asymptotically approaches the BT.2408
+ * relationship 203 / (100 * headroom) at large headroom.
  */
 #define ITU_BT2408_REFERENCE_WHITE_NITS 203.0f
 #define SDR_NOMINAL_WHITE_NITS          100.0f
+#define SUBTITLE_MIN_LUMINANCE_FACTOR   0.15f
+#define DISPLAY_LAYER_INIT_TIMEOUT_SEC  1.0
 
 #if __is_target_os(ios)
 #define IS_VT_ROTATION_API_AVAILABLE __IPHONE_OS_VERSION_MAX_ALLOWED >= 160000
@@ -546,6 +554,7 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) VLCSampleBufferSubpicture *subpicture;
     @property (nonatomic) id<VLCPixelBufferRotationContext> rotationContext;
     @property (nonatomic) float userHeadroom;
+    @property (nonatomic) int hdrMode;
     @property (nonatomic) CGFloat currentHeadroom;
     @property (nonatomic) bool warnedToneMapFallback;
     @property (nonatomic) const char *effectivePdrStr;
@@ -559,6 +568,9 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) BOOL warnedPdrUnavailable;
     @property (nonatomic) BOOL warnedTmmUnavailable;
     @property (nonatomic) BOOL warnedScreenHeadroomUnavailable;
+    @property (nonatomic) BOOL isPreparingDisplay;
+    @property (nonatomic) BOOL invalidated;
+    @property (nonatomic) NSCondition *readyCondition;
 
     @property (nonatomic, readonly) pip_controller_t *pipcontroller;
 
@@ -567,6 +579,7 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     - (instancetype)initWithVoutDisplay:(vout_display_t *)vd;
     - (void)placeVideo:(vout_display_place_t)newPlace;
     - (void)updateDynamicRangeAndHeadroom;
+    - (AVSampleBufferDisplayLayer *)getOrWaitDisplayLayer;
 @end
 
 #pragma mark - Class Implementations
@@ -802,6 +815,10 @@ shouldInheritContentsScale:(CGFloat)newScale
     _warnedPdrUnavailable = NO;
     _warnedTmmUnavailable = NO;
     _warnedScreenHeadroomUnavailable = NO;
+    _hdrMode = 0;
+    _isPreparingDisplay = NO;
+    _invalidated = NO;
+    _readyCondition = [NSCondition new];
 
     return self;
 }
@@ -836,41 +853,73 @@ shouldInheritContentsScale:(CGFloat)newScale
 }
 
 - (void)prepareDisplay {
-    @synchronized(_displayLayer) {
-        if (_displayLayer)
-            return;
+    [_readyCondition lock];
+    if (_displayLayer || _isPreparingDisplay || _invalidated) {
+        [_readyCondition unlock];
+        return;
     }
+    _isPreparingDisplay = YES;
+    [_readyCondition unlock];
 
-    VLCSampleBufferDisplay *sys = self;
+    __weak VLCSampleBufferDisplay *weakSelf = self;
     vout_display_place_t place = *_vd->place;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (sys.displayView)
+    void (^createDisplayBlock)(void) = ^{
+        VLCSampleBufferDisplay *strongSelf = weakSelf;
+        if (!strongSelf || strongSelf.invalidated)
+            return;
+
+        if (strongSelf.displayView)
             return;
 
         VLCSampleBufferDisplayView *displayView;
         VLCSampleBufferSubpictureView *spuView;
-        VLCView *window = sys.window;
+        VLCView *window = strongSelf.window;
 
         displayView = [[VLCSampleBufferDisplayView alloc] init];
-        displayView.sys = sys;
+        displayView.sys = strongSelf;
         spuView = [VLCSampleBufferSubpictureView new];
         [window addSubview:displayView];
         [window addSubview:spuView];
 
-        displayView.frame = [sys frameForPlace:&place];
+        displayView.frame = [strongSelf frameForPlace:&place];
         [spuView setFrame:[window bounds]];
 
-        sys.displayView = displayView;
-        sys.spuView = spuView;
-        @synchronized(sys.displayLayer) {
-            sys.displayLayer = displayView.displayLayer;
-        }
+        strongSelf.displayView = displayView;
+        strongSelf.spuView = spuView;
+        [strongSelf.readyCondition lock];
+        strongSelf.displayLayer = displayView.displayLayer;
+        [strongSelf.readyCondition broadcast];
+        [strongSelf.readyCondition unlock];
 
-        [sys updateDynamicRangeAndHeadroom];
-        [sys observeDisplayLayerFailures];
-        [sys setupScreenObservers];
-        [sys preparePictureInPicture];
-    });
+        if (strongSelf.invalidated)
+            return;
+
+        [strongSelf updateDynamicRangeAndHeadroom];
+        [strongSelf observeDisplayLayerFailures];
+        [strongSelf setupScreenObservers];
+        [strongSelf preparePictureInPicture];
+    };
+
+    if ([NSThread isMainThread]) {
+        createDisplayBlock();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), createDisplayBlock);
+    }
+}
+
+- (AVSampleBufferDisplayLayer *)getOrWaitDisplayLayer {
+    [_readyCondition lock];
+    if (_displayLayer == nil && !_invalidated && ![NSThread isMainThread]) {
+        NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:DISPLAY_LAYER_INIT_TIMEOUT_SEC];
+        while (_displayLayer == nil && !_invalidated) {
+            if (![_readyCondition waitUntilDate:deadline]) {
+                break;
+            }
+        }
+    }
+    AVSampleBufferDisplayLayer *layer = _displayLayer;
+    [_readyCondition unlock];
+    return layer;
 }
 
 - (void)setupScreenObservers {
@@ -925,18 +974,22 @@ shouldInheritContentsScale:(CGFloat)newScale
 
 - (void)updateDynamicRangeAndHeadroom {
     if (![NSThread isMainThread]) {
+        __weak VLCSampleBufferDisplay *weakSelf = self;
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self updateDynamicRangeAndHeadroom];
+            VLCSampleBufferDisplay *strongSelf = weakSelf;
+            if (strongSelf && !strongSelf.invalidated) {
+                [strongSelf updateDynamicRangeAndHeadroom];
+            }
         });
         return;
     }
 
-    if (!_displayView)
+    if (_invalidated || !_displayView)
         return;
 
 #if TARGET_OS_OSX
     vout_display_t *vd = _vd;
-    int hdr_mode = var_InheritInteger(vd, "macosx-hdr-mode");
+    int hdr_mode = self.hdrMode;
 
     NSWindow *nswindow = self.window.window ?: self.displayView.window;
     NSScreen *screen = nswindow.screen ?: [NSScreen mainScreen];
@@ -1153,11 +1206,12 @@ shouldInheritContentsScale:(CGFloat)newScale
 #endif
         CGFloat factor = 1.0;
         if (hdr_mode != 2 && hdr_mode != 3 && effectiveHeadroom > 1.0) {
-            factor = (CGFloat)(ITU_BT2408_REFERENCE_WHITE_NITS / (SDR_NOMINAL_WHITE_NITS * effectiveHeadroom));
+            factor = (CGFloat)(ITU_BT2408_REFERENCE_WHITE_NITS /
+                (ITU_BT2408_REFERENCE_WHITE_NITS + SDR_NOMINAL_WHITE_NITS * (effectiveHeadroom - 1.0)));
             if (factor > 1.0)
                 factor = 1.0;
-            else if (factor < 0.15)
-                factor = 0.15;
+            else if (factor < SUBTITLE_MIN_LUMINANCE_FACTOR)
+                factor = SUBTITLE_MIN_LUMINANCE_FACTOR;
         }
         if (fabs(_lastSubtitleScale - factor) > 0.001f || !_hasComputedSubtitleScale) {
             msg_Dbg(vd, "Subtitle reference-white scale factor computed: %.3f (derived from headroom %.2f, reference white %.0f nits)",
@@ -1222,13 +1276,23 @@ shouldInheritContentsScale:(CGFloat)newScale
 }
 
 - (void)close {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [_readyCondition lock];
+    _invalidated = YES;
+    [_readyCondition broadcast];
+    [_readyCondition unlock];
 
-    VLCSampleBufferDisplay *sys = self;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [sys.displayView removeFromSuperview];
-        [sys.spuView removeFromSuperview];
-    });
+    void (^cleanupBlock)(void) = ^{
+        [[NSNotificationCenter defaultCenter] removeObserver:self];
+        [self.displayView removeFromSuperview];
+        [self.spuView removeFromSuperview];
+    };
+
+    if ([NSThread isMainThread]) {
+        cleanupBlock();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), cleanupBlock);
+    }
+
     DeletePipController(_pipcontroller);
     _pipcontroller = NULL;
 }
@@ -1260,8 +1324,10 @@ static int EdrHeadroomCallback(vlc_object_t *obj, char const *name,
 static int HdrModeCallback(vlc_object_t *obj, char const *name,
                            vlc_value_t prev, vlc_value_t cur, void *data)
 {
-    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev); VLC_UNUSED(cur);
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
     VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.hdrMode = cur.i_int;
+    msg_Dbg(sys.vd, "HDR mode updated via variable callback: %d", (int)cur.i_int);
     [sys updateDynamicRangeAndHeadroom];
     return VLC_SUCCESS;
 }
@@ -1317,10 +1383,14 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         break;
     }
 
-    @synchronized(sys.displayLayer) {
-        if (sys.displayLayer == nil)
-            return;
-        if (sys.displayLayer.status == AVQueuedSampleBufferRenderingStatusFailed)
+    AVSampleBufferDisplayLayer *displayLayer = [sys getOrWaitDisplayLayer];
+    if (displayLayer == nil) {
+        msg_Warn(vd, "Display layer not ready; dropping picture");
+        return;
+    }
+
+    @synchronized(displayLayer) {
+        if (displayLayer.status == AVQueuedSampleBufferRenderingStatusFailed)
             return;
     }
 
@@ -1361,7 +1431,7 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
     if (render_fmt.lighting.MaxCLL == 0 && vd->fmt->lighting.MaxCLL != 0)
         render_fmt.lighting = vd->fmt->lighting;
 
-    int hdr_mode = var_InheritInteger(vd, "macosx-hdr-mode");
+    int hdr_mode = sys.hdrMode;
     switch (hdr_mode) {
     case 1: /* Force Native EDR / HDR */
         if (render_fmt.transfer != TRANSFER_FUNC_HLG)
@@ -1479,8 +1549,8 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         return;
     }
 
-    @synchronized(sys.displayLayer) {
-        [sys.displayLayer enqueueSampleBuffer:sampleBuffer];
+    @synchronized(displayLayer) {
+        [displayLayer enqueueSampleBuffer:sampleBuffer];
     }
 
     CFRelease(sampleBuffer);
@@ -1529,7 +1599,7 @@ static void UpdateSubpictureRegions(vout_display_t *vd,
         CGImageRef image = CGImageCreate(
             r->p_picture->format.i_visible_width, r->p_picture->format.i_visible_height,
             8, 32, r->p_picture->p->i_pitch,
-            space, kCGBitmapByteOrderDefault | kCGImageAlphaFirst,
+            space, kCGBitmapByteOrder32Host | kCGImageAlphaFirst,
             provider, NULL, true, kCGRenderingIntentDefault
             );
         VLCSampleBufferSubpictureRegion *region;
@@ -1621,8 +1691,12 @@ static void RenderSubpicture(vout_display_t *vd, const vlc_render_subpicture *sp
     VLCSampleBufferDisplay *sys;
     sys = (__bridge VLCSampleBufferDisplay*)vd->sys;
 
+    __weak VLCSampleBufferDisplay *weakSys = sys;
     dispatch_async(dispatch_get_main_queue(), ^{
-        [sys.spuView drawSubpicture:sys.subpicture];
+        VLCSampleBufferDisplay *strongSys = weakSys;
+        if (strongSys && !strongSys.invalidated) {
+            [strongSys.spuView drawSubpicture:strongSys.subpicture];
+        }
     });
 }
 
@@ -1655,8 +1729,12 @@ static int PlacementChanged(vout_display_t *vd, const vout_display_place_t *plac
     sys = (__bridge VLCSampleBufferDisplay*)vd->sys;
 
     vout_display_place_t newPlace = *place;
+    __weak VLCSampleBufferDisplay *weakSys = sys;
     dispatch_async(dispatch_get_main_queue(), ^{
-        [sys placeVideo:newPlace];
+        VLCSampleBufferDisplay *strongSys = weakSys;
+        if (strongSys && !strongSys.invalidated) {
+            [strongSys placeVideo:newPlace];
+        }
     });
 
     return VLC_SUCCESS;
@@ -1759,6 +1837,9 @@ static int Open (vout_display_t *vd,
 
         var_Create(vd, "macosx-edr-headroom", VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
         var_AddCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)sys);
+
+        int hdr_mode = var_InheritInteger(vd, "macosx-hdr-mode");
+        sys.hdrMode = hdr_mode;
 
         var_Create(vd, "macosx-hdr-mode", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
         var_AddCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)sys);
