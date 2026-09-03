@@ -828,27 +828,44 @@ static bool ParseHEVCHDR10Plus(decoder_t *p_dec, struct vt_hevc_context *hevcctx
 
                     if (num_windows >= 1 && num_windows <= 3)
                     {
+                        if (bs_pos(&bs) + (size_t)(num_windows - 1) * 153 > end_pos)
+                            goto skip_msg;
+
                         for (int w = 1; w < num_windows; w++)
                         {
                             bs_skip(&bs, 153);
                         }
 
+                        if (bs_pos(&bs) + 27 > end_pos)
+                            goto skip_msg;
                         uint32_t targeted_max_luma = bs_read(&bs, 27);
                         out->targeted_luminance = (float)targeted_max_luma;
 
+                        if (bs_pos(&bs) + 1 > end_pos)
+                            goto skip_msg;
                         uint8_t actual_peak_flag = bs_read1(&bs);
                         if (actual_peak_flag)
                         {
+                            if (bs_pos(&bs) + 10 > end_pos)
+                                goto skip_msg;
                             uint8_t rows = bs_read(&bs, 5);
                             uint8_t cols = bs_read(&bs, 5);
                             if (rows >= 2 && rows <= 25 && cols >= 2 && cols <= 25)
-                                bs_skip(&bs, (size_t)rows * cols * 4);
+                            {
+                                size_t table_bits = (size_t)rows * cols * 4;
+                                if (bs_pos(&bs) + table_bits > end_pos)
+                                    goto skip_msg;
+                                bs_skip(&bs, table_bits);
+                            }
                             else
                                 goto skip_msg;
                         }
 
                         for (int w = 0; w < num_windows; w++)
                         {
+                            if (bs_pos(&bs) + 72 > end_pos)
+                                goto skip_msg;
+
                             for (int i = 0; i < 3; i++)
                             {
                                 uint32_t maxscl = bs_read(&bs, 17);
@@ -864,6 +881,9 @@ static bool ParseHEVCHDR10Plus(decoder_t *p_dec, struct vt_hevc_context *hevcctx
                                 goto skip_msg;
                             if (w == 0)
                                 out->num_histogram = num_hist;
+
+                            if (bs_pos(&bs) + (size_t)num_hist * 24 + 10 > end_pos)
+                                goto skip_msg;
 
                             for (int i = 0; i < num_hist; i++)
                             {
@@ -881,24 +901,37 @@ static bool ParseHEVCHDR10Plus(decoder_t *p_dec, struct vt_hevc_context *hevcctx
                                 out->fraction_bright_pixels = (float)frac_bright / 1000.0f;
                         }
 
+                        if (bs_pos(&bs) + 1 > end_pos)
+                            goto skip_msg;
                         uint8_t mast_actual_peak_flag = bs_read1(&bs);
                         if (mast_actual_peak_flag)
                         {
+                            if (bs_pos(&bs) + 10 > end_pos)
+                                goto skip_msg;
                             uint8_t rows = bs_read(&bs, 5);
                             uint8_t cols = bs_read(&bs, 5);
                             if (rows >= 2 && rows <= 25 && cols >= 2 && cols <= 25)
-                                bs_skip(&bs, (size_t)rows * cols * 4);
+                            {
+                                size_t table_bits = (size_t)rows * cols * 4;
+                                if (bs_pos(&bs) + table_bits > end_pos)
+                                    goto skip_msg;
+                                bs_skip(&bs, table_bits);
+                            }
                             else
                                 goto skip_msg;
                         }
 
                         for (int w = 0; w < num_windows; w++)
                         {
+                            if (bs_pos(&bs) + 1 > end_pos)
+                                goto skip_msg;
                             uint8_t tone_mapping_flag = bs_read1(&bs);
                             if (w == 0)
                                 out->tone_mapping_flag = tone_mapping_flag;
                             if (tone_mapping_flag)
                             {
+                                if (bs_pos(&bs) + 28 > end_pos)
+                                    goto skip_msg;
                                 uint16_t knee_x = bs_read(&bs, 12);
                                 uint16_t knee_y = bs_read(&bs, 12);
                                 uint8_t num_anchors = bs_read(&bs, 4);
@@ -910,6 +943,8 @@ static bool ParseHEVCHDR10Plus(decoder_t *p_dec, struct vt_hevc_context *hevcctx
                                     out->knee_point_y = (float)knee_y / 4095.0f;
                                     out->num_bezier_anchors = num_anchors;
                                 }
+                                if (bs_pos(&bs) + (size_t)num_anchors * 10 > end_pos)
+                                    goto skip_msg;
                                 for (int i = 0; i < num_anchors; i++)
                                 {
                                     uint16_t anchor = bs_read(&bs, 10);
@@ -918,12 +953,18 @@ static bool ParseHEVCHDR10Plus(decoder_t *p_dec, struct vt_hevc_context *hevcctx
                                 }
                             }
 
+                            if (bs_pos(&bs) + 1 > end_pos)
+                                goto skip_msg;
                             uint8_t color_sat_flag = bs_read1(&bs);
                             if (color_sat_flag)
+                            {
+                                if (bs_pos(&bs) + 6 > end_pos)
+                                    goto skip_msg;
                                 bs_skip(&bs, 6);
+                            }
                         }
 
-                        if (!bs_error(&bs))
+                        if (!bs_error(&bs) && bs_pos(&bs) <= end_pos)
                             b_found = true;
                     }
                 }
@@ -969,7 +1010,7 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
     }
 
     size_t i_rbsp = rpu_unescape_rbsp(p_payload, i_payload, p_rbsp, i_payload);
-    if (i_rbsp < 4)
+    if (i_rbsp < 5)
     {
         if (b_allocated)
             free(p_rbsp);
@@ -1145,6 +1186,8 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
         {
             uint32_t nlq_method_idc = bs_read(&bs, 3);
             out->nlq_method_idc = (enum vlc_dovi_nlq_method_t)nlq_method_idc;
+            if (bs_pos(&bs) + (size_t)bl_bit_depth * 2 > i_rbsp * 8)
+                goto fail;
             bs_skip(&bs, (size_t)bl_bit_depth * 2);
         }
         else
@@ -1232,6 +1275,9 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
 
         if (!dm_compression)
         {
+            if (bs_pos(&bs) + 509 > i_rbsp * 8)
+                goto fail;
+
             for (int i = 0; i < 9; i++)
             {
                 int16_t val = (int16_t)bs_read(&bs, 16);
@@ -1260,34 +1306,87 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
             out->source_max_pq = bs_read(&bs, 12);
             bs_skip(&bs, 10); /* source_diagonal */
         }
+        else if (hevcctx->dovi_state.b_valid)
+        {
+            memcpy(out->nonlinear_matrix, hevcctx->dovi_state.last_dovi.nonlinear_matrix,
+                   sizeof(out->nonlinear_matrix));
+            memcpy(out->nonlinear_offset, hevcctx->dovi_state.last_dovi.nonlinear_offset,
+                   sizeof(out->nonlinear_offset));
+            memcpy(out->linear_matrix, hevcctx->dovi_state.last_dovi.linear_matrix,
+                   sizeof(out->linear_matrix));
+            out->source_min_pq = hevcctx->dovi_state.last_dovi.source_min_pq;
+            out->source_max_pq = hevcctx->dovi_state.last_dovi.source_max_pq;
+        }
+        else
+        {
+            goto fail;
+        }
 
         uint32_t num_ext_blocks = bs_read_ue(&bs);
         bs_align(&bs);
 
-        for (uint32_t b = 0; b < num_ext_blocks && !bs_error(&bs); b++)
+        if (num_ext_blocks > 64)
+            goto fail;
+
+        for (uint32_t b = 0; b < num_ext_blocks; b++)
         {
+            if (bs_error(&bs))
+                goto fail;
+
             uint32_t ext_block_length = bs_read_ue(&bs);
             uint8_t ext_block_level = bs_read(&bs, 8);
+            if (bs_error(&bs))
+                goto fail;
+
             size_t start_pos = bs_pos(&bs);
             size_t block_bits = (size_t)ext_block_length * 8;
 
+            if (block_bits > i_rbsp * 8 || start_pos + block_bits > i_rbsp * 8)
+                goto fail;
+
             if (ext_block_level == 1)
             {
+                if (block_bits < 36)
+                    goto fail;
                 out->source_min_pq = bs_read(&bs, 12);
                 out->source_max_pq = bs_read(&bs, 12);
                 bs_skip(&bs, 12); /* source_mid_pq */
             }
 
-            size_t current_pos = bs_pos(&bs);
-            if (current_pos > start_pos && current_pos - start_pos < block_bits)
-            {
-                bs_skip(&bs, block_bits - (current_pos - start_pos));
-            }
-            else if (current_pos == start_pos)
-            {
-                bs_skip(&bs, block_bits);
-            }
+            if (bs_error(&bs))
+                goto fail;
+
+            size_t parsed_bits = bs_pos(&bs) - start_pos;
+            if (parsed_bits > block_bits)
+                goto fail;
+
+            bs_skip(&bs, block_bits - parsed_bits);
+            if (bs_error(&bs))
+                goto fail;
         }
+
+        /*
+         * Note on DMv2 extension blocks:
+         * FFmpeg's dovi_rpudec.c checks (get_bits_left(gb) > 48) to parse a second
+         * DMv2 extension block group after DMv1. In raw RBSP without container-level
+         * length framing or CRC32 verification, remaining bits > 48 cannot safely
+         * distinguish between a genuine DMv2 group and trailing NAL padding/zeros,
+         * risking bit desynchronization and false parse failures. Moreover, Level 1
+         * brightness metadata (source_min_pq, source_max_pq) resides in DMv1 blocks;
+         * DMv2 blocks contain trim/display metadata (levels 3, 8-11, 254) not stored
+         * in vlc_video_dovi_metadata_t. We therefore stop after the DMv1 block group.
+         */
+    }
+    else if (hevcctx->dovi_state.b_valid)
+    {
+        memcpy(out->nonlinear_matrix, hevcctx->dovi_state.last_dovi.nonlinear_matrix,
+               sizeof(out->nonlinear_matrix));
+        memcpy(out->nonlinear_offset, hevcctx->dovi_state.last_dovi.nonlinear_offset,
+               sizeof(out->nonlinear_offset));
+        memcpy(out->linear_matrix, hevcctx->dovi_state.last_dovi.linear_matrix,
+               sizeof(out->linear_matrix));
+        out->source_min_pq = hevcctx->dovi_state.last_dovi.source_min_pq;
+        out->source_max_pq = hevcctx->dovi_state.last_dovi.source_max_pq;
     }
 
     if (bs_error(&bs))
