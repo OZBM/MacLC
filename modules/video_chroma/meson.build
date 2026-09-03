@@ -163,3 +163,16 @@ vlc_tests += {
     'dependencies': [libvlccore_dep],
     'include_directories': [vlc_include_dirs]
 }
+
+# Chroma copy NEON test
+if host_machine.cpu_family() == 'aarch64'
+vlc_tests += {
+    'name': 'test_src_video_chroma_copy_neon',
+    'sources': files('../../test/src/video_chroma/copy_neon.c'),
+    'suite' : ['video_chroma'],
+    'link_with': [chroma_copy_lib, vlc_libcompat, libvlccore, libvlc],
+    'dependencies': [libvlccore_dep],
+    'include_directories': [vlc_include_dirs]
+}
+endif
+

@@ -394,6 +394,13 @@ if host_system == 'darwin'
         'suite' : ['src', 'test_src'],
         'link_with' : [libvlc, libvlccore, libvlc_vtutils],
     }
+
+    vlc_tests += {
+        'name' : 'test_src_misc_cvpx_hdr_metadata',
+        'sources' : files('misc/cvpx_hdr_metadata.c'),
+        'suite' : ['src', 'test_src'],
+        'link_with' : [libvlc, libvlccore, libvlc_vtutils],
+    }
 endif
 
 vlc_tests += {
