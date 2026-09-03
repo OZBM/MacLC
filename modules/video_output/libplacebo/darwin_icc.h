@@ -29,12 +29,16 @@ typedef struct vlc_placebo_darwin_icc vlc_placebo_darwin_icc;
 /**
  * Creates a Darwin ICC watcher for the given window view handle.
  *
+ * The watcher owns its own dirty flag; poll it with
+ * vlc_placebo_darwin_icc_check_and_clear_dirty(). It deliberately holds no
+ * pointer into the caller's state, so the caller may be freed as soon as
+ * vlc_placebo_darwin_icc_destroy() returns, even while an AppKit notification
+ * is still in flight on the main thread.
+ *
  * @param nsobject the window's handle.nsobject (expected to be an NSView)
- * @param dirty pointer to atomic_bool dirty flag in vout_display_sys_t
  * @return opaque watcher pointer, or NULL if handle is not an NSView or allocation fails
  */
-vlc_placebo_darwin_icc *vlc_placebo_darwin_icc_create(void *nsobject,
-                                                      atomic_bool *dirty);
+vlc_placebo_darwin_icc *vlc_placebo_darwin_icc_create(void *nsobject);
 
 /**
  * Destroys the Darwin ICC watcher and unregisters all screen observers.

@@ -102,6 +102,7 @@ static void UpdateIccProfile(vout_display_t *, const vlc_icc_profile_t *);
 #ifdef __APPLE__
 static void DisplayReconfigCallback(CGDirectDisplayID, CGDisplayChangeSummaryFlags, void *);
 static void UpdateDarwinIccProfile(vout_display_t *);
+bool vlc_placebo_darwin_icc_check_and_clear_dirty(vlc_placebo_darwin_icc *);
 #endif
 
 static const struct vlc_display_operations ops = {
@@ -195,7 +196,7 @@ static int Open(vout_display_t *vd,
     void *nsobject = (vd->cfg->window != NULL &&
                       vd->cfg->window->type == VLC_WINDOW_TYPE_NSOBJECT)
                      ? vd->cfg->window->handle.nsobject : NULL;
-    sys->darwin_icc = vlc_placebo_darwin_icc_create(nsobject, &sys->icc_dirty);
+    sys->darwin_icc = vlc_placebo_darwin_icc_create(nsobject);
     CGDisplayRegisterReconfigurationCallback(DisplayReconfigCallback, vd);
 #endif
 
@@ -270,7 +271,10 @@ static void PictureRender(vout_display_t *vd, picture_t *pic,
         return;
 
 #ifdef __APPLE__
-    if (atomic_exchange_explicit(&sys->icc_dirty, false, memory_order_relaxed))
+    bool icc_dirty = atomic_exchange_explicit(&sys->icc_dirty, false, memory_order_relaxed);
+    if (sys->darwin_icc != NULL && vlc_placebo_darwin_icc_check_and_clear_dirty(sys->darwin_icc))
+        icc_dirty = true;
+    if (icc_dirty)
         UpdateDarwinIccProfile(vd);
 #endif
 

@@ -29,26 +29,27 @@
 #include "darwin_icc.h"
 
 @interface VLCDarwinICCWatcher : NSObject
-- (instancetype)initWithView:(NSView *)viewObject dirtyFlag:(atomic_bool *)dirtyFlag;
+- (instancetype)initWithView:(NSView *)viewObject;
 - (CGDirectDisplayID)displayID;
 - (void)requestUpdate;
+- (bool)checkAndClearDirty;
 - (void)invalidate;
 @end
 
 @implementation VLCDarwinICCWatcher {
     __weak NSView *_view;
-    atomic_bool *_dirty;
+    atomic_bool _dirty;
     _Atomic CGDirectDisplayID _cachedDisplayID;
     atomic_bool _invalidated;
 }
 
-- (instancetype)initWithView:(NSView *)viewObject dirtyFlag:(atomic_bool *)dirtyFlag
+- (instancetype)initWithView:(NSView *)viewObject
 {
     self = [super init];
     if (!self)
         return nil;
 
-    _dirty = dirtyFlag;
+    atomic_init(&_dirty, false);
     atomic_init(&_invalidated, false);
     atomic_init(&_cachedDisplayID, CGMainDisplayID());
     _view = viewObject;
@@ -121,9 +122,14 @@
     CGDirectDisplayID newID = [self resolveDisplayID];
     CGDirectDisplayID oldID = atomic_exchange_explicit(&_cachedDisplayID, newID, memory_order_relaxed);
 
-    if ((forceDirty || newID != oldID) && _dirty != NULL) {
-        atomic_store_explicit(_dirty, true, memory_order_relaxed);
+    if (forceDirty || newID != oldID) {
+        atomic_store_explicit(&_dirty, true, memory_order_relaxed);
     }
+}
+
+- (bool)checkAndClearDirty
+{
+    return atomic_exchange_explicit(&_dirty, false, memory_order_relaxed);
 }
 
 - (void)screenParametersDidChange:(NSNotification *)notification
@@ -183,7 +189,6 @@
     if (atomic_exchange_explicit(&_invalidated, true, memory_order_relaxed))
         return;
 
-    _dirty = NULL;
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
@@ -198,7 +203,7 @@ struct vlc_placebo_darwin_icc {
     void *watcher;
 };
 
-vlc_placebo_darwin_icc *vlc_placebo_darwin_icc_create(void *nsobject, atomic_bool *dirty)
+vlc_placebo_darwin_icc *vlc_placebo_darwin_icc_create(void *nsobject)
 {
     if (nsobject == NULL)
         return NULL;
@@ -211,7 +216,7 @@ vlc_placebo_darwin_icc *vlc_placebo_darwin_icc_create(void *nsobject, atomic_boo
     if (icc == NULL)
         return NULL;
 
-    VLCDarwinICCWatcher *watcher = [[VLCDarwinICCWatcher alloc] initWithView:(NSView *)view dirtyFlag:dirty];
+    VLCDarwinICCWatcher *watcher = [[VLCDarwinICCWatcher alloc] initWithView:(NSView *)view];
     if (watcher == nil) {
         free(icc);
         return NULL;
@@ -251,4 +256,13 @@ void vlc_placebo_darwin_icc_request_update(vlc_placebo_darwin_icc *icc)
 
     VLCDarwinICCWatcher *watcher = (__bridge VLCDarwinICCWatcher *)icc->watcher;
     [watcher requestUpdate];
+}
+
+bool vlc_placebo_darwin_icc_check_and_clear_dirty(vlc_placebo_darwin_icc *icc)
+{
+    if (icc == NULL || icc->watcher == NULL)
+        return false;
+
+    VLCDarwinICCWatcher *watcher = (__bridge VLCDarwinICCWatcher *)icc->watcher;
+    return [watcher checkAndClearDirty];
 }
