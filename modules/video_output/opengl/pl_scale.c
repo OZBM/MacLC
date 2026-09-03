@@ -22,6 +22,8 @@
 # include "config.h"
 #endif
 
+#include <stdatomic.h>
+
 #include "limits.h"
 
 #include <vlc_common.h>
@@ -70,6 +72,11 @@ struct sys
 
     unsigned out_width;
     unsigned out_height;
+
+    vlc_object_t *display;
+    _Atomic float headroom;
+    float user_headroom;
+    bool is_hdr_target;
 };
 
 static void
@@ -188,6 +195,18 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         vlc_placebo_HdrMetadata(meta->hdr10plus, &frame_in->color.hdr);
     }
 
+    if (sys->is_hdr_target)
+    {
+        float headroom = atomic_load_explicit(&sys->headroom, memory_order_relaxed);
+        if (headroom <= 0.0f)
+            headroom = sys->user_headroom;
+
+        if (headroom > 0.0f)
+            frame_out->color.hdr.max_luma = 100.0f * headroom;
+        else
+            frame_out->color.hdr.max_luma = 1000.0f;
+    }
+
     GLint value;
     vt->GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &value);
     GLuint final_draw_framebuffer = value; /* as GLuint */
@@ -241,10 +260,35 @@ RequestOutputSize(struct vlc_gl_filter *filter,
     return VLC_SUCCESS;
 }
 
+static int
+EdrHeadroomCallback(vlc_object_t *obj, const char *var,
+                    vlc_value_t oldval, vlc_value_t newval, void *data)
+{
+    (void) obj; (void) var; (void) oldval;
+    _Atomic float *headroom = data;
+    atomic_store_explicit(headroom, newval.f_float, memory_order_relaxed);
+    return VLC_SUCCESS;
+}
+
+static vlc_object_t *
+FindEdrHeadroomSource(struct vlc_gl_filter *filter)
+{
+    for (vlc_object_t *obj = VLC_OBJECT(filter); obj != NULL; obj = vlc_object_parent(obj))
+    {
+        if (var_Type(obj, "edr-headroom-effective") != 0)
+            return obj;
+    }
+    return NULL;
+}
+
 static void
 Close(struct vlc_gl_filter *filter)
 {
     struct sys *sys = filter->sys;
+
+    if (sys->display != NULL)
+        var_DelCallback(sys->display, "edr-headroom-effective",
+                        EdrHeadroomCallback, &sys->headroom);
 
     pl_renderer_destroy(&sys->pl_renderer);
     pl_opengl_destroy(&sys->pl_opengl);
@@ -379,14 +423,33 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
     else
         color_out.transfer = sys->frame_in.color.transfer;
 
-    if (is_hdr || (target_trc && pl_color_transfer_is_hdr(target_trc)))
-    {
-        float headroom = var_InheritFloat(filter, "edr-headroom-effective");
-        if (headroom <= 0.0f)
-            headroom = var_InheritFloat(filter, "macosx-edr-headroom");
+    sys->is_hdr_target = is_hdr || (target_trc && pl_color_transfer_is_hdr(target_trc));
+    sys->user_headroom = var_InheritFloat(filter, "macosx-edr-headroom");
 
-        if (headroom > 0.0f)
-            color_out.hdr.max_luma = 100.0f * headroom;
+    if (sys->is_hdr_target)
+    {
+        vlc_object_t *display = FindEdrHeadroomSource(filter);
+        float headroom = 0.0f;
+        if (display != NULL)
+        {
+            headroom = var_GetFloat(display, "edr-headroom-effective");
+            sys->display = display;
+        }
+        else
+            headroom = var_InheritFloat(filter, "edr-headroom-effective");
+
+        atomic_init(&sys->headroom, headroom);
+
+        if (display != NULL)
+            var_AddCallback(display, "edr-headroom-effective",
+                            EdrHeadroomCallback, &sys->headroom);
+
+        float effective = headroom;
+        if (effective <= 0.0f)
+            effective = sys->user_headroom;
+
+        if (effective > 0.0f)
+            color_out.hdr.max_luma = 100.0f * effective;
         else
             color_out.hdr.max_luma = 1000.0f;
     }
@@ -428,6 +491,9 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
     return VLC_SUCCESS;
 
 error:
+    if (sys->display != NULL)
+        var_DelCallback(sys->display, "edr-headroom-effective",
+                        EdrHeadroomCallback, &sys->headroom);
     pl_renderer_destroy(&sys->pl_renderer);
     pl_opengl_destroy(&sys->pl_opengl);
     pl_log_destroy(&sys->pl_log);
