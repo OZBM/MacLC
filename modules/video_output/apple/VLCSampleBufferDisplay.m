@@ -454,10 +454,18 @@ CreateCVPXConverter(vout_display_t *vd, const video_format_t *fmt)
     es_format_InitFromVideo(&converter->fmt_in, fmt);
     es_format_InitFromVideo(&converter->fmt_out, fmt);
 
+    const vlc_chroma_description_t *desc =
+        vlc_fourcc_GetChromaDescription(fmt->i_chroma);
+    bool is_422_10b = desc != NULL &&
+                      desc->subtype == VLC_CHROMA_SUBTYPE_YUV422 &&
+                      desc->pixel_bits > 10;
+
     bool is_10bit_hdr = (fmt->i_chroma == VLC_CODEC_I420_10L ||
                          fmt->i_chroma == VLC_CODEC_I420_10B ||
                          fmt->i_chroma == VLC_CODEC_P010 ||
                          fmt->i_chroma == VLC_CODEC_CVPX_P010 ||
+                         fmt->i_chroma == VLC_CODEC_CVPX_P216 ||
+                         is_422_10b ||
                          fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
                          fmt->transfer == TRANSFER_FUNC_HLG ||
                          fmt->primaries == COLOR_PRIMARIES_BT2020);
@@ -465,7 +473,8 @@ CreateCVPXConverter(vout_display_t *vd, const video_format_t *fmt)
     if (is_10bit_hdr)
     {
         converter->fmt_out.video.i_chroma =
-        converter->fmt_out.i_codec = VLC_CODEC_CVPX_P010;
+        converter->fmt_out.i_codec = is_422_10b ?
+            VLC_CODEC_CVPX_P216 : VLC_CODEC_CVPX_P010;
     }
     else if (fmt->i_chroma == VLC_CODEC_NV12)
     {

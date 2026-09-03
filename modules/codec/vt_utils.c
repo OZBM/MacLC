@@ -147,7 +147,8 @@ cvpxpic_create_mapped(const video_format_t *fmt, CVPixelBufferRef cvpx,
         case VLC_CODEC_BGRA:
         case VLC_CODEC_UYVY: planes_count = 0; break;
         case VLC_CODEC_NV12:
-        case VLC_CODEC_P010: planes_count = 2; break;
+        case VLC_CODEC_P010:
+        case VLC_CODEC_P216: planes_count = 2; break;
         case VLC_CODEC_I420: planes_count = 3; break;
         default: return NULL;
     }
@@ -199,6 +200,7 @@ cvpxpic_unmap(picture_t *mapped_pic)
         case VLC_CODEC_UYVY: fmt.i_chroma = VLC_CODEC_CVPX_UYVY; break;
         case VLC_CODEC_NV12: fmt.i_chroma = VLC_CODEC_CVPX_NV12; break;
         case VLC_CODEC_P010: fmt.i_chroma = VLC_CODEC_CVPX_P010; break;
+        case VLC_CODEC_P216: fmt.i_chroma = VLC_CODEC_CVPX_P216; break;
         case VLC_CODEC_I420: fmt.i_chroma = VLC_CODEC_CVPX_I420; break;
         case VLC_CODEC_BGRA: fmt.i_chroma = VLC_CODEC_CVPX_BGRA; break;
         default:
@@ -241,6 +243,9 @@ cvpxpool_create(const video_format_t *fmt, unsigned count)
             break;
         case VLC_CODEC_CVPX_P010:
             cvpx_format = 'x420'; /* kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange */
+            break;
+        case VLC_CODEC_CVPX_P216:
+            cvpx_format = kCVPixelFormatType_422YpCbCr16BiPlanarVideoRange;
             break;
         default:
             return NULL;
