@@ -85,6 +85,23 @@ void Copy420_16_SP_to_P(picture_t *dst, const uint8_t *src[ARRAY_STATIC_SIZE 2],
                         const size_t src_pitch[ARRAY_STATIC_SIZE 2], unsigned height,
                         int bitshift, const copy_cache_t *cache);
 
+/* Copy planes from NV16/P216 to NV16/P216 */
+void Copy422_SP_to_SP(picture_t *dst, const uint8_t *src[ARRAY_STATIC_SIZE 2],
+                      const size_t src_pitch[ARRAY_STATIC_SIZE 2], unsigned height,
+                      const copy_cache_t *cache);
+
+/* Copy planes from I422_16 to P216. A positive bitshift value will shift bits
+ * to the right, a negative value will shift to the left. */
+void Copy422_16_P_to_SP(picture_t *dst, const uint8_t *src[ARRAY_STATIC_SIZE 3],
+                        const size_t src_pitch[ARRAY_STATIC_SIZE 3], unsigned height,
+                        int bitshift, const copy_cache_t *cache);
+
+/* Copy planes from P216 to I422_16. A positive bitshift value will shift bits
+ * to the right, a negative value will shift to the left. */
+void Copy422_16_SP_to_P(picture_t *dst, const uint8_t *src[ARRAY_STATIC_SIZE 2],
+                        const size_t src_pitch[ARRAY_STATIC_SIZE 2], unsigned height,
+                        int bitshift, const copy_cache_t *cache);
+
 /**
  * This functions sets the internal plane pointers/dimensions for the given
  * buffer.

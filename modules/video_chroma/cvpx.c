@@ -70,21 +70,29 @@ static void ProbeChroma(vlc_chroma_conv_vec *vec)
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_BGRA, VLC_CODEC_CVPX_I420, true);
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_BGRA, VLC_CODEC_CVPX_NV12, true);
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_BGRA, VLC_CODEC_CVPX_P010, true);
+    vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_BGRA, VLC_CODEC_CVPX_P216, true);
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_BGRA, VLC_CODEC_CVPX_UYVY, true);
 
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_I420, VLC_CODEC_CVPX_NV12, true);
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_I420, VLC_CODEC_CVPX_P010, true);
+    vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_I420, VLC_CODEC_CVPX_P216, true);
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_I420, VLC_CODEC_CVPX_UYVY, true);
 
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_NV12, VLC_CODEC_CVPX_P010, true);
+    vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_NV12, VLC_CODEC_CVPX_P216, true);
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_NV12, VLC_CODEC_CVPX_UYVY, true);
 
+    vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_P010, VLC_CODEC_CVPX_P216, true);
     vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_P010, VLC_CODEC_CVPX_UYVY, true);
+
+    vlc_chroma_conv_add(vec, 0.25, VLC_CODEC_CVPX_P216, VLC_CODEC_CVPX_UYVY, true);
 
     vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_NV12, VLC_CODEC_NV12, true);
     vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_NV12, VLC_CODEC_I420, true);
     vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_P010, VLC_CODEC_P010, true);
     vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_P010, VLC_CODEC_I420_10L, true);
+    vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_P216, VLC_CODEC_P216, true);
+    vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_P216, VLC_CODEC_I422_16L, true);
     vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_UYVY, VLC_CODEC_UYVY, true);
     vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_I420, VLC_CODEC_I420, true);
     vlc_chroma_conv_add(vec, 1.1, VLC_CODEC_CVPX_BGRA, VLC_CODEC_BGRA, true);
@@ -153,6 +161,15 @@ static void Copy(filter_t *p_filter, picture_t *dst, picture_t *src,
                 DO_S(Copy420_16_SP_to_P, 6);
             }
             break;
+        case VLC_CODEC_P216:
+            if (outfcc == VLC_CODEC_P216)
+                DO(Copy422_SP_to_SP);
+            else
+            {
+                assert(outfcc == VLC_CODEC_I422_16L);
+                DO_S(Copy422_16_SP_to_P, 0);
+            }
+            break;
         case VLC_CODEC_I420:
             if (outfcc == VLC_CODEC_I420)
                 DO(Copy420_P_to_P);
@@ -165,6 +182,10 @@ static void Copy(filter_t *p_filter, picture_t *dst, picture_t *src,
         case VLC_CODEC_I420_10L:
             assert(outfcc == VLC_CODEC_P010);
             DO_S(Copy420_16_P_to_SP, -6);
+            break;
+        case VLC_CODEC_I422_16L:
+            assert(outfcc == VLC_CODEC_P216);
+            DO_S(Copy422_16_P_to_SP, 0);
             break;
         case VLC_CODEC_UYVY:
             assert(outfcc == VLC_CODEC_UYVY);
@@ -319,6 +340,9 @@ static int Open(filter_t *p_filter)
         CASE_CVPX_INPUT(P010, VLC_CODEC_I420_10L)
             i_cache_pixel_bytes = 2;
             break;
+        CASE_CVPX_INPUT(P216, VLC_CODEC_I422_16L)
+            i_cache_pixel_bytes = 2;
+            break;
         CASE_CVPX_INPUT(UYVY, 0)
             break;
         CASE_CVPX_INPUT(I420, 0)
@@ -331,6 +355,9 @@ static int Open(filter_t *p_filter)
                 CASE_CVPX_OUTPUT(NV12, VLC_CODEC_I420)
                     break;
                 CASE_CVPX_OUTPUT(P010, VLC_CODEC_I420_10L)
+                    i_cache_pixel_bytes = 2;
+                    break;
+                CASE_CVPX_OUTPUT(P216, VLC_CODEC_I422_16L)
                     i_cache_pixel_bytes = 2;
                     break;
                 CASE_CVPX_OUTPUT(UYVY, 0)
@@ -461,6 +488,7 @@ static vlc_fourcc_t const supported_chromas[] = { VLC_CODEC_CVPX_BGRA,
                                                   VLC_CODEC_CVPX_I420,
                                                   VLC_CODEC_CVPX_NV12,
                                                   VLC_CODEC_CVPX_P010,
+                                                  VLC_CODEC_CVPX_P216,
                                                   VLC_CODEC_CVPX_UYVY };
 
 static const struct vlc_filter_operations filter_ops = {
@@ -562,6 +590,10 @@ GetIntermediateChroma(vlc_fourcc_t input_chroma, vlc_fourcc_t output_chroma)
             case VLC_CODEC_I420_10L:
             case VLC_CODEC_I420_10B:
                 return VLC_CODEC_CVPX_P010;
+            case VLC_CODEC_P216:
+            case VLC_CODEC_I422_16L:
+            case VLC_CODEC_I422_16B:
+                return VLC_CODEC_CVPX_P216;
             default: break;
         }
     }
@@ -586,6 +618,7 @@ PrintConversionChain(filter_t *filter, void *opaque)
 static const vlc_fourcc_t supported_sw_chromas[] = {
     VLC_CODEC_I420, VLC_CODEC_BGRA, VLC_CODEC_NV12,
     VLC_CODEC_UYVY, VLC_CODEC_P010, VLC_CODEC_I420_10L, VLC_CODEC_I420_10B,
+    VLC_CODEC_P216, VLC_CODEC_I422_16L, VLC_CODEC_I422_16B,
 };
 
 static const struct vlc_filter_operations chain_CVPX_ops = {

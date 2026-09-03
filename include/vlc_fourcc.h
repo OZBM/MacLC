@@ -299,6 +299,8 @@
 #define VLC_CODEC_P012            VLC_FOURCC('P','0','1','2')
 /* 2 planes Y/UV 4:2:0 16-bit, little endian */
 #define VLC_CODEC_P016            VLC_FOURCC('P','0','1','6')
+/* 2 planes Y/UV 4:2:2 16-bit, little endian */
+#define VLC_CODEC_P216            VLC_FOURCC('P','2','1','6')
 
 /* Packed YUV */
 
@@ -500,6 +502,7 @@
 #define VLC_CODEC_CVPX_I420       VLC_FOURCC('C','V','P','I')
 #define VLC_CODEC_CVPX_BGRA       VLC_FOURCC('C','V','P','B')
 #define VLC_CODEC_CVPX_P010       VLC_FOURCC('C','V','P','P')
+#define VLC_CODEC_CVPX_P216       VLC_FOURCC('C','V','P','2')
 
 /* GStreamer Memory opaque buffer type */
 #define VLC_CODEC_GST_MEM_OPAQUE  VLC_FOURCC('G','S','T','M')

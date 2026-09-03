@@ -915,6 +915,29 @@ static void NEON_Copy420_16_P_to_SP(picture_t *dst, const uint8_t *src[static 3]
                             src[V_PLANE], src_pitch[V_PLANE],
                             (height + 1) / 2, bitshift);
 }
+
+static void NEON_Copy422_16_SP_to_P(picture_t *dst, const uint8_t *src[static 2],
+                                    const size_t src_pitch[static 2], unsigned height,
+                                    int bitshift)
+{
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, bitshift);
+    NEON_SplitPlanes16(dst->p[1].p_pixels, dst->p[1].i_pitch,
+                       dst->p[2].p_pixels, dst->p[2].i_pitch,
+                       src[1], src_pitch[1], height, bitshift);
+}
+
+static void NEON_Copy422_16_P_to_SP(picture_t *dst, const uint8_t *src[static 3],
+                                    const size_t src_pitch[static 3], unsigned height,
+                                    int bitshift)
+{
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, bitshift);
+    NEON_InterleavePlanes16(dst->p[1].p_pixels, dst->p[1].i_pitch,
+                            src[U_PLANE], src_pitch[U_PLANE],
+                            src[V_PLANE], src_pitch[V_PLANE],
+                            height, bitshift);
+}
 #endif /* defined(__aarch64__) */
 
 static void CopyPlane(uint8_t *dst, size_t dst_pitch,
@@ -987,6 +1010,19 @@ void Copy420_SP_to_SP(picture_t *dst, const uint8_t *src[static 2],
               src[0], src_pitch[0], height, 0);
     CopyPlane(dst->p[1].p_pixels, dst->p[1].i_pitch,
               src[1], src_pitch[1], (height+1)/2, 0);
+}
+
+void Copy422_SP_to_SP(picture_t *dst, const uint8_t *src[static 2],
+                      const size_t src_pitch[static 2], unsigned height,
+                      const copy_cache_t *cache)
+{
+    ASSERT_2PLANES;
+    VLC_UNUSED(cache);
+
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, 0);
+    CopyPlane(dst->p[1].p_pixels, dst->p[1].i_pitch,
+              src[1], src_pitch[1], height, 0);
 }
 
 #define SPLIT_PLANES(type, pitch_den) do { \
@@ -1096,6 +1132,28 @@ void Copy420_16_SP_to_P(picture_t *dst, const uint8_t *src[static 2],
     SplitPlanes16(dst->p[1].p_pixels, dst->p[1].i_pitch,
                   dst->p[2].p_pixels, dst->p[2].i_pitch,
                   src[1], src_pitch[1], (height+1)/2, bitshift);
+}
+
+void Copy422_16_SP_to_P(picture_t *dst, const uint8_t *src[static 2],
+                        const size_t src_pitch[static 2], unsigned height,
+                        int bitshift, const copy_cache_t *cache)
+{
+    ASSERT_2PLANES;
+    assert(bitshift >= -6 && bitshift <= 6 && (bitshift % 2 == 0));
+
+#if defined(__aarch64__)
+    VLC_UNUSED(cache);
+    /* ARMv8-A / AArch64 mandates NEON support, so no runtime CPU check is required */
+    return NEON_Copy422_16_SP_to_P(dst, src, src_pitch, height, bitshift);
+#else
+    VLC_UNUSED(cache);
+#endif
+
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, bitshift);
+    SplitPlanes16(dst->p[1].p_pixels, dst->p[1].i_pitch,
+                  dst->p[2].p_pixels, dst->p[2].i_pitch,
+                  src[1], src_pitch[1], height, bitshift);
 }
 
 #define INTERLEAVE_UV() do { \
@@ -1209,6 +1267,42 @@ void Copy420_16_P_to_SP(picture_t *dst, const uint8_t *src[static 3],
         INTERLEAVE_UV_SHIFTL((-bitshift) & 0xf);
 }
 
+void Copy422_16_P_to_SP(picture_t *dst, const uint8_t *src[static 3],
+                        const size_t src_pitch[static 3], unsigned height,
+                        int bitshift, const copy_cache_t *cache)
+{
+    ASSERT_3PLANES;
+    assert(bitshift >= -6 && bitshift <= 6 && (bitshift % 2 == 0));
+#if defined(__aarch64__)
+    (void) cache;
+    /* ARMv8-A / AArch64 mandates NEON support, so no runtime CPU check is required */
+    return NEON_Copy422_16_P_to_SP(dst, src, src_pitch, height, bitshift);
+#else
+    (void) cache;
+#endif
+
+    CopyPlane(dst->p[0].p_pixels, dst->p[0].i_pitch,
+              src[0], src_pitch[0], height, bitshift);
+
+    const unsigned copy_lines = height;
+    const unsigned copy_pitch = src_pitch[1] / 2;
+
+    const int i_extra_pitch_uv = dst->p[1].i_pitch / 2 - 2 * copy_pitch;
+    const int i_extra_pitch_u  = src_pitch[U_PLANE] / 2 - copy_pitch;
+    const int i_extra_pitch_v  = src_pitch[V_PLANE] / 2 - copy_pitch;
+
+    uint16_t *dstUV = (void*) dst->p[1].p_pixels;
+    const uint16_t *srcU  = (const uint16_t *) src[U_PLANE];
+    const uint16_t *srcV  = (const uint16_t *) src[V_PLANE];
+
+    if (bitshift == 0)
+        INTERLEAVE_UV();
+    else if (bitshift > 0)
+        INTERLEAVE_UV_SHIFTR(bitshift & 0xf);
+    else
+        INTERLEAVE_UV_SHIFTL((-bitshift) & 0xf);
+}
+
 void Copy420_P_to_P(picture_t *dst, const uint8_t *src[static 3],
                     const size_t src_pitch[static 3], unsigned height,
                     const copy_cache_t *cache)
@@ -1250,6 +1344,24 @@ int picture_UpdatePlanes(picture_t *picture, uint8_t *data, unsigned pitch)
             p->p_pixels = o->p_pixels + o->i_lines * o->i_pitch;
             p->i_pitch  = pitch;
             p->i_lines  = picture->format.i_height / 2;
+            assert(p->i_visible_pitch <= p->i_pitch);
+            assert(p->i_visible_lines <= p->i_lines);
+        }
+        return VLC_SUCCESS;
+    }
+
+    /*  Fill chroma planes for biplanar 4:2:2 YUV */
+    else
+    if (picture->format.i_chroma == VLC_CODEC_P216 ||
+        picture->format.i_chroma == VLC_CODEC_NV16) {
+
+        for (int n = 1; n < picture->i_planes; n++) {
+            const plane_t *o = &picture->p[n-1];
+            plane_t *p = &picture->p[n];
+
+            p->p_pixels = o->p_pixels + o->i_lines * o->i_pitch;
+            p->i_pitch  = pitch;
+            p->i_lines  = picture->format.i_height;
             assert(p->i_visible_pitch <= p->i_pitch);
             assert(p->i_visible_lines <= p->i_lines);
         }
@@ -1311,6 +1423,13 @@ static const struct test_conv convs[] = {
     },
     { .src_chroma = VLC_CODEC_I420_10L,
       .dsts = { { VLC_CODEC_P010, -6, .conv16 = Copy420_16_P_to_SP } },
+    },
+    { .src_chroma = VLC_CODEC_P216,
+      .dsts = { { VLC_CODEC_I422_16L, 0, .conv16 = Copy422_16_SP_to_P },
+                { VLC_CODEC_P216, 0, .conv = Copy422_SP_to_SP } },
+    },
+    { .src_chroma = VLC_CODEC_I422_16L,
+      .dsts = { { VLC_CODEC_P216, 0, .conv16 = Copy422_16_P_to_SP } },
     },
 };
 #define NB_CONVS ARRAY_SIZE(convs)
@@ -1393,6 +1512,8 @@ static void piccheck(picture_t *pic, const vlc_chroma_description_t *dsc,
                     colors_16_P[i] <<= 6;
                 break;
             case VLC_CODEC_I420_10L:
+            case VLC_CODEC_P216:
+            case VLC_CODEC_I422_16L:
                 break;
             default:
                 vlc_assert_unreachable();
