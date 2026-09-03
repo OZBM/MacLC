@@ -86,12 +86,14 @@
     int _hdrMode;
     float _userHeadroom;
     video_color_primaries_t _primaries;
+    video_transfer_func_t _transfer;
 }
 
 @property (nonatomic, copy) void (^render)(NSSize displaySize);
 @property (nonatomic, assign) int hdrMode;
 @property (nonatomic, assign) float userHeadroom;
 @property (nonatomic, assign) video_color_primaries_t primaries;
+@property (nonatomic, assign) video_transfer_func_t transfer;
 
 - (instancetype)init:(vlc_gl_t *)gl context:(CGLContextObj)context;
 - (void)displayFromVout;
@@ -121,11 +123,13 @@
     int _hdrMode;
     float _userHeadroom;
     video_color_primaries_t _primaries;
+    video_transfer_func_t _transfer;
 }
 
 @property (nonatomic, assign) int hdrMode;
 @property (nonatomic, assign) float userHeadroom;
 @property (nonatomic, assign) video_color_primaries_t primaries;
+@property (nonatomic, assign) video_transfer_func_t transfer;
 
 - (instancetype)init:(vlc_gl_t *)gl;
 - (void)vlcClose;
@@ -659,6 +663,10 @@ static int Open (vout_display_t *vd,
         if (primaries == COLOR_PRIMARIES_UNDEF && vd->source->primaries != COLOR_PRIMARIES_UNDEF)
             primaries = vd->source->primaries;
 
+        video_transfer_func_t transfer = fmt->transfer;
+        if (transfer == TRANSFER_FUNC_UNDEF && vd->source->transfer != TRANSFER_FUNC_UNDEF)
+            transfer = vd->source->transfer;
+
         int hdr_mode = var_InheritInteger(vd, "macosx-hdr-mode");
         float user_headroom = var_InheritFloat(vd, "macosx-edr-headroom");
         if (user_headroom > 0.0f && user_headroom < 1.0f)
@@ -685,6 +693,7 @@ static int Open (vout_display_t *vd,
             view.hdrMode = hdr_mode;
             view.userHeadroom = user_headroom;
             view.primaries = primaries;
+            view.transfer = transfer;
             [view setHDR:is_hdr];
             sys->cfg = *vd->cfg;
 
@@ -767,6 +776,7 @@ static int Open (vout_display_t *vd,
     _hdrMode = 0;
     _userHeadroom = 0.0f;
     _primaries = COLOR_PRIMARIES_UNDEF;
+    _transfer = TRANSFER_FUNC_UNDEF;
 
     _context = vlc_CreateCGLContext(gl);
     if (_context == NULL) {
@@ -833,6 +843,15 @@ static int Open (vout_display_t *vd,
     }
 }
 
+- (void)setTransfer:(video_transfer_func_t)transfer
+{
+    _transfer = transfer;
+    VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)self.layer;
+    if (layer != nil && [layer isKindOfClass:[VLCCAOpenGLLayer class]]) {
+        layer.transfer = transfer;
+    }
+}
+
 - (void)viewDidMoveToWindow
 {
     [super viewDidMoveToWindow];
@@ -894,6 +913,7 @@ static int Open (vout_display_t *vd,
         layer.hdrMode = _hdrMode;
         layer.userHeadroom = _userHeadroom;
         layer.primaries = _primaries;
+        layer.transfer = _transfer;
         [layer updateDynamicRangeWithHeadroom:effectiveHeadroom isHDR:_isHDR];
     }
 }
@@ -1020,6 +1040,7 @@ static int Open (vout_display_t *vd,
         layer.hdrMode = _hdrMode;
         layer.userHeadroom = _userHeadroom;
         layer.primaries = _primaries;
+        layer.transfer = _transfer;
         layer.delegate = self;
         return layer;
     }
@@ -1061,6 +1082,7 @@ shouldInheritContentsScale:(CGFloat)newScale
         _hdrMode = 0;
         _userHeadroom = 0.0f;
         _primaries = COLOR_PRIMARIES_UNDEF;
+        _transfer = TRANSFER_FUNC_UNDEF;
 
         _glContext = CGLRetainContext(context);
         assert(_glContext != NULL);
@@ -1129,8 +1151,10 @@ shouldInheritContentsScale:(CGFloat)newScale
             csName = kCGColorSpaceExtendedLinearDisplayP3;
         } else if (_primaries == COLOR_PRIMARIES_DCI_P3) {
             csName = kCGColorSpaceDisplayP3;
-        } else {
+        } else if (_transfer == TRANSFER_FUNC_SRGB) {
             csName = kCGColorSpaceSRGB;
+        } else {
+            csName = kCGColorSpaceITUR_709;
         }
 
         CGColorSpaceRef cs = CGColorSpaceCreateWithName(csName);
