@@ -223,11 +223,104 @@ static void test_cvpx_hdr_negative(void)
     printf("  -> Negative cases PASSED\n");
 }
 
+static void test_cvpx_hdr_hlg_bare(void)
+{
+    printf("Testing CVPixelBuffer HLG without mastering metadata (no synthesis)...\n");
+
+    CVPixelBufferRef cvpx = NULL;
+    CVReturn err = CVPixelBufferCreate(kCFAllocatorDefault, 64, 64,
+                                       kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange,
+                                       NULL, &cvpx);
+    assert(err == kCVReturnSuccess && cvpx != NULL);
+
+    /* A broadcast HLG stream is scene-referred: it carries no ST 2086
+     * mastering display volume and no CTA-861.3 content light level. VLC must
+     * not invent either of them, because the compositor would then tone map
+     * against a mastering volume the stream never declared. */
+    video_format_t fmt;
+    video_format_Init(&fmt, VLC_CODEC_P010);
+    fmt.i_width = fmt.i_visible_width = 3840;
+    fmt.i_height = fmt.i_visible_height = 2160;
+    fmt.space = COLOR_SPACE_BT2020;
+    fmt.primaries = COLOR_PRIMARIES_BT2020;
+    fmt.transfer = TRANSFER_FUNC_HLG;
+
+    cvpx_attach_mapped_color_properties(cvpx, &fmt);
+
+    video_format_t extracted;
+    video_format_Init(&extracted, 0);
+    cvpx_extract_color_properties(cvpx, &extracted);
+
+    /* The colorimetry itself must still be tagged. */
+    assert(extracted.space == COLOR_SPACE_BT2020);
+    assert(extracted.primaries == COLOR_PRIMARIES_BT2020);
+    assert(extracted.transfer == TRANSFER_FUNC_HLG);
+
+    /* Nothing must have been synthesised. */
+    for (size_t i = 0; i < 6; i++)
+        assert(extracted.mastering.primaries[i] == 0);
+    assert(extracted.mastering.white_point[0] == 0);
+    assert(extracted.mastering.white_point[1] == 0);
+    assert(extracted.mastering.max_luminance == 0);
+    assert(extracted.mastering.min_luminance == 0);
+    assert(extracted.lighting.MaxCLL == 0);
+    assert(extracted.lighting.MaxFALL == 0);
+
+    CFRelease(cvpx);
+    printf("  -> Bare HLG PASSED\n");
+}
+
+static void test_cvpx_hdr_low_luminance(void)
+{
+    printf("Testing CVPixelBuffer PQ mastering luminance below 1 nit...\n");
+
+    CVPixelBufferRef cvpx = NULL;
+    CVReturn err = CVPixelBufferCreate(kCFAllocatorDefault, 64, 64,
+                                       kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange,
+                                       NULL, &cvpx);
+    assert(err == kCVReturnSuccess && cvpx != NULL);
+
+    video_format_t fmt;
+    video_format_Init(&fmt, VLC_CODEC_P010);
+    fmt.space = COLOR_SPACE_BT2020;
+    fmt.primaries = COLOR_PRIMARIES_BT2020;
+    fmt.transfer = TRANSFER_FUNC_SMPTE_ST2084;
+
+    fmt.mastering.primaries[0] = 13250;
+    fmt.mastering.primaries[1] = 34500;
+    fmt.mastering.primaries[2] = 7500;
+    fmt.mastering.primaries[3] = 3000;
+    fmt.mastering.primaries[4] = 34000;
+    fmt.mastering.primaries[5] = 16000;
+    fmt.mastering.white_point[0] = 15635;
+    fmt.mastering.white_point[1] = 16450;
+
+    /* 0.5 cd/m^2 peak, expressed in the 0.0001 cd/m^2 units VLC and CoreVideo
+     * both use. A value below 10000 must survive untouched: rescaling it would
+     * turn a 0.5 nit mastering target into a 5000 nit one. */
+    fmt.mastering.max_luminance = 5000;
+    fmt.mastering.min_luminance = 1;
+
+    cvpx_attach_mapped_color_properties(cvpx, &fmt);
+
+    video_format_t extracted;
+    video_format_Init(&extracted, 0);
+    cvpx_extract_color_properties(cvpx, &extracted);
+
+    assert(extracted.mastering.max_luminance == 5000);
+    assert(extracted.mastering.min_luminance == 1);
+
+    CFRelease(cvpx);
+    printf("  -> Low mastering luminance PASSED\n");
+}
+
 int main(void)
 {
     test_cvpx_hdr_pq();
     test_cvpx_hdr_hlg();
     test_cvpx_hdr_negative();
+    test_cvpx_hdr_hlg_bare();
+    test_cvpx_hdr_low_luminance();
 
     printf("All CoreVideo HDR metadata tests PASSED!\n");
     return 0;
