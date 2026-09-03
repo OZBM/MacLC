@@ -574,8 +574,9 @@ struct vt_hevc_dovi_state
     uint8_t bl_bit_depth;
     uint8_t el_bit_depth;
     uint8_t disable_residual_flag;
-    uint8_t dm_compression;
+    uint8_t dm_3bits;
     vlc_video_dovi_metadata_t last_dovi;
+    bool b_seq_valid;
     bool b_valid;
 };
 
@@ -586,6 +587,7 @@ struct vt_hevc_context
     struct vt_hevc_dovi_state dovi_state;
     bool b_dovi_logged;
     bool b_dovi_warned;
+    bool b_dovi_bits_warned;
     bool b_hdr10plus_logged;
 };
 
@@ -614,6 +616,7 @@ static bool InitHEVC(decoder_t *p_dec)
     hevc_poc_cxt_init(&ctx->poc);
     ctx->b_dovi_logged = false;
     ctx->b_dovi_warned = false;
+    ctx->b_dovi_bits_warned = false;
     ctx->b_hdr10plus_logged = false;
     memset(&ctx->dovi_state, 0, sizeof(ctx->dovi_state));
     hxxx_helper_init(&ctx->hh, VLC_OBJECT(p_dec),
@@ -1059,7 +1062,8 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
     uint8_t bl_bit_depth = 10;
     uint8_t el_bit_depth = 10;
     uint8_t disable_residual_flag = 0;
-    uint8_t dm_compression = 0;
+    uint8_t dm_3bits = 0;
+    bool b_dm_valid = true;
 
     uint8_t vdr_seq_info_present_flag = bs_read1(&bs);
     if (vdr_seq_info_present_flag)
@@ -1102,7 +1106,10 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
 
             uint8_t spatial_resampling_filter_flag = bs_read1(&bs);
             VLC_UNUSED(spatial_resampling_filter_flag);
-            dm_compression = bs_read(&bs, 3);
+            /* Whether these three bits represent metadata compression or syntax
+             * reserved_zero_3bits is disputed; consulting the official Dolby Vision
+             * RPU bitstream specification or reference FFmpeg dovi_rpudec would settle it. */
+            dm_3bits = bs_read(&bs, 3);
             uint8_t el_spatial_resampling_filter_flag = bs_read1(&bs);
             VLC_UNUSED(el_spatial_resampling_filter_flag);
             disable_residual_flag = bs_read1(&bs);
@@ -1112,22 +1119,16 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
             goto fail;
         }
 
-        /* Save sequence state */
-        hevcctx->dovi_state.coef_data_type = coef_data_type;
-        hevcctx->dovi_state.coef_log2_denom = coef_log2_denom;
-        hevcctx->dovi_state.bl_bit_depth = bl_bit_depth;
-        hevcctx->dovi_state.el_bit_depth = el_bit_depth;
-        hevcctx->dovi_state.disable_residual_flag = disable_residual_flag;
-        hevcctx->dovi_state.dm_compression = dm_compression;
+        /* Sequence state is cached atomically at function exit on successful parse */
     }
-    else if (hevcctx->dovi_state.b_valid)
+    else if (hevcctx->dovi_state.b_seq_valid)
     {
         coef_data_type = hevcctx->dovi_state.coef_data_type;
         coef_log2_denom = hevcctx->dovi_state.coef_log2_denom;
         bl_bit_depth = hevcctx->dovi_state.bl_bit_depth;
         el_bit_depth = hevcctx->dovi_state.el_bit_depth;
         disable_residual_flag = hevcctx->dovi_state.disable_residual_flag;
-        dm_compression = hevcctx->dovi_state.dm_compression;
+        dm_3bits = hevcctx->dovi_state.dm_3bits;
     }
     else
     {
@@ -1273,7 +1274,7 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
         uint32_t scene_refresh_flag = bs_read_ue(&bs);
         VLC_UNUSED(scene_refresh_flag);
 
-        if (!dm_compression)
+        if (!dm_3bits)
         {
             if (bs_pos(&bs) + 509 > i_rbsp * 8)
                 goto fail;
@@ -1319,7 +1320,13 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
         }
         else
         {
-            goto fail;
+            if (!hevcctx->b_dovi_bits_warned)
+            {
+                msg_Dbg(p_dec, "Dolby Vision RPU: non-zero 3-bit header value (%u) with no cached metadata",
+                        dm_3bits);
+                hevcctx->b_dovi_bits_warned = true;
+            }
+            b_dm_valid = false;
         }
 
         uint32_t num_ext_blocks = bs_read_ue(&bs);
@@ -1388,12 +1395,30 @@ static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
         out->source_min_pq = hevcctx->dovi_state.last_dovi.source_min_pq;
         out->source_max_pq = hevcctx->dovi_state.last_dovi.source_max_pq;
     }
+    else
+    {
+        b_dm_valid = false;
+    }
 
     if (bs_error(&bs))
         goto fail;
 
     if (b_allocated)
         free(p_rbsp);
+
+    if (vdr_seq_info_present_flag)
+    {
+        hevcctx->dovi_state.coef_data_type = coef_data_type;
+        hevcctx->dovi_state.coef_log2_denom = coef_log2_denom;
+        hevcctx->dovi_state.bl_bit_depth = bl_bit_depth;
+        hevcctx->dovi_state.el_bit_depth = el_bit_depth;
+        hevcctx->dovi_state.disable_residual_flag = disable_residual_flag;
+        hevcctx->dovi_state.dm_3bits = dm_3bits;
+        hevcctx->dovi_state.b_seq_valid = true;
+    }
+
+    if (!b_dm_valid)
+        return false;
 
     hevcctx->dovi_state.last_dovi = *out;
     hevcctx->dovi_state.b_valid = true;
