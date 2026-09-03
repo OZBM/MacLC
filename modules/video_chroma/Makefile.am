@@ -98,5 +98,17 @@ if HAVE_SSE2
 check_PROGRAMS += chroma_copy_sse_test
 TESTS += chroma_copy_sse_test
 endif
+
+# Same build as chroma_copy_sse_test: COPY_TEST without COPY_TEST_NOOPTIM
+# selects the vectorised routines, which on aarch64 means the NEON ones.
+chroma_copy_neon_test_SOURCES = $(libchroma_copy_la_SOURCES)
+chroma_copy_neon_test_CFLAGS = -DCOPY_TEST
+chroma_copy_neon_test_LDADD = ../src/libvlccore.la
+
+if HAVE_ARM64
+check_PROGRAMS += chroma_copy_neon_test
+TESTS += chroma_copy_neon_test
+endif
+
 check_PROGRAMS += chroma_copy_test
 TESTS += chroma_copy_test

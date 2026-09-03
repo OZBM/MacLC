@@ -1394,6 +1394,10 @@ struct test_dst
 {
     vlc_fourcc_t chroma;
     int bitshift;
+    /* A bitshift of 0 is legitimate for the 16-bit conversions (P216 carries
+     * its samples in all 16 bits), so the shift alone cannot say which member
+     * of the union is set. */
+    bool is16;
     union
     {
         void (*conv)(picture_t *, const uint8_t *[], const size_t [], unsigned,
@@ -1419,17 +1423,17 @@ static const struct test_conv convs[] = {
                 { VLC_CODEC_NV12, 0, .conv = Copy420_P_to_SP } },
     },
     { .src_chroma = VLC_CODEC_P010,
-      .dsts = { { VLC_CODEC_I420_10L, 6, .conv16 = Copy420_16_SP_to_P } },
+      .dsts = { { VLC_CODEC_I420_10L, 6, true, .conv16 = Copy420_16_SP_to_P } },
     },
     { .src_chroma = VLC_CODEC_I420_10L,
-      .dsts = { { VLC_CODEC_P010, -6, .conv16 = Copy420_16_P_to_SP } },
+      .dsts = { { VLC_CODEC_P010, -6, true, .conv16 = Copy420_16_P_to_SP } },
     },
     { .src_chroma = VLC_CODEC_P216,
-      .dsts = { { VLC_CODEC_I422_16L, 0, .conv16 = Copy422_16_SP_to_P },
+      .dsts = { { VLC_CODEC_I422_16L, 0, true, .conv16 = Copy422_16_SP_to_P },
                 { VLC_CODEC_P216, 0, .conv = Copy422_SP_to_SP } },
     },
     { .src_chroma = VLC_CODEC_I422_16L,
-      .dsts = { { VLC_CODEC_P216, 0, .conv16 = Copy422_16_P_to_SP } },
+      .dsts = { { VLC_CODEC_P216, 0, true, .conv16 = Copy422_16_P_to_SP } },
     },
 };
 #define NB_CONVS ARRAY_SIZE(convs)
@@ -1627,7 +1631,7 @@ int main(void)
                         size->i_visible_width, size->i_visible_height,
                         (const char *) &src->format.i_chroma,
                         (const char *) &dst->format.i_chroma);
-                if (test_dst->bitshift == 0)
+                if (!test_dst->is16)
                     test_dst->conv(dst, src_planes, src_pitches,
                                    src->format.i_visible_height, &cache);
                 else
