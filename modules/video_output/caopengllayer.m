@@ -83,9 +83,15 @@
                    // unless you can be sure it won't be called in teardown
     CGLContextObj _glContext;
     atomic_bool _is_ready;
+    int _hdrMode;
+    float _userHeadroom;
+    video_color_primaries_t _primaries;
 }
 
 @property (nonatomic, copy) void (^render)(NSSize displaySize);
+@property (nonatomic, assign) int hdrMode;
+@property (nonatomic, assign) float userHeadroom;
+@property (nonatomic, assign) video_color_primaries_t primaries;
 
 - (instancetype)init:(vlc_gl_t *)gl context:(CGLContextObj)context;
 - (void)displayFromVout;
@@ -112,7 +118,14 @@
     CGLContextObj _context; // The CGL context managed by us
     CGLContextObj _context_previous; // The previously current CGL context, if any
     BOOL _isHDR;
+    int _hdrMode;
+    float _userHeadroom;
+    video_color_primaries_t _primaries;
 }
+
+@property (nonatomic, assign) int hdrMode;
+@property (nonatomic, assign) float userHeadroom;
+@property (nonatomic, assign) video_color_primaries_t primaries;
 
 - (instancetype)init:(vlc_gl_t *)gl;
 - (void)vlcClose;
@@ -411,9 +424,43 @@ static int OpenOpenGL(vlc_gl_t *gl, unsigned width, unsigned height,
 #pragma mark -
 #pragma mark Module functions
 
+static int EdrHeadroomCallback(vlc_object_t *obj, char const *name,
+                               vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)data;
+    float val = cur.f_float;
+    if (val > 0.0f && val < 1.0f)
+        val = 1.0f;
+    view.userHeadroom = val;
+    msg_Dbg(obj, "EDR headroom updated via variable callback: %.2f%s",
+            val, (val > 0.0f) ? " (user override)" : " (auto screen peak)");
+    [view updateDynamicRangeProperties];
+    return VLC_SUCCESS;
+}
+
+static int HdrModeCallback(vlc_object_t *obj, char const *name,
+                           vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)data;
+    view.hdrMode = (int)cur.i_int;
+    msg_Dbg(obj, "HDR mode updated via variable callback: %d", (int)cur.i_int);
+    [view updateDynamicRangeProperties];
+    return VLC_SUCCESS;
+}
+
 static void Close(vout_display_t *vd)
 {
     vout_display_sys_t *sys = vd->sys;
+
+    if (sys->gl) {
+        VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)sys->gl->sys;
+        if (view) {
+            var_DelCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)view);
+            var_DelCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)view);
+        }
+    }
 
     if (sys->vgl && !vlc_gl_MakeCurrent(sys->gl)) {
         vout_display_opengl_Delete(sys->vgl);
@@ -608,10 +655,36 @@ static int Open (vout_display_t *vd,
                        vd->source->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
                        vd->source->transfer == TRANSFER_FUNC_HLG);
 
+        video_color_primaries_t primaries = fmt->primaries;
+        if (primaries == COLOR_PRIMARIES_UNDEF && vd->source->primaries != COLOR_PRIMARIES_UNDEF)
+            primaries = vd->source->primaries;
+
+        int hdr_mode = var_InheritInteger(vd, "macosx-hdr-mode");
+        float user_headroom = var_InheritFloat(vd, "macosx-edr-headroom");
+        if (user_headroom > 0.0f && user_headroom < 1.0f)
+            user_headroom = 1.0f;
+
+        if (user_headroom > 0.0f) {
+            msg_Dbg(vd, "EDR headroom initialized to user override: %.2f", user_headroom);
+        } else {
+            msg_Dbg(vd, "EDR headroom initialized to auto (display peak)");
+        }
+        msg_Dbg(vd, "HDR mode initialized to %d", hdr_mode);
+
+        VLCVideoLayerView *videoView = (__bridge VLCVideoLayerView *)sys->gl->sys;
+        var_Create(vd, "macosx-edr-headroom", VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)videoView);
+
+        var_Create(vd, "macosx-hdr-mode", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)videoView);
+
         dispatch_sync(dispatch_get_main_queue(), ^{
 
             __weak VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)sys->gl->sys;
             __weak VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)[view layer];
+            view.hdrMode = hdr_mode;
+            view.userHeadroom = user_headroom;
+            view.primaries = primaries;
             [view setHDR:is_hdr];
             sys->cfg = *vd->cfg;
 
@@ -691,6 +764,9 @@ static int Open (vout_display_t *vd,
         return nil;
     _gl = gl;
     _isHDR = NO;
+    _hdrMode = 0;
+    _userHeadroom = 0.0f;
+    _primaries = COLOR_PRIMARIES_UNDEF;
 
     _context = vlc_CreateCGLContext(gl);
     if (_context == NULL) {
@@ -730,6 +806,33 @@ static int Open (vout_display_t *vd,
     return self;
 }
 
+- (void)setHdrMode:(int)hdrMode
+{
+    _hdrMode = hdrMode;
+    VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)self.layer;
+    if (layer != nil && [layer isKindOfClass:[VLCCAOpenGLLayer class]]) {
+        layer.hdrMode = hdrMode;
+    }
+}
+
+- (void)setUserHeadroom:(float)userHeadroom
+{
+    _userHeadroom = userHeadroom;
+    VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)self.layer;
+    if (layer != nil && [layer isKindOfClass:[VLCCAOpenGLLayer class]]) {
+        layer.userHeadroom = userHeadroom;
+    }
+}
+
+- (void)setPrimaries:(video_color_primaries_t)primaries
+{
+    _primaries = primaries;
+    VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)self.layer;
+    if (layer != nil && [layer isKindOfClass:[VLCCAOpenGLLayer class]]) {
+        layer.primaries = primaries;
+    }
+}
+
 - (void)viewDidMoveToWindow
 {
     [super viewDidMoveToWindow];
@@ -763,26 +866,35 @@ static int Open (vout_display_t *vd,
         return;
     }
 
-    NSScreen *screen = self.window.screen;
-    if (screen == nil) {
-        screen = [NSScreen mainScreen];
-    }
+    CGFloat effectiveHeadroom;
+    if (_userHeadroom > 0.0f) {
+        effectiveHeadroom = (CGFloat)_userHeadroom;
+    } else {
+        NSScreen *screen = self.window.screen;
+        if (screen == nil) {
+            screen = [NSScreen mainScreen];
+        }
 
-    CGFloat headroom = 1.0;
-    if (screen != nil) {
-        if (@available(macOS 10.15, *)) {
-            if ([screen respondsToSelector:@selector(maximumExtendedDynamicRangeColorComponentValue)]) {
-                headroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+        CGFloat screenHeadroom = 1.0;
+        if (screen != nil) {
+            if (@available(macOS 10.15, *)) {
+                if ([screen respondsToSelector:@selector(maximumExtendedDynamicRangeColorComponentValue)]) {
+                    screenHeadroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+                    if (screenHeadroom <= 1.0 && [screen respondsToSelector:@selector(maximumPotentialExtendedDynamicRangeColorComponentValue)] && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0) {
+                        screenHeadroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
+                    }
+                }
             }
         }
-    }
-    if (headroom < 1.0) {
-        headroom = 1.0;
+        effectiveHeadroom = (screenHeadroom > 1.0) ? screenHeadroom : 1.0;
     }
 
     VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)self.layer;
     if (layer != nil && [layer isKindOfClass:[VLCCAOpenGLLayer class]]) {
-        [layer updateDynamicRangeWithHeadroom:headroom isHDR:_isHDR];
+        layer.hdrMode = _hdrMode;
+        layer.userHeadroom = _userHeadroom;
+        layer.primaries = _primaries;
+        [layer updateDynamicRangeWithHeadroom:effectiveHeadroom isHDR:_isHDR];
     }
 }
 
@@ -905,6 +1017,9 @@ static int Open (vout_display_t *vd,
 
         assert(_context != NULL);
         VLCCAOpenGLLayer *layer = [[VLCCAOpenGLLayer alloc] init:_gl context:_context];
+        layer.hdrMode = _hdrMode;
+        layer.userHeadroom = _userHeadroom;
+        layer.primaries = _primaries;
         layer.delegate = self;
         return layer;
     }
@@ -943,6 +1058,9 @@ shouldInheritContentsScale:(CGFloat)newScale
     if (self) {
         _displayLock = [[NSLock alloc] init];
         _gl = gl;
+        _hdrMode = 0;
+        _userHeadroom = 0.0f;
+        _primaries = COLOR_PRIMARIES_UNDEF;
 
         _glContext = CGLRetainContext(context);
         assert(_glContext != NULL);
@@ -955,16 +1073,6 @@ shouldInheritContentsScale:(CGFloat)newScale
         self.asynchronous = NO;
         self.opaque = 1.0;
         self.hidden = NO;
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
-        if (@available(macOS 10.15, *)) {
-            self.wantsExtendedDynamicRangeContent = YES;
-            CGColorSpaceRef cs = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearDisplayP3);
-            if (cs) {
-                self.colorspace = cs;
-                CGColorSpaceRelease(cs);
-            }
-        }
-#endif
         [CATransaction unlock];
 
         NSScreen *screen = [NSScreen mainScreen];
@@ -987,28 +1095,65 @@ shouldInheritContentsScale:(CGFloat)newScale
 
 - (void)updateDynamicRangeWithHeadroom:(CGFloat)headroom isHDR:(BOOL)isHDR
 {
+    BOOL effectiveHDR;
+    switch (_hdrMode) {
+        case 1: /* Force HDR / native EDR */
+            effectiveHDR = YES;
+            break;
+        case 2: /* Tone-map to SDR */
+        case 3: /* Disable HDR */
+            effectiveHDR = NO;
+            break;
+        case 0: /* Auto */
+        default:
+            effectiveHDR = isHDR;
+            break;
+    }
+
+    CGFloat effectiveHeadroom;
+    if (_userHeadroom > 0.0f) {
+        effectiveHeadroom = (_userHeadroom > 1.0f) ? (CGFloat)_userHeadroom : 1.0;
+    } else {
+        effectiveHeadroom = (headroom > 1.0) ? headroom : 1.0;
+    }
+
     [CATransaction lock];
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
     if (@available(macOS 10.15, *)) {
         if ([self respondsToSelector:@selector(setWantsExtendedDynamicRangeContent:)]) {
-            self.wantsExtendedDynamicRangeContent = YES;
+            self.wantsExtendedDynamicRangeContent = effectiveHDR;
+        }
+
+        CFStringRef csName;
+        if (effectiveHDR) {
+            csName = kCGColorSpaceExtendedLinearDisplayP3;
+        } else if (_primaries == COLOR_PRIMARIES_DCI_P3) {
+            csName = kCGColorSpaceDisplayP3;
+        } else {
+            csName = kCGColorSpaceSRGB;
+        }
+
+        CGColorSpaceRef cs = CGColorSpaceCreateWithName(csName);
+        if (cs != NULL) {
+            self.colorspace = cs;
+            CGColorSpaceRelease(cs);
         }
     }
 #endif
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
     if (@available(macOS 14.0, *)) {
         if ([self respondsToSelector:@selector(setPreferredDynamicRange:)]) {
-            self.preferredDynamicRange = isHDR ? CADynamicRangeHigh : CADynamicRangeStandard;
+            self.preferredDynamicRange = effectiveHDR ? CADynamicRangeHigh : CADynamicRangeStandard;
         }
         if ([self respondsToSelector:@selector(setContentsHeadroom:)]) {
-            self.contentsHeadroom = headroom;
+            self.contentsHeadroom = effectiveHDR ? effectiveHeadroom : 1.0;
         }
     }
 #endif
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
     if (@available(macOS 15.0, *)) {
         if ([self respondsToSelector:@selector(setToneMapMode:)]) {
-            self.toneMapMode = isHDR ? CAToneMapModeIfSupported : CAToneMapModeAutomatic;
+            self.toneMapMode = effectiveHDR ? CAToneMapModeIfSupported : CAToneMapModeAutomatic;
         }
     }
 #endif
