@@ -29,6 +29,7 @@
 #import <vlc_common.h>
 #import <vlc_plugin.h>
 #import <vlc_codec.h>
+#import <vlc_ancillary.h>
 #import "../hxxx_helper.h"
 #import <vlc_bits.h>
 #import <vlc_boxes.h>
@@ -563,10 +564,35 @@ static bool VideoToolboxNeedsToRestartH264(decoder_t *p_dec,
 
 /** HEVC Specific */
 
+struct vt_hevc_dovi_state
+{
+    uint8_t coef_data_type;
+    uint8_t coef_log2_denom;
+    uint8_t bl_bit_depth;
+    uint8_t el_bit_depth;
+    uint8_t disable_residual_flag;
+    uint8_t dm_compression;
+    vlc_video_dovi_metadata_t last_dovi;
+    bool b_valid;
+};
+
 struct vt_hevc_context
 {
     struct hxxx_helper hh;
     hevc_poc_ctx_t poc;
+    struct vt_hevc_dovi_state dovi_state;
+    bool b_dovi_logged;
+    bool b_dovi_warned;
+    bool b_hdr10plus_logged;
+};
+
+struct vt_frame_info_t
+{
+    frame_info_t info;
+    bool has_hdr10plus;
+    vlc_video_hdr_dynamic_metadata_t hdr10plus;
+    bool has_dovi;
+    vlc_video_dovi_metadata_t dovi;
 };
 
 static void CleanHEVC(void *p_codec_context)
@@ -583,6 +609,10 @@ static bool InitHEVC(decoder_t *p_dec)
     if(!ctx)
         return false;
     hevc_poc_cxt_init(&ctx->poc);
+    ctx->b_dovi_logged = false;
+    ctx->b_dovi_warned = false;
+    ctx->b_hdr10plus_logged = false;
+    memset(&ctx->dovi_state, 0, sizeof(ctx->dovi_state));
     hxxx_helper_init(&ctx->hh, VLC_OBJECT(p_dec),
                      p_dec->fmt_in->i_codec, 0, 4);
     if(hxxx_helper_set_extra(&ctx->hh, p_dec->fmt_in->p_extra,
@@ -640,6 +670,645 @@ static bool ParseHEVCSEI(const hxxx_sei_data_t *p_sei_data, void *priv)
     return true;
 }
 
+static size_t rpu_unescape_rbsp(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_len)
+{
+    size_t di = 0;
+    for (size_t si = 0; si < src_len && di < dst_len; )
+    {
+        if (si + 2 < src_len && src[si] == 0x00 && src[si + 1] == 0x00 && src[si + 2] == 0x03)
+        {
+            dst[di++] = 0x00;
+            if (di < dst_len)
+                dst[di++] = 0x00;
+            si += 3;
+        }
+        else
+        {
+            dst[di++] = src[si++];
+        }
+    }
+    return di;
+}
+
+static inline int64_t rpu_read_se_coef(bs_t *p_bs, uint8_t coef_data_type, uint8_t coef_log2_denom)
+{
+    if (coef_data_type == 0 /* RPU_COEFF_FIXED */)
+    {
+        int64_t ipart = bs_read_se(p_bs);
+        uint64_t fpart = 0;
+        if (coef_log2_denom > 0)
+            fpart = bs_read(p_bs, coef_log2_denom);
+        return (ipart * (1LL << coef_log2_denom)) + (int64_t)fpart;
+    }
+    else if (coef_data_type == 1 /* RPU_COEFF_FLOAT */)
+    {
+        uint32_t u = bs_read(p_bs, 32);
+        float f;
+        memcpy(&f, &u, sizeof(f));
+        return (int64_t)(f * (1LL << coef_log2_denom));
+    }
+    return 0;
+}
+
+static inline uint64_t rpu_read_ue_coef(bs_t *p_bs, uint8_t coef_data_type, uint8_t coef_log2_denom)
+{
+    if (coef_data_type == 0 /* RPU_COEFF_FIXED */)
+    {
+        uint64_t ipart = bs_read_ue(p_bs);
+        uint64_t fpart = 0;
+        if (coef_log2_denom > 0)
+            fpart = bs_read(p_bs, coef_log2_denom);
+        return (ipart << coef_log2_denom) | fpart;
+    }
+    else if (coef_data_type == 1 /* RPU_COEFF_FLOAT */)
+    {
+        uint32_t u = bs_read(p_bs, 32);
+        float f;
+        memcpy(&f, &u, sizeof(f));
+        return (uint64_t)(f * (1LL << coef_log2_denom));
+    }
+    return 0;
+}
+
+static bool ParseHEVCHDR10Plus(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
+                               const uint8_t *p_nal, size_t i_nal,
+                               vlc_video_hdr_dynamic_metadata_t *out)
+{
+    VLC_UNUSED(p_dec);
+    VLC_UNUSED(hevcctx);
+
+    if (i_nal < 4)
+        return false;
+
+    const uint8_t *p_payload = p_nal + 2;
+    size_t i_payload = i_nal - 2;
+
+    uint8_t rbsp_buf[2048];
+    uint8_t *p_rbsp = rbsp_buf;
+    bool b_allocated = false;
+
+    if (i_payload > sizeof(rbsp_buf))
+    {
+        p_rbsp = malloc(i_payload);
+        if (!p_rbsp)
+            return false;
+        b_allocated = true;
+    }
+
+    size_t i_rbsp = rpu_unescape_rbsp(p_payload, i_payload, p_rbsp, i_payload);
+    if (i_rbsp < 7)
+    {
+        if (b_allocated)
+            free(p_rbsp);
+        return false;
+    }
+
+    bs_t bs;
+    bs_init(&bs, p_rbsp, i_rbsp);
+
+    bool b_found = false;
+
+    while (bs_aligned(&bs) && !bs_error(&bs) && !bs_eof(&bs))
+    {
+        size_t cur_pos = bs_pos(&bs);
+        if (cur_pos >= i_rbsp * 8 || (i_rbsp * 8 - cur_pos) < 16)
+            break;
+
+        /* SEI payloadType */
+        unsigned i_type = 0;
+        while (!bs_eof(&bs))
+        {
+            uint8_t b = bs_read(&bs, 8);
+            i_type += b;
+            if (b != 0xff)
+                break;
+        }
+        if (bs_error(&bs))
+            break;
+
+        /* SEI payloadSize */
+        unsigned i_size = 0;
+        while (!bs_eof(&bs))
+        {
+            uint8_t b = bs_read(&bs, 8);
+            i_size += b;
+            if (b != 0xff)
+                break;
+        }
+        if (bs_error(&bs))
+            break;
+
+        cur_pos = bs_pos(&bs);
+        if (cur_pos + (size_t)i_size * 8 > i_rbsp * 8)
+            break;
+
+        size_t end_pos = cur_pos + (size_t)i_size * 8;
+
+        if (i_type == 4 /* user_data_registered_itu_t_t35 */ && i_size >= 7)
+        {
+            uint8_t country_code = bs_read(&bs, 8);
+            if (country_code == 0xB5)
+            {
+                uint16_t provider_code = bs_read(&bs, 16);
+                uint16_t provider_oriented_code = bs_read(&bs, 16);
+                uint8_t application_identifier = bs_read(&bs, 8);
+
+                if (provider_code == 0x003C &&
+                    provider_oriented_code == 0x0001 &&
+                    application_identifier == 0x04)
+                {
+                    /* SMPTE ST 2094-40 / HDR10+ payload */
+                    memset(out, 0, sizeof(*out));
+                    out->country_code = 0xB5;
+                    out->application_version = bs_read(&bs, 8);
+                    uint8_t num_windows = bs_read(&bs, 2);
+
+                    if (num_windows >= 1 && num_windows <= 3)
+                    {
+                        for (int w = 1; w < num_windows; w++)
+                        {
+                            bs_skip(&bs, 153);
+                        }
+
+                        uint32_t targeted_max_luma = bs_read(&bs, 27);
+                        out->targeted_luminance = (float)targeted_max_luma;
+
+                        uint8_t actual_peak_flag = bs_read1(&bs);
+                        if (actual_peak_flag)
+                        {
+                            uint8_t rows = bs_read(&bs, 5);
+                            uint8_t cols = bs_read(&bs, 5);
+                            if (rows >= 2 && rows <= 25 && cols >= 2 && cols <= 25)
+                                bs_skip(&bs, (size_t)rows * cols * 4);
+                            else
+                                goto skip_msg;
+                        }
+
+                        for (int w = 0; w < num_windows; w++)
+                        {
+                            for (int i = 0; i < 3; i++)
+                            {
+                                uint32_t maxscl = bs_read(&bs, 17);
+                                if (w == 0)
+                                    out->maxscl[i] = (float)maxscl / 100000.0f;
+                            }
+                            uint32_t avg_maxrgb = bs_read(&bs, 17);
+                            if (w == 0)
+                                out->average_maxrgb = (float)avg_maxrgb / 100000.0f;
+
+                            uint8_t num_hist = bs_read(&bs, 4);
+                            if (num_hist > 15)
+                                goto skip_msg;
+                            if (w == 0)
+                                out->num_histogram = num_hist;
+
+                            for (int i = 0; i < num_hist; i++)
+                            {
+                                uint8_t pct = bs_read(&bs, 7);
+                                uint32_t pctl = bs_read(&bs, 17);
+                                if (w == 0 && i < 15)
+                                {
+                                    out->histogram[i].percentage = pct;
+                                    out->histogram[i].percentile = (float)pctl / 100000.0f;
+                                }
+                            }
+
+                            uint32_t frac_bright = bs_read(&bs, 10);
+                            if (w == 0)
+                                out->fraction_bright_pixels = (float)frac_bright / 1000.0f;
+                        }
+
+                        uint8_t mast_actual_peak_flag = bs_read1(&bs);
+                        if (mast_actual_peak_flag)
+                        {
+                            uint8_t rows = bs_read(&bs, 5);
+                            uint8_t cols = bs_read(&bs, 5);
+                            if (rows >= 2 && rows <= 25 && cols >= 2 && cols <= 25)
+                                bs_skip(&bs, (size_t)rows * cols * 4);
+                            else
+                                goto skip_msg;
+                        }
+
+                        for (int w = 0; w < num_windows; w++)
+                        {
+                            uint8_t tone_mapping_flag = bs_read1(&bs);
+                            if (w == 0)
+                                out->tone_mapping_flag = tone_mapping_flag;
+                            if (tone_mapping_flag)
+                            {
+                                uint16_t knee_x = bs_read(&bs, 12);
+                                uint16_t knee_y = bs_read(&bs, 12);
+                                uint8_t num_anchors = bs_read(&bs, 4);
+                                if (num_anchors > 15)
+                                    goto skip_msg;
+                                if (w == 0)
+                                {
+                                    out->knee_point_x = (float)knee_x / 4095.0f;
+                                    out->knee_point_y = (float)knee_y / 4095.0f;
+                                    out->num_bezier_anchors = num_anchors;
+                                }
+                                for (int i = 0; i < num_anchors; i++)
+                                {
+                                    uint16_t anchor = bs_read(&bs, 10);
+                                    if (w == 0 && i < 15)
+                                        out->bezier_curve_anchors[i] = (float)anchor / 1023.0f;
+                                }
+                            }
+
+                            uint8_t color_sat_flag = bs_read1(&bs);
+                            if (color_sat_flag)
+                                bs_skip(&bs, 6);
+                        }
+
+                        if (!bs_error(&bs))
+                            b_found = true;
+                    }
+                }
+            }
+        }
+
+skip_msg:
+        cur_pos = bs_pos(&bs);
+        if (cur_pos < end_pos)
+            bs_skip(&bs, end_pos - cur_pos);
+
+        if (b_found)
+            break;
+    }
+
+    if (b_allocated)
+        free(p_rbsp);
+
+    return b_found;
+}
+
+static bool ParseHEVCDoviRPU(decoder_t *p_dec, struct vt_hevc_context *hevcctx,
+                             const uint8_t *p_nal, size_t i_nal,
+                             vlc_video_dovi_metadata_t *out)
+{
+    if (i_nal < 4)
+        return false;
+
+    /* NAL header is 2 bytes */
+    const uint8_t *p_payload = p_nal + 2;
+    size_t i_payload = i_nal - 2;
+
+    uint8_t rbsp_buf[2048];
+    uint8_t *p_rbsp = rbsp_buf;
+    bool b_allocated = false;
+
+    if (i_payload > sizeof(rbsp_buf))
+    {
+        p_rbsp = malloc(i_payload);
+        if (!p_rbsp)
+            return false;
+        b_allocated = true;
+    }
+
+    size_t i_rbsp = rpu_unescape_rbsp(p_payload, i_payload, p_rbsp, i_payload);
+    if (i_rbsp < 4)
+    {
+        if (b_allocated)
+            free(p_rbsp);
+        return false;
+    }
+
+    bs_t bs;
+    bs_init(&bs, p_rbsp, i_rbsp);
+
+    uint8_t rpu_nal_prefix = bs_read(&bs, 8);
+    if (rpu_nal_prefix != 25)
+    {
+        if (b_allocated)
+            free(p_rbsp);
+        return false;
+    }
+
+    uint8_t rpu_type = bs_read(&bs, 6);
+    if (rpu_type != 2)
+    {
+        if (b_allocated)
+            free(p_rbsp);
+        return false;
+    }
+
+    uint16_t rpu_format = bs_read(&bs, 11);
+    uint8_t vdr_rpu_profile = bs_read(&bs, 4);
+    uint8_t vdr_rpu_level = bs_read(&bs, 4);
+    VLC_UNUSED(vdr_rpu_profile);
+    VLC_UNUSED(vdr_rpu_level);
+
+    memset(out, 0, sizeof(*out));
+    /* Defaults for colorspace matrices */
+    out->nonlinear_matrix[0] = 1.0f;
+    out->nonlinear_matrix[4] = 1.0f;
+    out->nonlinear_matrix[8] = 1.0f;
+    out->linear_matrix[0] = 1.0f;
+    out->linear_matrix[4] = 1.0f;
+    out->linear_matrix[8] = 1.0f;
+    out->source_min_pq = 0;
+    out->source_max_pq = 4095;
+    out->nlq_method_idc = VLC_DOVI_NLQ_NONE;
+
+    uint8_t coef_data_type = 0;
+    uint8_t coef_log2_denom = 23;
+    uint8_t bl_bit_depth = 10;
+    uint8_t el_bit_depth = 10;
+    uint8_t disable_residual_flag = 0;
+    uint8_t dm_compression = 0;
+
+    uint8_t vdr_seq_info_present_flag = bs_read1(&bs);
+    if (vdr_seq_info_present_flag)
+    {
+        uint8_t chroma_resampling_explicit_filter_flag = bs_read1(&bs);
+        VLC_UNUSED(chroma_resampling_explicit_filter_flag);
+        coef_data_type = bs_read(&bs, 2);
+        if (coef_data_type == 0 /* FIXED */)
+        {
+            coef_log2_denom = bs_read_ue(&bs);
+            if (coef_log2_denom < 13 || coef_log2_denom > 32)
+                goto fail;
+        }
+        else if (coef_data_type == 1 /* FLOAT */)
+        {
+            coef_log2_denom = 32;
+        }
+        else
+        {
+            goto fail;
+        }
+
+        uint8_t vdr_rpu_normalized_idc = bs_read(&bs, 2);
+        VLC_UNUSED(vdr_rpu_normalized_idc);
+        uint8_t bl_video_full_range_flag = bs_read1(&bs);
+        VLC_UNUSED(bl_video_full_range_flag);
+
+        if ((rpu_format & 0x700) == 0)
+        {
+            uint32_t bl_bit_depth_minus8 = bs_read_ue(&bs);
+            uint32_t el_bit_depth_minus8 = bs_read_ue(&bs);
+            uint32_t vdr_bit_depth_minus8 = bs_read_ue(&bs);
+
+            el_bit_depth_minus8 &= 0xFF;
+            if (bl_bit_depth_minus8 > 8 || el_bit_depth_minus8 > 8 || vdr_bit_depth_minus8 > 8)
+                goto fail;
+
+            bl_bit_depth = bl_bit_depth_minus8 + 8;
+            el_bit_depth = el_bit_depth_minus8 + 8;
+
+            uint8_t spatial_resampling_filter_flag = bs_read1(&bs);
+            VLC_UNUSED(spatial_resampling_filter_flag);
+            dm_compression = bs_read(&bs, 3);
+            uint8_t el_spatial_resampling_filter_flag = bs_read1(&bs);
+            VLC_UNUSED(el_spatial_resampling_filter_flag);
+            disable_residual_flag = bs_read1(&bs);
+        }
+        else
+        {
+            goto fail;
+        }
+
+        /* Save sequence state */
+        hevcctx->dovi_state.coef_data_type = coef_data_type;
+        hevcctx->dovi_state.coef_log2_denom = coef_log2_denom;
+        hevcctx->dovi_state.bl_bit_depth = bl_bit_depth;
+        hevcctx->dovi_state.el_bit_depth = el_bit_depth;
+        hevcctx->dovi_state.disable_residual_flag = disable_residual_flag;
+        hevcctx->dovi_state.dm_compression = dm_compression;
+    }
+    else if (hevcctx->dovi_state.b_valid)
+    {
+        coef_data_type = hevcctx->dovi_state.coef_data_type;
+        coef_log2_denom = hevcctx->dovi_state.coef_log2_denom;
+        bl_bit_depth = hevcctx->dovi_state.bl_bit_depth;
+        el_bit_depth = hevcctx->dovi_state.el_bit_depth;
+        disable_residual_flag = hevcctx->dovi_state.disable_residual_flag;
+        dm_compression = hevcctx->dovi_state.dm_compression;
+    }
+    else
+    {
+        goto fail;
+    }
+
+    out->bl_bit_depth = bl_bit_depth;
+    out->el_bit_depth = el_bit_depth;
+    out->coef_log2_denom = coef_log2_denom;
+
+    uint8_t vdr_dm_metadata_present_flag = bs_read1(&bs);
+    uint8_t use_prev_vdr_rpu_flag = bs_read1(&bs);
+    bool use_nlq = ((rpu_format & 0x700) == 0) && !disable_residual_flag;
+
+    if (use_prev_vdr_rpu_flag)
+    {
+        uint32_t prev_vdr_rpu_id = bs_read_ue(&bs);
+        VLC_UNUSED(prev_vdr_rpu_id);
+        if (hevcctx->dovi_state.b_valid)
+        {
+            out->nlq_method_idc = hevcctx->dovi_state.last_dovi.nlq_method_idc;
+            memcpy(out->curves, hevcctx->dovi_state.last_dovi.curves, sizeof(out->curves));
+            memcpy(out->nlq, hevcctx->dovi_state.last_dovi.nlq, sizeof(out->nlq));
+        }
+        else
+        {
+            goto fail;
+        }
+    }
+    else
+    {
+        uint32_t vdr_rpu_id = bs_read_ue(&bs);
+        VLC_UNUSED(vdr_rpu_id);
+        uint32_t mapping_color_space = bs_read_ue(&bs);
+        VLC_UNUSED(mapping_color_space);
+        uint32_t mapping_chroma_format_idc = bs_read_ue(&bs);
+        VLC_UNUSED(mapping_chroma_format_idc);
+
+        for (int c = 0; c < 3; c++)
+        {
+            uint32_t num_pivots_minus_2 = bs_read_ue(&bs);
+            if (num_pivots_minus_2 > 7)
+                goto fail;
+            uint32_t num_pivots = num_pivots_minus_2 + 2;
+            out->curves[c].num_pivots = num_pivots;
+
+            uint16_t pivot = 0;
+            for (uint32_t i = 0; i < num_pivots; i++)
+            {
+                pivot += bs_read(&bs, bl_bit_depth);
+                out->curves[c].pivots[i] = pivot;
+            }
+        }
+
+        if (use_nlq)
+        {
+            uint32_t nlq_method_idc = bs_read(&bs, 3);
+            out->nlq_method_idc = (enum vlc_dovi_nlq_method_t)nlq_method_idc;
+            bs_skip(&bs, (size_t)bl_bit_depth * 2);
+        }
+        else
+        {
+            out->nlq_method_idc = VLC_DOVI_NLQ_NONE;
+        }
+
+        uint32_t num_x_partitions = bs_read_ue(&bs) + 1;
+        uint32_t num_y_partitions = bs_read_ue(&bs) + 1;
+        VLC_UNUSED(num_x_partitions);
+        VLC_UNUSED(num_y_partitions);
+
+        /* vdr_rpu_data_payload */
+        for (int c = 0; c < 3; c++)
+        {
+            for (uint32_t i = 0; i < out->curves[c].num_pivots - 1; i++)
+            {
+                uint32_t mapping_idc = bs_read_ue(&bs);
+                out->curves[c].mapping_idc[i] = (enum vlc_dovi_reshape_method_t)mapping_idc;
+                if (mapping_idc == VLC_DOVI_RESHAPE_POLYNOMIAL)
+                {
+                    uint32_t poly_order_minus1 = bs_read_ue(&bs);
+                    if (poly_order_minus1 > 1)
+                        goto fail;
+                    uint32_t poly_order = poly_order_minus1 + 1;
+                    out->curves[c].poly_order[i] = poly_order;
+                    if (poly_order_minus1 == 0)
+                    {
+                        uint8_t linear_interp_flag = bs_read1(&bs);
+                        if (linear_interp_flag)
+                            goto fail;
+                    }
+                    for (uint32_t k = 0; k <= poly_order; k++)
+                    {
+                        out->curves[c].poly_coef[i][k] = rpu_read_se_coef(&bs, coef_data_type, coef_log2_denom);
+                    }
+                }
+                else if (mapping_idc == VLC_DOVI_RESHAPE_MMR)
+                {
+                    uint8_t mmr_order_minus1 = bs_read(&bs, 2);
+                    if (mmr_order_minus1 > 2)
+                        goto fail;
+                    uint8_t mmr_order = mmr_order_minus1 + 1;
+                    out->curves[c].mmr_order[i] = mmr_order;
+                    out->curves[c].mmr_constant[i] = rpu_read_se_coef(&bs, coef_data_type, coef_log2_denom);
+                    for (int j = 0; j < mmr_order; j++)
+                    {
+                        for (int k = 0; k < 7; k++)
+                        {
+                            out->curves[c].mmr_coef[i][j][k] = rpu_read_se_coef(&bs, coef_data_type, coef_log2_denom);
+                        }
+                    }
+                }
+                else
+                {
+                    goto fail;
+                }
+            }
+        }
+
+        if (use_nlq)
+        {
+            for (int c = 0; c < 3; c++)
+            {
+                out->nlq[c].offset = bs_read(&bs, el_bit_depth);
+                out->nlq[c].offset_depth = el_bit_depth;
+                out->nlq[c].hdr_in_max = rpu_read_ue_coef(&bs, coef_data_type, coef_log2_denom);
+                if (out->nlq_method_idc == VLC_DOVI_NLQ_LINEAR_DZ)
+                {
+                    out->nlq[c].dz_slope = rpu_read_ue_coef(&bs, coef_data_type, coef_log2_denom);
+                    out->nlq[c].dz_threshold = rpu_read_ue_coef(&bs, coef_data_type, coef_log2_denom);
+                }
+            }
+        }
+    }
+
+    if (vdr_dm_metadata_present_flag)
+    {
+        uint32_t affected_dm_id = bs_read_ue(&bs);
+        uint32_t current_dm_id = bs_read_ue(&bs);
+        VLC_UNUSED(affected_dm_id);
+        VLC_UNUSED(current_dm_id);
+        uint32_t scene_refresh_flag = bs_read_ue(&bs);
+        VLC_UNUSED(scene_refresh_flag);
+
+        if (!dm_compression)
+        {
+            for (int i = 0; i < 9; i++)
+            {
+                int16_t val = (int16_t)bs_read(&bs, 16);
+                out->nonlinear_matrix[i] = (float)val / 8192.0f;
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                uint32_t offset = bs_read(&bs, 32);
+                out->nonlinear_offset[i] = (float)(int32_t)offset / 268435456.0f;
+            }
+            for (int i = 0; i < 9; i++)
+            {
+                int16_t val = (int16_t)bs_read(&bs, 16);
+                out->linear_matrix[i] = (float)val / 16384.0f;
+            }
+
+            bs_skip(&bs, 16); /* signal_eotf */
+            bs_skip(&bs, 16); /* signal_eotf_param0 */
+            bs_skip(&bs, 16); /* signal_eotf_param1 */
+            bs_skip(&bs, 32); /* signal_eotf_param2 */
+            bs_skip(&bs, 5);  /* signal_bit_depth */
+            bs_skip(&bs, 2);  /* signal_color_space */
+            bs_skip(&bs, 2);  /* signal_chroma_format */
+            bs_skip(&bs, 2);  /* signal_full_range_flag */
+            out->source_min_pq = bs_read(&bs, 12);
+            out->source_max_pq = bs_read(&bs, 12);
+            bs_skip(&bs, 10); /* source_diagonal */
+        }
+
+        uint32_t num_ext_blocks = bs_read_ue(&bs);
+        bs_align(&bs);
+
+        for (uint32_t b = 0; b < num_ext_blocks && !bs_error(&bs); b++)
+        {
+            uint32_t ext_block_length = bs_read_ue(&bs);
+            uint8_t ext_block_level = bs_read(&bs, 8);
+            size_t start_pos = bs_pos(&bs);
+            size_t block_bits = (size_t)ext_block_length * 8;
+
+            if (ext_block_level == 1)
+            {
+                out->source_min_pq = bs_read(&bs, 12);
+                out->source_max_pq = bs_read(&bs, 12);
+                bs_skip(&bs, 12); /* source_mid_pq */
+            }
+
+            size_t current_pos = bs_pos(&bs);
+            if (current_pos > start_pos && current_pos - start_pos < block_bits)
+            {
+                bs_skip(&bs, block_bits - (current_pos - start_pos));
+            }
+            else if (current_pos == start_pos)
+            {
+                bs_skip(&bs, block_bits);
+            }
+        }
+    }
+
+    if (bs_error(&bs))
+        goto fail;
+
+    if (b_allocated)
+        free(p_rbsp);
+
+    hevcctx->dovi_state.last_dovi = *out;
+    hevcctx->dovi_state.b_valid = true;
+    return true;
+
+fail:
+    if (b_allocated)
+        free(p_rbsp);
+
+    if (!hevcctx->b_dovi_warned)
+    {
+        msg_Dbg(p_dec, "Dolby Vision RPU bitstream read error or unsupported profile");
+        hevcctx->b_dovi_warned = true;
+    }
+    return false;
+}
+
 static bool FillReorderInfoHEVC(decoder_t *p_dec, const block_t *p_block,
                                 frame_info_t *p_info)
 {
@@ -648,6 +1317,25 @@ static bool FillReorderInfoHEVC(decoder_t *p_dec, const block_t *p_block,
     hxxx_iterator_ctx_t itctx;
     hxxx_iterator_init(&itctx, p_block->p_buffer, p_block->i_buffer,
                        hevcctx->hh.i_output_nal_length_size);
+
+    /* Pre-scan the block for Dolby Vision RPU (NAL unit type 62) which may precede
+     * or follow the VCL slice NAL units in the access unit. */
+    const uint8_t *p_rpu_nal = NULL;
+    size_t i_rpu_nal = 0;
+    hxxx_iterator_ctx_t rpu_it;
+    hxxx_iterator_init(&rpu_it, p_block->p_buffer, p_block->i_buffer,
+                       hevcctx->hh.i_output_nal_length_size);
+    const uint8_t *p_scan;
+    size_t i_scan;
+    while (hxxx_iterate_next(&rpu_it, &p_scan, &i_scan))
+    {
+        if (i_scan >= 2 && hevc_getNALLayer(p_scan) == 0 && hevc_getNALType(p_scan) == 62)
+        {
+            p_rpu_nal = p_scan;
+            i_rpu_nal = i_scan;
+            break;
+        }
+    }
 
     const uint8_t *p_nal; size_t i_nal;
     struct
@@ -738,6 +1426,43 @@ static bool FillReorderInfoHEVC(decoder_t *p_dec, const block_t *p_block,
                 p_info->b_output_needed = hevc_get_slice_pic_output(p_sli);
 
             hevc_rbsp_release_slice_header(p_sli);
+
+            struct vt_frame_info_t *p_vt_info = (struct vt_frame_info_t *)p_info;
+            for (size_t i = 0; i < i_sei_count; i++)
+            {
+                if (!p_vt_info->has_hdr10plus)
+                {
+                    if (ParseHEVCHDR10Plus(p_dec, hevcctx,
+                                           sei_array[i].p_nal, sei_array[i].i_nal,
+                                           &p_vt_info->hdr10plus))
+                    {
+                        p_vt_info->has_hdr10plus = true;
+                        if (!hevcctx->b_hdr10plus_logged)
+                        {
+                            msg_Dbg(p_dec, "HDR10+ dynamic metadata detected and parsed");
+                            hevcctx->b_hdr10plus_logged = true;
+                        }
+                    }
+                }
+            }
+
+            if (p_rpu_nal)
+            {
+                if (ParseHEVCDoviRPU(p_dec, hevcctx, p_rpu_nal, i_rpu_nal, &p_vt_info->dovi))
+                {
+                    p_vt_info->has_dovi = true;
+                    if (!hevcctx->b_dovi_logged)
+                    {
+                        msg_Dbg(p_dec, "Dolby Vision RPU metadata detected and parsed");
+                        hevcctx->b_dovi_logged = true;
+                    }
+                }
+                else
+                {
+                    p_vt_info->has_dovi = false;
+                }
+            }
+
             return true; /* No need to parse further NAL */
         }
         else if (i_nal_type == HEVC_NAL_PREF_SEI)
@@ -853,9 +1578,10 @@ static void DrainDPBLocked(decoder_t *p_dec, bool flush)
 static frame_info_t * CreateReorderInfo(decoder_t *p_dec, const block_t *p_block)
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
-    frame_info_t *p_info = calloc(1, sizeof(*p_info));
-    if (!p_info)
+    struct vt_frame_info_t *p_vt_info = calloc(1, sizeof(*p_vt_info));
+    if (!p_vt_info)
         return NULL;
+    frame_info_t *p_info = &p_vt_info->info;
 
     /* failsafe defaults */
     p_info->b_output_needed = true;
@@ -2311,6 +3037,23 @@ static void DecoderCallback(void *decompressionOutputRefCon,
                  * 10bits. To fix this issue, we ensure that we don't have too many
                  * output frames allocated by waiting for the vout to release them. */
             pic_pacer_AccountAllocation(p_sys->pic_pacer, p_info->b_field);
+        }
+
+        struct vt_frame_info_t *p_vt_info = (struct vt_frame_info_t *)p_info;
+        if (p_vt_info && p_vt_info->has_hdr10plus)
+        {
+            vlc_video_hdr_dynamic_metadata_t *dst =
+                picture_AttachNewAncillary(p_pic, VLC_ANCILLARY_ID_HDR10PLUS, sizeof(*dst));
+            if (dst)
+                *dst = p_vt_info->hdr10plus;
+        }
+
+        if (p_vt_info && p_vt_info->has_dovi)
+        {
+            vlc_video_dovi_metadata_t *dst =
+                picture_AttachNewAncillary(p_pic, VLC_ANCILLARY_ID_DOVI, sizeof(*dst));
+            if (dst)
+                *dst = p_vt_info->dovi;
         }
     }
 
