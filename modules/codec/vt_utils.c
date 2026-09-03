@@ -495,6 +495,8 @@ cvpx_create_mastering_display_color_volume_data(const video_format_t *fmt)
                 max_l = 10000000;
             if (min_l == 0)
                 min_l = 1;
+        } else if (max_l == 0) {
+            return NULL;
         }
         st2086.max_luminance = htonl(max_l);
         st2086.min_luminance = htonl(min_l);

@@ -425,14 +425,9 @@ static inline void video_format_AdjustColorSpace( video_format_t *p_fmt )
 
     if ( p_fmt->primaries == COLOR_PRIMARIES_UNDEF )
     {
-        if ( b_is_uhd )
-        {
-            if ( b_is_hdr_transfer )
-                p_fmt->primaries = COLOR_PRIMARIES_BT2020;
-            else
-                p_fmt->primaries = COLOR_PRIMARIES_BT709;
-        }
-        else if ( p_fmt->i_visible_height > 576 ) // HD
+        if ( b_is_hdr_transfer )
+            p_fmt->primaries = COLOR_PRIMARIES_BT2020;
+        else if ( b_is_uhd || p_fmt->i_visible_height > 576 ) // UHD or HD
             p_fmt->primaries = COLOR_PRIMARIES_BT709;
         else if ( p_fmt->i_visible_height > 525 ) // PAL
             p_fmt->primaries = COLOR_PRIMARIES_BT601_625;
@@ -450,14 +445,9 @@ static inline void video_format_AdjustColorSpace( video_format_t *p_fmt )
 
     if ( p_fmt->space == COLOR_SPACE_UNDEF )
     {
-        if ( b_is_uhd )
-        {
-            if ( b_is_hdr_transfer )
-                p_fmt->space = COLOR_SPACE_BT2020;
-            else
-                p_fmt->space = COLOR_SPACE_BT709;
-        }
-        else if ( p_fmt->i_visible_height > 576 ) // HD
+        if ( b_is_hdr_transfer )
+            p_fmt->space = COLOR_SPACE_BT2020;
+        else if ( b_is_uhd || p_fmt->i_visible_height > 576 ) // UHD or HD
             p_fmt->space = COLOR_SPACE_BT709;
         else
             p_fmt->space = COLOR_SPACE_BT601;
