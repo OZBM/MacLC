@@ -175,12 +175,18 @@ static OSType GetBestChroma(uint8_t i_chroma_format, uint8_t i_depth_luma,
              * (AVSampleBufferDisplayLayer) is now the default video output on macOS and does
              * not use OpenGL (caopengllayer at priority 300 is the only OpenGL path left).
              *
-             * The ideal target for 4:2:0 >10-bit would be a 16-bit biplanar format such as
-             * kCVPixelFormatType_420YpCbCr16BiPlanarVideoRange. However, VLC lacks a corresponding
-             * CVPX fourcc (e.g. VLC_CODEC_CVPX_P016) in include/vlc_fourcc.h and
-             * modules/video_chroma/cvpx.c to carry 16-bit CVPixelBuffers across the pipeline.
+             * Note: Apple CoreVideo defines NO 4:2:0 16-bit biplanar format (there is no
+             * kCVPixelFormatType_420YpCbCr16BiPlanar... in the SDK). The only 16-bit
+             * biplanar YCbCr formats defined by Apple are 4:2:2
+             * (kCVPixelFormatType_422YpCbCr16BiPlanarVideoRange = 'sv22') and 4:4:4
+             * (kCVPixelFormatType_444YpCbCr16BiPlanarVideoRange = 'sv44').
              *
-             * TODO: Add VLC_CODEC_CVPX_P016 across VLC when 16-bit CVPX pipeline support is added.
+             * Supporting those formats natively would require introducing new VLC fourccs
+             * (e.g. VLC_CODEC_P216 and VLC_CODEC_CVPX_P216 for 4:2:2; P416 for 4:4:4),
+             * CPU-side semi-planar copy and SIMD conversion routines in copy.c, chroma
+             * descriptions in fourcc.c, pool handling in vt_utils.c / cvpx.c, display
+             * pipeline adaptation in VLCSampleBufferDisplay.m, and chroma subsampling
+             * interpolation since 4:2:0 bitstreams cannot map 1:1 to 4:2:2 or 4:4:4.
              *
              * In the meantime, fall back to the 10-bit P010 format (kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange)
              * where supported, preserving HDR precision far better than crushing to 8-bit 32BGRA. */
