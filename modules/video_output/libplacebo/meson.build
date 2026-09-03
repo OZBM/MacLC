@@ -13,11 +13,26 @@ libplacebo_utils = static_library('vlc_libplacebo_utils',
                                 dependencies: [libplacebo_dep],
                                 include_directories: [vlc_include_dirs])
 
+placebo_sources = files('instance.c', 'display.c')
+placebo_deps = [libplacebo_dep]
+placebo_objc_args = []
+
+if host_system == 'darwin'
+    placebo_sources += files('darwin_icc.m')
+    placebo_deps += [
+        frameworks['Cocoa'],
+        frameworks['CoreGraphics'],
+        frameworks['CoreFoundation'],
+    ]
+    placebo_objc_args += ['-fobjc-arc']
+endif
+
 vlc_modules += {
     'name' : 'placebo',
-    'sources' : files('instance.c', 'display.c'),
+    'sources' : placebo_sources,
     'link_with' : [libplacebo_utils],
-    'dependencies' : [libplacebo_dep],
+    'dependencies' : placebo_deps,
+    'objc_args' : placebo_objc_args,
 }
 
 ## Vulkan

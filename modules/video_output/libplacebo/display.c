@@ -45,6 +45,7 @@
 # include <CoreGraphics/CoreGraphics.h>
 # include <CoreFoundation/CoreFoundation.h>
 # include <stdatomic.h>
+# include "darwin_icc.h"
 #endif
 
 typedef struct vout_display_sys_t
@@ -86,6 +87,7 @@ typedef struct vout_display_sys_t
     CFDataRef icc_data;
     struct pl_icc_profile icc_profile;
     atomic_bool icc_dirty;
+    vlc_placebo_darwin_icc *darwin_icc;
 #endif
 } vout_display_sys_t;
 
@@ -190,6 +192,10 @@ static int Open(vout_display_t *vd,
 
 #ifdef __APPLE__
     atomic_init(&sys->icc_dirty, false);
+    void *nsobject = (vd->cfg->window != NULL &&
+                      vd->cfg->window->type == VLC_WINDOW_TYPE_NSOBJECT)
+                     ? vd->cfg->window->handle.nsobject : NULL;
+    sys->darwin_icc = vlc_placebo_darwin_icc_create(nsobject, &sys->icc_dirty);
     CGDisplayRegisterReconfigurationCallback(DisplayReconfigCallback, vd);
 #endif
 
@@ -200,6 +206,8 @@ static int Open(vout_display_t *vd,
 error:
     pl_renderer_destroy(&sys->renderer);
 #ifdef __APPLE__
+    if (sys->darwin_icc != NULL)
+        vlc_placebo_darwin_icc_destroy(sys->darwin_icc);
     if (sys->icc_data != NULL)
         CFRelease(sys->icc_data);
 #endif
@@ -215,6 +223,10 @@ static void Close(vout_display_t *vd)
 
 #ifdef __APPLE__
     CGDisplayRemoveReconfigurationCallback(DisplayReconfigCallback, vd);
+    if (sys->darwin_icc != NULL) {
+        vlc_placebo_darwin_icc_destroy(sys->darwin_icc);
+        sys->darwin_icc = NULL;
+    }
     if (sys->icc_data != NULL) {
         CFRelease(sys->icc_data);
         sys->icc_data = NULL;
@@ -563,18 +575,22 @@ static void DisplayReconfigCallback(CGDirectDisplayID display,
 
     vout_display_t *vd = userInfo;
     vout_display_sys_t *sys = vd->sys;
-    if (sys != NULL)
+    if (sys != NULL) {
+        if (sys->darwin_icc != NULL)
+            vlc_placebo_darwin_icc_request_update(sys->darwin_icc);
         atomic_store_explicit(&sys->icc_dirty, true, memory_order_relaxed);
+    }
 }
 
-// TODO: Multi-monitor support: query the NSScreen/NSWindow the video window
-// is attached to rather than CGMainDisplayID(). This requires Cocoa/AppKit
-// plumbing not currently available in this C display module.
 static void UpdateDarwinIccProfile(vout_display_t *vd)
 {
     vout_display_sys_t *sys = vd->sys;
 
-    CGColorSpaceRef cs = CGDisplayCopyColorSpace(CGMainDisplayID());
+    CGDirectDisplayID display_id = CGMainDisplayID();
+    if (sys->darwin_icc != NULL)
+        display_id = vlc_placebo_darwin_icc_get_display_id(sys->darwin_icc);
+
+    CGColorSpaceRef cs = CGDisplayCopyColorSpace(display_id);
     if (!cs)
         return;
 
@@ -631,6 +647,8 @@ static int SetDisplaySize(vout_display_t *vd, unsigned width_, unsigned height_)
     vlc_placebo_ReleaseCurrent(sys->pl);
 
 #ifdef __APPLE__
+    if (sys->darwin_icc != NULL)
+        vlc_placebo_darwin_icc_request_update(sys->darwin_icc);
     UpdateDarwinIccProfile(vd);
 #endif
 

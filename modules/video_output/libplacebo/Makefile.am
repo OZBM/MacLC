@@ -17,6 +17,14 @@ libplacebo_plugin_la_SOURCES = $(LIBPLACEBO_COMMONSOURCES) \
 libplacebo_plugin_la_CFLAGS = $(AM_CFLAGS) $(LIBPLACEBO_CFLAGS)
 libplacebo_plugin_la_LIBADD = $(LIBPLACEBO_LIBS) libplacebo_utils.la
 
+if HAVE_OSX
+libplacebo_plugin_la_SOURCES += video_output/libplacebo/darwin_icc.h \
+			  video_output/libplacebo/darwin_icc.m
+libplacebo_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) $(LIBPLACEBO_CFLAGS) -fobjc-arc
+libplacebo_plugin_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-framework,Cocoa \
+			  -Wl,-framework,CoreGraphics -Wl,-framework,CoreFoundation
+endif
+
 vout_PLUGINS += libplacebo_plugin.la
 
 ### Vulkan ###
