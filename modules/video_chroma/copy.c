@@ -1026,7 +1026,7 @@ void Copy422_SP_to_SP(picture_t *dst, const uint8_t *src[static 2],
 }
 
 #define SPLIT_PLANES(type, pitch_den) do { \
-    size_t copy_pitch = __MIN(__MIN(src_pitch / pitch_den, dstu_pitch), dstv_pitch); \
+    size_t copy_pitch = __MIN(__MIN(src_pitch / pitch_den, dstu_pitch / sizeof(type)), dstv_pitch / sizeof(type)); \
     for (unsigned y = 0; y < height; y++) { \
         for (unsigned x = 0; x < copy_pitch; x++) { \
             ((type *) dstu)[x] = ((const type *) src)[2*x+0]; \
@@ -1039,7 +1039,7 @@ void Copy422_SP_to_SP(picture_t *dst, const uint8_t *src[static 2],
 } while(0)
 
 #define SPLIT_PLANES_SHIFTR(type, pitch_den, bitshift) do { \
-    size_t copy_pitch = __MIN(__MIN(src_pitch / pitch_den, dstu_pitch), dstv_pitch); \
+    size_t copy_pitch = __MIN(__MIN(src_pitch / pitch_den, dstu_pitch / sizeof(type)), dstv_pitch / sizeof(type)); \
     for (unsigned y = 0; y < height; y++) { \
         for (unsigned x = 0; x < copy_pitch; x++) { \
             ((type *) dstu)[x] = (((const type *) src)[2*x+0]) >> (bitshift); \
@@ -1052,7 +1052,7 @@ void Copy422_SP_to_SP(picture_t *dst, const uint8_t *src[static 2],
 } while(0)
 
 #define SPLIT_PLANES_SHIFTL(type, pitch_den, bitshift) do { \
-    size_t copy_pitch = __MIN(__MIN(src_pitch / pitch_den, dstu_pitch), dstv_pitch); \
+    size_t copy_pitch = __MIN(__MIN(src_pitch / pitch_den, dstu_pitch / sizeof(type)), dstv_pitch / sizeof(type)); \
     for (unsigned y = 0; y < height; y++) { \
         for (unsigned x = 0; x < copy_pitch; x++) { \
             ((type *) dstu)[x] = (((const type *) src)[2*x+0]) << (bitshift); \
