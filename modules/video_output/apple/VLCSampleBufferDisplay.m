@@ -865,15 +865,36 @@ shouldInheritContentsScale:(CGFloat)newScale
     vout_display_place_t place = *_vd->place;
     void (^createDisplayBlock)(void) = ^{
         VLCSampleBufferDisplay *strongSelf = weakSelf;
-        if (!strongSelf || strongSelf.invalidated)
+        if (!strongSelf)
             return;
 
-        if (strongSelf.displayView)
+        if (strongSelf.invalidated) {
+            [strongSelf.readyCondition lock];
+            strongSelf.isPreparingDisplay = NO;
+            [strongSelf.readyCondition broadcast];
+            [strongSelf.readyCondition unlock];
             return;
+        }
+
+        if (strongSelf.displayView) {
+            [strongSelf.readyCondition lock];
+            strongSelf.isPreparingDisplay = NO;
+            [strongSelf.readyCondition broadcast];
+            [strongSelf.readyCondition unlock];
+            return;
+        }
+
+        VLCView *window = strongSelf.window;
+        if (!window) {
+            [strongSelf.readyCondition lock];
+            strongSelf.isPreparingDisplay = NO;
+            [strongSelf.readyCondition broadcast];
+            [strongSelf.readyCondition unlock];
+            return;
+        }
 
         VLCSampleBufferDisplayView *displayView;
         VLCSampleBufferSubpictureView *spuView;
-        VLCView *window = strongSelf.window;
 
         displayView = [[VLCSampleBufferDisplayView alloc] init];
         displayView.sys = strongSelf;
@@ -884,10 +905,22 @@ shouldInheritContentsScale:(CGFloat)newScale
         displayView.frame = [strongSelf frameForPlace:&place];
         [spuView setFrame:[window bounds]];
 
+        AVSampleBufferDisplayLayer *layer = displayView.displayLayer;
+        if (layer == nil) {
+            [displayView removeFromSuperview];
+            [spuView removeFromSuperview];
+            [strongSelf.readyCondition lock];
+            strongSelf.isPreparingDisplay = NO;
+            [strongSelf.readyCondition broadcast];
+            [strongSelf.readyCondition unlock];
+            return;
+        }
+
         strongSelf.displayView = displayView;
         strongSelf.spuView = spuView;
         [strongSelf.readyCondition lock];
-        strongSelf.displayLayer = displayView.displayLayer;
+        strongSelf.displayLayer = layer;
+        strongSelf.isPreparingDisplay = NO;
         [strongSelf.readyCondition broadcast];
         [strongSelf.readyCondition unlock];
 
@@ -1277,12 +1310,18 @@ shouldInheritContentsScale:(CGFloat)newScale
 
 - (void)close {
     [_readyCondition lock];
+    if (_invalidated) {
+        [_readyCondition unlock];
+        return;
+    }
     _invalidated = YES;
+    _isPreparingDisplay = NO;
     [_readyCondition broadcast];
     [_readyCondition unlock];
 
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+
     void (^cleanupBlock)(void) = ^{
-        [[NSNotificationCenter defaultCenter] removeObserver:self];
         [self.displayView removeFromSuperview];
         [self.spuView removeFromSuperview];
     };
@@ -1290,7 +1329,7 @@ shouldInheritContentsScale:(CGFloat)newScale
     if ([NSThread isMainThread]) {
         cleanupBlock();
     } else {
-        dispatch_sync(dispatch_get_main_queue(), cleanupBlock);
+        dispatch_async(dispatch_get_main_queue(), cleanupBlock);
     }
 
     DeletePipController(_pipcontroller);
@@ -1596,10 +1635,12 @@ static void UpdateSubpictureRegions(vout_display_t *vd,
             r->p_picture->p->p_pixels + pixels_offset,
             length - pixels_offset);
         CGDataProviderRef provider = CGDataProviderCreateWithCFData(data);
+        /* CoreGraphics big-endian reads the 32-bit word in A, R, G, B memory
+         * address order, matching the advertised VLC_CODEC_ARGB chroma. */
         CGImageRef image = CGImageCreate(
             r->p_picture->format.i_visible_width, r->p_picture->format.i_visible_height,
             8, 32, r->p_picture->p->i_pitch,
-            space, kCGBitmapByteOrder32Host | kCGImageAlphaFirst,
+            space, kCGBitmapByteOrder32Big | kCGImageAlphaFirst,
             provider, NULL, true, kCGRenderingIntentDefault
             );
         VLCSampleBufferSubpictureRegion *region;
