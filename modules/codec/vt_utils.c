@@ -438,9 +438,7 @@ cvpx_create_mastering_display_color_volume_data(const video_format_t *fmt)
                          fmt->mastering.white_point[0] != 0 ||
                          fmt->mastering.primaries[0] != 0;
 
-    bool is_hdr = fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
-                  fmt->transfer == TRANSFER_FUNC_HLG ||
-                  fmt->primaries == COLOR_PRIMARIES_BT2020;
+    bool is_hdr = fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084;
 
     if (!has_mastering && !is_hdr)
         return NULL;
@@ -453,31 +451,53 @@ cvpx_create_mastering_display_color_volume_data(const video_format_t *fmt)
     } __attribute__((packed)) st2086;
 
     if (has_mastering) {
-        st2086.display_primaries[0][0] = htons(fmt->mastering.primaries[0]);
-        st2086.display_primaries[0][1] = htons(fmt->mastering.primaries[1]);
-        st2086.display_primaries[1][0] = htons(fmt->mastering.primaries[2]);
-        st2086.display_primaries[1][1] = htons(fmt->mastering.primaries[3]);
-        st2086.display_primaries[2][0] = htons(fmt->mastering.primaries[4]);
-        st2086.display_primaries[2][1] = htons(fmt->mastering.primaries[5]);
-        st2086.white_point[0] = htons(fmt->mastering.white_point[0]);
-        st2086.white_point[1] = htons(fmt->mastering.white_point[1]);
-        if (st2086.display_primaries[0][0] == 0) {
+        bool coords_valid = true;
+        for (int i = 0; i < 6; i++) {
+            if (fmt->mastering.primaries[i] == 0 || fmt->mastering.primaries[i] > 50000) {
+                coords_valid = false;
+                break;
+            }
+        }
+        if (coords_valid &&
+            (fmt->mastering.white_point[0] == 0 || fmt->mastering.white_point[0] > 50000 ||
+             fmt->mastering.white_point[1] == 0 || fmt->mastering.white_point[1] > 50000)) {
+            coords_valid = false;
+        }
+
+        if (coords_valid) {
+            st2086.display_primaries[0][0] = htons(fmt->mastering.primaries[0]);
+            st2086.display_primaries[0][1] = htons(fmt->mastering.primaries[1]);
+            st2086.display_primaries[1][0] = htons(fmt->mastering.primaries[2]);
+            st2086.display_primaries[1][1] = htons(fmt->mastering.primaries[3]);
+            st2086.display_primaries[2][0] = htons(fmt->mastering.primaries[4]);
+            st2086.display_primaries[2][1] = htons(fmt->mastering.primaries[5]);
+            st2086.white_point[0] = htons(fmt->mastering.white_point[0]);
+            st2086.white_point[1] = htons(fmt->mastering.white_point[1]);
+        } else {
             st2086.display_primaries[0][0] = htons(13250); // G.x
             st2086.display_primaries[0][1] = htons(34500); // G.y
             st2086.display_primaries[1][0] = htons(7500);  // B.x
             st2086.display_primaries[1][1] = htons(3000);  // B.y
             st2086.display_primaries[2][0] = htons(34000); // R.x
             st2086.display_primaries[2][1] = htons(16000); // R.y
+            st2086.white_point[0] = htons(15635);          // D65.x
+            st2086.white_point[1] = htons(16450);          // D65.y
         }
-        if (st2086.white_point[0] == 0) {
-            st2086.white_point[0] = htons(15635); // D65.x
-            st2086.white_point[1] = htons(16450); // D65.y
-        }
+
+        /* VLC mastering display max_luminance and min_luminance are in units
+         * of 0.0001 cd/m^2 (SMPTE ST 2086 contract). CoreVideo expects the
+         * exact same 0.0001 cd/m^2 units as a 32-bit big-endian value.
+         * Keep values as-is without heuristic scaling. */
         uint32_t max_l = fmt->mastering.max_luminance;
-        if (max_l > 0 && max_l < 10000)
-            max_l *= 10000;
-        st2086.max_luminance = htonl(max_l ? max_l : 10000000);
-        st2086.min_luminance = htonl(fmt->mastering.min_luminance ? fmt->mastering.min_luminance : 1);
+        uint32_t min_l = fmt->mastering.min_luminance;
+        if (fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084) {
+            if (max_l == 0)
+                max_l = 10000000;
+            if (min_l == 0)
+                min_l = 1;
+        }
+        st2086.max_luminance = htonl(max_l);
+        st2086.min_luminance = htonl(min_l);
     } else {
         /* Default HDR10 Mastering Display: BT.2020 primaries, D65 white point, 1000 nits max, 0.0001 nits min */
         /* ST 2086 SEI order: 0=Green, 1=Blue, 2=Red in 0.00002 units */
@@ -503,9 +523,7 @@ cvpx_create_content_light_level_data(const video_format_t *fmt)
         return NULL;
 
     bool has_lighting = (fmt->lighting.MaxCLL != 0 || fmt->lighting.MaxFALL != 0);
-    bool is_hdr = fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
-                  fmt->transfer == TRANSFER_FUNC_HLG ||
-                  fmt->primaries == COLOR_PRIMARIES_BT2020;
+    bool is_hdr = fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084;
 
     if (!has_lighting && !is_hdr)
         return NULL;
@@ -516,8 +534,13 @@ cvpx_create_content_light_level_data(const video_format_t *fmt)
     } __attribute__((packed)) cta861_3;
 
     if (has_lighting) {
-        cta861_3.max_cll = htons(fmt->lighting.MaxCLL ? fmt->lighting.MaxCLL : 1000);
-        cta861_3.max_fall = htons(fmt->lighting.MaxFALL ? fmt->lighting.MaxFALL : (fmt->lighting.MaxCLL ? fmt->lighting.MaxCLL / 2 : 400));
+        if (fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084) {
+            cta861_3.max_cll = htons(fmt->lighting.MaxCLL ? fmt->lighting.MaxCLL : 1000);
+            cta861_3.max_fall = htons(fmt->lighting.MaxFALL ? fmt->lighting.MaxFALL : (fmt->lighting.MaxCLL ? fmt->lighting.MaxCLL / 2 : 400));
+        } else {
+            cta861_3.max_cll = htons(fmt->lighting.MaxCLL);
+            cta861_3.max_fall = htons(fmt->lighting.MaxFALL);
+        }
     } else {
         cta861_3.max_cll = htons(1000); // 1000 nits MaxCLL
         cta861_3.max_fall = htons(400);  // 400 nits MaxFALL

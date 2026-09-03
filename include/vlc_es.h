@@ -418,9 +418,21 @@ static inline int video_format_Copy( video_format_t *p_dst, const video_format_t
 
 static inline void video_format_AdjustColorSpace( video_format_t *p_fmt )
 {
+    const bool b_is_uhd = ( p_fmt->i_visible_width >= 3840 || p_fmt->i_width >= 3840 ||
+                            p_fmt->i_visible_height >= 2160 || p_fmt->i_height >= 2160 );
+    const bool b_is_hdr_transfer = ( p_fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
+                                     p_fmt->transfer == TRANSFER_FUNC_HLG );
+
     if ( p_fmt->primaries == COLOR_PRIMARIES_UNDEF )
     {
-        if ( p_fmt->i_visible_height > 576 ) // HD
+        if ( b_is_uhd )
+        {
+            if ( b_is_hdr_transfer )
+                p_fmt->primaries = COLOR_PRIMARIES_BT2020;
+            else
+                p_fmt->primaries = COLOR_PRIMARIES_BT709;
+        }
+        else if ( p_fmt->i_visible_height > 576 ) // HD
             p_fmt->primaries = COLOR_PRIMARIES_BT709;
         else if ( p_fmt->i_visible_height > 525 ) // PAL
             p_fmt->primaries = COLOR_PRIMARIES_BT601_625;
@@ -430,7 +442,7 @@ static inline void video_format_AdjustColorSpace( video_format_t *p_fmt )
 
     if ( p_fmt->transfer == TRANSFER_FUNC_UNDEF )
     {
-        if ( p_fmt->i_visible_height > 576 ) // HD
+        if ( b_is_uhd || p_fmt->i_visible_height > 576 ) // UHD or HD
             p_fmt->transfer = TRANSFER_FUNC_BT709;
         else
             p_fmt->transfer = TRANSFER_FUNC_SRGB;
@@ -438,7 +450,14 @@ static inline void video_format_AdjustColorSpace( video_format_t *p_fmt )
 
     if ( p_fmt->space == COLOR_SPACE_UNDEF )
     {
-        if ( p_fmt->i_visible_height > 576 ) // HD
+        if ( b_is_uhd )
+        {
+            if ( b_is_hdr_transfer )
+                p_fmt->space = COLOR_SPACE_BT2020;
+            else
+                p_fmt->space = COLOR_SPACE_BT709;
+        }
+        else if ( p_fmt->i_visible_height > 576 ) // HD
             p_fmt->space = COLOR_SPACE_BT709;
         else
             p_fmt->space = COLOR_SPACE_BT601;
