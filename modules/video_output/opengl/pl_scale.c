@@ -355,22 +355,12 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
      *      8-bit BT.709 playback does not regress and avoids unintended gamut
      *      or transfer curve conversion.
      * 3. Peak luminance and EDR headroom:
-     *    - If "macosx-edr-headroom" is explicitly set by the user (> 0.0f),
-     *      target peak luminance is calculated as 100.0f * headroom nits.
-     *    - Otherwise, dynamic screen headroom query (NSScreen's
-     *      maximumExtendedDynamicRangeColorComponentValue) is NOT-REACHED:
-     *      in caopengllayer.m, the screen headroom query is retained in
-     *      internal Objective-C layer properties (effectiveHeadroom) and is
-     *      never published back to the VLC object tree (vd or sys->gl), nor
-     *      is display dynamic range passed through vout_display_opengl_New()
-     *      or vlc_gl_filters_Append().
-     *      To plumb dynamic headroom without inventing an API, caopengllayer.m
-     *      would need to set "macosx-edr-headroom" on vd or an "edr-headroom"
-     *      float variable on sys->gl whenever the screen or window headroom
-     *      changes.
-     *      In the absence of a reached dynamic headroom, fall back to a fixed
-     *      1000.0 cd/m² peak (the sustained capability of Apple Silicon
-     *      Liquid Retina XDR displays).
+     *    - For HDR content, prefer the effective display headroom published
+     *      by the vout display module via "edr-headroom-effective". Target
+     *      peak luminance is 100.0f * headroom nits.
+     *    - Fall back to explicit user override from "macosx-edr-headroom" (> 0.0f).
+     *    - Fall back last to a fixed 1000.0 cd/m² peak (the sustained capability
+     *      of Apple Silicon Liquid Retina XDR displays).
      */
     struct pl_color_space color_out = {0};
     bool is_hdr = pl_color_space_is_hdr(&sys->frame_in.color);
@@ -389,11 +379,17 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
     else
         color_out.transfer = sys->frame_in.color.transfer;
 
-    float headroom = var_InheritFloat(filter, "macosx-edr-headroom");
-    if (headroom > 0.0f)
-        color_out.hdr.max_luma = 100.0f * headroom;
-    else if (is_hdr || (target_trc && pl_color_transfer_is_hdr(target_trc)))
-        color_out.hdr.max_luma = 1000.0f;
+    if (is_hdr || (target_trc && pl_color_transfer_is_hdr(target_trc)))
+    {
+        float headroom = var_InheritFloat(filter, "edr-headroom-effective");
+        if (headroom <= 0.0f)
+            headroom = var_InheritFloat(filter, "macosx-edr-headroom");
+
+        if (headroom > 0.0f)
+            color_out.hdr.max_luma = 100.0f * headroom;
+        else
+            color_out.hdr.max_luma = 1000.0f;
+    }
 
     sys->frame_out = (struct pl_frame) {
         .num_planes = 1,

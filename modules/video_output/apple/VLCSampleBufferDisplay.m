@@ -1065,6 +1065,7 @@ shouldInheritContentsScale:(CGFloat)newScale
         effectiveHeadroom = (screenHeadroom > 1.0) ? screenHeadroom : 1.0;
     }
     _currentHeadroom = effectiveHeadroom;
+    var_SetFloat(vd, "edr-headroom-effective", (float)effectiveHeadroom);
 
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
@@ -1387,6 +1388,7 @@ static void Close(vout_display_t *vd)
 
     var_DelCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)sys);
     var_DelCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)sys);
+    var_Destroy(vd, "edr-headroom-effective");
 
     DeleteCVPXConverter(sys->converter);
 
@@ -1864,10 +1866,14 @@ static int Open (vout_display_t *vd,
     }
 
     @autoreleasepool {
+        var_Create(vd, "edr-headroom-effective", VLC_VAR_FLOAT);
+        var_SetFloat(vd, "edr-headroom-effective", 1.0f);
+
         VLCSampleBufferDisplay *sys =
             [[VLCSampleBufferDisplay alloc] initWithVoutDisplay:vd];
 
         if (sys == nil) {
+            var_Destroy(vd, "edr-headroom-effective");
             DeleteCVPXConverter(converter);
             return VLC_ENOMEM;
         }

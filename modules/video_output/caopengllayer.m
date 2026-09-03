@@ -114,6 +114,7 @@
 @interface VLCVideoLayerView : NSView <CALayerDelegate, NSViewLayerContentScaleDelegate>
 #endif
 {
+    vout_display_t *_vd;
     vlc_gl_t *_gl; // All accesses to this must be @synchronized(self)
     id _container;
 
@@ -126,6 +127,7 @@
     video_transfer_func_t _transfer;
 }
 
+@property (nonatomic, assign) vout_display_t *vd;
 @property (nonatomic, assign) int hdrMode;
 @property (nonatomic, assign) float userHeadroom;
 @property (nonatomic, assign) video_color_primaries_t primaries;
@@ -463,6 +465,7 @@ static void Close(vout_display_t *vd)
         if (view) {
             var_DelCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)view);
             var_DelCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)view);
+            var_Destroy(vd, "edr-headroom-effective");
         }
     }
 
@@ -680,16 +683,21 @@ static int Open (vout_display_t *vd,
         msg_Dbg(vd, "HDR mode initialized to %d", hdr_mode);
 
         VLCVideoLayerView *videoView = (__bridge VLCVideoLayerView *)sys->gl->sys;
+        videoView.vd = vd;
         var_Create(vd, "macosx-edr-headroom", VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
         var_AddCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)videoView);
 
         var_Create(vd, "macosx-hdr-mode", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
         var_AddCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)videoView);
 
+        var_Create(vd, "edr-headroom-effective", VLC_VAR_FLOAT);
+        var_SetFloat(vd, "edr-headroom-effective", 1.0f);
+
         dispatch_sync(dispatch_get_main_queue(), ^{
 
             __weak VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)sys->gl->sys;
             __weak VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)[view layer];
+            view.vd = vd;
             view.hdrMode = hdr_mode;
             view.userHeadroom = user_headroom;
             view.primaries = primaries;
@@ -772,6 +780,8 @@ static int Open (vout_display_t *vd,
     if (self == nil)
         return nil;
     _gl = gl;
+    /* Set by Open() once the display exists; until then nothing is published. */
+    _vd = NULL;
     _isHDR = NO;
     _hdrMode = 0;
     _userHeadroom = 0.0f;
@@ -812,8 +822,26 @@ static int Open (vout_display_t *vd,
            selector:@selector(windowDidChangeScreen:)
                name:NSWindowDidChangeScreenNotification
              object:nil];
+    [nc addObserver:self
+           selector:@selector(windowDidChangeScreenProfile:)
+               name:NSWindowDidChangeScreenProfileNotification
+             object:nil];
 
     return self;
+}
+
+- (vout_display_t *)vd
+{
+    @synchronized (self) {
+        return _vd;
+    }
+}
+
+- (void)setVd:(vout_display_t *)vd
+{
+    @synchronized (self) {
+        _vd = vd;
+    }
 }
 
 - (void)setHdrMode:(int)hdrMode
@@ -870,6 +898,13 @@ static int Open (vout_display_t *vd,
     }
 }
 
+- (void)windowDidChangeScreenProfile:(NSNotification *)notification
+{
+    if (notification.object == nil || notification.object == self.window) {
+        [self updateDynamicRangeProperties];
+    }
+}
+
 - (void)setHDR:(BOOL)isHDR
 {
     _isHDR = isHDR;
@@ -915,6 +950,12 @@ static int Open (vout_display_t *vd,
         layer.primaries = _primaries;
         layer.transfer = _transfer;
         [layer updateDynamicRangeWithHeadroom:effectiveHeadroom isHDR:_isHDR];
+    }
+
+    @synchronized (self) {
+        if (_vd != NULL) {
+            var_SetFloat(_vd, "edr-headroom-effective", (float)effectiveHeadroom);
+        }
     }
 }
 
@@ -982,9 +1023,14 @@ static int Open (vout_display_t *vd,
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
     [nc removeObserver:self name:NSApplicationDidChangeScreenParametersNotification object:nil];
     [nc removeObserver:self name:NSWindowDidChangeScreenNotification object:nil];
+    [nc removeObserver:self name:NSWindowDidChangeScreenProfileNotification object:nil];
 
     VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)[self layer];
     [layer vlcClose];
+
+    @synchronized (self) {
+        _vd = NULL;
+    }
 
     @synchronized (layer) {
         _gl = NULL;
@@ -1013,6 +1059,7 @@ static int Open (vout_display_t *vd,
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
     [nc removeObserver:self name:NSApplicationDidChangeScreenParametersNotification object:nil];
     [nc removeObserver:self name:NSWindowDidChangeScreenNotification object:nil];
+    [nc removeObserver:self name:NSWindowDidChangeScreenProfileNotification object:nil];
 
     if (_context != NULL) {
         CGLReleaseContext(_context);
