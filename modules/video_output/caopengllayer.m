@@ -463,6 +463,9 @@ static void Close(vout_display_t *vd)
     if (sys->gl) {
         VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)sys->gl->sys;
         if (view) {
+            @synchronized (view) {
+                view.vd = NULL;
+            }
             var_DelCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)view);
             var_DelCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)view);
             var_Destroy(vd, "edr-headroom-effective");
