@@ -48,7 +48,7 @@
 #define CFG_PREFIX "plscale-"
 
 static const char *const filter_options[] = {
-    "upscaler", "downscaler", NULL,
+    "upscaler", "downscaler", "target-prim", "target-trc", NULL,
 };
 
 struct sys
@@ -268,6 +268,17 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
     config_ChainParse(filter, CFG_PREFIX, filter_options, config);
     int upscaler = var_InheritInteger(filter, CFG_PREFIX "upscaler");
     int downscaler = var_InheritInteger(filter, CFG_PREFIX "downscaler");
+    int target_prim = var_InheritInteger(filter, CFG_PREFIX "target-prim");
+    if (!target_prim)
+        target_prim = var_InheritInteger(filter, "pl-target-prim");
+    if (target_prim < 0 || target_prim >= PL_COLOR_PRIM_COUNT)
+        target_prim = PL_COLOR_PRIM_UNKNOWN;
+
+    int target_trc = var_InheritInteger(filter, CFG_PREFIX "target-trc");
+    if (!target_trc)
+        target_trc = var_InheritInteger(filter, "pl-target-trc");
+    if (target_trc < 0 || target_trc >= PL_COLOR_TRC_COUNT)
+        target_trc = PL_COLOR_TRC_UNKNOWN;
 
     if (upscaler < 0 || (size_t) upscaler >= ARRAY_SIZE(scale_values)
             || upscaler == SCALE_CUSTOM)
@@ -333,12 +344,57 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
         goto error;
     }
 
-    /* TODO: Target colour space (frame_out.color) and HDR display metadata
-     * (frame_out.color.hdr, including peak luminance and EDR headroom) are left
-     * unset. Without this information, libplacebo tone-maps against default
-     * SDR/BT.709 assumptions rather than adapting to actual display capabilities.
-     * Actual display characteristics should be queried from the platform /
-     * windowing system rather than guessed. */
+    /* Target colour space and HDR display metadata for libplacebo tone-mapping.
+     * Order of preference:
+     * 1. Explicit user configuration via inherited options ("pl-target-prim",
+     *    "pl-target-trc", or filter chain "target-prim", "target-trc").
+     * 2. Platform display characteristics:
+     *    - For HDR content on macOS, the compositor presents an extended-sRGB
+     *      / Display-P3 surface (PL_COLOR_PRIM_DISPLAY_P3, PL_COLOR_TRC_SRGB).
+     *    - For SDR content, the target matches the input colour space to ensure
+     *      8-bit BT.709 playback does not regress and avoids unintended gamut
+     *      or transfer curve conversion.
+     * 3. Peak luminance and EDR headroom:
+     *    - If "macosx-edr-headroom" is explicitly set by the user (> 0.0f),
+     *      target peak luminance is calculated as 100.0f * headroom nits.
+     *    - Otherwise, dynamic screen headroom query (NSScreen's
+     *      maximumExtendedDynamicRangeColorComponentValue) is NOT-REACHED:
+     *      in caopengllayer.m, the screen headroom query is retained in
+     *      internal Objective-C layer properties (effectiveHeadroom) and is
+     *      never published back to the VLC object tree (vd or sys->gl), nor
+     *      is display dynamic range passed through vout_display_opengl_New()
+     *      or vlc_gl_filters_Append().
+     *      To plumb dynamic headroom without inventing an API, caopengllayer.m
+     *      would need to set "macosx-edr-headroom" on vd or an "edr-headroom"
+     *      float variable on sys->gl whenever the screen or window headroom
+     *      changes.
+     *      In the absence of a reached dynamic headroom, fall back to a fixed
+     *      1000.0 cd/m² peak (the sustained capability of Apple Silicon
+     *      Liquid Retina XDR displays).
+     */
+    struct pl_color_space color_out = {0};
+    bool is_hdr = pl_color_space_is_hdr(&sys->frame_in.color);
+
+    if (target_prim)
+        color_out.primaries = target_prim;
+    else if (is_hdr)
+        color_out.primaries = PL_COLOR_PRIM_DISPLAY_P3;
+    else
+        color_out.primaries = sys->frame_in.color.primaries;
+
+    if (target_trc)
+        color_out.transfer = target_trc;
+    else if (is_hdr)
+        color_out.transfer = PL_COLOR_TRC_SRGB;
+    else
+        color_out.transfer = sys->frame_in.color.transfer;
+
+    float headroom = var_InheritFloat(filter, "macosx-edr-headroom");
+    if (headroom > 0.0f)
+        color_out.hdr.max_luma = 100.0f * headroom;
+    else if (is_hdr || (target_trc && pl_color_transfer_is_hdr(target_trc)))
+        color_out.hdr.max_luma = 1000.0f;
+
     sys->frame_out = (struct pl_frame) {
         .num_planes = 1,
         .planes = {
@@ -352,6 +408,7 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
                 },
             },
         },
+        .color = color_out,
     };
 
     sys->render_params = pl_render_default_params;
@@ -402,4 +459,12 @@ vlc_module_begin()
     add_integer(CFG_PREFIX "downscaler", SCALE_BUILTIN, DOWNSCALER_TEXT, \
                 DOWNSCALER_LONGTEXT) \
         change_integer_list(scale_values, scale_text) \
+
+    add_integer(CFG_PREFIX "target-prim", PL_COLOR_PRIM_UNKNOWN, PRIM_TEXT, \
+                PRIM_LONGTEXT) \
+        change_integer_list(prim_values, prim_text) \
+
+    add_integer(CFG_PREFIX "target-trc", PL_COLOR_TRC_UNKNOWN, TRC_TEXT, \
+                TRC_LONGTEXT) \
+        change_integer_list(trc_values, trc_text)
 vlc_module_end()
