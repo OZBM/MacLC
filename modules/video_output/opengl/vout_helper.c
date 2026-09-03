@@ -120,8 +120,10 @@ CreateFilters(vlc_gl_t *gl, const struct vlc_gl_api *api,
     int upscaler = var_InheritInteger(gl, "gl-upscaler");
     int downscaler = var_InheritInteger(gl, "gl-downscaler");
     int has_dovi = fmt_in->dovi.rpu_present && !fmt_in->dovi.el_present; /* can't handle EL yet */
+    bool has_hdr = fmt_in->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
+                   fmt_in->transfer == TRANSFER_FUNC_HLG;
 
-    if (upscaler || downscaler || has_dovi)
+    if (upscaler || downscaler || has_dovi || has_hdr)
     {
         char upscaler_value[12];
         char downscaler_value[12];

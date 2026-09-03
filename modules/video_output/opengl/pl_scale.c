@@ -66,6 +66,7 @@ struct sys
     struct pl_frame frame_out;
     struct pl_render_params render_params;
     struct pl_dovi_metadata dovi_metadata;
+    struct pl_hdr_metadata hdr_static;
 
     unsigned out_width;
     unsigned out_height;
@@ -170,6 +171,8 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         r->x1 = coords[2] * w;
         r->y1 = coords[3] * h;
     }
+
+    frame_in->color.hdr = sys->hdr_static;
 
     if (frame_in->repr.dovi && meta->dovi_rpu) {
         vlc_placebo_DoviMetadata(meta->dovi_rpu, &sys->dovi_metadata);
@@ -312,6 +315,8 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
         .color = vlc_placebo_ColorSpace(&sampler->fmt_in),
     };
 
+    sys->hdr_static = sys->frame_in.color.hdr;
+
     if (sampler->fmt_in.dovi.rpu_present && !sampler->fmt_in.dovi.el_present) {
         sys->frame_in.color.primaries = PL_COLOR_PRIM_BT_2020;
         sys->frame_in.color.transfer = PL_COLOR_TRC_PQ;
@@ -328,6 +333,12 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
         goto error;
     }
 
+    /* TODO: Target colour space (frame_out.color) and HDR display metadata
+     * (frame_out.color.hdr, including peak luminance and EDR headroom) are left
+     * unset. Without this information, libplacebo tone-maps against default
+     * SDR/BT.709 assumptions rather than adapting to actual display capabilities.
+     * Actual display characteristics should be queried from the platform /
+     * windowing system rather than guessed. */
     sys->frame_out = (struct pl_frame) {
         .num_planes = 1,
         .planes = {
