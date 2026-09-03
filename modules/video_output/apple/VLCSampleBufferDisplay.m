@@ -951,9 +951,9 @@ shouldInheritContentsScale:(CGFloat)newScale
 
 - (AVSampleBufferDisplayLayer *)getOrWaitDisplayLayer {
     [_readyCondition lock];
-    if (_displayLayer == nil && !_invalidated && ![NSThread isMainThread]) {
+    if (_displayLayer == nil && _isPreparingDisplay && !_invalidated && ![NSThread isMainThread]) {
         NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:DISPLAY_LAYER_INIT_TIMEOUT_SEC];
-        while (_displayLayer == nil && !_invalidated) {
+        while (_displayLayer == nil && _isPreparingDisplay && !_invalidated) {
             if (![_readyCondition waitUntilDate:deadline]) {
                 break;
             }
