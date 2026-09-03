@@ -41,6 +41,12 @@
 #include <libplacebo/swapchain.h>
 #include <libplacebo/shaders/lut.h>
 
+#ifdef __APPLE__
+# include <CoreGraphics/CoreGraphics.h>
+# include <CoreFoundation/CoreFoundation.h>
+# include <stdatomic.h>
+#endif
+
 typedef struct vout_display_sys_t
 {
     vlc_placebo_t *pl;
@@ -76,6 +82,11 @@ typedef struct vout_display_sys_t
     char *hook_path;
 
     struct pl_dovi_metadata dovi_metadata;
+#ifdef __APPLE__
+    CFDataRef icc_data;
+    struct pl_icc_profile icc_profile;
+    atomic_bool icc_dirty;
+#endif
 } vout_display_sys_t;
 
 // Display callbacks
@@ -86,6 +97,10 @@ static void Close(vout_display_t *);
 static void UpdateParams(vout_display_t *);
 static void UpdateColorspaceHint(vout_display_t *, const video_format_t *);
 static void UpdateIccProfile(vout_display_t *, const vlc_icc_profile_t *);
+#ifdef __APPLE__
+static void DisplayReconfigCallback(CGDirectDisplayID, CGDisplayChangeSummaryFlags, void *);
+static void UpdateDarwinIccProfile(vout_display_t *);
+#endif
 
 static const struct vlc_display_operations ops = {
     .close = Close,
@@ -173,12 +188,21 @@ static int Open(vout_display_t *vd,
     vd->info.subpicture_chromas = subfmts;
     vd->ops = &ops;
 
+#ifdef __APPLE__
+    atomic_init(&sys->icc_dirty, false);
+    CGDisplayRegisterReconfigurationCallback(DisplayReconfigCallback, vd);
+#endif
+
     UpdateParams(vd);
     (void) context;
     return VLC_SUCCESS;
 
 error:
     pl_renderer_destroy(&sys->renderer);
+#ifdef __APPLE__
+    if (sys->icc_data != NULL)
+        CFRelease(sys->icc_data);
+#endif
     vlc_placebo_Release(sys->pl);
     vd->sys = NULL;
     return VLC_EGENERIC;
@@ -188,6 +212,14 @@ static void Close(vout_display_t *vd)
 {
     vout_display_sys_t *sys = vd->sys;
     pl_gpu gpu = sys->pl->gpu;
+
+#ifdef __APPLE__
+    CGDisplayRemoveReconfigurationCallback(DisplayReconfigCallback, vd);
+    if (sys->icc_data != NULL) {
+        CFRelease(sys->icc_data);
+        sys->icc_data = NULL;
+    }
+#endif
 
     if (vlc_placebo_MakeCurrent(sys->pl) == VLC_SUCCESS) {
         for (int i = 0; i < 4; i++)
@@ -224,6 +256,11 @@ static void PictureRender(vout_display_t *vd, picture_t *pic,
 
     if (vlc_placebo_MakeCurrent(sys->pl) != VLC_SUCCESS)
         return;
+
+#ifdef __APPLE__
+    if (atomic_exchange_explicit(&sys->icc_dirty, false, memory_order_relaxed))
+        UpdateDarwinIccProfile(vd);
+#endif
 
     struct pl_swapchain_frame frame;
     if (!pl_swapchain_start_frame(sys->pl->swapchain, &frame)) {
@@ -298,6 +335,11 @@ static void PictureRender(vout_display_t *vd, picture_t *pic,
             sys->target_icc_signature = target.profile.signature;
         }
     }
+#ifdef __APPLE__
+    else if (sys->icc_profile.data) {
+        target.profile = sys->icc_profile;
+    }
+#endif
 
     // Set the target crop dynamically based on the swapchain flip state
     vout_display_place_t place = *vd->place;
@@ -510,11 +552,62 @@ static void UpdateColorspaceHint(vout_display_t *vd, const video_format_t *fmt)
     pl_swapchain_colorspace_hint(sys->pl->swapchain, &hint);
 }
 
+#ifdef __APPLE__
+static void DisplayReconfigCallback(CGDirectDisplayID display,
+                                    CGDisplayChangeSummaryFlags flags,
+                                    void *userInfo)
+{
+    VLC_UNUSED(display);
+    if (flags & kCGDisplayBeginConfigurationFlag)
+        return;
+
+    vout_display_t *vd = userInfo;
+    vout_display_sys_t *sys = vd->sys;
+    if (sys != NULL)
+        atomic_store_explicit(&sys->icc_dirty, true, memory_order_relaxed);
+}
+
+// TODO: Multi-monitor support: query the NSScreen/NSWindow the video window
+// is attached to rather than CGMainDisplayID(). This requires Cocoa/AppKit
+// plumbing not currently available in this C display module.
+static void UpdateDarwinIccProfile(vout_display_t *vd)
+{
+    vout_display_sys_t *sys = vd->sys;
+
+    CGColorSpaceRef cs = CGDisplayCopyColorSpace(CGMainDisplayID());
+    if (!cs)
+        return;
+
+    CFDataRef icc_data = CGColorSpaceCopyICCData(cs);
+    CGColorSpaceRelease(cs);
+    if (!icc_data)
+        return;
+
+    if (sys->icc_data != NULL && CFEqual(sys->icc_data, icc_data)) {
+        CFRelease(icc_data);
+        return;
+    }
+
+    if (sys->icc_data != NULL)
+        CFRelease(sys->icc_data);
+
+    sys->icc_data = icc_data;
+    sys->icc_profile.data = CFDataGetBytePtr(sys->icc_data);
+    sys->icc_profile.len = (size_t) CFDataGetLength(sys->icc_data);
+    sys->icc_profile.signature = 0;
+    pl_icc_profile_compute_signature(&sys->icc_profile);
+    sys->target_icc_signature = sys->icc_profile.signature;
+}
+#endif
+
 static void UpdateIccProfile(vout_display_t *vd, const vlc_icc_profile_t *prof)
 {
     vout_display_sys_t *sys = vd->sys;
     sys->target_icc_signature = 0; /* recompute signature on next PictureRender */
     (void) prof; /* we get the current value from vout_display_cfg_t */
+#ifdef __APPLE__
+    UpdateDarwinIccProfile(vd);
+#endif
 }
 
 static int SetDisplaySize(vout_display_t *vd, unsigned width_, unsigned height_)
@@ -536,6 +629,10 @@ static int SetDisplaySize(vout_display_t *vd, unsigned width_, unsigned height_)
     vlc_placebo_Resize(sys->pl, width_, height_);
     pl_swapchain_resize(sys->pl->swapchain, &width, &height);
     vlc_placebo_ReleaseCurrent(sys->pl);
+
+#ifdef __APPLE__
+    UpdateDarwinIccProfile(vd);
+#endif
 
     /* NOTE: We currently ignore resizing failures that are transient
      * on X11. Maybe improving resizing might fix that, but we don't
@@ -699,7 +796,11 @@ vlc_module_begin ()
     add_integer("pl-lut-mode", LUT_DISABLED, LUT_MODE_TEXT, LUT_MODE_LONGTEXT)
             change_integer_list(lut_mode_values, lut_mode_text)
 
+#ifdef __APPLE__
+    // Display ICC profile is queried dynamically from ColorSync on Darwin
+#else
     // TODO: support for ICC profiles
+#endif
 
     add_float_with_range("pl-peak-period", pl_peak_detect_default_params.smoothing_period,
             0., 1000., PEAK_PERIOD_TEXT, PEAK_PERIOD_LONGTEXT)
@@ -868,6 +969,10 @@ static void UpdateParams(vout_display_t *vd)
         .primaries = var_InheritInteger(vd, "pl-target-prim"),
         .transfer = var_InheritInteger(vd, "pl-target-trc"),
     };
+
+#ifdef __APPLE__
+    UpdateDarwinIccProfile(vd);
+#endif
 
     sys->lut_mode = var_InheritInteger(vd, "pl-lut-mode");
     char *lut_file = var_InheritString(vd, "pl-lut-file");
