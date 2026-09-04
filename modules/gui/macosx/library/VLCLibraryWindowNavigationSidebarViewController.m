@@ -39,6 +39,8 @@
 #import "views/VLCStatusNotifierView.h"
 #import "views/VLCUIUnits.h"
 
+#import "theme/MacLCDesign.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -77,7 +79,10 @@ static NSString * const VLCLibrarySegmentCellIdentifier = @"VLCLibrarySegmentCel
     self.treeController.childrenKeyPath = @"childNodes";
     self.treeController.leafKeyPath = @"leaf";
 
-    self.outlineView.rowSizeStyle = NSTableViewRowSizeStyleMedium;
+    if (@available(macOS 11.0, *)) {
+        self.outlineView.style = NSTableViewStyleSourceList;
+    }
+    self.outlineView.rowSizeStyle = NSTableViewRowSizeStyleDefault;
     self.outlineView.allowsMultipleSelection = NO;
     self.outlineView.allowsEmptySelection = NO;
     self.outlineView.allowsColumnSelection = NO;
@@ -359,8 +364,13 @@ static NSString * const VLCLibrarySegmentCellIdentifier = @"VLCLibrarySegmentCel
     [cellView.textField bind:NSValueBinding toObject:cellView withKeyPath:@"objectValue.displayString" options:nil];
     [cellView.imageView bind:NSImageBinding toObject:cellView withKeyPath:@"objectValue.displayImage" options:nil];
 
-    if (@available(macOS 10.14, *)) {
-        cellView.imageView.contentTintColor = NSColor.VLCAccentColor;
+    if (isHeader) {
+        cellView.textField.font = MacLCDesign.headline;
+        cellView.textField.textColor = MacLCDesign.secondaryLabel;
+    } else {
+        cellView.textField.font = MacLCDesign.body;
+        cellView.textField.textColor = MacLCDesign.primaryLabel;
+        cellView.imageView.contentTintColor = MacLCDesign.accent;
     }
 
     NSTreeNode * const treeNode = (NSTreeNode *)item;
@@ -369,10 +379,8 @@ static NSString * const VLCLibrarySegmentCellIdentifier = @"VLCLibrarySegmentCel
         segment.mediaLibraryRequired &&
         VLCMain.sharedInstance.libraryController.libraryModel == nil;
     if (mediaLibraryUnavailable) {
-        cellView.textField.textColor = NSColor.tertiaryLabelColor;
-        if (@available(macOS 10.14, *)) {
-            cellView.imageView.contentTintColor = NSColor.tertiaryLabelColor;
-        }
+        cellView.textField.textColor = MacLCDesign.tertiaryLabel;
+        cellView.imageView.contentTintColor = MacLCDesign.tertiaryLabel;
     }
 
     return cellView;

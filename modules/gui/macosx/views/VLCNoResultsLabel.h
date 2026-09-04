@@ -24,7 +24,20 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface VLCNoResultsLabel : NSTextField
+@interface VLCNoResultsLabel : NSView
+
+@property (nonatomic, readonly) NSImageView *symbolImageView;
+@property (nonatomic, readonly) NSTextField *titleLabel;
+@property (nonatomic, readonly) NSTextField *messageLabel;
+@property (nonatomic, readonly) NSButton *actionButton;
+
+@property (nonatomic, copy) NSString *stringValue;
+@property (nonatomic, copy, nullable) NSString *titleString;
+@property (nonatomic, copy, nullable) NSString *messageString;
+@property (nonatomic, copy, nullable) NSString *actionTitle;
+@property (nonatomic, copy, nullable) void (^actionBlock)(void);
+
+- (void)setActionTarget:(nullable id)target action:(nullable SEL)action;
 
 @end
 

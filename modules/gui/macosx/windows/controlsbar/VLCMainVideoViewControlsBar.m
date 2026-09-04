@@ -22,6 +22,8 @@
 
 #import "VLCMainVideoViewControlsBar.h"
 
+#import "theme/MacLCDesign.h"
+
 #import "extensions/NSString+Helpers.h"
 
 #import "library/VLCLibraryController.h"
@@ -46,8 +48,6 @@
     VLCPlayerController *_playerController;
 }
 
-@property (readonly) NSImageSymbolConfiguration *mainButtonsSymbolConfig API_AVAILABLE(macos(26.0));
-
 @end
 
 @implementation VLCMainVideoViewControlsBar
@@ -58,59 +58,57 @@
 
     self.bookmarksButton.toolTip = _NS("Bookmarks");
     self.bookmarksButton.accessibilityLabel = self.bookmarksButton.toolTip;
+    self.bookmarksButton.image = [MacLCDesign symbolNamed:@"bookmark.fill" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Bookmarks")];
 
     self.subtitlesButton.toolTip = _NS("Subtitles");
     self.subtitlesButton.accessibilityLabel = self.subtitlesButton.toolTip;
+    self.subtitlesButton.image = [MacLCDesign symbolNamed:@"text.bubble" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Subtitles")];
 
     self.audioButton.toolTip = _NS("Audio");
     self.audioButton.accessibilityLabel = self.audioButton.toolTip;
+    self.audioButton.image = [MacLCDesign symbolNamed:@"waveform" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Audio")];
 
     self.videoButton.toolTip = _NS("Video");
     self.videoButton.accessibilityLabel = self.videoButton.toolTip;
+    self.videoButton.image = [MacLCDesign symbolNamed:@"tv" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Video")];
 
     self.lyricsButton.toolTip = _NS("Lyrics");
     self.lyricsButton.accessibilityLabel = self.lyricsButton.toolTip;
+    self.lyricsButton.image = [MacLCDesign symbolNamed:@"music.note.list" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Lyrics")];
 
     self.playbackRateButton.toolTip = _NS("Playback Rate");
     self.playbackRateButton.accessibilityLabel = self.playbackRateButton.toolTip;
+    self.playbackRateButton.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleCaption1 weight:NSFontWeightMedium];
 
     self.floatOnTopButton.toolTip = _NS("Float on Top");
     self.floatOnTopButton.accessibilityLabel = self.floatOnTopButton.toolTip;
+    self.floatOnTopButton.image = [MacLCDesign symbolNamed:@"play.rectangle.on.rectangle" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Float on Top")];
 
     self.pipButton.toolTip = _NS("Picture in Picture");
     self.pipButton.accessibilityLabel = self.pipButton.toolTip;
+    self.pipButton.image = [MacLCDesign symbolNamed:@"pip" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Picture in Picture")];
 
-    if (@available(macOS 26.0, *)) {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-        _mainButtonsSymbolConfig = [NSImageSymbolConfiguration configurationWithPaletteColors:@[NSColor.whiteColor]];
+    NSArray<NSButton *> * const buttons = @[
+        self.playButton,
+        self.backwardButton,
+        self.forwardButton,
+        self.jumpBackwardButton,
+        self.jumpForwardButton,
+        self.bookmarksButton,
+        self.subtitlesButton,
+        self.audioButton,
+        self.videoButton,
+        self.lyricsButton,
+        self.fullscreenButton,
+        self.floatOnTopButton,
+        self.playbackRateButton,
+        self.pipButton,
+        self.muteVolumeButton
+    ];
 
-        NSPointerArray * const buttons = NSPointerArray.weakObjectsPointerArray;
-        [buttons addPointer:(__bridge void *)self.playButton];
-        [buttons addPointer:(__bridge void *)self.backwardButton];
-        [buttons addPointer:(__bridge void *)self.forwardButton];
-        [buttons addPointer:(__bridge void *)self.jumpBackwardButton];
-        [buttons addPointer:(__bridge void *)self.jumpForwardButton];
-        [buttons addPointer:(__bridge void *)self.bookmarksButton];
-        [buttons addPointer:(__bridge void *)self.subtitlesButton];
-        [buttons addPointer:(__bridge void *)self.audioButton];
-        [buttons addPointer:(__bridge void *)self.videoButton];
-        [buttons addPointer:(__bridge void *)self.lyricsButton];
-        [buttons addPointer:(__bridge void *)self.fullscreenButton];
-        [buttons addPointer:(__bridge void *)self.floatOnTopButton];
-        [buttons addPointer:(__bridge void *)self.playbackRateButton];
-        [buttons addPointer:(__bridge void *)self.pipButton];
-        [buttons addPointer:(__bridge void *)self.muteVolumeButton];
-        [buttons compact];
-        
-        for (NSButton * const button in buttons) {
-            button.bordered = YES;
-            button.borderShape = NSControlBorderShapeCapsule;
-            button.bezelStyle = NSBezelStyleGlass;
-            button.layer = [CALayer layer];
-            button.image = [button.image imageWithSymbolConfiguration:_mainButtonsSymbolConfig];
-            button.alternateImage = [button.alternateImage imageWithSymbolConfiguration:_mainButtonsSymbolConfig];
-        }
-#endif
+    for (NSButton * const button in buttons) {
+        if (!button) continue;
+        button.contentTintColor = MacLCDesign.primaryLabel;
     }
 
     _playQueueController = VLCMain.sharedInstance.playQueueController;
@@ -177,14 +175,8 @@
     self.lyricsButton.enabled = lyricsAvailable;
     self.lyricsButton.hidden = !_playerController.currentMediaIsAudioOnly && !lyricsAvailable;
     self.lyricsButton.state = _playerController.showLyrics ? NSControlStateValueOn : NSControlStateValueOff;
-
-    if (@available(macOS 26.0, *)) {
-        self.lyricsButton.bezelColor =
-            _playerController.showLyrics ? NSColor.controlAccentColor : nil;
-    } else if (@available(macOS 10.14, *)) {
-        self.lyricsButton.contentTintColor =
-            _playerController.showLyrics ? NSColor.controlAccentColor : nil;
-    }
+    self.lyricsButton.contentTintColor =
+        _playerController.showLyrics ? MacLCDesign.accent : MacLCDesign.primaryLabel;
 }
 
 - (vout_thread_t *)windowVoutThread
@@ -210,14 +202,8 @@
 
     const BOOL isFullscreen = _playerController.fullscreen;
     self.floatOnTopButton.enabled = !isFullscreen;
-
-    if (@available(macOS 26.0, *)) {
-        self.floatOnTopButton.bezelColor =
-            (floatOnTopEnabled && !isFullscreen) ? NSColor.controlAccentColor : nil;
-    } else if (@available(macOS 10.14, *)) {
-        self.floatOnTopButton.contentTintColor =
-            (floatOnTopEnabled && !isFullscreen) ? NSColor.controlAccentColor : nil;
-    }
+    self.floatOnTopButton.contentTintColor =
+        (floatOnTopEnabled && !isFullscreen) ? MacLCDesign.accent : MacLCDesign.primaryLabel;
 }
 
 - (void)playbackRateChanged:(NSNotification *)notification
@@ -230,13 +216,8 @@
     self.playbackRateButton.title =
         [NSString stringWithFormat:@"%.1fx", _playerController.playbackRate];
     self.playbackRateButton.enabled = _playerController.rateChangable;
-
-    if (@available(macOS 26.0, *)) {
-        NSMutableAttributedString * const colorTitle = [[NSMutableAttributedString alloc] initWithAttributedString:self.playbackRateButton.attributedTitle];
-        const NSRange titleRange = NSMakeRange(0, colorTitle.length);
-        [colorTitle addAttribute:NSForegroundColorAttributeName value:NSColor.whiteColor range:titleRange];
-        self.playbackRateButton.attributedTitle = colorTitle;
-    }
+    self.playbackRateButton.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleCaption1 weight:NSFontWeightMedium];
+    self.playbackRateButton.contentTintColor = MacLCDesign.primaryLabel;
 }
 
 - (IBAction)openPlaybackRate:(id)sender
@@ -339,39 +320,22 @@
 - (void)playerStateUpdated:(NSNotification *)notification
 {
     [super playerStateUpdated:notification];
-    if (@available(macOS 26.0, *)) {
-        if (self.mainButtonsSymbolConfig == nil)
-            return;
-        self.playButton.image = [self.playButton.image imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-        self.playButton.alternateImage = [self.playButton.alternateImage imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-    }
+    self.playButton.contentTintColor = MacLCDesign.primaryLabel;
 }
 
 - (void)updateCurrentItemDisplayControls:(NSNotification *)notification
 {
     [super updateCurrentItemDisplayControls:notification];
-    if (@available(macOS 26.0, *)) {
-        if (self.mainButtonsSymbolConfig == nil)
-            return;
-        self.forwardButton.image = [self.forwardButton.image imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-        self.forwardButton.alternateImage = [self.forwardButton.alternateImage imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-        self.backwardButton.image = [self.backwardButton.image imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-        self.backwardButton.alternateImage = [self.backwardButton.alternateImage imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-        self.jumpForwardButton.image = [self.jumpForwardButton.image imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-        self.jumpForwardButton.alternateImage = [self.jumpForwardButton.alternateImage imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-        self.jumpBackwardButton.image = [self.jumpBackwardButton.image imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-        self.jumpBackwardButton.alternateImage = [self.jumpBackwardButton.alternateImage imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-    }
+    self.forwardButton.contentTintColor = MacLCDesign.primaryLabel;
+    self.backwardButton.contentTintColor = MacLCDesign.primaryLabel;
+    self.jumpForwardButton.contentTintColor = MacLCDesign.primaryLabel;
+    self.jumpBackwardButton.contentTintColor = MacLCDesign.primaryLabel;
 }
 
 - (void)updateMuteVolumeButtonImage
 {
     [super updateMuteVolumeButtonImage];
-    if (@available(macOS 26.0, *)) {
-        if (self.mainButtonsSymbolConfig == nil)
-            return;
-        self.muteVolumeButton.image = [self.muteVolumeButton.image imageWithSymbolConfiguration:self.mainButtonsSymbolConfig];
-    }
+    self.muteVolumeButton.contentTintColor = MacLCDesign.primaryLabel;
 }
 
 @end

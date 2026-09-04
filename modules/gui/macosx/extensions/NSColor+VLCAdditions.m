@@ -22,85 +22,83 @@
 
 #import "NSColor+VLCAdditions.h"
 
+#import "theme/MacLCDesign.h"
+
 @implementation NSColor (VLCAdditions)
 
 + (NSColor *)VLCAccentColor
 {
-    if (@available(macOS 10.14, *)) {
-        return [NSColor controlAccentColor];
-    }
-
-    return [NSColor VLCOrangeElementColor];
+    return MacLCDesign.accent;
 }
 
 + (NSColor *)VLCOrangeElementColor
 {
-    return [NSColor colorWithRed:1. green:.38 blue:.04 alpha:1.];
+    return MacLCDesign.accent;
 }
 
 + (NSColor *)VLCSubtlerAccentColor
 {
-    return [NSColor.VLCAccentColor colorWithAlphaComponent:0.8];
+    return [MacLCDesign.accent colorWithAlphaComponent:0.8];
 }
 
 + (NSColor *)VLClibrarySubtitleColor
 {
-    return [NSColor colorWithRed:0.52 green:0.57 blue:0.61 alpha:1.];
+    return MacLCDesign.secondaryLabel;
 }
 
 + (NSColor *)VLClibraryAnnotationColor
 {
-    return [NSColor whiteColor];
+    return MacLCDesign.primaryLabel;
 }
 
 + (NSColor *)VLClibraryAnnotationBackgroundColor
 {
-    return [NSColor colorWithRed:0. green:0. blue:0. alpha:.2];
+    return [MacLCDesign.controlBackground colorWithAlphaComponent:0.2];
 }
 
 + (NSColor *)VLClibrarySeparatorLightColor
 {
-    return [NSColor colorWithRed:0.89 green:0.91 blue:0.93 alpha:1.];
+    return MacLCDesign.separator;
 }
 
 + (NSColor *)VLClibrarySeparatorDarkColor
 {
-    return [NSColor colorWithRed:0.11 green:0.09 blue:0.07 alpha:1.];
+    return MacLCDesign.separator;
 }
 
 + (NSColor *)VLClibraryProgressIndicatorBackgroundColor
 {
-    return [NSColor colorWithRed:37./255. green:41./255. blue:44./255. alpha:.8];
+    return MacLCDesign.scrubberTrack;
 }
 
 + (NSColor *)VLCSliderFillColor
 {
-    return NSColor.VLCAccentColor;
+    return MacLCDesign.scrubberFill;
 }
 
 + (NSColor *)VLCSliderLightBackgroundColor
 {
-    return [NSColor colorWithCalibratedWhite:0.5 alpha:0.5];
+    return MacLCDesign.scrubberTrack;
 }
 
 + (NSColor *)VLCSliderDarkBackgroundColor
 {
-    return [NSColor colorWithCalibratedWhite:1 alpha:0.2];
+    return MacLCDesign.scrubberTrack;
 }
 
 + (NSColor *)VLCLightSubtleBorderColor
 {
-    return [NSColor colorWithCalibratedWhite:0.85 alpha:1.0];
+    return MacLCDesign.separator;
 }
 
 + (NSColor *)VLCDarkSubtleBorderColor
 {
-    return [NSColor colorWithCalibratedWhite:0.3 alpha:1.0];
+    return MacLCDesign.separator;
 }
 
 + (NSColor *)VLCSubtleBorderColor
 {
-    return [NSColor colorNamed:@"VLCSubtleBorderColor"];
+    return MacLCDesign.separator;
 }
 
 @end

@@ -26,6 +26,7 @@
 #import <vlc_common.h>
 
 #import "extensions/NSAnimationContext+VLCAdditions.h"
+#import "extensions/NSString+Helpers.h"
 #import "extensions/NSView+VLCAdditions.h"
 #import "extensions/NSWindow+VLCAdditions.h"
 
@@ -41,6 +42,8 @@
 #import "playqueue/VLCPlayQueueController.h"
 
 #import "private/PIPSPI.h"
+
+#import "theme/MacLCDesign.h"
 
 #import "views/VLCBottomBarView.h"
 #import "views/VLCPlaybackEndViewController.h"
@@ -200,6 +203,20 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     [self updatePlayQueueToggleState];
     [self updateLibraryControls];
 
+    self.returnButton.image = [MacLCDesign symbolNamed:@"chevron.backward"
+                                             pointSize:14.
+                                                weight:NSFontWeightMedium
+                                    accessibilityLabel:_NS("Back to Library")];
+    self.returnButton.toolTip = _NS("Back to Library");
+    [self.returnButton.cell setAccessibilityLabel:_NS("Back to Library")];
+
+    self.playQueueButton.image = [MacLCDesign symbolNamed:@"list.bullet"
+                                                pointSize:14.
+                                                   weight:NSFontWeightMedium
+                                       accessibilityLabel:_NS("Play Queue")];
+    self.playQueueButton.toolTip = _NS("Play Queue");
+    [self.playQueueButton.cell setAccessibilityLabel:_NS("Play Queue")];
+
     _returnButtonBottomConstraint = [NSLayoutConstraint constraintWithItem:_returnButton
                                                                  attribute:NSLayoutAttributeBottom
                                                                  relatedBy:NSLayoutRelationEqual
@@ -228,23 +245,26 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         _videoViewBottomToViewConstraint = [self.voutContainingView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor];
         self.videoViewBottomToViewConstraint.active = NO;
 
-        if (@available(macOS 26.0, *)) {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-            NSGlassEffectContainerView * const glassEffectView = [[NSGlassEffectContainerView alloc] initWithFrame:self.bottomBarView.frame];
-            glassEffectView.translatesAutoresizingMaskIntoConstraints = NO;
-            [self.classicViewBottomBarContainerView addSubview:glassEffectView];
-            [glassEffectView applyConstraintsToFillSuperview];
-            [self.bottomBarView removeFromSuperview];
-            glassEffectView.contentView = self.bottomBarView;
-#endif
-        } else {
-            NSVisualEffectView * const controlsBackgroundView = [[NSVisualEffectView alloc] initWithFrame:self.bottomBarView.frame];
-            controlsBackgroundView.translatesAutoresizingMaskIntoConstraints = NO;
-            controlsBackgroundView.blendingMode = NSVisualEffectBlendingModeWithinWindow;
-            controlsBackgroundView.material = NSVisualEffectMaterialTitlebar;
-            [self.bottomBarView addSubview:controlsBackgroundView positioned:NSWindowBelow relativeTo:self.bottomBarView.subviews.firstObject];
-            [controlsBackgroundView applyConstraintsToFillSuperview];
-        }
+        NSVisualEffectView * const controlsBackgroundView = [[NSVisualEffectView alloc] initWithFrame:self.bottomBarView.frame];
+        controlsBackgroundView.translatesAutoresizingMaskIntoConstraints = NO;
+        controlsBackgroundView.blendingMode = NSVisualEffectBlendingModeWithinWindow;
+        controlsBackgroundView.material = NSVisualEffectMaterialTitlebar;
+        [self.bottomBarView addSubview:controlsBackgroundView positioned:NSWindowBelow relativeTo:self.bottomBarView.subviews.firstObject];
+        [controlsBackgroundView applyConstraintsToFillSuperview];
+    } else {
+        self.bottomBarView.wantsLayer = YES;
+        self.bottomBarView.layer.cornerRadius = MacLCDesign.cornerRadiusLarge;
+        self.bottomBarView.layer.masksToBounds = YES;
+
+        NSVisualEffectView * const hudView = [MacLCDesign floatingHUDMaterialView];
+        hudView.translatesAutoresizingMaskIntoConstraints = NO;
+        hudView.wantsLayer = YES;
+        hudView.layer.cornerRadius = MacLCDesign.cornerRadiusLarge;
+        hudView.layer.masksToBounds = YES;
+        hudView.layer.borderWidth = VLCUIUnits.borderThickness;
+        hudView.layer.borderColor = MacLCDesign.separator.CGColor;
+        [self.bottomBarView addSubview:hudView positioned:NSWindowBelow relativeTo:self.bottomBarView.subviews.firstObject];
+        [hudView applyConstraintsToFillSuperview];
     }
 }
 

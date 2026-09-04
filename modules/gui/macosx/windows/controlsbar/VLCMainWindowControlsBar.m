@@ -25,6 +25,8 @@
 
 #import "VLCControlsBarCommon.h"
 
+#import "theme/MacLCDesign.h"
+
 #import "extensions/NSAppearance+VLCAdditions.h"
 #import "extensions/NSColor+VLCAdditions.h"
 #import "extensions/NSImage+VLCAdditions.h"
@@ -69,24 +71,11 @@
 {
     [super awakeFromNib];
 
-    if (@available(macOS 26.0, *)) {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-        NSGlassEffectView * const glassEffectView = [[NSGlassEffectView alloc] init];
-        glassEffectView.translatesAutoresizingMaskIntoConstraints = NO;
-        self.bottomBarView.subviews = @[glassEffectView];
-        glassEffectView.contentView = self.dropView;
-        [glassEffectView applyConstraintsToFillSuperview];
-        glassEffectView.cornerRadius = CGFLOAT_MAX;
-        self.bottomBarView.drawBorder = NO;
-        self.bottomBarView.clipsToBounds = NO;
-#endif
-    } else {
-        self.visualEffectView.wantsLayer = YES;
-        self.visualEffectView.layer.cornerRadius = VLCUIUnits.cornerRadius;
-        self.visualEffectView.layer.masksToBounds = YES;
-        self.visualEffectView.layer.borderWidth = VLCUIUnits.borderThickness;
-        self.visualEffectView.layer.borderColor = NSColor.VLCSubtleBorderColor.CGColor;
-    }
+    self.visualEffectView.wantsLayer = YES;
+    self.visualEffectView.layer.cornerRadius = MacLCDesign.cornerRadiusMedium;
+    self.visualEffectView.layer.masksToBounds = YES;
+    self.visualEffectView.layer.borderWidth = VLCUIUnits.borderThickness;
+    self.visualEffectView.layer.borderColor = MacLCDesign.separator.CGColor;
 
     _playQueueController = VLCMain.sharedInstance.playQueueController;
     _playerController = _playQueueController.playerController;
@@ -107,21 +96,19 @@
     [self.volumeUpButton setToolTip: _NS("Full Volume")];
     self.volumeUpButton.accessibilityLabel = self.volumeUpButton.toolTip;
 
-    if (@available(macOS 11.0, *)) {
-        _alwaysMuteImage = [NSImage imageWithSystemSymbolName:@"speaker.minus.fill"
-                                     accessibilityDescription:_NS("Mute")];
+    _alwaysMuteImage = [MacLCDesign symbolNamed:@"speaker.minus.fill"
+                                      pointSize:14.
+                                         weight:NSFontWeightMedium
+                             accessibilityLabel:_NS("Mute")];
 
-        [self.stopButton setImage: [NSImage imageWithSystemSymbolName:@"stop.fill"
-                                             accessibilityDescription:_NS("Stop")]];
-        [self.volumeUpButton setImage: [NSImage imageWithSystemSymbolName:@"speaker.plus.fill"
-                                                 accessibilityDescription:_NS("Volume up")]];
-    } else {
-        _alwaysMuteImage = NSImage.VLCVolumeOffTemplateImage;
-
-        [self.stopButton setImage:NSImage.VLCStopImage];
-        [self.stopButton setAlternateImage:NSImage.VLCStopPressedImage];
-        [self.volumeUpButton setImage:NSImage.VLCVolumeOnTemplateImage];
-    }
+    [self.stopButton setImage:[MacLCDesign symbolNamed:@"stop.fill"
+                                             pointSize:14.
+                                                weight:NSFontWeightMedium
+                                    accessibilityLabel:_NS("Stop")]];
+    [self.volumeUpButton setImage:[MacLCDesign symbolNamed:@"speaker.plus.fill"
+                                                 pointSize:14.
+                                                    weight:NSFontWeightMedium
+                                        accessibilityLabel:_NS("Volume up")]];
 
     [self updateMuteVolumeButtonImage];
 
@@ -146,14 +133,7 @@
                         change:(NSDictionary<NSKeyValueChangeKey,id> *)change
                        context:(void *)context
 {
-    if (@available(macOS 26.0, *)) {
-        return;
-    } else if (@available(macOS 10.14, *)) {
-        NSAppearance * const appearance = change[NSKeyValueChangeNewKey];
-        const BOOL isDark = appearance.shouldShowDarkAppearance;
-        self.visualEffectView.layer.borderColor = isDark ?
-            NSColor.VLCDarkSubtleBorderColor.CGColor : NSColor.VLCLightSubtleBorderColor.CGColor;
-    }
+    self.visualEffectView.layer.borderColor = MacLCDesign.separator.CGColor;
 }
 
 #pragma mark -
