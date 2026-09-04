@@ -134,7 +134,9 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
     toolbar.allowsUserCustomization = NO;
     toolbar.autosavesConfiguration = NO;
     toolbar.delegate = self;
-    toolbar.displayMode = NSToolbarDisplayModeIconAndLabel;
+    /* The Apply item supplies its own titled button, so letting the toolbar
+     * draw the item label as well printed "Apply" twice, one above the other. */
+    toolbar.displayMode = NSToolbarDisplayModeIconOnly;
     window.toolbar = toolbar;
 
     [window setFrameAutosaveName:kMacLCSettingsAutosaveName];
@@ -212,7 +214,12 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
     [NSLayoutConstraint activateConstraints:@[
         [_detailScrollView.leadingAnchor constraintEqualToAnchor:detailView.leadingAnchor],
         [_detailScrollView.trailingAnchor constraintEqualToAnchor:detailView.trailingAnchor],
-        [_detailScrollView.topAnchor constraintEqualToAnchor:detailView.topAnchor],
+        /* Pin to the safe area, not the raw top: the window has a transparent
+         * titlebar, so anchoring to detailView.topAnchor ran the pane's first
+         * card up underneath the title and drew the two texts on top of each
+         * other. */
+        [_detailScrollView.topAnchor
+            constraintEqualToAnchor:detailView.safeAreaLayoutGuide.topAnchor],
         [_detailScrollView.bottomAnchor constraintEqualToAnchor:detailView.bottomAnchor]
     ]];
 

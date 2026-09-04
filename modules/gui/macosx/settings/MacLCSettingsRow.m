@@ -85,9 +85,11 @@
         _titleLabel.font = [MacLCDesign bodyEmphasized];
         _titleLabel.textColor = [MacLCDesign primaryLabel];
         _titleLabel.lineBreakMode = NSLineBreakByWordWrapping;
-        [_titleLabel setContentHuggingPriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
         [_titleLabel setContentCompressionResistancePriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
         [_titleLabel setContentCompressionResistancePriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationVertical];
+        /* Hug the text so the spacer, not the label, takes up the slack. */
+        [_titleLabel setContentHuggingPriority:NSLayoutPriorityDefaultHigh
+                                forOrientation:NSLayoutConstraintOrientationHorizontal];
 
         // Flexible spacer between title and control
         NSView *spacer = [[NSView alloc] initWithFrame:NSZeroRect];
@@ -104,6 +106,13 @@
         _headerStackView.orientation = NSUserInterfaceLayoutOrientationHorizontal;
         _headerStackView.alignment = NSLayoutAttributeCenterY;
         _headerStackView.spacing = [MacLCDesign spacingS];
+        /* Under the default gravity-areas distribution the stack centres its
+         * views and never hands the slack to the spacer, so once rows became
+         * full width the label and its control drifted into the middle of the
+         * card. Filling makes the spacer - the only view that does not hug its
+         * content - absorb the extra width, which keeps the label against the
+         * leading edge and the control against the trailing one. */
+        _headerStackView.distribution = NSStackViewDistributionFill;
         [_headerStackView addArrangedSubview:_warningImageView];
         [_headerStackView addArrangedSubview:_titleLabel];
         [_headerStackView addArrangedSubview:spacer];

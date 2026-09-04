@@ -30,6 +30,32 @@
 
 @end
 
+/**
+ * A vertical stack that makes every row it is given as wide as the card.
+ *
+ * NSStackView's leading alignment leaves each arranged view at its fitting
+ * width, which left a settings row only as wide as its own longest line - so
+ * its control sat immediately after a short explanation and far to the right
+ * after a long one. Setting the stack's alignment to NSLayoutAttributeWidth
+ * instead makes the rows trail-align at unequal widths, which is no better.
+ * Constraining each row explicitly is the one arrangement that does what a
+ * card wants.
+ */
+@interface MacLCCardContentStackView : NSStackView
+@end
+
+@implementation MacLCCardContentStackView
+
+- (void)addArrangedSubview:(NSView *)view
+{
+    [super addArrangedSubview:view];
+    const CGFloat horizontalInsets = self.edgeInsets.left + self.edgeInsets.right;
+    [view.widthAnchor constraintEqualToAnchor:self.widthAnchor
+                                     constant:-horizontalInsets].active = YES;
+}
+
+@end
+
 @implementation MacLCCardView
 
 + (instancetype)cardViewWithTitle:(nullable NSString *)title
@@ -84,7 +110,7 @@
     _cardContainerView.layer.borderWidth = 1.0;
     _cardContainerView.translatesAutoresizingMaskIntoConstraints = NO;
 
-    _contentStackView = [[NSStackView alloc] initWithFrame:NSZeroRect];
+    _contentStackView = [[MacLCCardContentStackView alloc] initWithFrame:NSZeroRect];
     _contentStackView.orientation = NSUserInterfaceLayoutOrientationVertical;
     _contentStackView.alignment = NSLayoutAttributeLeading;
     _contentStackView.spacing = MacLCDesign.spacingM;
