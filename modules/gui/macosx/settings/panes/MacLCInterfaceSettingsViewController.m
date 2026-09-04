@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "settings/panes/MacLCInterfaceSettingsViewController.h"
+#import "settings/MacLCConfigSafe.h"
 #import "settings/MacLCSettingsRow.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -242,38 +243,43 @@
     _notificationsRow.defaultHint = _NS("Default: Off");
     [queueCard.contentStackView addArrangedSubview:_notificationsRow];
 
-    // Card 4: Web Remote & Network Interface (Advanced disclosure)
-    _advancedDisclosureButton = [NSButton buttonWithTitle:_NS("Advanced Web Remote ▶")
-                                                   target:self
-                                                   action:@selector(toggleAdvancedAction:)];
-    _advancedDisclosureButton.bezelStyle = NSBezelStyleInline;
-    [rootStack addArrangedSubview:_advancedDisclosureButton];
+    // Card 4: the web remote, which the lua interface provides. On a build
+    // without lua the option does not exist, so the card is not built at all:
+    // a control that cannot do anything is worse than a missing one.
+    if (MacLCConfigExists("http-password")) {
+        _advancedDisclosureButton = [NSButton buttonWithTitle:_NS("Advanced Web Remote ▶")
+                                                       target:self
+                                                       action:@selector(toggleAdvancedAction:)];
+        _advancedDisclosureButton.bezelStyle = NSBezelStyleInline;
+        [rootStack addArrangedSubview:_advancedDisclosureButton];
 
-    _advancedCard = [MacLCCardView cardViewWithTitle:_NS("Web Remote Control (Advanced)")];
-    _advancedCard.translatesAutoresizingMaskIntoConstraints = NO;
-    _advancedCard.hidden = YES;
-    [rootStack addArrangedSubview:_advancedCard];
-    [_advancedCard.trailingAnchor constraintEqualToAnchor:rootStack.trailingAnchor].active = YES;
+        _advancedCard = [MacLCCardView cardViewWithTitle:_NS("Web Remote Control (Advanced)")];
+        _advancedCard.translatesAutoresizingMaskIntoConstraints = NO;
+        _advancedCard.hidden = YES;
+        [rootStack addArrangedSubview:_advancedCard];
+        [_advancedCard.trailingAnchor constraintEqualToAnchor:rootStack.trailingAnchor].active = YES;
 
-    _httpRemoteRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Enable HTTP Web Remote")
-                                                explanation:_NS("Host a local web server allowing browser-based and mobile remote control.")
-                                                      state:NO
-                                                     action:^(BOOL checked) {
-        weakSelf.hasUnsavedChanges = YES;
-        weakSelf.httpPasswordRow.enabled = checked;
-    }];
-    _httpRemoteRow.defaultHint = _NS("Default: Off");
-    [_advancedCard.contentStackView addArrangedSubview:_httpRemoteRow];
+        _httpRemoteRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Enable HTTP Web Remote")
+                                                    explanation:_NS("Host a local web server allowing browser-based and mobile remote control.")
+                                                          state:NO
+                                                         action:^(BOOL checked) {
+            weakSelf.hasUnsavedChanges = YES;
+            weakSelf.httpPasswordRow.enabled = checked;
+        }];
+        _httpRemoteRow.defaultHint = _NS("Default: Off");
+        [_advancedCard.contentStackView addArrangedSubview:_httpRemoteRow];
 
-    _httpPasswordRow = [MacLCSettingsRow textFieldRowWithTitle:_NS("Web Remote Password")
-                                                   explanation:_NS("Password required for browsers and remote applications to connect.")
-                                                          text:@""
-                                                   placeholder:@"Password"
-                                                      isSecure:YES
-                                                        action:^(NSString *text) {
-        weakSelf.hasUnsavedChanges = YES;
-    }];
-    [_advancedCard.contentStackView addArrangedSubview:_httpPasswordRow];
+        _httpPasswordRow = [MacLCSettingsRow textFieldRowWithTitle:_NS("Web Remote Password")
+                                                       explanation:_NS("Password required for browsers and remote applications to connect.")
+                                                              text:@""
+                                                       placeholder:@"Password"
+                                                          isSecure:YES
+                                                            action:^(NSString *text) {
+            weakSelf.hasUnsavedChanges = YES;
+        }];
+        [_advancedCard.contentStackView addArrangedSubview:_httpPasswordRow];
+
+    }
 
     // Reset button
     NSButton *resetBtn = [NSButton buttonWithTitle:_NS("Reset Interface Settings…")
@@ -314,7 +320,7 @@
 
 - (BOOL)hasModule:(NSString *)moduleName inConfig:(const char *)configName
 {
-    char *val = config_GetPsz(configName);
+    char *val = MacLCConfigGetPsz(configName);
     if (!val) return NO;
     NSString *modules = toNSStr(val);
     free(val);
@@ -323,7 +329,7 @@
 
 - (void)setModule:(NSString *)moduleName inConfig:(const char *)configName enabled:(BOOL)enable
 {
-    char *val = config_GetPsz(configName);
+    char *val = MacLCConfigGetPsz(configName);
     NSString *modules = val ? toNSStr(val) : @"";
     if (val) free(val);
 
@@ -336,7 +342,7 @@
         [components removeObject:moduleName];
     }
     [components removeObject:@""];
-    config_PutPsz(configName, [[components componentsJoinedByString:@":"] UTF8String]);
+    MacLCConfigPutPsz(configName, [[components componentsJoinedByString:@":"] UTF8String]);
 }
 
 #pragma mark - Settings Operations
@@ -345,17 +351,17 @@
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 
-    _statusIconRow.checkboxButton.state = config_GetInt("macosx-statusicon") ? NSControlStateValueOn : NSControlStateValueOff;
-    _mediaKeysRow.checkboxButton.state = config_GetInt("macosx-mediakeys") ? NSControlStateValueOn : NSControlStateValueOff;
+    _statusIconRow.checkboxButton.state = MacLCConfigGetInt("macosx-statusicon", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    _mediaKeysRow.checkboxButton.state = MacLCConfigGetInt("macosx-mediakeys", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
-    BOOL remote = config_GetInt("macosx-appleremote") != 0;
+    BOOL remote = MacLCConfigGetInt("macosx-appleremote", 0) != 0;
     _appleRemoteRow.checkboxButton.state = remote ? NSControlStateValueOn : NSControlStateValueOff;
-    _appleRemoteSysVolRow.checkboxButton.state = config_GetInt("macosx-appleremote-sysvol") ? NSControlStateValueOn : NSControlStateValueOff;
-    _appleRemotePrevNextRow.checkboxButton.state = config_GetInt("macosx-appleremote-prevnext") ? NSControlStateValueOn : NSControlStateValueOff;
+    _appleRemoteSysVolRow.checkboxButton.state = MacLCConfigGetInt("macosx-appleremote-sysvol", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    _appleRemotePrevNextRow.checkboxButton.state = MacLCConfigGetInt("macosx-appleremote-prevnext", 0) ? NSControlStateValueOn : NSControlStateValueOff;
     _appleRemoteSysVolRow.enabled = remote;
     _appleRemotePrevNextRow.enabled = remote;
 
-    [_controlItunesRow.popUpButton selectItemWithTag:config_GetInt("macosx-control-itunes")];
+    [_controlItunesRow.popUpButton selectItemWithTag:MacLCConfigGetInt("macosx-control-itunes", 0)];
 
     _trackNumberRow.checkboxButton.state = [defaults boolForKey:VLCDisplayTrackNumberPlayQueueKey] ? NSControlStateValueOn : NSControlStateValueOff;
     _endOfPlaybackRow.checkboxButton.state = [defaults boolForKey:VLCPlaybackEndViewEnabledKey] ? NSControlStateValueOn : NSControlStateValueOff;
@@ -363,13 +369,15 @@
     BOOL notif = [self hasModule:@"growl" inConfig:"control"];
     _notificationsRow.checkboxButton.state = notif ? NSControlStateValueOn : NSControlStateValueOff;
 
-    BOOL http = [self hasModule:@"http" inConfig:"extraintf"];
-    _httpRemoteRow.checkboxButton.state = http ? NSControlStateValueOn : NSControlStateValueOff;
-    _httpPasswordRow.enabled = http;
+    if (_httpRemoteRow) {
+        BOOL http = [self hasModule:@"http" inConfig:"extraintf"];
+        _httpRemoteRow.checkboxButton.state = http ? NSControlStateValueOn : NSControlStateValueOff;
+        _httpPasswordRow.enabled = http;
 
-    char *pwd = config_GetPsz("http-password");
-    _httpPasswordRow.textField.stringValue = pwd ? toNSStr(pwd) : @"";
-    free(pwd);
+        char *pwd = MacLCConfigGetPsz("http-password");
+        _httpPasswordRow.textField.stringValue = pwd ? toNSStr(pwd) : @"";
+        free(pwd);
+    }
 
     self.hasUnsavedChanges = NO;
 }
@@ -378,13 +386,13 @@
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 
-    config_PutInt("macosx-statusicon", _statusIconRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-mediakeys", _mediaKeysRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-appleremote", _appleRemoteRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-appleremote-sysvol", _appleRemoteSysVolRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-appleremote-prevnext", _appleRemotePrevNextRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-statusicon", _statusIconRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-mediakeys", _mediaKeysRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-appleremote", _appleRemoteRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-appleremote-sysvol", _appleRemoteSysVolRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-appleremote-prevnext", _appleRemotePrevNextRow.checkboxButton.state == NSControlStateValueOn);
 
-    config_PutInt("macosx-control-itunes", _controlItunesRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("macosx-control-itunes", _controlItunesRow.popUpButton.selectedTag);
 
     BOOL oldTrackNum = [defaults boolForKey:VLCDisplayTrackNumberPlayQueueKey];
     BOOL newTrackNum = _trackNumberRow.checkboxButton.state == NSControlStateValueOn;
@@ -397,9 +405,11 @@
 
     [self setModule:@"growl" inConfig:"control" enabled:_notificationsRow.checkboxButton.state == NSControlStateValueOn];
 
-    BOOL http = _httpRemoteRow.checkboxButton.state == NSControlStateValueOn;
-    [self setModule:@"http" inConfig:"extraintf" enabled:http];
-    config_PutPsz("http-password", [_httpPasswordRow.textField.stringValue UTF8String]);
+    if (_httpRemoteRow) {
+        BOOL http = _httpRemoteRow.checkboxButton.state == NSControlStateValueOn;
+        [self setModule:@"http" inConfig:"extraintf" enabled:http];
+        MacLCConfigPutPsz("http-password", [_httpPasswordRow.textField.stringValue UTF8String]);
+    }
 
     self.hasUnsavedChanges = NO;
 }
@@ -411,13 +421,13 @@
     [defaults removeObjectForKey:VLCPlaybackEndViewEnabledKey];
 
     module_config_t *item;
-    if ((item = config_FindConfig("macosx-statusicon"))) config_PutInt("macosx-statusicon", item->orig.i);
-    if ((item = config_FindConfig("macosx-mediakeys"))) config_PutInt("macosx-mediakeys", item->orig.i);
-    if ((item = config_FindConfig("macosx-appleremote"))) config_PutInt("macosx-appleremote", item->orig.i);
-    if ((item = config_FindConfig("macosx-appleremote-sysvol"))) config_PutInt("macosx-appleremote-sysvol", item->orig.i);
-    if ((item = config_FindConfig("macosx-appleremote-prevnext"))) config_PutInt("macosx-appleremote-prevnext", item->orig.i);
-    if ((item = config_FindConfig("macosx-control-itunes"))) config_PutInt("macosx-control-itunes", item->orig.i);
-    if ((item = config_FindConfig("http-password"))) config_PutPsz("http-password", "");
+    if ((item = config_FindConfig("macosx-statusicon"))) MacLCConfigPutInt("macosx-statusicon", item->orig.i);
+    if ((item = config_FindConfig("macosx-mediakeys"))) MacLCConfigPutInt("macosx-mediakeys", item->orig.i);
+    if ((item = config_FindConfig("macosx-appleremote"))) MacLCConfigPutInt("macosx-appleremote", item->orig.i);
+    if ((item = config_FindConfig("macosx-appleremote-sysvol"))) MacLCConfigPutInt("macosx-appleremote-sysvol", item->orig.i);
+    if ((item = config_FindConfig("macosx-appleremote-prevnext"))) MacLCConfigPutInt("macosx-appleremote-prevnext", item->orig.i);
+    if ((item = config_FindConfig("macosx-control-itunes"))) MacLCConfigPutInt("macosx-control-itunes", item->orig.i);
+    if ((item = config_FindConfig("http-password"))) MacLCConfigPutPsz("http-password", "");
 
     [self setModule:@"growl" inConfig:"control" enabled:NO];
     [self setModule:@"http" inConfig:"extraintf" enabled:NO];

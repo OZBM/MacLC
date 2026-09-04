@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "settings/panes/MacLCPlaybackSettingsViewController.h"
+#import "settings/MacLCConfigSafe.h"
 #import "settings/MacLCSettingsRow.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -352,61 +353,61 @@
 - (void)loadSettings
 {
     // Rate
-    float rate = config_GetFloat("rate");
+    float rate = MacLCConfigGetFloat("rate", 0.0f);
     if (rate <= 0.0f) rate = 1.0f;
     _rateRow.stepper.doubleValue = rate;
     _rateRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%.2fx", rate];
 
     // Fast seek
-    _fastSeekRow.checkboxButton.state = config_GetInt("input-fast-seek") ? NSControlStateValueOn : NSControlStateValueOff;
+    _fastSeekRow.checkboxButton.state = MacLCConfigGetInt("input-fast-seek", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     // Autostart
-    _autostartRow.checkboxButton.state = config_GetInt("playlist-autostart") ? NSControlStateValueOn : NSControlStateValueOff;
+    _autostartRow.checkboxButton.state = MacLCConfigGetInt("playlist-autostart", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     // Loop & Repeat & Random
-    _loopRow.checkboxButton.state = config_GetInt("loop") ? NSControlStateValueOn : NSControlStateValueOff;
-    _repeatRow.checkboxButton.state = config_GetInt("repeat") ? NSControlStateValueOn : NSControlStateValueOff;
-    _randomRow.checkboxButton.state = config_GetInt("random") ? NSControlStateValueOn : NSControlStateValueOff;
+    _loopRow.checkboxButton.state = MacLCConfigGetInt("loop", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    _repeatRow.checkboxButton.state = MacLCConfigGetInt("repeat", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    _randomRow.checkboxButton.state = MacLCConfigGetInt("random", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     // Jump sizes
-    _extraShortJumpRow.stepper.doubleValue = config_GetInt("extrashort-jump-size");
+    _extraShortJumpRow.stepper.doubleValue = MacLCConfigGetInt("extrashort-jump-size", 0);
     _extraShortJumpRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%.0f s", _extraShortJumpRow.stepper.doubleValue];
 
-    _shortJumpRow.stepper.doubleValue = config_GetInt("short-jump-size");
+    _shortJumpRow.stepper.doubleValue = MacLCConfigGetInt("short-jump-size", 0);
     _shortJumpRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%.0f s", _shortJumpRow.stepper.doubleValue];
 
-    _mediumJumpRow.stepper.doubleValue = config_GetInt("medium-jump-size");
+    _mediumJumpRow.stepper.doubleValue = MacLCConfigGetInt("medium-jump-size", 0);
     _mediumJumpRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%.0f s", _mediumJumpRow.stepper.doubleValue];
 
-    _longJumpRow.stepper.doubleValue = config_GetInt("long-jump-size");
+    _longJumpRow.stepper.doubleValue = MacLCConfigGetInt("long-jump-size", 0);
     _longJumpRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%.0f s", _longJumpRow.stepper.doubleValue];
 
     // Advanced options
-    _hardwareDecRow.checkboxButton.state = config_GetInt("videotoolbox-hw-decoder-only") ? NSControlStateValueOn : NSControlStateValueOff;
-    [_aviIndexRow.popUpButton selectItemWithTag:config_GetInt("avi-index")];
-    [_skipLoopRow.popUpButton selectItemWithTag:config_GetInt("avcodec-skiploopfilter")];
+    _hardwareDecRow.checkboxButton.state = MacLCConfigGetInt("videotoolbox-hw-decoder-only", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    [_aviIndexRow.popUpButton selectItemWithTag:MacLCConfigGetInt("avi-index", 0)];
+    [_skipLoopRow.popUpButton selectItemWithTag:MacLCConfigGetInt("avcodec-skiploopfilter", 0)];
 
     self.hasUnsavedChanges = NO;
 }
 
 - (void)applyChanges
 {
-    config_PutFloat("rate", (float)_rateRow.stepper.doubleValue);
-    config_PutInt("input-fast-seek", _fastSeekRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("playlist-autostart", _autostartRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutFloat("rate", (float)_rateRow.stepper.doubleValue);
+    MacLCConfigPutInt("input-fast-seek", _fastSeekRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("playlist-autostart", _autostartRow.checkboxButton.state == NSControlStateValueOn);
 
-    config_PutInt("loop", _loopRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("repeat", _repeatRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("random", _randomRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("loop", _loopRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("repeat", _repeatRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("random", _randomRow.checkboxButton.state == NSControlStateValueOn);
 
-    config_PutInt("extrashort-jump-size", (int)_extraShortJumpRow.stepper.doubleValue);
-    config_PutInt("short-jump-size", (int)_shortJumpRow.stepper.doubleValue);
-    config_PutInt("medium-jump-size", (int)_mediumJumpRow.stepper.doubleValue);
-    config_PutInt("long-jump-size", (int)_longJumpRow.stepper.doubleValue);
+    MacLCConfigPutInt("extrashort-jump-size", (int)_extraShortJumpRow.stepper.doubleValue);
+    MacLCConfigPutInt("short-jump-size", (int)_shortJumpRow.stepper.doubleValue);
+    MacLCConfigPutInt("medium-jump-size", (int)_mediumJumpRow.stepper.doubleValue);
+    MacLCConfigPutInt("long-jump-size", (int)_longJumpRow.stepper.doubleValue);
 
-    config_PutInt("videotoolbox-hw-decoder-only", _hardwareDecRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("avi-index", _aviIndexRow.popUpButton.selectedTag);
-    config_PutInt("avcodec-skiploopfilter", _skipLoopRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("videotoolbox-hw-decoder-only", _hardwareDecRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("avi-index", _aviIndexRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("avcodec-skiploopfilter", _skipLoopRow.popUpButton.selectedTag);
 
     self.hasUnsavedChanges = NO;
 }
@@ -414,19 +415,19 @@
 - (void)resetToDefaults
 {
     module_config_t *item;
-    if ((item = config_FindConfig("rate"))) config_PutFloat("rate", item->orig.f);
-    if ((item = config_FindConfig("input-fast-seek"))) config_PutInt("input-fast-seek", item->orig.i);
-    if ((item = config_FindConfig("playlist-autostart"))) config_PutInt("playlist-autostart", item->orig.i);
-    if ((item = config_FindConfig("loop"))) config_PutInt("loop", item->orig.i);
-    if ((item = config_FindConfig("repeat"))) config_PutInt("repeat", item->orig.i);
-    if ((item = config_FindConfig("random"))) config_PutInt("random", item->orig.i);
-    if ((item = config_FindConfig("extrashort-jump-size"))) config_PutInt("extrashort-jump-size", item->orig.i);
-    if ((item = config_FindConfig("short-jump-size"))) config_PutInt("short-jump-size", item->orig.i);
-    if ((item = config_FindConfig("medium-jump-size"))) config_PutInt("medium-jump-size", item->orig.i);
-    if ((item = config_FindConfig("long-jump-size"))) config_PutInt("long-jump-size", item->orig.i);
-    if ((item = config_FindConfig("videotoolbox-hw-decoder-only"))) config_PutInt("videotoolbox-hw-decoder-only", item->orig.i);
-    if ((item = config_FindConfig("avi-index"))) config_PutInt("avi-index", item->orig.i);
-    if ((item = config_FindConfig("avcodec-skiploopfilter"))) config_PutInt("avcodec-skiploopfilter", item->orig.i);
+    if ((item = config_FindConfig("rate"))) MacLCConfigPutFloat("rate", item->orig.f);
+    if ((item = config_FindConfig("input-fast-seek"))) MacLCConfigPutInt("input-fast-seek", item->orig.i);
+    if ((item = config_FindConfig("playlist-autostart"))) MacLCConfigPutInt("playlist-autostart", item->orig.i);
+    if ((item = config_FindConfig("loop"))) MacLCConfigPutInt("loop", item->orig.i);
+    if ((item = config_FindConfig("repeat"))) MacLCConfigPutInt("repeat", item->orig.i);
+    if ((item = config_FindConfig("random"))) MacLCConfigPutInt("random", item->orig.i);
+    if ((item = config_FindConfig("extrashort-jump-size"))) MacLCConfigPutInt("extrashort-jump-size", item->orig.i);
+    if ((item = config_FindConfig("short-jump-size"))) MacLCConfigPutInt("short-jump-size", item->orig.i);
+    if ((item = config_FindConfig("medium-jump-size"))) MacLCConfigPutInt("medium-jump-size", item->orig.i);
+    if ((item = config_FindConfig("long-jump-size"))) MacLCConfigPutInt("long-jump-size", item->orig.i);
+    if ((item = config_FindConfig("videotoolbox-hw-decoder-only"))) MacLCConfigPutInt("videotoolbox-hw-decoder-only", item->orig.i);
+    if ((item = config_FindConfig("avi-index"))) MacLCConfigPutInt("avi-index", item->orig.i);
+    if ((item = config_FindConfig("avcodec-skiploopfilter"))) MacLCConfigPutInt("avcodec-skiploopfilter", item->orig.i);
 
     [self loadSettings];
     self.hasUnsavedChanges = YES;

@@ -458,6 +458,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/preferences/prefs.m \
 	gui/macosx/preferences/prefs_widgets.h \
 	gui/macosx/preferences/prefs_widgets.m \
+	gui/macosx/settings/MacLCConfigSafe.h \
+	gui/macosx/settings/MacLCConfigSafe.m \
 	gui/macosx/settings/MacLCSettingsPane.h \
 	gui/macosx/settings/MacLCSettingsRow.h \
 	gui/macosx/settings/MacLCSettingsRow.m \

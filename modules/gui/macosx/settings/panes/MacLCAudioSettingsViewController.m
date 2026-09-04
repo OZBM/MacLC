@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "settings/panes/MacLCAudioSettingsViewController.h"
+#import "settings/MacLCConfigSafe.h"
 #import "settings/MacLCSettingsRow.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -367,7 +368,7 @@
 
 - (BOOL)hasAudioFilter:(NSString *)filterName
 {
-    char *val = config_GetPsz("audio-filter");
+    char *val = MacLCConfigGetPsz("audio-filter");
     if (!val) return NO;
     NSString *filters = toNSStr(val);
     free(val);
@@ -376,7 +377,7 @@
 
 - (void)setAudioFilter:(NSString *)filterName enabled:(BOOL)enable
 {
-    char *val = config_GetPsz("audio-filter");
+    char *val = MacLCConfigGetPsz("audio-filter");
     NSString *filters = val ? toNSStr(val) : @"";
     if (val) free(val);
 
@@ -389,35 +390,35 @@
         [components removeObject:filterName];
     }
     [components removeObject:@""];
-    config_PutPsz("audio-filter", [[components componentsJoinedByString:@":"] UTF8String]);
+    MacLCConfigPutPsz("audio-filter", [[components componentsJoinedByString:@":"] UTF8String]);
 }
 
 #pragma mark - Settings Operations
 
 - (void)loadSettings
 {
-    _audioEnableRow.checkboxButton.state = config_GetInt("audio") ? NSControlStateValueOn : NSControlStateValueOff;
+    _audioEnableRow.checkboxButton.state = MacLCConfigGetInt("audio", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
-    BOOL saveVol = config_GetInt("volume-save") != 0;
+    BOOL saveVol = MacLCConfigGetInt("volume-save", 0) != 0;
     _saveVolumeRow.checkboxButton.state = saveVol ? NSControlStateValueOn : NSControlStateValueOff;
     _defaultVolumeRow.enabled = !saveVol;
 
-    int vol = (int)config_GetInt("auhal-volume");
+    int vol = (int)MacLCConfigGetInt("auhal-volume", 0);
     double volPct = vol * 200.0 / (double)AOUT_VOLUME_MAX;
     if (volPct < 0) volPct = 100;
     _defaultVolumeRow.slider.doubleValue = volPct;
     _defaultVolumeRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%.0f%%", volPct];
 
-    int maxVol = (int)config_GetInt("macosx-max-volume");
+    int maxVol = (int)MacLCConfigGetInt("macosx-max-volume", 0);
     if (maxVol < 60) maxVol = 125;
     _maxVolumeRow.stepper.doubleValue = maxVol;
     _maxVolumeRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%d%%", maxVol];
 
-    char *lang = config_GetPsz("audio-language");
+    char *lang = MacLCConfigGetPsz("audio-language");
     _audioLangRow.textField.stringValue = lang ? toNSStr(lang) : @"";
     free(lang);
 
-    char *rg = config_GetPsz("audio-replay-gain-mode");
+    char *rg = MacLCConfigGetPsz("audio-replay-gain-mode");
     NSString *rgStr = rg ? toNSStr(rg) : @"none";
     free(rg);
     if ([rgStr isEqualToString:@"track"]) [_replayGainRow.popUpButton selectItemWithTag:1];
@@ -428,7 +429,7 @@
     _normVolRow.checkboxButton.state = norm ? NSControlStateValueOn : NSControlStateValueOff;
     _normMaxLevelRow.enabled = norm;
 
-    float normLvl = config_GetFloat("norm-max-level");
+    float normLvl = MacLCConfigGetFloat("norm-max-level", 0.0f);
     if (normLvl <= 0.0f) normLvl = 2.0f;
     _normMaxLevelRow.slider.doubleValue = normLvl;
     _normMaxLevelRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%.1fx", normLvl];
@@ -437,12 +438,12 @@
     _headphoneRow.checkboxButton.state = headphone ? NSControlStateValueOn : NSControlStateValueOff;
     _headphoneDimRow.enabled = headphone;
 
-    int dim = (int)config_GetInt("headphone-dim");
+    int dim = (int)MacLCConfigGetInt("headphone-dim", 0);
     if (dim < 5) dim = 10;
     _headphoneDimRow.stepper.doubleValue = dim;
     _headphoneDimRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%d m", dim];
 
-    char *vis = config_GetPsz("audio-visual");
+    char *vis = MacLCConfigGetPsz("audio-visual");
     NSString *visStr = vis ? toNSStr(vis) : @"";
     free(vis);
     if ([visStr isEqualToString:@"goom"]) [_visualRow.popUpButton selectItemWithTag:1];
@@ -455,11 +456,11 @@
         _lastfmUserRow.enabled = scrobble;
         _lastfmPasswordRow.enabled = scrobble;
 
-        char *usr = config_GetPsz("lastfm-username");
+        char *usr = MacLCConfigGetPsz("lastfm-username");
         _lastfmUserRow.textField.stringValue = usr ? toNSStr(usr) : @"";
         free(usr);
 
-        char *pwd = config_GetPsz("lastfm-password");
+        char *pwd = MacLCConfigGetPsz("lastfm-password");
         _lastfmPasswordRow.textField.stringValue = pwd ? toNSStr(pwd) : @"";
         free(pwd);
     }
@@ -469,37 +470,37 @@
 
 - (void)applyChanges
 {
-    config_PutInt("audio", _audioEnableRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("audio", _audioEnableRow.checkboxButton.state == NSControlStateValueOn);
 
     BOOL saveVol = _saveVolumeRow.checkboxButton.state == NSControlStateValueOn;
-    config_PutInt("volume-save", saveVol);
+    MacLCConfigPutInt("volume-save", saveVol);
     var_SetBool(_p_intf, "volume-save", saveVol);
 
     if (!saveVol) {
         int auhalVol = (int)(_defaultVolumeRow.slider.doubleValue * (double)AOUT_VOLUME_MAX / 200.0);
-        config_PutInt("auhal-volume", auhalVol);
+        MacLCConfigPutInt("auhal-volume", auhalVol);
     }
 
-    config_PutInt("macosx-max-volume", (int)_maxVolumeRow.stepper.doubleValue);
-    config_PutPsz("audio-language", [_audioLangRow.textField.stringValue UTF8String]);
+    MacLCConfigPutInt("macosx-max-volume", (int)_maxVolumeRow.stepper.doubleValue);
+    MacLCConfigPutPsz("audio-language", [_audioLangRow.textField.stringValue UTF8String]);
 
     NSInteger rgTag = _replayGainRow.popUpButton.selectedTag;
     const char *rgMode = "none";
     if (rgTag == 1) rgMode = "track";
     else if (rgTag == 2) rgMode = "album";
-    config_PutPsz("audio-replay-gain-mode", rgMode);
+    MacLCConfigPutPsz("audio-replay-gain-mode", rgMode);
 
     [self setAudioFilter:@"normvol" enabled:_normVolRow.checkboxButton.state == NSControlStateValueOn];
-    config_PutFloat("norm-max-level", (float)_normMaxLevelRow.slider.doubleValue);
+    MacLCConfigPutFloat("norm-max-level", (float)_normMaxLevelRow.slider.doubleValue);
 
     [self setAudioFilter:@"headphone" enabled:_headphoneRow.checkboxButton.state == NSControlStateValueOn];
-    config_PutInt("headphone-dim", (int)_headphoneDimRow.stepper.doubleValue);
+    MacLCConfigPutInt("headphone-dim", (int)_headphoneDimRow.stepper.doubleValue);
 
     NSInteger visTag = _visualRow.popUpButton.selectedTag;
     const char *visMode = "";
     if (visTag == 1) visMode = "goom";
     else if (visTag == 2) visMode = "visual";
-    config_PutPsz("audio-visual", visMode);
+    MacLCConfigPutPsz("audio-visual", visMode);
 
     if (_lastfmCard) {
         if (_lastfmEnableRow.checkboxButton.state == NSControlStateValueOn) {
@@ -507,8 +508,8 @@
         } else {
             config_RemoveIntf("audioscrobbler");
         }
-        config_PutPsz("lastfm-username", [_lastfmUserRow.textField.stringValue UTF8String]);
-        config_PutPsz("lastfm-password", [_lastfmPasswordRow.textField.stringValue UTF8String]);
+        MacLCConfigPutPsz("lastfm-username", [_lastfmUserRow.textField.stringValue UTF8String]);
+        MacLCConfigPutPsz("lastfm-password", [_lastfmPasswordRow.textField.stringValue UTF8String]);
     }
 
     self.hasUnsavedChanges = NO;
@@ -517,21 +518,21 @@
 - (void)resetToDefaults
 {
     module_config_t *item;
-    if ((item = config_FindConfig("audio"))) config_PutInt("audio", item->orig.i);
-    if ((item = config_FindConfig("volume-save"))) config_PutInt("volume-save", item->orig.i);
-    if ((item = config_FindConfig("auhal-volume"))) config_PutInt("auhal-volume", item->orig.i);
-    if ((item = config_FindConfig("macosx-max-volume"))) config_PutInt("macosx-max-volume", item->orig.i);
-    if ((item = config_FindConfig("audio-language"))) config_PutPsz("audio-language", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("audio-replay-gain-mode"))) config_PutPsz("audio-replay-gain-mode", item->orig.psz ? item->orig.psz : "none");
-    if ((item = config_FindConfig("norm-max-level"))) config_PutFloat("norm-max-level", item->orig.f);
-    if ((item = config_FindConfig("headphone-dim"))) config_PutInt("headphone-dim", item->orig.i);
-    if ((item = config_FindConfig("audio-visual"))) config_PutPsz("audio-visual", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("audio-filter"))) config_PutPsz("audio-filter", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("audio"))) MacLCConfigPutInt("audio", item->orig.i);
+    if ((item = config_FindConfig("volume-save"))) MacLCConfigPutInt("volume-save", item->orig.i);
+    if ((item = config_FindConfig("auhal-volume"))) MacLCConfigPutInt("auhal-volume", item->orig.i);
+    if ((item = config_FindConfig("macosx-max-volume"))) MacLCConfigPutInt("macosx-max-volume", item->orig.i);
+    if ((item = config_FindConfig("audio-language"))) MacLCConfigPutPsz("audio-language", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("audio-replay-gain-mode"))) MacLCConfigPutPsz("audio-replay-gain-mode", item->orig.psz ? item->orig.psz : "none");
+    if ((item = config_FindConfig("norm-max-level"))) MacLCConfigPutFloat("norm-max-level", item->orig.f);
+    if ((item = config_FindConfig("headphone-dim"))) MacLCConfigPutInt("headphone-dim", item->orig.i);
+    if ((item = config_FindConfig("audio-visual"))) MacLCConfigPutPsz("audio-visual", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("audio-filter"))) MacLCConfigPutPsz("audio-filter", item->orig.psz ? item->orig.psz : "");
 
     if (_lastfmCard) {
         config_RemoveIntf("audioscrobbler");
-        if ((item = config_FindConfig("lastfm-username"))) config_PutPsz("lastfm-username", "");
-        if ((item = config_FindConfig("lastfm-password"))) config_PutPsz("lastfm-password", "");
+        if ((item = config_FindConfig("lastfm-username"))) MacLCConfigPutPsz("lastfm-username", "");
+        if ((item = config_FindConfig("lastfm-password"))) MacLCConfigPutPsz("lastfm-password", "");
     }
 
     [self loadSettings];

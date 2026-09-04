@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "settings/panes/MacLCHDRSettingsViewController.h"
+#import "settings/MacLCConfigSafe.h"
 
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -375,7 +376,7 @@
 - (void)loadSettings
 {
     /* Primary mode */
-    _currentHdrMode = config_GetInt("macosx-hdr-mode");
+    _currentHdrMode = MacLCConfigGetInt("macosx-hdr-mode", 0);
     if (_currentHdrMode < 0 || _currentHdrMode > 3) {
         _currentHdrMode = 0;
     }
@@ -384,24 +385,24 @@
     }
 
     /* Headroom */
-    _currentHeadroom = config_GetFloat("macosx-edr-headroom");
+    _currentHeadroom = MacLCConfigGetFloat("macosx-edr-headroom", 0.0f);
     [self updateHeadroomControlsWithVal:_currentHeadroom];
 
     /* Picture processing */
-    [_toneMappingPopup selectItemWithTag:config_GetInt("gl-tone-mapping-function")];
-    float param = config_GetFloat("gl-tone-mapping-param");
+    [_toneMappingPopup selectItemWithTag:MacLCConfigGetInt("gl-tone-mapping-function", 0)];
+    float param = MacLCConfigGetFloat("gl-tone-mapping-param", 0.0f);
     _toneMappingParamSlider.floatValue = param;
     _toneMappingParamLabel.stringValue = (param == 0.0f) ? _NS("0.0 (Optimal default)") : [NSString stringWithFormat:@"%.2f", param];
-    [_gamutMappingPopup selectItemWithTag:config_GetInt("gl-gamut-mapping")];
-    _inverseToneMappingCheckbox.state = config_GetInt("gl-inverse-tone-mapping") ? NSControlStateValueOn : NSControlStateValueOff;
+    [_gamutMappingPopup selectItemWithTag:MacLCConfigGetInt("gl-gamut-mapping", 0)];
+    _inverseToneMappingCheckbox.state = MacLCConfigGetInt("gl-inverse-tone-mapping", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     /* Sharpness and smoothing */
-    [_upscalerPopup selectItemWithTag:config_GetInt("gl-upscaler")];
-    [_downscalerPopup selectItemWithTag:config_GetInt("gl-downscaler")];
-    [_ditherPopup selectItemWithTag:config_GetInt("dither-algo")];
+    [_upscalerPopup selectItemWithTag:MacLCConfigGetInt("gl-upscaler", 0)];
+    [_downscalerPopup selectItemWithTag:MacLCConfigGetInt("gl-downscaler", 0)];
+    [_ditherPopup selectItemWithTag:MacLCConfigGetInt("dither-algo", 0)];
 
     /* Video engine */
-    char *psz_vout = config_GetPsz("vout");
+    char *psz_vout = MacLCConfigGetPsz("vout");
     if (psz_vout && strlen(psz_vout) > 0) {
         [_voutPopup selectItemWithTag:[self tagForVoutString:[NSString stringWithUTF8String:psz_vout]]];
     } else {
@@ -409,11 +410,11 @@
     }
     free(psz_vout);
 
-    _legacyFallbackCheckbox.state = config_GetInt("force-darwin-legacy-display") ? NSControlStateValueOn : NSControlStateValueOff;
+    _legacyFallbackCheckbox.state = MacLCConfigGetInt("force-darwin-legacy-display", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     /* Decoding */
-    _hwDecodeOnlyCheckbox.state = config_GetInt("videotoolbox-hw-decoder-only") ? NSControlStateValueOn : NSControlStateValueOff;
-    char *psz_chroma = config_GetPsz("videotoolbox-cvpx-chroma");
+    _hwDecodeOnlyCheckbox.state = MacLCConfigGetInt("videotoolbox-hw-decoder-only", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    char *psz_chroma = MacLCConfigGetPsz("videotoolbox-cvpx-chroma");
     if (psz_chroma && strlen(psz_chroma) > 0) {
         [_cvpxChromaPopup selectItemWithTag:[self tagForChromaString:[NSString stringWithUTF8String:psz_chroma]]];
     } else {
@@ -428,31 +429,31 @@
 - (void)applyChanges
 {
     /* Primary */
-    config_PutInt("macosx-hdr-mode", _currentHdrMode);
+    MacLCConfigPutInt("macosx-hdr-mode", _currentHdrMode);
 
     /* Headroom */
-    config_PutFloat("macosx-edr-headroom", _currentHeadroom);
+    MacLCConfigPutFloat("macosx-edr-headroom", _currentHeadroom);
 
     /* Picture processing */
-    config_PutInt("gl-tone-mapping-function", (int)_toneMappingPopup.selectedTag);
-    config_PutFloat("gl-tone-mapping-param", _toneMappingParamSlider.floatValue);
-    config_PutInt("gl-gamut-mapping", (int)_gamutMappingPopup.selectedTag);
-    config_PutInt("gl-inverse-tone-mapping", (_inverseToneMappingCheckbox.state == NSControlStateValueOn) ? 1 : 0);
+    MacLCConfigPutInt("gl-tone-mapping-function", (int)_toneMappingPopup.selectedTag);
+    MacLCConfigPutFloat("gl-tone-mapping-param", _toneMappingParamSlider.floatValue);
+    MacLCConfigPutInt("gl-gamut-mapping", (int)_gamutMappingPopup.selectedTag);
+    MacLCConfigPutInt("gl-inverse-tone-mapping", (_inverseToneMappingCheckbox.state == NSControlStateValueOn) ? 1 : 0);
 
     /* Sharpness and smoothing */
-    config_PutInt("gl-upscaler", (int)_upscalerPopup.selectedTag);
-    config_PutInt("gl-downscaler", (int)_downscalerPopup.selectedTag);
-    config_PutInt("dither-algo", (int)_ditherPopup.selectedTag);
+    MacLCConfigPutInt("gl-upscaler", (int)_upscalerPopup.selectedTag);
+    MacLCConfigPutInt("gl-downscaler", (int)_downscalerPopup.selectedTag);
+    MacLCConfigPutInt("dither-algo", (int)_ditherPopup.selectedTag);
 
     /* Video engine */
     NSString *voutVal = [self voutStringForTag:_voutPopup.selectedTag];
-    config_PutPsz("vout", [voutVal UTF8String]);
-    config_PutInt("force-darwin-legacy-display", (_legacyFallbackCheckbox.state == NSControlStateValueOn) ? 1 : 0);
+    MacLCConfigPutPsz("vout", [voutVal UTF8String]);
+    MacLCConfigPutInt("force-darwin-legacy-display", (_legacyFallbackCheckbox.state == NSControlStateValueOn) ? 1 : 0);
 
     /* Decoding */
-    config_PutInt("videotoolbox-hw-decoder-only", (_hwDecodeOnlyCheckbox.state == NSControlStateValueOn) ? 1 : 0);
+    MacLCConfigPutInt("videotoolbox-hw-decoder-only", (_hwDecodeOnlyCheckbox.state == NSControlStateValueOn) ? 1 : 0);
     NSString *chromaVal = [self chromaStringForTag:_cvpxChromaPopup.selectedTag];
-    config_PutPsz("videotoolbox-cvpx-chroma", [chromaVal UTF8String]);
+    MacLCConfigPutPsz("videotoolbox-cvpx-chroma", [chromaVal UTF8String]);
 
     _hasUnsavedChanges = NO;
 }
@@ -1065,7 +1066,7 @@
     }
 
     if (!activeEngineName) {
-        BOOL forceLegacy = config_GetInt("force-darwin-legacy-display") || (_legacyFallbackCheckbox.state == NSControlStateValueOn);
+        BOOL forceLegacy = MacLCConfigGetInt("force-darwin-legacy-display", 0) || (_legacyFallbackCheckbox.state == NSControlStateValueOn);
         if (forceLegacy || _voutPopup.selectedTag == 2) {
             activeEngineName = _NS("OpenGL Core Layer (caopengllayer, standby)");
         } else {

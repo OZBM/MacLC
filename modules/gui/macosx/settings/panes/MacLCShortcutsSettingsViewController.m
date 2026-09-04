@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "settings/panes/MacLCShortcutsSettingsViewController.h"
+#import "settings/MacLCConfigSafe.h"
 #import "settings/MacLCSettingsRow.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -249,7 +250,7 @@
 
 - (void)loadSettings
 {
-    _mediaKeysRow.checkboxButton.state = config_GetInt("macosx-mediakeys") ? NSControlStateValueOn : NSControlStateValueOff;
+    _mediaKeysRow.checkboxButton.state = MacLCConfigGetInt("macosx-mediakeys", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     [_allDescriptions removeAllObjects];
     [_allNames removeAllObjects];
@@ -269,7 +270,7 @@
                     [_allDescriptions addObject:NSTR(p_item->psz_text)];
                     [_allNames addObject:toNSStr(p_item->psz_name)];
 
-                    char *currVal = config_GetPsz(p_item->psz_name);
+                    char *currVal = MacLCConfigGetPsz(p_item->psz_name);
                     [_allCurrentShortcuts addObject:currVal ? toNSStr(currVal) : @""];
                     if (currVal) free(currVal);
 
@@ -568,10 +569,10 @@
 
 - (void)applyChanges
 {
-    config_PutInt("macosx-mediakeys", _mediaKeysRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-mediakeys", _mediaKeysRow.checkboxButton.state == NSControlStateValueOn);
 
     for (NSUInteger i = 0; i < _allNames.count; i++) {
-        config_PutPsz([_allNames[i] UTF8String], [_allCurrentShortcuts[i] UTF8String]);
+        MacLCConfigPutPsz([_allNames[i] UTF8String], [_allCurrentShortcuts[i] UTF8String]);
     }
     self.hasUnsavedChanges = NO;
 }
@@ -579,7 +580,7 @@
 - (void)resetToDefaults
 {
     module_config_t *item = config_FindConfig("macosx-mediakeys");
-    if (item) config_PutInt("macosx-mediakeys", item->orig.i);
+    if (item) MacLCConfigPutInt("macosx-mediakeys", item->orig.i);
 
     for (NSUInteger i = 0; i < _allNames.count; i++) {
         _allCurrentShortcuts[i] = _allDefaultShortcuts[i];
