@@ -28,7 +28,25 @@
 #import <Cocoa/Cocoa.h>
 #import <vlc_input.h>
 
-#define NSTR(s) ((s) ? toNSStr(vlc_gettext(s)) : @"")
+NSString *toNSStr(const char *str);
+
+/**
+ * Substitutes VLC brand names with MacLC in user-visible localized strings.
+ * Operates post-gettext translation to maintain localization integrity.
+ *
+ * Rules:
+ * - "VLC media player" -> "MacLC"
+ * - "VLC Media Player" -> "MacLC"
+ * - Standalone "VLC" -> "MacLC"
+ * Preserves URLs (containing ://), file paths, technical identifiers (VLC_*, VLC#, VLCKit, VLSub, libvlc, etc.),
+ * and lowercase vlc references.
+ *
+ * @param input The translated or original NSString.
+ * @return The brand-substituted NSString.
+ */
+NSString * _Nullable VLCSubstituteBrandNames(NSString * _Nullable input);
+
+#define NSTR(s) ((s) ? VLCSubstituteBrandNames(toNSStr(vlc_gettext(s))) : @"")
 
 /**
  * For marking translatable static strings (like `_()`)
@@ -59,8 +77,6 @@ extern NSString *const kVLCMediaBD;
 extern NSString *const kVLCMediaVideoTSFolder;
 extern NSString *const kVLCMediaBDMVFolder;
 extern NSString *const kVLCMediaUnknown;
-
-NSString *toNSStr(const char *str);
 
 /**
  * Takes the first value of an cocoa key string, and converts it to VLCs int representation.

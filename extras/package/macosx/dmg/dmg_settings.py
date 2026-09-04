@@ -20,7 +20,7 @@ import os
 #    dmgbuild -s dmgsettings.py -D app=/path/to/My.app "My Application" MyApp.dmg
 
 # Application settings
-application = defines.get('app', 'VLC.app')
+application = defines.get('app', 'MacLC.app')
 appname = os.path.basename(application)
 
 # Volume format (see hdiutil create -help)

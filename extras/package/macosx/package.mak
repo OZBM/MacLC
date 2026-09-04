@@ -20,9 +20,9 @@ macos-install:
 	DESTDIR="$(macos_destdir)" $(MAKE) install
 	touch "$(macos_destdir)"
 
-# VLC.app for packaging and giving it to your friends
+# MacLC.app for packaging and giving it to your friends
 # use package-macosx to get a nice dmg
-VLC.app: macos-install
+MacLC.app: macos-install
 	rm -Rf $@
 	## Copy Contents
 	cp -R "$(macos_destdir)$(datadir)/macosx/" $@
@@ -77,8 +77,8 @@ endif
 	## Copy libbluray jar
 	-cp -a "$(CONTRIB_DIR)"/share/java/libbluray*.jar $@/Contents/Frameworks/plugins/
 	## Install binary
-	cp "$(macos_destdir)$(prefix)/bin/vlc" $@/Contents/MacOS/VLC
-	install_name_tool -rpath "$(libdir)" "@executable_path/../Frameworks/" $@/Contents/MacOS/VLC
+	cp "$(macos_destdir)$(prefix)/bin/vlc" $@/Contents/MacOS/MacLC
+	install_name_tool -rpath "$(libdir)" "@executable_path/../Frameworks/" $@/Contents/MacOS/MacLC
 	cp "$(macos_destdir)$(pkglibexecdir)/vlc-preparser" $@/Contents/MacOS/
 	install_name_tool -rpath "$(libdir)" "@executable_path/../Frameworks/" $@/Contents/MacOS/vlc-preparser
 	## Generate plugin cache
@@ -90,51 +90,54 @@ endif
 	find $@ -type d -exec chmod ugo+rx '{}' \;
 	find $@ -type f -exec chmod ugo+r '{}' \;
 
+# Deliberate alias for backwards compatibility
+VLC.app: MacLC.app
+
 package-macosx-sdk: macos-install
 	rm -f "$(top_builddir)/vlc-macos-sdk-$(VERSION).tar.gz"
 	tar -cf - --exclude "share/macosx" -C "$(macos_destdir)" . \
 		| gzip -c > "$(top_builddir)/vlc-macos-sdk-$(VERSION).tar.gz"
 
-package-macosx: VLC.app
-	rm -f "$(top_builddir)/vlc-$(VERSION).dmg"
+package-macosx: MacLC.app
+	rm -f "$(top_builddir)/maclc-$(VERSION).dmg"
 if HAVE_DMGBUILD
 	@echo "Packaging fancy DMG using dmgbuild"
 	cd "$(top_srcdir)/extras/package/macosx/dmg" && dmgbuild -s "dmg_settings.py" \
-		-D app="$(abs_top_builddir)/VLC.app" "VLC Media Player" "$(abs_top_builddir)/vlc-$(VERSION).dmg"
+		-D app="$(abs_top_builddir)/MacLC.app" "MacLC" "$(abs_top_builddir)/maclc-$(VERSION).dmg"
 else !HAVE_DMGBUILD
 	@echo "Packaging non-fancy DMG"
 	## Create directory for DMG contents
-	mkdir -p "$(top_builddir)/vlc-$(VERSION)"
+	mkdir -p "$(top_builddir)/maclc-$(VERSION)"
 	## Copy contents
-	cp -Rp "$(top_builddir)/VLC.app" "$(top_builddir)/vlc-$(VERSION)/VLC.app"
+	cp -Rp "$(top_builddir)/MacLC.app" "$(top_builddir)/maclc-$(VERSION)/MacLC.app"
 	## Symlink to Applications so users can easily drag-and-drop the App to it
-	$(LN_S) -f /Applications "$(top_builddir)/vlc-$(VERSION)/"
+	$(LN_S) -f /Applications "$(top_builddir)/maclc-$(VERSION)/"
 	## Create DMG
-	hdiutil create -srcfolder "$(top_builddir)/vlc-$(VERSION)" -volname "VLC Media Player" \
-		-format UDBZ -fs HFS+ -o "$(top_builddir)/vlc-$(VERSION).dmg"
+	hdiutil create -srcfolder "$(top_builddir)/maclc-$(VERSION)" -volname "MacLC" \
+		-format UDBZ -fs HFS+ -o "$(top_builddir)/maclc-$(VERSION).dmg"
 	## Cleanup
-	rm -rf "$(top_builddir)/vlc-$(VERSION)"
+	rm -rf "$(top_builddir)/maclc-$(VERSION)"
 endif
 
-package-macosx-zip: VLC.app
-	rm -f "$(top_builddir)/vlc-$(VERSION).zip"
-	mkdir -p $(top_builddir)/vlc-$(VERSION)/Goodies/
-	cp -Rp $(top_builddir)/VLC.app $(top_builddir)/vlc-$(VERSION)/VLC.app
-	cd $(srcdir); cp -R AUTHORS COPYING README.md THANKS NEWS $(abs_top_builddir)/vlc-$(VERSION)/Goodies/
-	zip -r -y -9 $(top_builddir)/vlc-$(VERSION).zip $(top_builddir)/vlc-$(VERSION)
-	rm -rf "$(top_builddir)/vlc-$(VERSION)"
+package-macosx-zip: MacLC.app
+	rm -f "$(top_builddir)/maclc-$(VERSION).zip"
+	mkdir -p $(top_builddir)/maclc-$(VERSION)/Goodies/
+	cp -Rp $(top_builddir)/MacLC.app $(top_builddir)/maclc-$(VERSION)/MacLC.app
+	cd $(srcdir); cp -R AUTHORS COPYING README.md THANKS NEWS $(abs_top_builddir)/maclc-$(VERSION)/Goodies/
+	zip -r -y -9 $(top_builddir)/maclc-$(VERSION).zip $(top_builddir)/maclc-$(VERSION)
+	rm -rf "$(top_builddir)/maclc-$(VERSION)"
 
 package-macosx-release:
-	rm -f "$(top_builddir)/vlc-$(VERSION)-release.zip"
-	mkdir -p $(top_builddir)/vlc-$(VERSION)-release
-	cp -Rp $(top_builddir)/VLC.app $(top_builddir)/vlc-$(VERSION)-release/
-	cp $(srcdir)/extras/package/macosx/dmg/* $(top_builddir)/vlc-$(VERSION)-release/
-	cp "$(srcdir)/extras/package/macosx/codesign.sh" $(top_builddir)/vlc-$(VERSION)-release/
-	cp "$(srcdir)/extras/package/macosx/vlc-hardening.entitlements" $(top_builddir)/vlc-$(VERSION)-release/
-	cp "$(pkglibexecdir)/vlc-cache-gen" $(top_builddir)/vlc-$(VERSION)-release/
-	install_name_tool -add_rpath "@executable_path/VLC.app/Contents/Frameworks" $(top_builddir)/vlc-$(VERSION)-release/vlc-cache-gen
-	zip -r -y -9 $(top_builddir)/vlc-$(VERSION)-release.zip $(top_builddir)/vlc-$(VERSION)-release
-	rm -rf "$(top_builddir)/vlc-$(VERSION)-release"
+	rm -f "$(top_builddir)/maclc-$(VERSION)-release.zip"
+	mkdir -p $(top_builddir)/maclc-$(VERSION)-release
+	cp -Rp $(top_builddir)/MacLC.app $(top_builddir)/maclc-$(VERSION)-release/
+	cp $(srcdir)/extras/package/macosx/dmg/* $(top_builddir)/maclc-$(VERSION)-release/
+	cp "$(srcdir)/extras/package/macosx/codesign.sh" $(top_builddir)/maclc-$(VERSION)-release/
+	cp "$(srcdir)/extras/package/macosx/vlc-hardening.entitlements" $(top_builddir)/maclc-$(VERSION)-release/
+	cp "$(pkglibexecdir)/vlc-cache-gen" $(top_builddir)/maclc-$(VERSION)-release/
+	install_name_tool -add_rpath "@executable_path/MacLC.app/Contents/Frameworks" $(top_builddir)/maclc-$(VERSION)-release/vlc-cache-gen
+	zip -r -y -9 $(top_builddir)/maclc-$(VERSION)-release.zip $(top_builddir)/maclc-$(VERSION)-release
+	rm -rf "$(top_builddir)/maclc-$(VERSION)-release"
 
 package-translations:
 	mkdir -p "$(srcdir)/vlc-translations-$(VERSION)"
