@@ -599,6 +599,8 @@ modules/gui/macosx/views/VLCImageView.h
 modules/gui/macosx/views/VLCImageView.m
 modules/gui/macosx/views/VLCLinearProgressIndicator.h
 modules/gui/macosx/views/VLCLinearProgressIndicator.m
+modules/gui/macosx/views/VLCNoResultsLabel.h
+modules/gui/macosx/views/VLCNoResultsLabel.m
 modules/gui/macosx/views/VLCPlaybackProgressSlider.h
 modules/gui/macosx/views/VLCPlaybackProgressSlider.m
 modules/gui/macosx/views/VLCPlaybackProgressSliderCell.h

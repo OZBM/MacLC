@@ -28,6 +28,8 @@
 #import "extensions/NSColor+VLCAdditions.h"
 #import "extensions/NSView+VLCAdditions.h"
 
+#import "theme/MacLCDesign.h"
+
 @implementation VLCBottomBarView
 
 - (instancetype)initWithCoder:(NSCoder *)coder
@@ -69,6 +71,7 @@
     self.needsDisplay = YES;
     self.drawBorder = YES;
     self.layer.masksToBounds = YES;
+    self.layer.cornerRadius = MacLCDesign.cornerRadiusMedium;
 }
 
 - (void)drawRect:(NSRect)dirtyRect
@@ -79,13 +82,13 @@
         return;
     }
 
-    const NSRect barFrame = self.frame;
-    const CGFloat cornerRadius = VLCUIUnits.cornerRadius;
+    const NSRect barFrame = self.bounds;
+    const CGFloat cornerRadius = MacLCDesign.cornerRadiusMedium;
     NSBezierPath * const borderPath = [NSBezierPath bezierPathWithRoundedRect:barFrame 
                                                                       xRadius:cornerRadius 
                                                                       yRadius:cornerRadius];
     
-    [NSColor.VLCSubtleBorderColor setStroke];
+    [MacLCDesign.separator setStroke];
     borderPath.lineWidth = VLCUIUnits.borderThickness;
     [borderPath stroke];
 }

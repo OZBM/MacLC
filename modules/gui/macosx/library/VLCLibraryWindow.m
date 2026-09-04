@@ -37,6 +37,8 @@
 #import "extensions/NSView+VLCAdditions.h"
 #import "extensions/NSWindow+VLCAdditions.h"
 
+#import "theme/MacLCDesign.h"
+
 #import "library/VLCInputItem.h"
 #import "library/VLCLibraryAbstractMediaLibrarySegmentViewController.h"
 #import "library/VLCLibraryCollectionViewSupplementaryElementView.h"
@@ -163,6 +165,11 @@ static int ShowController(vlc_object_t * __unused p_this,
     self.identifier = VLCLibraryWindowIdentifier;
     self.minSize = NSMakeSize(VLCLibraryWindowMinimalWidth, VLCLibraryWindowMinimalHeight);
 
+    self.titlebarAppearsTransparent = YES;
+    self.titleVisibility = NSWindowTitleHidden;
+    self.styleMask |= NSWindowStyleMaskFullSizeContentView;
+    self.toolbarStyle = NSWindowToolbarStyleUnified;
+
     if (@available(macOS 10.15, *)) {
         self.colorSpace = [NSColorSpace extendedSRGBColorSpace];
     }
@@ -209,6 +216,10 @@ static int ShowController(vlc_object_t * __unused p_this,
     [self setupLoadingOverlayView];
 
     self.librarySearchField.delegate = self;
+
+    self.placeholderLabel.font = MacLCDesign.title3;
+    self.placeholderLabel.textColor = MacLCDesign.secondaryLabel;
+    ((NSButton *)self.placeholderGoToBrowseButton).bezelColor = MacLCDesign.accent;
 }
 
 - (void)dealloc
@@ -368,6 +379,8 @@ static int ShowController(vlc_object_t * __unused p_this,
     [self displayLibraryView:self.emptyLibraryView];
     self.placeholderImageView.image = image;
     self.placeholderLabel.stringValue = message;
+    self.placeholderLabel.font = MacLCDesign.title3;
+    self.placeholderLabel.textColor = MacLCDesign.secondaryLabel;
 }
 
 - (void)displayNoResultsMessage
@@ -375,6 +388,11 @@ static int ShowController(vlc_object_t * __unused p_this,
     if (self.noResultsLabel == nil) {
         _noResultsLabel = [[VLCNoResultsLabel alloc] init];
         _noResultsLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        __weak typeof(self) weakSelf = self;
+        _noResultsLabel.actionBlock = ^{
+            [weakSelf clearFilterString];
+            [weakSelf updateFilterString];
+        };
     }
     
     if ([self.libraryTargetView.subviews containsObject:self.loadingOverlayView]) {

@@ -22,29 +22,28 @@
 
 #import "NSFont+VLCAdditions.h"
 
+#import "theme/MacLCDesign.h"
+
 @implementation NSFont (VLCAdditions)
 
 + (NSFont *)VLClibrarySectionHeaderFont
 {
-    return [NSFont systemFontOfSize:24. weight:NSFontWeightBold];
+    return MacLCDesign.title1;
 }
 
 + (NSFont *)VLCLibrarySubsectionHeaderFont
 {
-    return [NSFont systemFontOfSize:17. weight:NSFontWeightSemibold];
+    return MacLCDesign.headline;
 }
 
 + (NSFont *)VLCLibrarySubsectionSubheaderFont
 {
-    return [NSFont systemFontOfSize:15. weight:NSFontWeightMedium];
+    return MacLCDesign.subheadline;
 }
 
 + (NSFont *)VLCLibraryItemAnnotationFont
 {
-    if (@available(macOS 11.0, *)) {
-        return [NSFont preferredFontForTextStyle:NSFontTextStyleCaption1 options:@{}];
-    }
-    return [NSFont systemFontOfSize:10 weight:NSFontWeightRegular];
+    return MacLCDesign.caption;
 }
 
 @end

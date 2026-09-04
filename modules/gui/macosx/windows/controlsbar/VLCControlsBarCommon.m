@@ -45,6 +45,8 @@
 #import "views/VLCUIUnits.h"
 #import "views/VLCVolumeSlider.h"
 
+#import "theme/MacLCDesign.h"
+
 /*****************************************************************************
  * VLCControlsBarCommon
  *
@@ -154,65 +156,58 @@
     self.fullscreenButton.toolTip = _NS("Enter fullscreen");
     self.fullscreenButton.accessibilityLabel = self.fullscreenButton.toolTip;
 
-    if (@available(macOS 11.0, *)) {
-        if (@available(macOS 26.0, *)) {
-            _playImage = [NSImage imageWithSystemSymbolName:@"play.fill" accessibilityDescription:_NS("Play")];
-            _pressedPlayImage = [NSImage imageWithSystemSymbolName:@"play.fill" accessibilityDescription:_NS("Play")];
-            _pauseImage = [NSImage imageWithSystemSymbolName:@"pause.fill" accessibilityDescription:_NS("Pause")];
-            _pressedPauseImage = [NSImage imageWithSystemSymbolName:@"pause.fill" accessibilityDescription:_NS("Pause")];
-        } else {
-            _playImage = [NSImage imageWithSystemSymbolName:@"play.circle.fill"
-                                accessibilityDescription:_NS("Play")];
-            _pressedPlayImage = [NSImage imageWithSystemSymbolName:@"play.circle.fill"
-                                        accessibilityDescription:_NS("Play")];
-            _pauseImage = [NSImage imageWithSystemSymbolName:@"pause.circle.fill"
-                                    accessibilityDescription:_NS("Pause")];
-            _pressedPauseImage = [NSImage imageWithSystemSymbolName:@"pause.circle.fill"
-                                        accessibilityDescription:_NS("Pause")];
-        }
-        _backwardImage = [NSImage imageWithSystemSymbolName:@"backward.fill" accessibilityDescription:_NS("Previous")];
-        _forwardImage = [NSImage imageWithSystemSymbolName:@"forward.fill" accessibilityDescription:_NS("Next")];
-        _fullscreenImage = [NSImage imageWithSystemSymbolName:@"arrow.up.backward.and.arrow.down.forward"
-                                     accessibilityDescription:_NS("Fullscreen")];
-        _mutedVolumeImage = [NSImage imageWithSystemSymbolName:@"speaker.slash.fill"
-                                      accessibilityDescription:_NS("Muted")];
-        _unmutedVolumeImage = [NSImage imageWithSystemSymbolName:@"speaker.wave.3.fill"
-                                        accessibilityDescription:_NS("Unmuted")];
+    _playImage = [MacLCDesign symbolNamed:@"play.fill" pointSize:16. weight:NSFontWeightMedium accessibilityLabel:_NS("Play")];
+    _pressedPlayImage = _playImage;
+    _pauseImage = [MacLCDesign symbolNamed:@"pause.fill" pointSize:16. weight:NSFontWeightMedium accessibilityLabel:_NS("Pause")];
+    _pressedPauseImage = _pauseImage;
+    _backwardImage = [MacLCDesign symbolNamed:@"backward.fill" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Previous")];
+    _forwardImage = [MacLCDesign symbolNamed:@"forward.fill" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Next")];
+    _fullscreenImage = [MacLCDesign symbolNamed:@"arrow.up.left.and.arrow.down.right" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Fullscreen")];
+    _mutedVolumeImage = [MacLCDesign symbolNamed:@"speaker.slash.fill" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Muted")];
+    _unmutedVolumeImage = [MacLCDesign symbolNamed:@"speaker.wave.2.fill" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Unmuted")];
 
-        const int64_t shortJumpSize = var_InheritInteger(getIntf(), "short-jump-size");
-        NSString * const shortJumpSizeString = [NSString stringWithFormat:@"%lli", shortJumpSize];
-        switch (shortJumpSize) {
-            case 90:
-            case 75:
-            case 60:
-            case 45:
-            case 30:
-            case 15:
-            case 10:
-            case 5:
-            {
-                NSString * const jumpForwardSymbolName =
-                    [NSString stringWithFormat:@"%@.arrow.trianglehead.clockwise",shortJumpSizeString];
-                NSString * const jumpBackwardSymbolName =
-                    [NSString stringWithFormat:@"%@.arrow.trianglehead.counterclockwise", shortJumpSizeString];
-                self.jumpForwardButton.image =
-                    [NSImage imageWithSystemSymbolName:jumpForwardSymbolName
-                              accessibilityDescription:_NS("Jump forward")];
-                self.jumpBackwardButton.image =
-                    [NSImage imageWithSystemSymbolName:jumpBackwardSymbolName
-                              accessibilityDescription:_NS("Jump backward")];
-            }
+    const int64_t shortJumpSize = var_InheritInteger(getIntf(), "short-jump-size");
+    NSString * const shortJumpSizeString = [NSString stringWithFormat:@"%lli", shortJumpSize];
+    switch (shortJumpSize) {
+        case 90:
+        case 75:
+        case 60:
+        case 45:
+        case 30:
+        case 15:
+        case 10:
+        case 5:
+        {
+            NSString * const jumpForwardSymbolName =
+                [NSString stringWithFormat:@"%@.arrow.trianglehead.clockwise", shortJumpSizeString];
+            NSString * const jumpBackwardSymbolName =
+                [NSString stringWithFormat:@"%@.arrow.trianglehead.counterclockwise", shortJumpSizeString];
+            self.jumpForwardButton.image =
+                [MacLCDesign symbolNamed:jumpForwardSymbolName
+                               pointSize:14.
+                                  weight:NSFontWeightMedium
+                      accessibilityLabel:_NS("Jump forward")];
+            self.jumpBackwardButton.image =
+                [MacLCDesign symbolNamed:jumpBackwardSymbolName
+                               pointSize:14.
+                                  weight:NSFontWeightMedium
+                      accessibilityLabel:_NS("Jump backward")];
+            break;
         }
-    } else {
-        _playImage = NSImage.VLCPlayTemplateImage;
-        _pressedPlayImage = NSImage.VLCPlayTemplateImage;
-        _pauseImage = NSImage.VLCPauseTemplateImage;
-        _pressedPauseImage = NSImage.VLCPauseTemplateImage;
-        _backwardImage = NSImage.VLCBackwardTemplateImage;
-        _forwardImage = NSImage.VLCForwardTemplateImage;
-        _fullscreenImage = NSImage.VLCFullscreenOffTemplateImage;
-        _mutedVolumeImage = NSImage.VLCVolumeOffTemplateImage;
-        _unmutedVolumeImage = NSImage.VLCVolumeOnTemplateImage;
+        default:
+        {
+            self.jumpForwardButton.image =
+                [MacLCDesign symbolNamed:@"goforward"
+                               pointSize:14.
+                                  weight:NSFontWeightMedium
+                      accessibilityLabel:_NS("Jump forward")];
+            self.jumpBackwardButton.image =
+                [MacLCDesign symbolNamed:@"gobackward"
+                               pointSize:14.
+                                  weight:NSFontWeightMedium
+                      accessibilityLabel:_NS("Jump backward")];
+            break;
+        }
     }
 
     self.backwardButton.image = _backwardImage;
@@ -236,6 +231,10 @@
     self.muteVolumeButton.toolTip = _NS("Mute");
     self.muteVolumeButton.accessibilityLabel = self.muteVolumeButton.toolTip;
 
+    NSFont * const monospacedTimeFont = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleCaption1 weight:NSFontWeightMedium];
+    self.timeField.font = monospacedTimeFont;
+    self.trailingTimeField.font = monospacedTimeFont;
+
     self.timeField.needsDisplay = YES;
     self.timeField.preferencesIdentifier = VLCTimeFieldDisplayTimeAsElapsed;
     self.trailingTimeField.isTimeRemaining = NO;
@@ -246,6 +245,10 @@
     self.timeField.preferencesIdentifier = VLCTimeFieldDisplayTimeAsRemaining;
     self.trailingTimeField.isTimeRemaining = YES;
     self.trailingTimeField.accessibilityLabel = _NS("Playback time");
+
+    self.pipButton.toolTip = _NS("Picture in Picture");
+    self.pipButton.accessibilityLabel = self.pipButton.toolTip;
+    self.pipButton.image = [MacLCDesign symbolNamed:@"pip" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Picture in Picture")];
 
     // remove fullscreen button for lion fullscreen
     if (_nativeFullscreenMode) {

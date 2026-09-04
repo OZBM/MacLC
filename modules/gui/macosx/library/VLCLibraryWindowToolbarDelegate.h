@@ -51,7 +51,7 @@ extern NSString * const VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier;
 @property (readwrite, weak) IBOutlet NSToolbarItem *libraryViewModeToolbarItem;
 @property (readwrite, weak) IBOutlet NSToolbarItem *sortOrderToolbarItem;
 @property (readwrite, weak) IBOutlet NSToolbarItem *flexibleSpaceToolbarItem;
-@property (readwrite, weak) IBOutlet NSToolbarItem *librarySearchToolbarItem;
+@property (readwrite, weak) IBOutlet NSSearchToolbarItem *librarySearchToolbarItem;
 @property (readwrite, weak) IBOutlet NSToolbarItem *togglePlayQueueToolbarItem;
 @property (readwrite, weak) IBOutlet NSToolbarItem *renderersToolbarItem;
 

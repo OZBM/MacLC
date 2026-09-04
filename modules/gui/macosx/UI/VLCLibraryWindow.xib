@@ -14,8 +14,8 @@
         </customObject>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
         <customObject id="-3" userLabel="Application" customClass="NSObject"/>
-        <window title="Window" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" frameAutosaveName="librarywindow" animationBehavior="default" tabbingIdentifier="VLCLibraryWindow" toolbarStyle="unified" titleVisibility="hidden" id="QvC-M9-y7g" customClass="VLCLibraryWindow">
-            <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
+        <window title="Window" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" frameAutosaveName="librarywindow" animationBehavior="default" tabbingIdentifier="VLCLibraryWindow" titlebarAppearsTransparent="YES" toolbarStyle="unified" titleVisibility="hidden" id="QvC-M9-y7g" customClass="VLCLibraryWindow">
+            <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES" fullSizeContentView="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="196" y="240" width="896" height="456"/>
             <rect key="screenRect" x="0.0" y="0.0" width="1680" height="1019"/>
@@ -565,7 +565,7 @@
                     </constraint>
                 </constraints>
             </view>
-            <toolbar key="toolbar" implicitIdentifier="CAE4F278-DC20-4A58-B07E-1580E7B14C87" autosavesConfiguration="NO" allowsUserCustomization="NO" showsBaselineSeparator="NO" displayMode="iconOnly" sizeMode="regular" id="pr3-TD-J2z">
+            <toolbar key="toolbar" implicitIdentifier="CAE4F278-DC20-4A58-B07E-1580E7B14C87" autosavesConfiguration="YES" allowsUserCustomization="YES" showsBaselineSeparator="NO" displayMode="iconOnly" sizeMode="regular" id="pr3-TD-J2z">
                 <allowedToolbarItems>
                     <toolbarItem implicitItemIdentifier="71EED6C9-B0A2-4964-8846-16159F10619E" label="Sort Order" paletteLabel="Sort Order" image="arrow.up.arrow.down" catalog="system" sizingBehavior="auto" id="Tbc-Ik-FaO">
                         <nil key="toolTip"/>

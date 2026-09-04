@@ -27,6 +27,8 @@
 #import "extensions/NSImage+VLCAdditions.h"
 #import "extensions/NSString+Helpers.h"
 
+#import "theme/MacLCDesign.h"
+
 #import "library/VLCInputItem.h"
 #import "library/VLCInputNode.h"
 #import "library/VLCLibraryController.h"
@@ -148,13 +150,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Home");
         self.internalSearchFieldPlaceholder = _NS("Search the library");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"house"
-                                                  accessibilityDescription:@"Home icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCBWHomeImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"house"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Home")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryHomeViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -182,13 +181,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Favorites");
         self.internalSearchFieldPlaceholder = _NS("Search your favorites");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"heart"
-                                                  accessibilityDescription:@"Favorites icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCBWHomeImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"star"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Favorites")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryFavoritesViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -226,13 +222,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Movies");
         self.internalSearchFieldPlaceholder = _NS("Search your movies");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"film"
-                                                  accessibilityDescription:@"Movies icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMovieImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"film"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Movies")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryVideoViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -262,13 +255,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Shows");
         self.internalSearchFieldPlaceholder = _NS("Search your shows");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"tv"
-                                                  accessibilityDescription:@"Shows icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMovieImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"tv"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Shows")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryVideoViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -302,13 +292,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Videos");
         self.internalSearchFieldPlaceholder = _NS("Search your videos");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"film.stack"
-                                                  accessibilityDescription:@"Video icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMovieImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"video"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Videos")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryVideoViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -348,13 +335,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Artists");
         self.internalSearchFieldPlaceholder = _NS("Search your artists");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"music.mic"
-                                                  accessibilityDescription:@"Music artists icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMusicImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"person.2"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Artists")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryAudioViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -388,13 +372,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Albums");
         self.internalSearchFieldPlaceholder = _NS("Search your albums");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"square.stack"
-                                                  accessibilityDescription:@"Music albums icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMusicImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"square.stack"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Albums")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryAudioViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -428,13 +409,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Songs");
         self.internalSearchFieldPlaceholder = _NS("Search your songs");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"music.note"
-                                                  accessibilityDescription:@"Music songs icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMusicImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"music.note"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Songs")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryAudioViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -468,13 +446,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Genres");
         self.internalSearchFieldPlaceholder = _NS("Search your genres");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"guitars"
-                                                  accessibilityDescription:@"Music genres icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMusicImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"guitars"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Genres")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryAudioViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -508,13 +483,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Music");
         self.internalSearchFieldPlaceholder = _NS("Search your music");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"music.note"
-                                                  accessibilityDescription:@"Music icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMusicImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"music.quarternote.3"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Music")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryAudioViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -550,13 +522,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Music playlists");
         self.internalSearchFieldPlaceholder = _NS("Search your music playlists");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"music.note.list"
-                                                  accessibilityDescription:@"Music playlists icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMusicImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"music.note.list"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Music playlists")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryPlaylistViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -590,13 +559,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Video playlists");
         self.internalSearchFieldPlaceholder = _NS("Search your video playlists");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"list.and.film"
-                                                  accessibilityDescription:@"Video playlists icon"];
-        } else {
-            self.internalDisplayImage = NSImage.VLCSidebarMovieImage;
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"film.stack"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Video playlists")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryPlaylistViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -630,13 +596,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Playlists");
         self.internalSearchFieldPlaceholder = _NS("Search your playlists");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"list.triangle"
-                                                  accessibilityDescription:@"Playlists icon"];
-        } else {
-            self.internalDisplayImage = [NSImage imageNamed:NSImageNameListViewTemplate];
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"list.bullet.rectangle"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Playlists")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryPlaylistViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -679,13 +642,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = group.displayString;
         self.internalSearchFieldPlaceholder = _NS("Search this group");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"play.rectangle"
-                                                  accessibilityDescription:@"Group icon"];
-        } else {
-            self.internalDisplayImage = [NSImage imageNamed:NSImageNameTouchBarTagIconTemplate];
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"rectangle.3.group"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Group")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryGroupsViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -719,13 +679,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Groups");
         self.internalSearchFieldPlaceholder = _NS("Search your groups");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"rectangle.3.group"
-                                                  accessibilityDescription:@"Groups icon"];
-        } else {
-            self.internalDisplayImage = [NSImage imageNamed:NSImageNameTouchBarTagIconTemplate];
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"rectangle.3.group"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Groups")];
         self.internalMediaLibraryRequired = YES;
         self.internalLibraryViewControllerClass = VLCLibraryGroupsViewController.class;
         self.internalLibraryViewControllerCreator = ^{
@@ -780,14 +737,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = descriptor.name;
         self.internalSearchFieldPlaceholder = _NS("Search this location");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage =
-                [NSImage imageWithSystemSymbolName:@"folder"
-                          accessibilityDescription:@"Bookmarked location icon"];
-        } else {
-            self.internalDisplayImage = [NSImage imageNamed:NSImageNameFolder];
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"folder"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Bookmarked location")];
         self.internalLibraryViewControllerClass = VLCLibraryGroupsViewController.class;
         self.internalLibraryViewControllerCreator = ^{
             return [[VLCLibraryMediaSourceViewController alloc] initWithLibraryWindow:VLCMain.sharedInstance.libraryWindow];
@@ -820,13 +773,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Browse");
         self.internalSearchFieldPlaceholder = _NS("Search this location");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage = [NSImage imageWithSystemSymbolName:@"folder"
-                                                  accessibilityDescription:@"Browse icon"];
-        } else {
-            self.internalDisplayImage = [NSImage imageNamed:NSImageNameFolder];
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"folder"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Browse")];
         self.internalLibraryViewControllerClass = VLCLibraryMediaSourceViewController.class;
         self.internalLibraryViewControllerCreator = ^{
             return [[VLCLibraryMediaSourceViewController alloc] initWithLibraryWindow:VLCMain.sharedInstance.libraryWindow];
@@ -892,14 +842,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     if (self) {
         self.internalDisplayString = _NS("Streams");
         self.internalSearchFieldPlaceholder = _NS("Search your streams");
-        if (@available(macOS 11.0, *)) {
-            self.internalDisplayImage =
-                [NSImage imageWithSystemSymbolName:@"antenna.radiowaves.left.and.right"
-                          accessibilityDescription:@"Streams icon"];
-        } else {
-            self.internalDisplayImage = [NSImage imageNamed:NSImageNameActionTemplate];
-            self.internalDisplayImage.template = YES;
-        }
+        self.internalDisplayImage = [MacLCDesign symbolNamed:@"antenna.radiowaves.left.and.right"
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:_NS("Streams")];
         self.internalLibraryViewControllerClass = VLCLibraryMediaSourceViewController.class;
         self.internalLibraryViewControllerCreator = ^{
             return [[VLCLibraryMediaSourceViewController alloc] initWithLibraryWindow:VLCMain.sharedInstance.libraryWindow];

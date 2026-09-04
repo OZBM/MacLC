@@ -30,6 +30,8 @@
 
 #import "main/VLCMain.h"
 
+#import "theme/MacLCDesign.h"
+
 #import "views/VLCBottomBarView.h"
 
 #import "windows/controlsbar/VLCControlsBarCommon.h"
@@ -43,22 +45,22 @@ NSString * const VLCLibraryCollectionViewItemAdjustmentKey = @"VLCLibraryCollect
 
 + (const CGFloat)largeSpacing
 {
-    return 16;
+    return MacLCDesign.spacingL;
 }
 
 + (const CGFloat)mediumSpacing
 {
-    return 8;
+    return MacLCDesign.spacingS;
 }
 
 + (const CGFloat)smallSpacing
 {
-    return 4;
+    return MacLCDesign.spacingXS;
 }
 
 + (const CGFloat)cornerRadius
 {
-    return 4.;
+    return MacLCDesign.cornerRadiusMedium;
 }
 
 + (const CGFloat)borderThickness
@@ -68,27 +70,27 @@ NSString * const VLCLibraryCollectionViewItemAdjustmentKey = @"VLCLibraryCollect
 
 + (const CGFloat)scrollBarSmallSideSize
 {
-    return 16;
+    return MacLCDesign.spacingL;
 }
 
 + (const CGFloat)largeTableViewRowHeight
 {
-    return 100;
+    return 96;
 }
 
 + (const CGFloat)mediumTableViewRowHeight
 {
-    return 50;
+    return 48;
 }
 
 + (const CGFloat)smallTableViewRowHeight
 {
-    return 25;
+    return MacLCDesign.rowMinimumHeight;
 }
 
 + (const CGFloat)videoLibraryTableViewRowHeight
 {
-    return 42;
+    return 48;
 }
 
 + (const CGFloat)mediumDetailSupplementaryViewCollectionViewWidth
@@ -312,7 +314,7 @@ NSString * const VLCLibraryCollectionViewItemAdjustmentKey = @"VLCLibraryCollect
 
 + (const CGFloat)controlsFadeAnimationDuration
 {
-    return 0.4f;
+    return MacLCDesign.animationDuration;
 }
 
 + (const CGFloat)librarySplitViewSelectionViewMinimumWidth
