@@ -50,26 +50,50 @@ Verified by building and running:
 - The brand substitution passes 22 cases, including `VLC.app`, `VLCKit`,
   `libvlccore`, `vlc://quit`, `VLC_PLUGIN_PATH` and a French UI string.
 
-## What is NOT verified
+## What the self-check found
 
-**Nothing in the settings UI has been constructed at runtime, and no part of the
-redesign has been looked at.** Screen-recording and accessibility access were
-both unavailable in the environment where this was built, so there are no
-screenshots and no interactive testing. The panes compile and are wired into the
-window; whether they lay out correctly, and whether every SF Symbol resolves, is
-unknown.
+`MACLC_SELFTEST=1` builds every pane at startup and logs what appeared:
 
-A startup self-check was specified for exactly this — `MACLC_SELFTEST=1`
-constructing every pane and logging what built — but the delegation service kept
-failing mid-edit, twice leaving damaged files that had to be reverted. It is
-worth finishing. The specification is in the session notes; it needs two files
-and a three-line hook in `-applicationDidFinishLaunching:`.
+```
+pane=General    title="General"      symbol=YES views=136 controls=45 status=OK
+pane=Playback   title="Playback"     symbol=YES views=223 controls=76 status=OK
+pane=Video      title="Video"        symbol=YES views=281 controls=96 status=OK
+pane=HDR        title="HDR & Colour" symbol=YES views=186 controls=70 status=OK
+pane=Audio      title="Audio"        symbol=YES views=237 controls=80 status=OK
+pane=Subtitles  title="Subtitles"    symbol=YES views=200 controls=68 status=OK
+pane=Interface  title="Interface"    symbol=YES views=145 controls=49 status=OK
+pane=Shortcuts  title="Shortcuts"    symbol=YES views= 78 controls=13 status=OK
+window status=OK
+summary: 8 panes, 8 ok, 0 failed
+```
+
+Its first run did not get that far. The Interface pane aborted the whole
+process on `config_GetPsz("http-password")` — an option only the lua interface
+declares, and this build is `--disable-lua`. Since that is an `assert()` inside
+libvlccore rather than an Objective-C exception, no `@try` could have caught it:
+opening settings would have killed the app. Fixed by routing all 240 config
+accesses in the panes through wrappers that check `config_FindConfig` first, and
+by not building the web remote card at all when its option is absent.
+
+## What is still NOT verified
+
+**Nobody has looked at the redesign.** Screen-recording and accessibility access
+were both refused in this environment, so there are no screenshots and no
+interactive testing. The self-check proves the panes construct, that their views
+and controls exist in the numbers above, and that every SF Symbol resolves. It
+says nothing about whether the layout is *good* — spacing, alignment, truncation,
+scrolling behaviour, dark mode, or how any of it looks at a small window size.
+That still needs a person with the app in front of them.
 
 ## Known debt
 
 - `MacLCHDRSettingsViewController` defines its own `MacLCSettingsRowView` and
   `MacLCStatusRowView` while the settings window has `MacLCSettingsRow`. They
   were written in parallel and should be consolidated onto the shared builder.
+- Step 3 of the config hardening was applied only where it was needed: the web
+  remote card. Other panes are safe from aborting, but a row whose option is
+  missing will still be shown and do nothing. Making every row declare its
+  option name would let `MacLCSettingsRow` skip it generically.
 - Adding a `_Nullable` declaration to `NSString+Helpers.h` outside any
   `NS_ASSUME_NONNULL` region produces 38 nullability warnings across the module.
   Wrapping the new declarations would silence them.
