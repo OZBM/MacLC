@@ -342,10 +342,75 @@ unsigned int CocoaKeyToVLC(unichar i_key)
     return (unsigned int)i_key;
 }
 
+NSString * _Nullable VLCSubstituteBrandNames(NSString * _Nullable input)
+{
+    if (input == nil || input.length == 0) {
+        return input;
+    }
+
+    // Fast-path: return untouched if "VLC" is not present
+    if ([input rangeOfString:@"VLC"].location == NSNotFound) {
+        return input;
+    }
+
+    // Guard against recursion
+    static __thread BOOL in_brand_substitution = NO;
+    if (in_brand_substitution) {
+        return input;
+    }
+
+    // Guard against already-substituted text
+    if ([input rangeOfString:@"MacLC"].location != NSNotFound) {
+        return input;
+    }
+
+    // Never touch URLs / URIs
+    if ([input rangeOfString:@"://"].location != NSNotFound) {
+        return input;
+    }
+
+    // Never touch file paths
+    if ([input hasPrefix:@"/"] || [input hasPrefix:@"~/"] ||
+        [input hasPrefix:@"./"] || [input hasPrefix:@"../"]) {
+        return input;
+    }
+
+    in_brand_substitution = YES;
+
+    static NSRegularExpression *brandRegex = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // Matches "VLC media player", "VLC Media Player", and standalone "VLC"
+        // Negative lookbehind ensures no preceding alphanumeric, _, ., #, /, or \ or -
+        // Negative lookahead ensures no succeeding alphanumeric, _, #, /, - or file extension like .app
+        NSString *pattern = @"(?<![a-zA-Z0-9_.#/\\\\-])(VLC media player|VLC Media Player|VLC)(?![a-zA-Z0-9_#/-])(?!\\.[a-zA-Z0-9])";
+        NSError *error = nil;
+        brandRegex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:&error];
+        if (error) {
+            NSLog(@"VLCSubstituteBrandNames regex creation failed: %@", error);
+        }
+    });
+
+    NSString *result = [brandRegex stringByReplacingMatchesInString:input
+                                                            options:0
+                                                              range:NSMakeRange(0, input.length)
+                                                       withTemplate:@"MacLC"];
+
+    in_brand_substitution = NO;
+    return result;
+}
+
 /* takes a good old const c string and converts it to NSString without UTF8 loss */
 
 NSString *toNSStr(const char *str) {
-    return str != NULL ? [NSString stringWithUTF8String:str] : @"";
+    if (str == NULL) {
+        return @"";
+    }
+    NSString *nsStr = [NSString stringWithUTF8String:str];
+    if (nsStr == nil) {
+        nsStr = [NSString stringWithCString:str encoding:NSISOLatin1StringEncoding];
+    }
+    return nsStr ?: @"";
 }
 
 bool fixIntfSettings(void)

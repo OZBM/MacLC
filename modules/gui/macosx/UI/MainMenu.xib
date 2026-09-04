@@ -197,8 +197,8 @@
         </customObject>
         <menu title="MainMenu" systemMenu="main" id="29" userLabel="MainMenu">
             <items>
-                <menuItem title="VLC" id="56">
-                    <menu key="submenu" title="VLC" systemMenu="apple" id="57">
+                <menuItem title="MacLC" id="56">
+                    <menu key="submenu" title="MacLC" systemMenu="apple" id="57">
                         <items>
                             <menuItem title="About VLC media player..." id="58">
                                 <modifierMask key="keyEquivalentModifierMask"/>

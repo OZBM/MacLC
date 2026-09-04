@@ -1,10 +1,10 @@
 /* Localized versions of Info.plist keys */
 
-"NSCameraUsageDescription" = "VLC pēc lietotāja pieprasījuma vēlas piekļūt kamerai.";
-"NSMicrophoneUsageDescription" = "VLC pēc lietotāja pieprasījuma vēlas piekļūt mikrofonam.";
-"NSAppleEventsUsageDescription" = "VLC vēlas pauzēt un atsākt ārējos mediju atskaņotājus.";
-"NSDesktopFolderUsageDescription" = "VLC pēc lietotāja pieprasījuma vēlas piekļūt darbvirsmas mapei.";
-"NSDocumentsFolderUsageDescription" = "VLC pēc lietotāja pieprasījuma vēlas piekļūt dokumentu mapei.";
-"NSDownloadsFolderUsageDescription" = "VLC pēc lietotāja pieprasījuma vēlas piekļūt lejupielāžu mapei.";
-"NSNetworkVolumesUsageDescription" = "VLC pēc lietotāja pieprasījuma vēlas piekļūt tīkla sējumam.";
-"NSRemovableVolumesUsageDescription" = "VLC pēc lietotāja pieprasījuma vēlas piekļūt noņemamam sējumam.";
+"NSCameraUsageDescription" = "MacLC pēc lietotāja pieprasījuma vēlas piekļūt kamerai.";
+"NSMicrophoneUsageDescription" = "MacLC pēc lietotāja pieprasījuma vēlas piekļūt mikrofonam.";
+"NSAppleEventsUsageDescription" = "MacLC vēlas pauzēt un atsākt ārējos mediju atskaņotājus.";
+"NSDesktopFolderUsageDescription" = "MacLC pēc lietotāja pieprasījuma vēlas piekļūt darbvirsmas mapei.";
+"NSDocumentsFolderUsageDescription" = "MacLC pēc lietotāja pieprasījuma vēlas piekļūt dokumentu mapei.";
+"NSDownloadsFolderUsageDescription" = "MacLC pēc lietotāja pieprasījuma vēlas piekļūt lejupielāžu mapei.";
+"NSNetworkVolumesUsageDescription" = "MacLC pēc lietotāja pieprasījuma vēlas piekļūt tīkla sējumam.";
+"NSRemovableVolumesUsageDescription" = "MacLC pēc lietotāja pieprasījuma vēlas piekļūt noņemamam sējumam.";

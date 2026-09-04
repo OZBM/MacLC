@@ -349,4 +349,37 @@
     [fileManager removeItemAtPath:path error:nil];
 }
 
+- (void)testBrandSubstitution
+{
+    // Mandatory test cases
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC"), @"MacLC");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC media player"), @"MacLC");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"About VLC media player"), @"About MacLC");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"Masquer VLC"), @"Masquer MacLC");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLSub"), @"VLSub");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"libvlccore"), @"libvlccore");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"vlc://quit"), @"vlc://quit");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"https://www.videolan.org/vlc/"), @"https://www.videolan.org/vlc/");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VideoLAN"), @"VideoLAN");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"vlcrc"), @"vlcrc");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC_PLUGIN_PATH"), @"VLC_PLUGIN_PATH");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"MacLC"), @"MacLC");
+
+    // Additional boundary and edge cases
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC#"), @"VLC#");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLCKit"), @"VLCKit");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC-debug"), @"VLC-debug");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"/Applications/VLC.app"), @"/Applications/VLC.app");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC.app"), @"VLC.app");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@".vlc"), @".vlc");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"vlc-cache-gen"), @"vlc-cache-gen");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC Media Player"), @"MacLC");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC's preferences"), @"MacLC's preferences");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"Hide VLC"), @"Hide MacLC");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"Quit VLC"), @"Quit MacLC");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"(VLC)"), @"(MacLC)");
+    XCTAssertNil(VLCSubstituteBrandNames(nil));
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@""), @"");
+}
+
 @end

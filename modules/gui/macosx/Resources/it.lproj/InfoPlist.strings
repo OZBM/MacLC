@@ -1,10 +1,10 @@
 /* Localized versions of Info.plist keys */
 
-"NSCameraUsageDescription" = "VLC vuole accedere alla fotocamera come richiesto dall'utente.";
-"NSMicrophoneUsageDescription" = "VLC vuole accedere al microfono come richiesto dall'utente.";
-"NSAppleEventsUsageDescription" = "VLC vuole sospendere e ripristinare i lettori multimediali esterni. ";
-"NSDesktopFolderUsageDescription" = "VLC vuole accedere alla cartella del desktop come richiesto dall'utente.";
-"NSDocumentsFolderUsageDescription" = "VLC vuole accedere alla cartella dei documenti come richiesto dall'utente.";
-"NSDownloadsFolderUsageDescription" = "VLC vuole accedere alla cartella degli scaricamenti come richiesto dall'utente.";
-"NSNetworkVolumesUsageDescription" = "VLC vuole accedere a un volume di rete come richiesto dall'utente.";
-"NSRemovableVolumesUsageDescription" = "VLC vuole accedere a un volume rimovibile come richiesto dall'utente.";
+"NSCameraUsageDescription" = "MacLC vuole accedere alla fotocamera come richiesto dall'utente.";
+"NSMicrophoneUsageDescription" = "MacLC vuole accedere al microfono come richiesto dall'utente.";
+"NSAppleEventsUsageDescription" = "MacLC vuole sospendere e ripristinare i lettori multimediali esterni. ";
+"NSDesktopFolderUsageDescription" = "MacLC vuole accedere alla cartella del desktop come richiesto dall'utente.";
+"NSDocumentsFolderUsageDescription" = "MacLC vuole accedere alla cartella dei documenti come richiesto dall'utente.";
+"NSDownloadsFolderUsageDescription" = "MacLC vuole accedere alla cartella degli scaricamenti come richiesto dall'utente.";
+"NSNetworkVolumesUsageDescription" = "MacLC vuole accedere a un volume di rete come richiesto dall'utente.";
+"NSRemovableVolumesUsageDescription" = "MacLC vuole accedere a un volume rimovibile come richiesto dall'utente.";

@@ -689,7 +689,7 @@
                             </connections>
                         </button>
                     </toolbarItem>
-                    <toolbarItem implicitItemIdentifier="068A0B88-812C-44BE-8997-704367CF5226" label="VLC" paletteLabel="VLC" image="VLC" title="VLC" id="XND-sc-TDa">
+                    <toolbarItem implicitItemIdentifier="068A0B88-812C-44BE-8997-704367CF5226" label="MacLC" paletteLabel="MacLC" image="VLC" title="MacLC" id="XND-sc-TDa">
                         <nil key="toolTip"/>
                         <size key="minSize" width="28" height="28"/>
                         <size key="maxSize" width="28" height="28"/>
