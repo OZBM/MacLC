@@ -212,6 +212,12 @@
 @property (readwrite, weak) IBOutlet NSTextField *video_edrHeadroomLabel;
 @property (readwrite, weak) IBOutlet NSTextField *video_edrHeadroomTextField;
 @property (readwrite, weak) IBOutlet NSTextField *video_hdrStatusLabel;
+@property (readwrite, weak) IBOutlet NSButton *video_hdrSettingsButton;
+
+- (void)setupVideoView;
+- (IBAction)openHDRSettingsSheet:(id)sender;
+- (IBAction)dismissHDRSheetCancel:(id)sender;
+- (IBAction)dismissHDRSheetOK:(id)sender;
 
 // URL handler popup window
 @property (readwrite, strong) IBOutlet NSWindow *urlhandler_win;

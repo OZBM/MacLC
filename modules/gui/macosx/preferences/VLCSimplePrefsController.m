@@ -124,6 +124,8 @@ static inline void safe_config_PutFloat(const char *name, float value)
 #import "playqueue/VLCPlayQueueTableCellView.h"
 #import "views/VLCPlaybackEndViewController.h"
 #import "windows/video/VLCMainVideoViewController.h"
+#import "settings/panes/MacLCHDRSettingsViewController.h"
+#import "theme/MacLCDesign.h"
 
 static struct {
     const char iso[6];
@@ -247,6 +249,9 @@ static NSString* VLCHotkeysSettingToolbarIdentifier = @"Hotkeys Settings Item Id
     VLCMediaLibraryFolderManagementController *_mediaLibraryManagementController;
 
     intf_thread_t *p_intf;
+    NSButton *_hdrSettingsButton;
+    MacLCHDRSettingsViewController *_activeHDRSettingsViewController;
+    NSWindow *_activeHDRSheetWindow;
 }
 @end
 
@@ -889,6 +894,8 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
         }
     }
 
+    [self setupVideoView];
+
     // set lion fullscreen mode restrictions
     [self enableLionFullscreenMode: [_video_nativeFullscreenCheckbox state]];
 
@@ -1390,6 +1397,136 @@ static inline void save_string_list(intf_thread_t * __unused p_intf, id object, 
 - (void)showVideoSettings
 {
     [self showSettingsForCategory:_videoView];
+}
+
+- (void)setupVideoView
+{
+    if (!_hdrSettingsButton) {
+        _hdrSettingsButton = [NSButton buttonWithTitle:_NS("HDR & Colour…")
+                                                target:self
+                                                action:@selector(openHDRSettingsSheet:)];
+        _hdrSettingsButton.bezelStyle = NSBezelStyleRounded;
+        _hdrSettingsButton.font = MacLCDesign.body;
+        _hdrSettingsButton.translatesAutoresizingMaskIntoConstraints = NO;
+
+        if (_video_hdrBox) {
+            [_video_hdrBox.contentView addSubview:_hdrSettingsButton];
+            [NSLayoutConstraint activateConstraints:@[
+                [_hdrSettingsButton.trailingAnchor constraintEqualToAnchor:_video_hdrBox.contentView.trailingAnchor constant:-16],
+                [_hdrSettingsButton.bottomAnchor constraintEqualToAnchor:_video_hdrBox.contentView.bottomAnchor constant:-12]
+            ]];
+        } else if (_video_displayBox) {
+            [_video_displayBox.contentView addSubview:_hdrSettingsButton];
+            [NSLayoutConstraint activateConstraints:@[
+                [_hdrSettingsButton.trailingAnchor constraintEqualToAnchor:_video_displayBox.contentView.trailingAnchor constant:-16],
+                [_hdrSettingsButton.topAnchor constraintEqualToAnchor:_video_displayBox.contentView.topAnchor constant:12]
+            ]];
+        } else if (_videoView) {
+            [_videoView addSubview:_hdrSettingsButton];
+            [NSLayoutConstraint activateConstraints:@[
+                [_hdrSettingsButton.trailingAnchor constraintEqualToAnchor:_videoView.trailingAnchor constant:-20],
+                [_hdrSettingsButton.topAnchor constraintEqualToAnchor:_videoView.topAnchor constant:20]
+            ]];
+        }
+    }
+}
+
+- (IBAction)openHDRSettingsSheet:(id)sender
+{
+    MacLCHDRSettingsViewController *hdrVC = [[MacLCHDRSettingsViewController alloc] initWithIntf:p_intf];
+    [hdrVC loadSettings];
+
+    NSWindow *sheetWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 560, 640)
+                                                        styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskResizable
+                                                          backing:NSBackingStoreBuffered
+                                                            defer:NO];
+    sheetWindow.title = _NS("HDR & Colour Settings");
+
+    NSView *contentView = sheetWindow.contentView;
+
+    NSScrollView *scrollView = [[NSScrollView alloc] init];
+    scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+    scrollView.hasVerticalScroller = YES;
+    scrollView.hasHorizontalScroller = NO;
+    scrollView.autohidesScrollers = YES;
+    scrollView.drawsBackground = NO;
+    scrollView.documentView = hdrVC.view;
+
+    [contentView addSubview:scrollView];
+
+    NSBox *separator = [[NSBox alloc] init];
+    separator.boxType = NSBoxSeparator;
+    separator.translatesAutoresizingMaskIntoConstraints = NO;
+    [contentView addSubview:separator];
+
+    NSButton *cancelBtn = [NSButton buttonWithTitle:_NS("Cancel")
+                                             target:self
+                                             action:@selector(dismissHDRSheetCancel:)];
+    cancelBtn.bezelStyle = NSBezelStyleRounded;
+    cancelBtn.keyEquivalent = @"\e";
+    cancelBtn.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSButton *okBtn = [NSButton buttonWithTitle:_NS("OK")
+                                         target:self
+                                         action:@selector(dismissHDRSheetOK:)];
+    okBtn.bezelStyle = NSBezelStyleRounded;
+    okBtn.keyEquivalent = @"\r";
+    okBtn.translatesAutoresizingMaskIntoConstraints = NO;
+
+    [contentView addSubview:cancelBtn];
+    [contentView addSubview:okBtn];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [scrollView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:MacLCDesign.spacingM],
+        [scrollView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
+        [scrollView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor],
+        [scrollView.bottomAnchor constraintEqualToAnchor:separator.topAnchor constant:-MacLCDesign.spacingS],
+
+        [separator.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
+        [separator.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor],
+        [separator.bottomAnchor constraintEqualToAnchor:okBtn.topAnchor constant:-MacLCDesign.spacingM],
+
+        [okBtn.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-MacLCDesign.windowContentMargin],
+        [okBtn.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor constant:-MacLCDesign.spacingM],
+        [okBtn.widthAnchor constraintGreaterThanOrEqualToConstant:75],
+
+        [cancelBtn.trailingAnchor constraintEqualToAnchor:okBtn.leadingAnchor constant:-MacLCDesign.spacingS],
+        [cancelBtn.centerYAnchor constraintEqualToAnchor:okBtn.centerYAnchor],
+        [cancelBtn.widthAnchor constraintGreaterThanOrEqualToConstant:75],
+
+        [hdrVC.view.widthAnchor constraintEqualToAnchor:scrollView.contentView.widthAnchor]
+    ]];
+
+    _activeHDRSettingsViewController = hdrVC;
+    _activeHDRSheetWindow = sheetWindow;
+
+    [self.window beginSheet:sheetWindow completionHandler:nil];
+    [hdrVC paneDidAppear];
+}
+
+- (IBAction)dismissHDRSheetCancel:(id)sender
+{
+    if (_activeHDRSheetWindow) {
+        [_activeHDRSettingsViewController paneDidDisappear];
+        [self.window endSheet:_activeHDRSheetWindow returnCode:NSModalResponseCancel];
+        [_activeHDRSheetWindow orderOut:self];
+        _activeHDRSheetWindow = nil;
+        _activeHDRSettingsViewController = nil;
+    }
+}
+
+- (IBAction)dismissHDRSheetOK:(id)sender
+{
+    if (_activeHDRSheetWindow) {
+        [_activeHDRSettingsViewController applyChanges];
+        config_SaveConfigFile(p_intf);
+        [_activeHDRSettingsViewController paneDidDisappear];
+        [self.window endSheet:_activeHDRSheetWindow returnCode:NSModalResponseOK];
+        [_activeHDRSheetWindow orderOut:self];
+        _activeHDRSheetWindow = nil;
+        _activeHDRSettingsViewController = nil;
+        [self resetControls];
+    }
 }
 
 - (IBAction)osdSettingChanged:(id)sender
