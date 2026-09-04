@@ -459,8 +459,26 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/preferences/prefs_widgets.h \
 	gui/macosx/preferences/prefs_widgets.m \
 	gui/macosx/settings/MacLCSettingsPane.h \
+	gui/macosx/settings/MacLCSettingsRow.h \
+	gui/macosx/settings/MacLCSettingsRow.m \
+	gui/macosx/settings/MacLCSettingsWindowController.h \
+	gui/macosx/settings/MacLCSettingsWindowController.m \
+	gui/macosx/settings/panes/MacLCAudioSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCAudioSettingsViewController.m \
+	gui/macosx/settings/panes/MacLCGeneralSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCGeneralSettingsViewController.m \
 	gui/macosx/settings/panes/MacLCHDRSettingsViewController.h \
 	gui/macosx/settings/panes/MacLCHDRSettingsViewController.m \
+	gui/macosx/settings/panes/MacLCInterfaceSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCInterfaceSettingsViewController.m \
+	gui/macosx/settings/panes/MacLCPlaybackSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCPlaybackSettingsViewController.m \
+	gui/macosx/settings/panes/MacLCShortcutsSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCShortcutsSettingsViewController.m \
+	gui/macosx/settings/panes/MacLCSubtitlesSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCSubtitlesSettingsViewController.m \
+	gui/macosx/settings/panes/MacLCVideoSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCVideoSettingsViewController.m \
 	gui/macosx/shaders/VLCShaderTypes.h \
 	gui/macosx/theme/MacLCCardView.h \
 	gui/macosx/theme/MacLCCardView.m \

@@ -50,6 +50,7 @@
 #import "playqueue/VLCPlayerController.h"
 #import "playqueue/VLCPlayQueueSortingMenuController.h"
 #import "preferences/VLCSimplePrefsController.h"
+#import "settings/MacLCSettingsWindowController.h"
 
 #import "windows/VLCAboutWindowController.h"
 #import "windows/VLCConnectToServerDialog.h"
@@ -1571,7 +1572,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 {
     VLCMain *mainInstance = VLCMain.sharedInstance;
     NSInteger i_level = [[mainInstance voutProvider] currentStatusWindowLevel];
-    [[mainInstance simplePreferences] showSimplePrefsWithLevel:i_level];
+    [[mainInstance settingsWindowController] showSettingsWindowWithLevel:i_level];
 }
 
 - (IBAction)openAddonManager:(id)sender
