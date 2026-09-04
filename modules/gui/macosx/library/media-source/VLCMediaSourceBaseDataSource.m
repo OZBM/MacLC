@@ -27,6 +27,8 @@
 #import "VLCLocalMediaSource.h"
 #import "VLCMediaSourceDataSource.h"
 #import "VLCMediaSourceDeviceCollectionViewItem.h"
+
+#import "theme/MacLCDesign.h"
 #import "VLCMediaSourceProvider.h"
 
 #import "extensions/NSImage+VLCAdditions.h"
@@ -326,7 +328,18 @@ NSString * const VLCMediaSourceTableTagsColumnIdentifier = @"VLCMediaSourceTable
                     if ([childRootInput.name containsString:@"home"]) {
                         placeholder = NSImage.VLCBWHomeImage;
                     } else {
-                        placeholder = indexPath.item % 2 ? NSImage.VLCBWServer1Image : NSImage.VLCBWServer2Image;
+                        /* A folder was drawn with one of two server icons,
+                         * picked by whether its index happened to be odd, so
+                         * Documents and Downloads showed as servers in two
+                         * arbitrary colours. Draw a folder as a folder. */
+                        NSImage * const folderSymbol =
+                            [MacLCDesign symbolNamed:@"folder.fill"
+                                           pointSize:64.
+                                              weight:NSFontWeightRegular
+                                  accessibilityLabel:_NS("Folder")];
+                        placeholder = folderSymbol
+                            ? [folderSymbol imageTintedWithColor:MacLCDesign.accent]
+                            : NSImage.VLCBWServer1Image;
                     }
                     break;
                 case ITEM_TYPE_DISC:

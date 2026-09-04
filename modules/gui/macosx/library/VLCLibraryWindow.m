@@ -170,6 +170,14 @@ static int ShowController(vlc_object_t * __unused p_this,
     self.styleMask |= NSWindowStyleMaskFullSizeContentView;
     self.toolbarStyle = NSWindowToolbarStyleUnified;
 
+    /* The toolbar carries the only navigation, search and view-mode controls
+     * this window has, so it is structural rather than decorative. Because the
+     * toolbar autosaves its configuration, a single hidden state would persist
+     * across every later launch and leave the window with no way to navigate
+     * and no menu item to bring the toolbar back. Keep the saved item
+     * arrangement, but always show it. */
+    self.toolbar.visible = YES;
+
     if (@available(macOS 10.15, *)) {
         self.colorSpace = [NSColorSpace extendedSRGBColorSpace];
     }

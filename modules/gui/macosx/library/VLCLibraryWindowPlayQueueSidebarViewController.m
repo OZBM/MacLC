@@ -40,7 +40,10 @@
 #import "playqueue/VLCPlayQueueDataSource.h"
 #import "playqueue/VLCPlayQueueSortingMenuController.h"
 
+#import "theme/MacLCDesign.h"
+
 #import "views/VLCDragDropView.h"
+#import "views/VLCNoResultsLabel.h"
 #import "views/VLCRoundedCornerTextField.h"
 #import "views/VLCUIUnits.h"
 
@@ -82,26 +85,40 @@
 
     self.openMediaButton.title = _NS("Open media...");
 
-    // Allow the drop zone image to shrink when the sidebar is contracted
+    /* The drop zone used to be a dashed rectangle around a large grey arrow,
+     * which is not a shape macOS uses anywhere. Replace it with the standard
+     * empty state - a symbol, a heading, a sentence and one action - and keep
+     * the drag destination behaviour of the view underneath. The nib's image
+     * and button stay in the hierarchy so their outlets and the drag handling
+     * remain valid; they are simply not shown. */
     for (NSView * const subview in self.dragDropView.subviews) {
-        if ([subview isKindOfClass:[VLCDropDisabledImageView class]]) {
-            for (NSLayoutConstraint * const constraint in subview.constraints) {
-                if (constraint.firstAttribute == NSLayoutAttributeWidth ||
-                    constraint.firstAttribute == NSLayoutAttributeHeight) {
-                    constraint.priority = NSLayoutPriorityDefaultLow;
-                }
-            }
-            [subview.widthAnchor constraintEqualToAnchor:subview.heightAnchor].active = YES;
-            [subview setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
-                                             forOrientation:NSLayoutConstraintOrientationHorizontal];
-            [subview setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
-                                             forOrientation:NSLayoutConstraintOrientationVertical];
-            break;
-        }
+        subview.hidden = YES;
     }
-    [self.dragDropView.bottomAnchor
-        constraintGreaterThanOrEqualToAnchor:self.openMediaButton.bottomAnchor
-                                    constant:VLCUIUnits.smallSpacing].active = YES;
+
+    VLCNoResultsLabel * const emptyState = [[VLCNoResultsLabel alloc] initWithFrame:NSZeroRect];
+    emptyState.translatesAutoresizingMaskIntoConstraints = NO;
+    emptyState.symbolImageView.image =
+        [MacLCDesign symbolNamed:@"list.and.film"
+                       pointSize:48.
+                          weight:NSFontWeightRegular
+              accessibilityLabel:_NS("Play queue is empty")];
+    emptyState.titleString = _NS("Nothing in the queue");
+    emptyState.messageString =
+        _NS("Drag video or audio files here, or open one, to start playing.");
+    emptyState.actionTitle = _NS("Open Media…");
+    [emptyState setActionTarget:self action:@selector(openMedia:)];
+    [self.dragDropView addSubview:emptyState];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [emptyState.centerXAnchor constraintEqualToAnchor:self.dragDropView.centerXAnchor],
+        [emptyState.centerYAnchor constraintEqualToAnchor:self.dragDropView.centerYAnchor],
+        [emptyState.leadingAnchor
+            constraintGreaterThanOrEqualToAnchor:self.dragDropView.leadingAnchor
+                                        constant:MacLCDesign.spacingL],
+        [emptyState.trailingAnchor
+            constraintLessThanOrEqualToAnchor:self.dragDropView.trailingAnchor
+                                     constant:-MacLCDesign.spacingL],
+    ]];
 
     self.shuffleButton.toolTip = _NS("Shuffle");
     self.repeatButton.toolTip = _NS("Repeat");

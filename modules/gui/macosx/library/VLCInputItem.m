@@ -468,7 +468,25 @@ static const struct input_item_parser_cbs_t parserCallbacks =
     NSString * const path = toNSStr(psz_path);
     free(psz_path);
 
-    [NSImage quickLookPreviewForLocalPath:path 
+    /* Quick Look renders a directory as a small glyph centred on a large
+     * transparent canvas, which in a grid leaves a folder looking like a tiny
+     * mark adrift in an empty tile. The workspace icon is the real folder
+     * icon and fills its bounds, so ask for that directly and never preview a
+     * directory. */
+    BOOL isDirectory = NO;
+    if ([NSFileManager.defaultManager fileExistsAtPath:path isDirectory:&isDirectory]
+        && isDirectory) {
+        NSImage * const folderIcon = [NSWorkspace.sharedWorkspace iconForFile:path];
+        if (folderIcon) {
+            folderIcon.size = size;
+            completionHandler(folderIcon);
+        } else {
+            completionHandler(nil);
+        }
+        return;
+    }
+
+    [NSImage quickLookPreviewForLocalPath:path
                                  withSize:size
                         completionHandler:^(NSImage * image) {
         if (image) {
