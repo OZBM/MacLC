@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "settings/panes/MacLCGeneralSettingsViewController.h"
+#import "settings/MacLCConfigSafe.h"
 #import "settings/MacLCSettingsRow.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -325,22 +326,22 @@ static struct {
     [_appearanceRow.popUpButton selectItemAtIndex:appIdx];
 
     // Icon change
-    _iconChangeRow.checkboxButton.state = config_GetInt("macosx-icon-change") ? NSControlStateValueOn : NSControlStateValueOff;
+    _iconChangeRow.checkboxButton.state = MacLCConfigGetInt("macosx-icon-change", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     // Continue playback
-    NSInteger continueVal = config_GetInt("macosx-continue-playback");
+    NSInteger continueVal = MacLCConfigGetInt("macosx-continue-playback", 0);
     [_continuePlaybackRow.popUpButton selectItemWithTag:continueVal];
 
     // Recent items
-    BOOL recent = config_GetInt("macosx-recentitems") != 0;
+    BOOL recent = MacLCConfigGetInt("macosx-recentitems", 0) != 0;
     _recentItemsRow.checkboxButton.state = recent ? NSControlStateValueOn : NSControlStateValueOff;
     _continuePlaybackRow.enabled = recent;
 
     // Autoload extensions
-    _autoloadExtensionsRow.checkboxButton.state = config_GetInt("macosx-autoload-extensions") ? NSControlStateValueOn : NSControlStateValueOff;
+    _autoloadExtensionsRow.checkboxButton.state = MacLCConfigGetInt("macosx-autoload-extensions", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     // Metadata network access
-    _metadataNetworkRow.checkboxButton.state = config_GetInt("metadata-network-access") ? NSControlStateValueOn : NSControlStateValueOff;
+    _metadataNetworkRow.checkboxButton.state = MacLCConfigGetInt("metadata-network-access", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
 #ifdef HAVE_SPARKLE
     if (_updatesRow && VLCMain.sharedInstance.sparkleUpdaterController.updater) {
@@ -372,11 +373,11 @@ static struct {
     [defaults setObject:appMode forKey:@"MacLCAppearanceMode"];
 
     // Options
-    config_PutInt("macosx-icon-change", _iconChangeRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-continue-playback", _continuePlaybackRow.popUpButton.selectedTag);
-    config_PutInt("macosx-recentitems", _recentItemsRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-autoload-extensions", _autoloadExtensionsRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("metadata-network-access", _metadataNetworkRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-icon-change", _iconChangeRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-continue-playback", _continuePlaybackRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("macosx-recentitems", _recentItemsRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-autoload-extensions", _autoloadExtensionsRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("metadata-network-access", _metadataNetworkRow.checkboxButton.state == NSControlStateValueOn);
 
 #ifdef HAVE_SPARKLE
     if (_updatesRow && VLCMain.sharedInstance.sparkleUpdaterController.updater) {
@@ -395,11 +396,11 @@ static struct {
     [defaults removeObjectForKey:@"MacLCAppearanceMode"];
 
     module_config_t *item;
-    if ((item = config_FindConfig("macosx-icon-change"))) config_PutInt("macosx-icon-change", item->orig.i);
-    if ((item = config_FindConfig("macosx-continue-playback"))) config_PutInt("macosx-continue-playback", item->orig.i);
-    if ((item = config_FindConfig("macosx-recentitems"))) config_PutInt("macosx-recentitems", item->orig.i);
-    if ((item = config_FindConfig("macosx-autoload-extensions"))) config_PutInt("macosx-autoload-extensions", item->orig.i);
-    if ((item = config_FindConfig("metadata-network-access"))) config_PutInt("metadata-network-access", item->orig.i);
+    if ((item = config_FindConfig("macosx-icon-change"))) MacLCConfigPutInt("macosx-icon-change", item->orig.i);
+    if ((item = config_FindConfig("macosx-continue-playback"))) MacLCConfigPutInt("macosx-continue-playback", item->orig.i);
+    if ((item = config_FindConfig("macosx-recentitems"))) MacLCConfigPutInt("macosx-recentitems", item->orig.i);
+    if ((item = config_FindConfig("macosx-autoload-extensions"))) MacLCConfigPutInt("macosx-autoload-extensions", item->orig.i);
+    if ((item = config_FindConfig("metadata-network-access"))) MacLCConfigPutInt("metadata-network-access", item->orig.i);
 
     [self loadSettings];
     self.hasUnsavedChanges = YES;

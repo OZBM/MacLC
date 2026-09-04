@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "settings/panes/MacLCVideoSettingsViewController.h"
+#import "settings/MacLCConfigSafe.h"
 #import "settings/MacLCSettingsRow.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -397,99 +398,99 @@
 
 - (void)loadSettings
 {
-    _videoEnableRow.checkboxButton.state = config_GetInt("video") ? NSControlStateValueOn : NSControlStateValueOff;
-    [_targetScreenRow.popUpButton selectItemWithTag:config_GetInt("macosx-vdev")];
-    _onTopRow.checkboxButton.state = config_GetInt("video-on-top") ? NSControlStateValueOn : NSControlStateValueOff;
-    _autoResizeRow.checkboxButton.state = config_GetInt("macosx-video-autoresize") ? NSControlStateValueOn : NSControlStateValueOff;
-    _pauseMinimizedRow.checkboxButton.state = config_GetInt("macosx-pause-minimized") ? NSControlStateValueOn : NSControlStateValueOff;
+    _videoEnableRow.checkboxButton.state = MacLCConfigGetInt("video", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    [_targetScreenRow.popUpButton selectItemWithTag:MacLCConfigGetInt("macosx-vdev", 0)];
+    _onTopRow.checkboxButton.state = MacLCConfigGetInt("video-on-top", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    _autoResizeRow.checkboxButton.state = MacLCConfigGetInt("macosx-video-autoresize", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    _pauseMinimizedRow.checkboxButton.state = MacLCConfigGetInt("macosx-pause-minimized", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
-    _startFullscreenRow.checkboxButton.state = config_GetInt("fullscreen") ? NSControlStateValueOn : NSControlStateValueOff;
-    BOOL nativeFS = config_GetInt("macosx-nativefullscreenmode") != 0;
+    _startFullscreenRow.checkboxButton.state = MacLCConfigGetInt("fullscreen", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+    BOOL nativeFS = MacLCConfigGetInt("macosx-nativefullscreenmode", 0) != 0;
     _nativeFullscreenRow.checkboxButton.state = nativeFS ? NSControlStateValueOn : NSControlStateValueOff;
-    _blackScreenRow.checkboxButton.state = config_GetInt("macosx-black") ? NSControlStateValueOn : NSControlStateValueOff;
+    _blackScreenRow.checkboxButton.state = MacLCConfigGetInt("macosx-black", 0) ? NSControlStateValueOn : NSControlStateValueOff;
     _blackScreenRow.enabled = !nativeFS;
-    _dimKeyboardRow.checkboxButton.state = config_GetInt("macosx-dim-keyboard") ? NSControlStateValueOn : NSControlStateValueOff;
+    _dimKeyboardRow.checkboxButton.state = MacLCConfigGetInt("macosx-dim-keyboard", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
-    [_deinterlaceRow.popUpButton selectItemWithTag:config_GetInt("deinterlace")];
+    [_deinterlaceRow.popUpButton selectItemWithTag:MacLCConfigGetInt("deinterlace", 0)];
 
-    char *mode = config_GetPsz("deinterlace-mode");
+    char *mode = MacLCConfigGetPsz("deinterlace-mode");
     NSString *modeStr = mode ? toNSStr(mode) : @"auto";
     free(mode);
     NSArray *modes = @[@"auto", @"discard", @"blend", @"bob", @"linear", @"yadif", @"yadif2x"];
     NSUInteger mIdx = [modes indexOfObject:modeStr];
     [_deinterlaceModeRow.popUpButton selectItemAtIndex:(mIdx != NSNotFound) ? (NSInteger)mIdx : 0];
 
-    char *aspect = config_GetPsz("aspect-ratio");
+    char *aspect = MacLCConfigGetPsz("aspect-ratio");
     NSString *aspectStr = aspect ? toNSStr(aspect) : @"";
     free(aspect);
     [_aspectRatioRow.popUpButton selectItemWithTitle:aspectStr.length > 0 ? aspectStr : _NS("Default")];
 
-    char *crop = config_GetPsz("crop");
+    char *crop = MacLCConfigGetPsz("crop");
     NSString *cropStr = crop ? toNSStr(crop) : @"";
     free(crop);
     [_cropRatioRow.popUpButton selectItemWithTitle:cropStr.length > 0 ? cropStr : _NS("Default")];
 
-    _lockAspectRow.checkboxButton.state = config_GetInt("macosx-lock-aspect-ratio") ? NSControlStateValueOn : NSControlStateValueOff;
+    _lockAspectRow.checkboxButton.state = MacLCConfigGetInt("macosx-lock-aspect-ratio", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
-    char *snapPath = config_GetPsz("snapshot-path");
+    char *snapPath = MacLCConfigGetPsz("snapshot-path");
     _snapFolderRow.textField.stringValue = snapPath ? toNSStr(snapPath) : @"";
     free(snapPath);
 
-    char *snapPrefix = config_GetPsz("snapshot-prefix");
+    char *snapPrefix = MacLCConfigGetPsz("snapshot-prefix");
     _snapPrefixRow.textField.stringValue = snapPrefix ? toNSStr(snapPrefix) : @"vlcsnap-";
     free(snapPrefix);
 
-    char *snapFormat = config_GetPsz("snapshot-format");
+    char *snapFormat = MacLCConfigGetPsz("snapshot-format");
     NSString *fmtStr = snapFormat ? toNSStr(snapFormat) : @"png";
     free(snapFormat);
     [_snapFormatRow.popUpButton selectItemWithTitle:fmtStr];
 
-    _snapSequentialRow.checkboxButton.state = config_GetInt("snapshot-sequential") ? NSControlStateValueOn : NSControlStateValueOff;
+    _snapSequentialRow.checkboxButton.state = MacLCConfigGetInt("snapshot-sequential", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
     self.hasUnsavedChanges = NO;
 }
 
 - (void)applyChanges
 {
-    config_PutInt("video", _videoEnableRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-vdev", _targetScreenRow.popUpButton.selectedTag);
-    config_PutInt("video-on-top", _onTopRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-video-autoresize", _autoResizeRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-pause-minimized", _pauseMinimizedRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("video", _videoEnableRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-vdev", _targetScreenRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("video-on-top", _onTopRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-video-autoresize", _autoResizeRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-pause-minimized", _pauseMinimizedRow.checkboxButton.state == NSControlStateValueOn);
 
-    config_PutInt("fullscreen", _startFullscreenRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-nativefullscreenmode", _nativeFullscreenRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-black", _blackScreenRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutInt("macosx-dim-keyboard", _dimKeyboardRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("fullscreen", _startFullscreenRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-nativefullscreenmode", _nativeFullscreenRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-black", _blackScreenRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-dim-keyboard", _dimKeyboardRow.checkboxButton.state == NSControlStateValueOn);
 
-    config_PutInt("deinterlace", _deinterlaceRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("deinterlace", _deinterlaceRow.popUpButton.selectedTag);
 
     NSArray *modes = @[@"auto", @"discard", @"blend", @"bob", @"linear", @"yadif", @"yadif2x"];
     NSInteger mIdx = _deinterlaceModeRow.popUpButton.indexOfSelectedItem;
     if (mIdx >= 0 && mIdx < (NSInteger)modes.count) {
-        config_PutPsz("deinterlace-mode", [modes[mIdx] UTF8String]);
+        MacLCConfigPutPsz("deinterlace-mode", [modes[mIdx] UTF8String]);
     }
 
     NSString *aspectTitle = _aspectRatioRow.popUpButton.titleOfSelectedItem;
     if ([aspectTitle isEqualToString:_NS("Default")]) {
-        config_PutPsz("aspect-ratio", "");
+        MacLCConfigPutPsz("aspect-ratio", "");
     } else {
-        config_PutPsz("aspect-ratio", [aspectTitle UTF8String]);
+        MacLCConfigPutPsz("aspect-ratio", [aspectTitle UTF8String]);
     }
 
     NSString *cropTitle = _cropRatioRow.popUpButton.titleOfSelectedItem;
     if ([cropTitle isEqualToString:_NS("Default")]) {
-        config_PutPsz("crop", "");
+        MacLCConfigPutPsz("crop", "");
     } else {
-        config_PutPsz("crop", [cropTitle UTF8String]);
+        MacLCConfigPutPsz("crop", [cropTitle UTF8String]);
     }
 
-    config_PutInt("macosx-lock-aspect-ratio", _lockAspectRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-lock-aspect-ratio", _lockAspectRow.checkboxButton.state == NSControlStateValueOn);
 
-    config_PutPsz("snapshot-path", [_snapFolderRow.textField.stringValue UTF8String]);
-    config_PutPsz("snapshot-prefix", [_snapPrefixRow.textField.stringValue UTF8String]);
-    config_PutPsz("snapshot-format", [_snapFormatRow.popUpButton.titleOfSelectedItem UTF8String]);
-    config_PutInt("snapshot-sequential", _snapSequentialRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutPsz("snapshot-path", [_snapFolderRow.textField.stringValue UTF8String]);
+    MacLCConfigPutPsz("snapshot-prefix", [_snapPrefixRow.textField.stringValue UTF8String]);
+    MacLCConfigPutPsz("snapshot-format", [_snapFormatRow.popUpButton.titleOfSelectedItem UTF8String]);
+    MacLCConfigPutInt("snapshot-sequential", _snapSequentialRow.checkboxButton.state == NSControlStateValueOn);
 
     self.hasUnsavedChanges = NO;
 }
@@ -497,24 +498,24 @@
 - (void)resetToDefaults
 {
     module_config_t *item;
-    if ((item = config_FindConfig("video"))) config_PutInt("video", item->orig.i);
-    if ((item = config_FindConfig("macosx-vdev"))) config_PutInt("macosx-vdev", item->orig.i);
-    if ((item = config_FindConfig("video-on-top"))) config_PutInt("video-on-top", item->orig.i);
-    if ((item = config_FindConfig("macosx-video-autoresize"))) config_PutInt("macosx-video-autoresize", item->orig.i);
-    if ((item = config_FindConfig("macosx-pause-minimized"))) config_PutInt("macosx-pause-minimized", item->orig.i);
-    if ((item = config_FindConfig("fullscreen"))) config_PutInt("fullscreen", item->orig.i);
-    if ((item = config_FindConfig("macosx-nativefullscreenmode"))) config_PutInt("macosx-nativefullscreenmode", item->orig.i);
-    if ((item = config_FindConfig("macosx-black"))) config_PutInt("macosx-black", item->orig.i);
-    if ((item = config_FindConfig("macosx-dim-keyboard"))) config_PutInt("macosx-dim-keyboard", item->orig.i);
-    if ((item = config_FindConfig("deinterlace"))) config_PutInt("deinterlace", item->orig.i);
-    if ((item = config_FindConfig("deinterlace-mode"))) config_PutPsz("deinterlace-mode", item->orig.psz ? item->orig.psz : "auto");
-    if ((item = config_FindConfig("aspect-ratio"))) config_PutPsz("aspect-ratio", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("crop"))) config_PutPsz("crop", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("macosx-lock-aspect-ratio"))) config_PutInt("macosx-lock-aspect-ratio", item->orig.i);
-    if ((item = config_FindConfig("snapshot-path"))) config_PutPsz("snapshot-path", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("snapshot-prefix"))) config_PutPsz("snapshot-prefix", item->orig.psz ? item->orig.psz : "vlcsnap-");
-    if ((item = config_FindConfig("snapshot-format"))) config_PutPsz("snapshot-format", item->orig.psz ? item->orig.psz : "png");
-    if ((item = config_FindConfig("snapshot-sequential"))) config_PutInt("snapshot-sequential", item->orig.i);
+    if ((item = config_FindConfig("video"))) MacLCConfigPutInt("video", item->orig.i);
+    if ((item = config_FindConfig("macosx-vdev"))) MacLCConfigPutInt("macosx-vdev", item->orig.i);
+    if ((item = config_FindConfig("video-on-top"))) MacLCConfigPutInt("video-on-top", item->orig.i);
+    if ((item = config_FindConfig("macosx-video-autoresize"))) MacLCConfigPutInt("macosx-video-autoresize", item->orig.i);
+    if ((item = config_FindConfig("macosx-pause-minimized"))) MacLCConfigPutInt("macosx-pause-minimized", item->orig.i);
+    if ((item = config_FindConfig("fullscreen"))) MacLCConfigPutInt("fullscreen", item->orig.i);
+    if ((item = config_FindConfig("macosx-nativefullscreenmode"))) MacLCConfigPutInt("macosx-nativefullscreenmode", item->orig.i);
+    if ((item = config_FindConfig("macosx-black"))) MacLCConfigPutInt("macosx-black", item->orig.i);
+    if ((item = config_FindConfig("macosx-dim-keyboard"))) MacLCConfigPutInt("macosx-dim-keyboard", item->orig.i);
+    if ((item = config_FindConfig("deinterlace"))) MacLCConfigPutInt("deinterlace", item->orig.i);
+    if ((item = config_FindConfig("deinterlace-mode"))) MacLCConfigPutPsz("deinterlace-mode", item->orig.psz ? item->orig.psz : "auto");
+    if ((item = config_FindConfig("aspect-ratio"))) MacLCConfigPutPsz("aspect-ratio", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("crop"))) MacLCConfigPutPsz("crop", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("macosx-lock-aspect-ratio"))) MacLCConfigPutInt("macosx-lock-aspect-ratio", item->orig.i);
+    if ((item = config_FindConfig("snapshot-path"))) MacLCConfigPutPsz("snapshot-path", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("snapshot-prefix"))) MacLCConfigPutPsz("snapshot-prefix", item->orig.psz ? item->orig.psz : "vlcsnap-");
+    if ((item = config_FindConfig("snapshot-format"))) MacLCConfigPutPsz("snapshot-format", item->orig.psz ? item->orig.psz : "png");
+    if ((item = config_FindConfig("snapshot-sequential"))) MacLCConfigPutInt("snapshot-sequential", item->orig.i);
 
     [self loadSettings];
     self.hasUnsavedChanges = YES;

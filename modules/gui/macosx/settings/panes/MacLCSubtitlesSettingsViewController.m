@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "settings/panes/MacLCSubtitlesSettingsViewController.h"
+#import "settings/MacLCConfigSafe.h"
 #import "settings/MacLCSettingsRow.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -339,13 +340,13 @@
 
 - (void)loadSettings
 {
-    _osdRow.checkboxButton.state = config_GetInt("osd") ? NSControlStateValueOn : NSControlStateValueOff;
+    _osdRow.checkboxButton.state = MacLCConfigGetInt("osd", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
-    char *subLang = config_GetPsz("sub-language");
+    char *subLang = MacLCConfigGetPsz("sub-language");
     _subLangRow.textField.stringValue = subLang ? toNSStr(subLang) : @"";
     free(subLang);
 
-    char *enc = config_GetPsz("subsdec-encoding");
+    char *enc = MacLCConfigGetPsz("subsdec-encoding");
     NSString *encStr = enc ? toNSStr(enc) : @"";
     free(enc);
     if (encStr.length == 0 || [encStr isEqualToString:@"UTF-8"]) {
@@ -354,30 +355,30 @@
         [_encodingRow.popUpButton selectItemWithTitle:encStr];
     }
 
-    _autodetectRow.checkboxButton.state = config_GetInt("sub-autodetect-file") ? NSControlStateValueOn : NSControlStateValueOff;
+    _autodetectRow.checkboxButton.state = MacLCConfigGetInt("sub-autodetect-file", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
-    char *font = config_GetPsz("freetype-font");
+    char *font = MacLCConfigGetPsz("freetype-font");
     _fontRow.textField.stringValue = font ? toNSStr(font) : @"Helvetica Neue";
     free(font);
 
-    int scale = (int)config_GetInt("sub-text-scale");
+    int scale = (int)MacLCConfigGetInt("sub-text-scale", 0);
     if (scale <= 0) scale = 100;
     _fontSizeRow.slider.doubleValue = scale;
     _fontSizeRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%d%%", scale];
 
-    int colorVal = (int)config_GetInt("freetype-color");
+    int colorVal = (int)MacLCConfigGetInt("freetype-color", 0);
     [_fontColorRow.popUpButton selectItemWithTag:colorVal];
 
-    int opacity = (int)(config_GetInt("freetype-opacity") * 100.0 / 255.0 + 0.5);
+    int opacity = (int)(MacLCConfigGetInt("freetype-opacity", 0) * 100.0 / 255.0 + 0.5);
     _fontOpacityRow.slider.doubleValue = opacity;
     _fontOpacityRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%d%%", opacity];
 
-    _fontBoldRow.checkboxButton.state = config_GetInt("freetype-bold") ? NSControlStateValueOn : NSControlStateValueOff;
+    _fontBoldRow.checkboxButton.state = MacLCConfigGetInt("freetype-bold", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
-    [_outlineThicknessRow.popUpButton selectItemWithTag:config_GetInt("freetype-outline-thickness")];
-    [_outlineColorRow.popUpButton selectItemWithTag:config_GetInt("freetype-outline-color")];
+    [_outlineThicknessRow.popUpButton selectItemWithTag:MacLCConfigGetInt("freetype-outline-thickness", 0)];
+    [_outlineColorRow.popUpButton selectItemWithTag:MacLCConfigGetInt("freetype-outline-color", 0)];
 
-    int shadow = (int)(config_GetInt("freetype-shadow-opacity") * 100.0 / 255.0 + 0.5);
+    int shadow = (int)(MacLCConfigGetInt("freetype-shadow-opacity", 0) * 100.0 / 255.0 + 0.5);
     _shadowOpacityRow.slider.doubleValue = shadow;
     _shadowOpacityRow.sliderReadoutLabel.stringValue = [NSString stringWithFormat:@"%d%%", shadow];
 
@@ -386,26 +387,26 @@
 
 - (void)applyChanges
 {
-    config_PutInt("osd", _osdRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutPsz("sub-language", [_subLangRow.textField.stringValue UTF8String]);
+    MacLCConfigPutInt("osd", _osdRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutPsz("sub-language", [_subLangRow.textField.stringValue UTF8String]);
 
     NSString *enc = _encodingRow.popUpButton.titleOfSelectedItem;
     if ([enc hasPrefix:_NS("Default")]) {
-        config_PutPsz("subsdec-encoding", "");
+        MacLCConfigPutPsz("subsdec-encoding", "");
     } else {
-        config_PutPsz("subsdec-encoding", [enc UTF8String]);
+        MacLCConfigPutPsz("subsdec-encoding", [enc UTF8String]);
     }
 
-    config_PutInt("sub-autodetect-file", _autodetectRow.checkboxButton.state == NSControlStateValueOn);
-    config_PutPsz("freetype-font", [_fontRow.textField.stringValue UTF8String]);
-    config_PutInt("sub-text-scale", (int)_fontSizeRow.slider.doubleValue);
-    config_PutInt("freetype-color", (int)_fontColorRow.popUpButton.selectedTag);
-    config_PutInt("freetype-opacity", (int)(_fontOpacityRow.slider.doubleValue * 255.0 / 100.0 + 0.5));
-    config_PutInt("freetype-bold", _fontBoldRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutInt("sub-autodetect-file", _autodetectRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutPsz("freetype-font", [_fontRow.textField.stringValue UTF8String]);
+    MacLCConfigPutInt("sub-text-scale", (int)_fontSizeRow.slider.doubleValue);
+    MacLCConfigPutInt("freetype-color", (int)_fontColorRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("freetype-opacity", (int)(_fontOpacityRow.slider.doubleValue * 255.0 / 100.0 + 0.5));
+    MacLCConfigPutInt("freetype-bold", _fontBoldRow.checkboxButton.state == NSControlStateValueOn);
 
-    config_PutInt("freetype-outline-thickness", (int)_outlineThicknessRow.popUpButton.selectedTag);
-    config_PutInt("freetype-outline-color", (int)_outlineColorRow.popUpButton.selectedTag);
-    config_PutInt("freetype-shadow-opacity", (int)(_shadowOpacityRow.slider.doubleValue * 255.0 / 100.0 + 0.5));
+    MacLCConfigPutInt("freetype-outline-thickness", (int)_outlineThicknessRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("freetype-outline-color", (int)_outlineColorRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("freetype-shadow-opacity", (int)(_shadowOpacityRow.slider.doubleValue * 255.0 / 100.0 + 0.5));
 
     self.hasUnsavedChanges = NO;
 }
@@ -413,18 +414,18 @@
 - (void)resetToDefaults
 {
     module_config_t *item;
-    if ((item = config_FindConfig("osd"))) config_PutInt("osd", item->orig.i);
-    if ((item = config_FindConfig("sub-language"))) config_PutPsz("sub-language", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("subsdec-encoding"))) config_PutPsz("subsdec-encoding", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("sub-autodetect-file"))) config_PutInt("sub-autodetect-file", item->orig.i);
-    if ((item = config_FindConfig("freetype-font"))) config_PutPsz("freetype-font", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("sub-text-scale"))) config_PutInt("sub-text-scale", item->orig.i);
-    if ((item = config_FindConfig("freetype-color"))) config_PutInt("freetype-color", item->orig.i);
-    if ((item = config_FindConfig("freetype-opacity"))) config_PutInt("freetype-opacity", item->orig.i);
-    if ((item = config_FindConfig("freetype-bold"))) config_PutInt("freetype-bold", item->orig.i);
-    if ((item = config_FindConfig("freetype-outline-thickness"))) config_PutInt("freetype-outline-thickness", item->orig.i);
-    if ((item = config_FindConfig("freetype-outline-color"))) config_PutInt("freetype-outline-color", item->orig.i);
-    if ((item = config_FindConfig("freetype-shadow-opacity"))) config_PutInt("freetype-shadow-opacity", item->orig.i);
+    if ((item = config_FindConfig("osd"))) MacLCConfigPutInt("osd", item->orig.i);
+    if ((item = config_FindConfig("sub-language"))) MacLCConfigPutPsz("sub-language", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("subsdec-encoding"))) MacLCConfigPutPsz("subsdec-encoding", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("sub-autodetect-file"))) MacLCConfigPutInt("sub-autodetect-file", item->orig.i);
+    if ((item = config_FindConfig("freetype-font"))) MacLCConfigPutPsz("freetype-font", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("sub-text-scale"))) MacLCConfigPutInt("sub-text-scale", item->orig.i);
+    if ((item = config_FindConfig("freetype-color"))) MacLCConfigPutInt("freetype-color", item->orig.i);
+    if ((item = config_FindConfig("freetype-opacity"))) MacLCConfigPutInt("freetype-opacity", item->orig.i);
+    if ((item = config_FindConfig("freetype-bold"))) MacLCConfigPutInt("freetype-bold", item->orig.i);
+    if ((item = config_FindConfig("freetype-outline-thickness"))) MacLCConfigPutInt("freetype-outline-thickness", item->orig.i);
+    if ((item = config_FindConfig("freetype-outline-color"))) MacLCConfigPutInt("freetype-outline-color", item->orig.i);
+    if ((item = config_FindConfig("freetype-shadow-opacity"))) MacLCConfigPutInt("freetype-shadow-opacity", item->orig.i);
 
     [self loadSettings];
     self.hasUnsavedChanges = YES;
