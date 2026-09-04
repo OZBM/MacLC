@@ -7,6 +7,10 @@ actool_verbose__0 = $(actool_verbose_0)
 # so that it is properly rebuilt when its content changes.
 ASSET_CATALOG_DEPS = \
 	gui/macosx/Resources/Assets.xcassets/Contents.json \
+	gui/macosx/Resources/Assets.xcassets/MacLCCardBackground.colorset/Contents.json \
+	gui/macosx/Resources/Assets.xcassets/MacLCContentBackground.colorset/Contents.json \
+	gui/macosx/Resources/Assets.xcassets/MacLCScrubberFill.colorset/Contents.json \
+	gui/macosx/Resources/Assets.xcassets/MacLCScrubberTrack.colorset/Contents.json \
 	gui/macosx/Resources/Assets.xcassets/VLCAccentColor.colorset/Contents.json \
 	gui/macosx/Resources/Assets.xcassets/dropzone.imageset/Contents.json \
 	gui/macosx/Resources/Assets.xcassets/dropzone.imageset/dropzone-dark.png \
@@ -455,6 +459,10 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/preferences/prefs_widgets.h \
 	gui/macosx/preferences/prefs_widgets.m \
 	gui/macosx/shaders/VLCShaderTypes.h \
+	gui/macosx/theme/MacLCCardView.h \
+	gui/macosx/theme/MacLCCardView.m \
+	gui/macosx/theme/MacLCDesign.h \
+	gui/macosx/theme/MacLCDesign.m \
 	gui/macosx/views/iCarousel/iCarousel.h \
 	gui/macosx/views/iCarousel/iCarousel.m \
 	gui/macosx/views/VLCBasicView.h \
