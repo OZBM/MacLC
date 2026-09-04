@@ -461,6 +461,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/settings/MacLCSettingsPane.h \
 	gui/macosx/settings/MacLCSettingsRow.h \
 	gui/macosx/settings/MacLCSettingsRow.m \
+	gui/macosx/settings/MacLCSettingsSelfTest.h \
+	gui/macosx/settings/MacLCSettingsSelfTest.m \
 	gui/macosx/settings/MacLCSettingsWindowController.h \
 	gui/macosx/settings/MacLCSettingsWindowController.m \
 	gui/macosx/settings/panes/MacLCAudioSettingsViewController.h \

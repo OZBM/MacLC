@@ -76,6 +76,7 @@
 #import "preferences/prefs.h"
 #import "preferences/VLCSimplePrefsController.h"
 #import "settings/MacLCSettingsWindowController.h"
+#import "settings/MacLCSettingsSelfTest.h"
 
 #import "views/VLCPlaybackEndViewController.h"
 
@@ -391,6 +392,9 @@ static VLCMain *sharedInstance = nil;
         if ([self processIsTranslated] > 0) {
             msg_Warn(getIntf(), "Process is translated!");
         }
+    }
+    if (getenv("MACLC_SELFTEST") != NULL) {
+        [MacLCSettingsSelfTest runWithIntf:getIntf()];
     }
 }
 
