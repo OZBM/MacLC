@@ -575,6 +575,15 @@ modules/gui/macosx/preferences/prefs.h
 modules/gui/macosx/preferences/prefs.m
 modules/gui/macosx/preferences/prefs_widgets.h
 modules/gui/macosx/preferences/prefs_widgets.m
+modules/gui/macosx/settings/MacLCSettingsRow.m
+modules/gui/macosx/settings/MacLCSettingsWindowController.m
+modules/gui/macosx/settings/panes/MacLCAudioSettingsViewController.m
+modules/gui/macosx/settings/panes/MacLCGeneralSettingsViewController.m
+modules/gui/macosx/settings/panes/MacLCInterfaceSettingsViewController.m
+modules/gui/macosx/settings/panes/MacLCPlaybackSettingsViewController.m
+modules/gui/macosx/settings/panes/MacLCShortcutsSettingsViewController.m
+modules/gui/macosx/settings/panes/MacLCSubtitlesSettingsViewController.m
+modules/gui/macosx/settings/panes/MacLCVideoSettingsViewController.m
 modules/gui/macosx/views/VLCBottomBarView.h
 modules/gui/macosx/views/VLCBottomBarView.m
 modules/gui/macosx/views/VLCDefaultValueSlider.h

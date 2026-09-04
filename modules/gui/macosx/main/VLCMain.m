@@ -75,6 +75,7 @@
 
 #import "preferences/prefs.h"
 #import "preferences/VLCSimplePrefsController.h"
+#import "settings/MacLCSettingsWindowController.h"
 
 #import "views/VLCPlaybackEndViewController.h"
 
@@ -108,6 +109,7 @@ NSString * const kVLCPreferencesVersion = @"VLCPreferencesVersion";
     VLCMainMenu *_mainmenu;
     VLCPrefs *_prefs;
     VLCSimplePrefsController *_sprefs;
+    MacLCSettingsWindowController *_settingsWindowController;
     VLCOpenWindowController *_open;
     VLCCoreDialogProvider *_coredialogs;
     VLCBookmarksWindowController *_bookmarks;
@@ -555,6 +557,14 @@ static VLCMain *sharedInstance = nil;
         _sprefs = [[VLCSimplePrefsController alloc] init];
 
     return _sprefs;
+}
+
+- (MacLCSettingsWindowController *)settingsWindowController
+{
+    if (!_settingsWindowController)
+        _settingsWindowController = [[MacLCSettingsWindowController alloc] initWithIntf:_p_intf];
+
+    return _settingsWindowController;
 }
 
 - (VLCPrefs *)preferences
