@@ -55,11 +55,21 @@ NSString * const VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier =
                  @"Could not find navigation sidebar toggle toolbar item!");
 
         const NSInteger trackingSeparatorItemIndex = navSidebarToggleToolbarItemIndex + 1;
-        [self.toolbar 
-            insertItemWithItemIdentifier:VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier
-                                 atIndex:trackingSeparatorItemIndex];
-        _trackingSeparatorToolbarItem =
-            [self.toolbar.items objectAtIndex:trackingSeparatorItemIndex];
+        // Defensive: avoid duplicate separator when toolbar autosaves configuration restores it
+        NSToolbarItem *existingSeparator = nil;
+        for (NSToolbarItem *item in self.toolbar.items) {
+            if ([item.itemIdentifier isEqualToString:VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier]) {
+                existingSeparator = item;
+                break;
+            }
+        }
+        if (existingSeparator) {
+            _trackingSeparatorToolbarItem = existingSeparator;
+        } else {
+            [self.toolbar insertItemWithItemIdentifier:VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier
+                                          atIndex:trackingSeparatorItemIndex];
+            _trackingSeparatorToolbarItem = [self.toolbar.items objectAtIndex:trackingSeparatorItemIndex];
+        }
     }
 
     NSNotificationCenter * const notificationCenter = NSNotificationCenter.defaultCenter;
