@@ -458,6 +458,9 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/preferences/prefs.m \
 	gui/macosx/preferences/prefs_widgets.h \
 	gui/macosx/preferences/prefs_widgets.m \
+	gui/macosx/settings/MacLCSettingsPane.h \
+	gui/macosx/settings/panes/MacLCHDRSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCHDRSettingsViewController.m \
 	gui/macosx/shaders/VLCShaderTypes.h \
 	gui/macosx/theme/MacLCCardView.h \
 	gui/macosx/theme/MacLCCardView.m \
