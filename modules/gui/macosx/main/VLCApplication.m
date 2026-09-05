@@ -61,6 +61,9 @@
          * it ends-up after being relocated or rename */
         _appLocationURL = [[[NSBundle mainBundle] bundleURL] fileReferenceURL];
 
+        /* Drives the seasonal snow effect. It used to swap the app icon for a
+         * cone in a Father Xmas hat as well; MacLC has its own icon and keeps
+         * it all year. */
         if (config_GetInt("macosx-icon-change")) {
             NSCalendar *const gregorian =
                 [[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
@@ -95,17 +98,7 @@
     if (_vlcAppIconImage != nil)
         return _vlcAppIconImage;
 
-    if (self.winterHolidaysTheming) {
-        /* After day 354 of the year, the usual VLC cone is replaced by another cone
-         * wearing a Father Xmas hat.
-         * Note: this icon doesn't represent an endorsement of The Coca-Cola Company.
-         */
-        _vlcAppIconImage = NSImage.VLCXmasAppIconImage;
-    }
-
-    if (_vlcAppIconImage == nil)
-        _vlcAppIconImage = NSImage.VLCAppIconImage;
-
+    _vlcAppIconImage = NSImage.VLCAppIconImage;
     return _vlcAppIconImage;
 }
 

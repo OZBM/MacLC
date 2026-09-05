@@ -152,7 +152,44 @@ func drawIcon(size: CGFloat) -> CGImage {
     return ctx.makeImage()!
 }
 
+// MARK: - Menu bar mark
+
+/// The status item is a template image: macOS throws the colour away and tints
+/// the alpha channel to match the menu bar. So the mark has to survive as pure
+/// silhouette - a solid squircle with the play triangle knocked out of it,
+/// which stays unmistakable at 18 points where an outline would not.
+func writeStatusBarPDF(to path: String) {
+    let w: CGFloat = 18, h: CGFloat = 18
+    var box = CGRect(x: 0, y: 0, width: w, height: h)
+    guard let dest = CGDataConsumer(url: URL(fileURLWithPath: path) as CFURL),
+          let ctx = CGContext(consumer: dest, mediaBox: &box, nil) else {
+        FileHandle.standardError.write("cannot write \(path)\n".data(using: .utf8)!)
+        exit(1)
+    }
+    ctx.beginPDFPage(nil)
+    let center = CGPoint(x: w / 2, y: h / 2)
+
+    let body = CGMutablePath()
+    body.addPath(squirclePath(center: center, halfSide: w / 2 - 0.5))
+    // Reversed winding knocks the triangle out of the solid shape.
+    let cut = playPath(center: center, radius: 4.6, corner: 1.1)
+    body.addPath(cut)
+
+    ctx.addPath(body)
+    ctx.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+    ctx.fillPath(using: .evenOdd)
+
+    ctx.endPDFPage()
+    ctx.closePDF()
+    print("wrote \(path)")
+}
+
 // MARK: - Output
+
+if CommandLine.arguments.count > 2, CommandLine.arguments[1] == "--statusbar" {
+    writeStatusBarPDF(to: CommandLine.arguments[2])
+    exit(0)
+}
 
 let outDir = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "."
 let sizes: [(String, CGFloat)] = [
@@ -185,3 +222,5 @@ for (name, size) in sizes {
 //   mkdir MacLC.iconset && ./makeicon MacLC.iconset
 //   iconutil -c icns MacLC.iconset -o \
 //       ../../../../modules/gui/macosx/Resources/App-Icons/MacLC.icns
+//   ./makeicon --statusbar \
+//       ../../../../modules/gui/macosx/Resources/Button-Icons/MacLCStatusBarIcon.pdf

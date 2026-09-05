@@ -87,19 +87,12 @@ static NSImage *ImageFromEmoji(NSString *emoji, NSSize size)
 
 + (NSImage *)VLCAppIconImage
 {
-    /* Fall back to the old name so a bundle built before the icon was
-     * replaced still shows something rather than nothing. */
-    return [NSImage imageNamed:@"MacLC"] ?: [NSImage imageNamed:@"VLC"];
-}
-
-+ (NSImage *)VLCXmasAppIconImage
-{
-    return [NSImage imageNamed:@"VLC-Xmas"];
+    return [NSImage imageNamed:@"MacLC"];
 }
 
 + (NSImage *)VLCStatusBarIconImage
 {
-    return [NSImage imageNamed:@"VLCStatusBarIcon"];
+    return [NSImage imageNamed:@"MacLCStatusBarIcon"];
 }
 
 + (NSImage *)VLCSidebarMovieImage
