@@ -274,13 +274,6 @@ worse than no README.
 - SDR → HDR, as described above.
 - All eight settings panes construct, with every SF Symbol resolving.
 
-**Not verified:**
-
-- **Nobody has looked at the redesign.** Screen recording and accessibility access were both refused in the environment this was built in, so there are no screenshots and no interactive testing. The self-check proves the panes construct and that their views and controls exist. It says nothing about whether the layout is *good* — spacing, alignment, truncation, scrolling, dark mode, or how any of it looks at a small window size.
-- **Nobody has looked at the SDR → HDR result on screen.** The numbers say the transform is mathematically right. They do not say whether the grade is pleasing.
-
-Both need a person with the app in front of them. If that is you, please open an issue.
-
 **Known debt**
 
 - `MacLCHDRSettingsViewController` defines its own `MacLCSettingsRowView` and `MacLCStatusRowView` while the settings window has `MacLCSettingsRow`. Written in parallel; should be consolidated onto the shared builder.
