@@ -43,6 +43,21 @@ have to rediscover any of it.
   that declares it.
 - **Window and playback chrome** — unified toolbar, real source-list sidebar,
   floating HUD controls over video, empty states.
+- **SDR to HDR** (`macosx-sdr-to-hdr`, `macosx-sdr-to-hdr-boost`) — one switch
+  that plays ordinary files through the display's extended range.
+  `modules/video_output/apple/VLCHDRExpander.{h,m}` re-encodes each SDR picture
+  as PQ / BT.2020 10-bit in a Metal compute pass: de-quantise, linearise with
+  the source transfer function, expand highlights, convert the primaries, PQ,
+  then write `x420`. The expansion curve is the identity at and below a knee at
+  half SDR white and quadratic above it, matching value and slope at the knee
+  and landing SDR white on the boost, applied to the largest component so hue
+  and saturation do not move. Effective boost is `min(user boost, screen
+  headroom)`, and the result carries mastering-display metadata describing the
+  volume that was generated, so the compositor does not tone-map it back down.
+  Wired into `RenderPicture` in `VLCSampleBufferDisplay.m`, which skips it for
+  HDR sources and for HDR modes 2 and 3. The same two variables are registered
+  on the video output thread as well, so the settings pane can switch it while
+  a file is playing rather than only for the next one.
 
 ## What was verified, and how
 
@@ -57,6 +72,22 @@ Verified by building and running:
 - `--macosx-edr-headroom=2.0` is picked up as a user override and propagated.
 - The brand substitution passes 22 cases, including `VLC.app`, `VLCKit`,
   `libvlccore`, `vlc://quit`, `VLC_PLUGIN_PATH` and a French UI string.
+- SDR to HDR, on an M3 Max with 6.15x display headroom. The shader was checked
+  against a CPU reference of the same transform written separately: luma and
+  chroma agree to the code on an eight-step ramp, the bottom six bits of every
+  16-bit word are clear, and decoding the result back through PQ gives the
+  luminance SDR would have shown for every input at or below the knee, rising
+  monotonically to exactly the boost at SDR white. Playback was exercised for
+  all four input formats the expander accepts — `420v`, `420f`, `x420` and
+  `BGRA` — and an HDR10 clip under the same switch is left untouched. The pass
+  costs 0.53 ms at 1080p and 0.91 ms at 4K including the synchronous wait; a
+  60-second 4K run finishes in the same wall-clock time as with the switch off
+  and its memory is flat against a 20-second one. The harness that measures all
+  of this is not in the tree; it lives in the session scratch directory as
+  `shadertest.m` and needs only clang and Metal.
+
+  Nobody has looked at the result on screen: the numbers say the transform is
+  right, they do not say whether the grade is pleasing.
 
 ## What the self-check found
 
@@ -66,7 +97,7 @@ Verified by building and running:
 pane=General    title="General"      symbol=YES views=136 controls=45 status=OK
 pane=Playback   title="Playback"     symbol=YES views=223 controls=76 status=OK
 pane=Video      title="Video"        symbol=YES views=281 controls=96 status=OK
-pane=HDR        title="HDR & Colour" symbol=YES views=186 controls=70 status=OK
+pane=HDR        title="HDR & Colour" symbol=YES views=204 controls=77 status=OK
 pane=Audio      title="Audio"        symbol=YES views=237 controls=80 status=OK
 pane=Subtitles  title="Subtitles"    symbol=YES views=200 controls=68 status=OK
 pane=Interface  title="Interface"    symbol=YES views=145 controls=49 status=OK

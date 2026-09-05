@@ -179,6 +179,20 @@ vlc_module_begin()
 #define EDR_HEADROOM_LONGTEXT N_( \
     "Controls the extended dynamic range brightness scaling factor (0.0 for auto screen headroom).")
 
+#define SDR_TO_HDR_TEXT N_("Play SDR video in HDR")
+#define SDR_TO_HDR_LONGTEXT N_( \
+    "Expands standard dynamic range video into the display's extended range, " \
+    "on the GPU. Shadows and mid-tones are left as they are; only highlights " \
+    "are lifted, up to the limit set below or the screen's own headroom, " \
+    "whichever is lower. Has no effect on a display without extended range, " \
+    "and none on video that is already HDR.")
+
+#define SDR_TO_HDR_BOOST_TEXT N_("SDR to HDR highlight boost")
+#define SDR_TO_HDR_BOOST_LONGTEXT N_( \
+    "How much brighter than SDR white the brightest highlights are allowed to " \
+    "become, as a multiple. 1.0 disables the expansion; 4.0 is a natural " \
+    "looking default; higher values are more dramatic and less faithful.")
+
 static const int hdr_mode_list[] = { 0, 1, 2, 3 };
 static const char *const hdr_mode_list_text[] = {
     N_("Auto (Native EDR on HDR screens, Tonemap on SDR)"),
@@ -194,6 +208,9 @@ static const char *const hdr_mode_list_text[] = {
         add_integer("macosx-hdr-mode", 0, HDR_MODE_TEXT, HDR_MODE_LONGTEXT)
             change_integer_list(hdr_mode_list, hdr_mode_list_text)
         add_float("macosx-edr-headroom", 0.0f, EDR_HEADROOM_TEXT, EDR_HEADROOM_LONGTEXT)
+        add_bool("macosx-sdr-to-hdr", false, SDR_TO_HDR_TEXT, SDR_TO_HDR_LONGTEXT)
+        add_float_with_range("macosx-sdr-to-hdr-boost", 4.0f, 1.0f, 16.0f,
+                             SDR_TO_HDR_BOOST_TEXT, SDR_TO_HDR_BOOST_LONGTEXT)
 
     add_submodule()
         set_description("Mac OS X Video Output Provider")

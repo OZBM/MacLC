@@ -90,14 +90,16 @@ endif
 
 if HAVE_DARWIN
 if !HAVE_WATCHOS
-libsamplebufferdisplay_plugin_la_SOURCES = video_output/apple/VLCSampleBufferDisplay.m codec/vt_utils.c codec/vt_utils.h
+libsamplebufferdisplay_plugin_la_SOURCES = video_output/apple/VLCSampleBufferDisplay.m \
+	video_output/apple/VLCHDRExpander.m video_output/apple/VLCHDRExpander.h \
+	codec/vt_utils.c codec/vt_utils.h
 libsamplebufferdisplay_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-arc
 if HAVE_OSX
 libsamplebufferdisplay_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(vout_RPATH) \
-	-Wl,-framework,AVFoundation,-framework,AVKit,-framework,Cocoa,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage
+	-Wl,-framework,AVFoundation,-framework,AVKit,-framework,Cocoa,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,IOSurface
 else
 libsamplebufferdisplay_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(vout_RPATH) \
-	-Wl,-framework,AVFoundation,-framework,Foundation,-framework,AVKit,-framework,UIKit,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage
+	-Wl,-framework,AVFoundation,-framework,Foundation,-framework,AVKit,-framework,UIKit,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,IOSurface
 endif
 vout_PLUGINS += libsamplebufferdisplay_plugin.la
 endif

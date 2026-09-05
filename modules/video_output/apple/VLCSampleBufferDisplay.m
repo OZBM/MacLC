@@ -34,6 +34,7 @@
 #include <vlc_modules.h>
 
 #import "VLCDrawable.h"
+#import "VLCHDRExpander.h"
 
 #import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
@@ -564,6 +565,11 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) id<VLCPixelBufferRotationContext> rotationContext;
     @property (nonatomic) float userHeadroom;
     @property (nonatomic) int hdrMode;
+    @property (nonatomic) BOOL sdrToHdr;
+    @property (nonatomic) float sdrToHdrBoost;
+    @property (nonatomic) VLCHDRExpander *hdrExpander;
+    @property (nonatomic) BOOL hdrExpanderFailed;
+    @property (nonatomic) BOOL hasLoggedExpansion;
     @property (nonatomic) CGFloat currentHeadroom;
     @property (nonatomic) bool warnedToneMapFallback;
     @property (nonatomic) const char *effectivePdrStr;
@@ -1346,6 +1352,19 @@ shouldInheritContentsScale:(CGFloat)newScale
     _pipcontroller = NULL;
 }
 
+/* The expander is built the first time a picture actually needs it: it compiles
+ * its shaders, which is not worth doing for a session that never turns the
+ * feature on. A failure is remembered so it is not retried for every frame. */
+- (VLCHDRExpander *)hdrExpander
+{
+    if (_hdrExpander == nil && !_hdrExpanderFailed) {
+        _hdrExpander = [VLCHDRExpander expanderForObject:VLC_OBJECT(_vd)];
+        if (_hdrExpander == nil)
+            _hdrExpanderFailed = YES;
+    }
+    return _hdrExpander;
+}
+
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
@@ -1370,6 +1389,30 @@ static int EdrHeadroomCallback(vlc_object_t *obj, char const *name,
     return VLC_SUCCESS;
 }
 
+static int SdrToHdrCallback(vlc_object_t *obj, char const *name,
+                            vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.sdrToHdr = cur.b_bool;
+    sys.hasLoggedExpansion = NO;
+    msg_Dbg(sys.vd, "SDR to HDR expansion %s via variable callback",
+            cur.b_bool ? "enabled" : "disabled");
+    return VLC_SUCCESS;
+}
+
+static int SdrToHdrBoostCallback(vlc_object_t *obj, char const *name,
+                                 vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.sdrToHdrBoost = cur.f_float;
+    sys.hasLoggedExpansion = NO;
+    msg_Dbg(sys.vd, "SDR to HDR boost updated via variable callback: %.2f",
+            cur.f_float);
+    return VLC_SUCCESS;
+}
+
 static int HdrModeCallback(vlc_object_t *obj, char const *name,
                            vlc_value_t prev, vlc_value_t cur, void *data)
 {
@@ -1388,6 +1431,19 @@ static void Close(vout_display_t *vd)
 
     var_DelCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)sys);
     var_DelCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)sys);
+    var_DelCallback(vd, "macosx-sdr-to-hdr", SdrToHdrCallback, (__bridge void*)sys);
+    var_DelCallback(vd, "macosx-sdr-to-hdr-boost", SdrToHdrBoostCallback,
+                    (__bridge void*)sys);
+
+    vlc_object_t *vout_obj = vlc_object_parent(vd);
+    if (vout_obj != NULL) {
+        var_DelCallback(vout_obj, "macosx-sdr-to-hdr", SdrToHdrCallback,
+                        (__bridge void*)sys);
+        var_DelCallback(vout_obj, "macosx-sdr-to-hdr-boost",
+                        SdrToHdrBoostCallback, (__bridge void*)sys);
+        var_Destroy(vout_obj, "macosx-sdr-to-hdr");
+        var_Destroy(vout_obj, "macosx-sdr-to-hdr-boost");
+    }
     var_Destroy(vd, "edr-headroom-effective");
 
     DeleteCVPXConverter(sys->converter);
@@ -1482,6 +1538,55 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         render_fmt.lighting = vd->fmt->lighting;
 
     int hdr_mode = sys.hdrMode;
+
+    const bool source_is_hdr =
+        render_fmt.transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
+        render_fmt.transfer == TRANSFER_FUNC_HLG;
+
+    /* Dynamic range expansion. An SDR picture is re-encoded as PQ / BT.2020 so
+     * that the compositor lights up the display's extended range for it; the
+     * expansion itself leaves everything below the knee alone, so mid-tones
+     * look the same as they did in SDR. Only worth doing when the layer is
+     * asking for HDR in the first place. */
+    if (sys.sdrToHdr && !source_is_hdr && (hdr_mode == 0 || hdr_mode == 1)) {
+        VLCHDRExpander *expander = sys.hdrExpander;
+        if (expander != nil) {
+            expander.boost = sys.sdrToHdrBoost;
+
+            CVPixelBufferRef expanded =
+                [expander expandPixelBuffer:pixelBuffer
+                                     format:&render_fmt
+                                   headroom:(float)sys.currentHeadroom];
+            if (expanded != NULL) {
+                CVPixelBufferRelease(pixelBuffer);
+                pixelBuffer = expanded;
+
+                render_fmt.transfer = TRANSFER_FUNC_SMPTE_ST2084;
+                render_fmt.primaries = COLOR_PRIMARIES_BT2020;
+                render_fmt.space = COLOR_SPACE_BT2020;
+                render_fmt.color_range = COLOR_RANGE_LIMITED;
+
+                /* Describe the volume that was actually generated, so the
+                 * compositor has no reason to tone-map the expansion back
+                 * down. Luminances are in 0.0001 cd/m^2, per ST 2086. */
+                const float peak_nits = expander.lastPeakNits;
+                memset(&render_fmt.mastering, 0, sizeof(render_fmt.mastering));
+                render_fmt.mastering.max_luminance =
+                    (uint32_t)(peak_nits * 10000.0f);
+                render_fmt.mastering.min_luminance = 1;
+                render_fmt.lighting.MaxCLL = (uint16_t)peak_nits;
+                render_fmt.lighting.MaxFALL = (uint16_t)(peak_nits / 4.0f);
+
+                if (!sys.hasLoggedExpansion) {
+                    msg_Dbg(vd, "SDR to HDR: expanding to %.0f cd/m^2 "
+                                "(boost %.2f, display headroom %.2f)",
+                            peak_nits, sys.sdrToHdrBoost, sys.currentHeadroom);
+                    sys.hasLoggedExpansion = YES;
+                }
+            }
+        }
+    }
+
     switch (hdr_mode) {
     case 1: /* Force Native EDR / HDR */
         if (render_fmt.transfer != TRANSFER_FUNC_HLG)
@@ -1900,6 +2005,36 @@ static int Open (vout_display_t *vd,
         var_Create(vd, "macosx-hdr-mode", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
         var_AddCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)sys);
 
+        sys.sdrToHdr = var_InheritBool(vd, "macosx-sdr-to-hdr");
+        sys.sdrToHdrBoost = var_InheritFloat(vd, "macosx-sdr-to-hdr-boost");
+        if (sys.sdrToHdr) {
+            msg_Dbg(vd, "SDR to HDR expansion enabled, boost %.2f",
+                    sys.sdrToHdrBoost);
+        }
+
+        var_Create(vd, "macosx-sdr-to-hdr", VLC_VAR_BOOL | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, "macosx-sdr-to-hdr", SdrToHdrCallback,
+                        (__bridge void*)sys);
+        var_Create(vd, "macosx-sdr-to-hdr-boost",
+                   VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, "macosx-sdr-to-hdr-boost", SdrToHdrBoostCallback,
+                        (__bridge void*)sys);
+
+        /* The same two variables on the video output thread, which is what an
+         * interface can reach while a file is playing. Setting them there
+         * switches the expansion on or off without restarting playback. */
+        vlc_object_t *vout_obj = vlc_object_parent(vd);
+        if (vout_obj != NULL) {
+            var_Create(vout_obj, "macosx-sdr-to-hdr",
+                       VLC_VAR_BOOL | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, "macosx-sdr-to-hdr", SdrToHdrCallback,
+                            (__bridge void*)sys);
+            var_Create(vout_obj, "macosx-sdr-to-hdr-boost",
+                       VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, "macosx-sdr-to-hdr-boost",
+                            SdrToHdrBoostCallback, (__bridge void*)sys);
+        }
+
         vd->sys = (__bridge_retained void*)sys;
 
         static const struct vlc_display_operations ops = {
@@ -1943,6 +2078,20 @@ static int Open (vout_display_t *vd,
 #define EDR_HEADROOM_LONGTEXT N_( \
     "Controls the extended dynamic range brightness scaling factor (0.0 for auto screen headroom, >= 1.0 to force specific headroom).")
 
+#define SDR_TO_HDR_TEXT N_("Play SDR video in HDR")
+#define SDR_TO_HDR_LONGTEXT N_( \
+    "Expands standard dynamic range video into the display's extended range, " \
+    "on the GPU. Shadows and mid-tones are left as they are; only highlights " \
+    "are lifted, up to the limit set below or the screen's own headroom, " \
+    "whichever is lower. Has no effect on a display without extended range, " \
+    "and none on video that is already HDR.")
+
+#define SDR_TO_HDR_BOOST_TEXT N_("SDR to HDR highlight boost")
+#define SDR_TO_HDR_BOOST_LONGTEXT N_( \
+    "How much brighter than SDR white the brightest highlights are allowed to " \
+    "become, as a multiple. 1.0 disables the expansion; 4.0 is a natural " \
+    "looking default; higher values are more dramatic and less faithful.")
+
 static const int hdr_mode_values[] = { 0, 1, 2, 3 };
 static const char *const hdr_mode_names[] = {
     N_("Auto (Native EDR on HDR screens, Tonemap on SDR)"),
@@ -1968,6 +2117,9 @@ vlc_module_begin()
     add_integer("macosx-hdr-mode", 0, HDR_MODE_TEXT, HDR_MODE_LONGTEXT)
         change_integer_list(hdr_mode_values, hdr_mode_names)
     add_float("macosx-edr-headroom", 0.0f, EDR_HEADROOM_TEXT, EDR_HEADROOM_LONGTEXT)
+    add_bool("macosx-sdr-to-hdr", false, SDR_TO_HDR_TEXT, SDR_TO_HDR_LONGTEXT)
+    add_float_with_range("macosx-sdr-to-hdr-boost", 4.0f, 1.0f, 16.0f,
+                         SDR_TO_HDR_BOOST_TEXT, SDR_TO_HDR_BOOST_LONGTEXT)
     set_help(HELP_TEXT)
     set_callback_display(Open, 600)
 vlc_module_end()

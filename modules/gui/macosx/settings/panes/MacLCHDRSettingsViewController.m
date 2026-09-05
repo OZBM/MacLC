@@ -44,6 +44,7 @@
 #include <vlc_interface.h>
 #include <vlc_input_item.h>
 #include <vlc_es.h>
+#include <vlc_vout.h>
 
 #define SDR_NOMINAL_WHITE_NITS 100.0f
 
@@ -230,6 +231,13 @@
     NSArray<NSButton *> *_hdrModeRadioButtons;
     NSInteger _currentHdrMode;
 
+    // SDR to HDR (macosx-sdr-to-hdr, macosx-sdr-to-hdr-boost)
+    NSButton *_sdrToHdrCheckbox;
+    NSSlider *_sdrToHdrBoostSlider;
+    NSTextField *_sdrToHdrBoostLabel;
+    NSTextField *_sdrToHdrBoostCaption;
+    float _currentSdrToHdrBoost;
+
     // Brightness Headroom (macosx-edr-headroom)
     NSButton *_headroomAutoCheckbox;
     NSSlider *_headroomSlider;
@@ -310,6 +318,7 @@
 
     [self buildStatusCard];
     [self buildPrimaryControlCard];
+    [self buildSDRToHDRCard];
     [self buildHeadroomCard];
     [self buildAdvancedSection];
     [self buildFooter];
@@ -347,6 +356,9 @@
         @"lanczos", @"spline", @"dither", @"videotoolbox", @"hardware decoding",
         @"cvpx", @"p010", @"bgra", @"sdr", @"hlg", @"dolby vision",
         @"samplebufferdisplay", @"caopengllayer",
+        @"inverse tone mapping", @"dynamic range expansion", @"fake hdr",
+        @"sdr to hdr", @"convert sdr", @"macosx-sdr-to-hdr",
+        @"macosx-sdr-to-hdr-boost",
         @"macosx-hdr-mode", @"macosx-edr-headroom", @"force-darwin-legacy-display",
         @"gl-tone-mapping-function", @"gl-tone-mapping-param", @"gl-gamut-mapping",
         @"gl-inverse-tone-mapping", @"gl-upscaler", @"gl-downscaler",
@@ -383,6 +395,12 @@
     for (NSButton *btn in _hdrModeRadioButtons) {
         btn.state = (btn.tag == _currentHdrMode) ? NSControlStateValueOn : NSControlStateValueOff;
     }
+
+    /* SDR to HDR */
+    _sdrToHdrCheckbox.state = MacLCConfigGetInt("macosx-sdr-to-hdr", 0)
+        ? NSControlStateValueOn : NSControlStateValueOff;
+    _currentSdrToHdrBoost = MacLCConfigGetFloat("macosx-sdr-to-hdr-boost", 4.0f);
+    [self updateSdrToHdrControls];
 
     /* Headroom */
     _currentHeadroom = MacLCConfigGetFloat("macosx-edr-headroom", 0.0f);
@@ -431,6 +449,12 @@
     /* Primary */
     MacLCConfigPutInt("macosx-hdr-mode", _currentHdrMode);
 
+    /* SDR to HDR */
+    const BOOL sdrToHdr = (_sdrToHdrCheckbox.state == NSControlStateValueOn);
+    MacLCConfigPutInt("macosx-sdr-to-hdr", sdrToHdr ? 1 : 0);
+    MacLCConfigPutFloat("macosx-sdr-to-hdr-boost", _currentSdrToHdrBoost);
+    [self pushSdrToHdrToRunningVideoOutput];
+
     /* Headroom */
     MacLCConfigPutFloat("macosx-edr-headroom", _currentHeadroom);
 
@@ -464,6 +488,10 @@
     for (NSButton *btn in _hdrModeRadioButtons) {
         btn.state = (btn.tag == 0) ? NSControlStateValueOn : NSControlStateValueOff;
     }
+
+    _sdrToHdrCheckbox.state = NSControlStateValueOff;
+    _currentSdrToHdrBoost = 4.0f;
+    [self updateSdrToHdrControls];
 
     _currentHeadroom = 0.0f;
     [self updateHeadroomControlsWithVal:0.0f];
@@ -609,6 +637,89 @@
     }
 
     _hdrModeRadioButtons = buttons;
+    [_mainStackView addArrangedSubview:card];
+    [card.widthAnchor constraintEqualToAnchor:_mainStackView.widthAnchor constant:-2 * MacLCDesign.windowContentMargin].active = YES;
+}
+
+- (void)buildSDRToHDRCard
+{
+    MacLCCardView *card = [MacLCCardView cardViewWithTitle:_NS("SDR to HDR")];
+    card.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _sdrToHdrCheckbox = [NSButton checkboxWithTitle:_NS("Play SDR video in HDR")
+                                             target:self
+                                             action:@selector(sdrToHdrToggled:)];
+    _sdrToHdrCheckbox.font = MacLCDesign.bodyEmphasized;
+    _sdrToHdrCheckbox.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *explanationLabel = [NSTextField wrappingLabelWithString:
+        _NS("An ordinary video file carries no HDR signal, so the screen shows "
+            "it at standard brightness however capable it is. Switch this on "
+            "and every such file is re-graded for the display's extended range "
+            "as it plays: shadows and mid-tones come out exactly as they were, "
+            "and only the highlights are lifted, so the picture gains depth "
+            "without looking washed out. It needs a screen with extended "
+            "range — the Liquid Retina XDR display of an Apple silicon MacBook "
+            "Pro, or an external HDR display — and it leaves video that is "
+            "already HDR alone.")];
+    explanationLabel.font = MacLCDesign.caption;
+    explanationLabel.textColor = MacLCDesign.secondaryLabel;
+    explanationLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    explanationLabel.accessibilityRole = NSAccessibilityStaticTextRole;
+
+    NSView *boostRow = [[NSView alloc] init];
+    boostRow.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *boostTitle = [NSTextField labelWithString:_NS("Highlight boost")];
+    boostTitle.font = MacLCDesign.body;
+    boostTitle.textColor = MacLCDesign.primaryLabel;
+    boostTitle.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _sdrToHdrBoostLabel = [NSTextField labelWithString:@"4.0x"];
+    _sdrToHdrBoostLabel.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleBody];
+    _sdrToHdrBoostLabel.textColor = MacLCDesign.primaryLabel;
+    _sdrToHdrBoostLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    [boostRow addSubview:boostTitle];
+    [boostRow addSubview:_sdrToHdrBoostLabel];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [boostTitle.leadingAnchor constraintEqualToAnchor:boostRow.leadingAnchor],
+        [boostTitle.topAnchor constraintEqualToAnchor:boostRow.topAnchor],
+        [boostTitle.bottomAnchor constraintEqualToAnchor:boostRow.bottomAnchor],
+
+        [_sdrToHdrBoostLabel.trailingAnchor constraintEqualToAnchor:boostRow.trailingAnchor],
+        [_sdrToHdrBoostLabel.centerYAnchor constraintEqualToAnchor:boostTitle.centerYAnchor]
+    ]];
+
+    _sdrToHdrBoostSlider = [[NSSlider alloc] init];
+    _sdrToHdrBoostSlider.minValue = 1.0;
+    _sdrToHdrBoostSlider.maxValue = 16.0;
+    _sdrToHdrBoostSlider.numberOfTickMarks = 16;
+    _sdrToHdrBoostSlider.allowsTickMarkValuesOnly = NO;
+    _sdrToHdrBoostSlider.continuous = YES;
+    _sdrToHdrBoostSlider.target = self;
+    _sdrToHdrBoostSlider.action = @selector(sdrToHdrBoostChanged:);
+    _sdrToHdrBoostSlider.translatesAutoresizingMaskIntoConstraints = NO;
+    [_sdrToHdrBoostSlider setAccessibilityLabel:_NS("SDR to HDR highlight boost")];
+
+    _sdrToHdrBoostCaption = [NSTextField wrappingLabelWithString:@""];
+    _sdrToHdrBoostCaption.font = MacLCDesign.caption;
+    _sdrToHdrBoostCaption.textColor = MacLCDesign.secondaryLabel;
+    _sdrToHdrBoostCaption.translatesAutoresizingMaskIntoConstraints = NO;
+    _sdrToHdrBoostCaption.accessibilityRole = NSAccessibilityStaticTextRole;
+
+    [card.contentStackView addArrangedSubview:_sdrToHdrCheckbox];
+    [card.contentStackView addArrangedSubview:explanationLabel];
+    [card.contentStackView addArrangedSubview:boostRow];
+    [card.contentStackView addArrangedSubview:_sdrToHdrBoostSlider];
+    [card.contentStackView addArrangedSubview:_sdrToHdrBoostCaption];
+
+    [explanationLabel.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
+    [boostRow.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
+    [_sdrToHdrBoostSlider.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
+    [_sdrToHdrBoostCaption.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
+
     [_mainStackView addArrangedSubview:card];
     [card.widthAnchor constraintEqualToAnchor:_mainStackView.widthAnchor constant:-2 * MacLCDesign.windowContentMargin].active = YES;
 }
@@ -1183,6 +1294,86 @@
     [self refreshLiveStatus];
 }
 
+- (void)sdrToHdrToggled:(NSButton *)sender
+{
+    VLC_UNUSED(sender);
+    [self updateSdrToHdrControls];
+    _hasUnsavedChanges = YES;
+    [self refreshLiveStatus];
+}
+
+- (void)sdrToHdrBoostChanged:(NSSlider *)sender
+{
+    _currentSdrToHdrBoost = sender.floatValue;
+    [self updateSdrToHdrControls];
+    _hasUnsavedChanges = YES;
+}
+
+- (void)updateSdrToHdrControls
+{
+    const BOOL enabled = (_sdrToHdrCheckbox.state == NSControlStateValueOn);
+
+    if (_currentSdrToHdrBoost < 1.0f)
+        _currentSdrToHdrBoost = 1.0f;
+    else if (_currentSdrToHdrBoost > 16.0f)
+        _currentSdrToHdrBoost = 16.0f;
+
+    _sdrToHdrBoostSlider.enabled = enabled;
+    _sdrToHdrBoostSlider.floatValue = _currentSdrToHdrBoost;
+    _sdrToHdrBoostLabel.stringValue =
+        [NSString stringWithFormat:@"%.1fx", _currentSdrToHdrBoost];
+    _sdrToHdrBoostLabel.textColor =
+        enabled ? MacLCDesign.primaryLabel : MacLCDesign.secondaryLabel;
+
+    NSScreen *screen = self.view.window.screen ?: [NSScreen mainScreen];
+    const CGFloat screenHeadroom =
+        screen.maximumExtendedDynamicRangeColorComponentValue;
+    const float applied = (screenHeadroom > 1.0 && screenHeadroom < _currentSdrToHdrBoost)
+        ? (float)screenHeadroom : _currentSdrToHdrBoost;
+
+    NSString *caption;
+    if (screenHeadroom <= 1.0) {
+        caption = _NS("This display has no extended range right now, so there "
+                      "would be nothing to expand into and the picture is left "
+                      "alone.");
+    } else {
+        caption = [NSString stringWithFormat:
+            _NS("Highlights reach about %.0f cd/m2. This display currently "
+                "allows %.1fx, and the lower of the two is what is used."),
+            applied * SDR_NOMINAL_WHITE_NITS, screenHeadroom];
+    }
+
+    /* The expansion is part of the default Apple video engine. The OpenGL
+     * engine has its own, under Advanced. */
+    const BOOL isOpenGL = (_legacyFallbackCheckbox.state == NSControlStateValueOn)
+                       || (_voutPopup.selectedTag == 2);
+    if (isOpenGL) {
+        caption = [caption stringByAppendingString:
+            _NS(" The OpenGL engine is selected below, which does its own "
+                "expansion: use Inverse tone mapping under Advanced instead.")];
+    }
+
+    _sdrToHdrBoostCaption.stringValue = caption;
+}
+
+/* Applies the toggle to whatever is playing, so it can be judged against the
+ * picture instead of on the next file. The variables live on the video output
+ * thread; when the running display module is not the one that implements the
+ * expansion, the sets simply find nothing and do nothing. */
+- (void)pushSdrToHdrToRunningVideoOutput
+{
+    VLCPlayerController *playerController =
+        VLCMain.sharedInstance.playQueueController.playerController;
+    vout_thread_t *vout = [playerController mainVideoOutputThread];
+    if (vout == NULL)
+        return;
+
+    var_SetBool(vout, "macosx-sdr-to-hdr",
+                _sdrToHdrCheckbox.state == NSControlStateValueOn);
+    var_SetFloat(vout, "macosx-sdr-to-hdr-boost", _currentSdrToHdrBoost);
+    vout_Release(vout);
+}
+
 - (void)headroomAutoToggled:(NSButton *)sender
 {
     if (sender.state == NSControlStateValueOn) {
@@ -1261,6 +1452,8 @@
     for (MacLCSettingsRowView *row in _openGLEngineRows) {
         [row setRowEnabled:isOpenGL];
     }
+
+    [self updateSdrToHdrControls];
 }
 
 #pragma mark - String Mapping Helpers
