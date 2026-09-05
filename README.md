@@ -281,25 +281,7 @@ worse than no README.
 - Adding a `_Nullable` declaration to `NSString+Helpers.h` outside any `NS_ASSUME_NONNULL` region produces 38 nullability warnings across the module.
 - The seasonal Xmas icon is still upstream art — it belongs to an easter egg, and replacing it is a separate piece of drawing.
 - The Dolby Vision RPU bitstream parser on `dovi-rpu-wip` desynchronises at partition fields.
-- libplacebo's Vulkan backend still cannot be elected on Darwin: there is no Vulkan windowing platform module (`VK_EXT_metal_surface` / `CAMetalLayer` bridge). See `VULKAN-DARWIN-PLAN.md`.
-
----
-
-## Design documents
-
-The working documents are kept in the tree, deliberately — the next person to touch this
-code should not have to rediscover any of it.
-
-| Path | What it is |
-|---|---|
-| `maclc-handoff/DESIGN-BRIEF.md` | The north star: product identity, design principles, visual language, settings model, HDR specification |
-| `maclc-handoff/VERIFIED-FACTS.md` | The real layout and APIs of `modules/gui/macosx/`, checked against the tree |
-| `maclc-handoff/PANE-CONTRACT.md` | The `MacLCSettingsPane` protocol and the row idiom |
-| `maclc-handoff/RECON-HDR.md` | Every config option affecting HDR on macOS, with `file:line` evidence |
-| `maclc-handoff/RECON-BRANDING.md` | The rename audit — and everything that must **not** be renamed |
-| `hdr-handoff/HANDOFF-HDR-MACOS.md` | The full HDR architecture and implementation record |
-| `tools/hdr-probe/RESULTS.md` | Measured VideoToolbox and EDR capabilities on M3 Max |
-| `VULKAN-DARWIN-PLAN.md` | Why a Darwin Vulkan backend cannot be built yet |
+- libplacebo's Vulkan backend still cannot be elected on Darwin: there is no Vulkan windowing platform module (`VK_EXT_metal_surface` / `CAMetalLayer` bridge).
 
 ---
 

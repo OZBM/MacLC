@@ -69,3 +69,9 @@ build/
 *.la
 .deps/
 .libs/
+
+# design/handoff working docs, not part of the shipped source
+maclc-handoff/
+hdr-handoff/
+tools/hdr-probe/
+VULKAN-DARWIN-PLAN.md
