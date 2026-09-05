@@ -11,7 +11,7 @@
 	<key>CFBundleExecutable</key>
 	<string>MacLC</string>
 	<key>CFBundleIconFile</key>
-	<string>VLC.icns</string>
+	<string>MacLC.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.videolan.vlc</string>
 	<key>CFBundleInfoDictionaryVersion</key>
