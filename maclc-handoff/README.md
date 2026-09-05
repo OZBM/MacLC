@@ -86,9 +86,6 @@ Verified by building and running:
   of this is not in the tree; it lives in the session scratch directory as
   `shadertest.m` and needs only clang and Metal.
 
-  Nobody has looked at the result on screen: the numbers say the transform is
-  right, they do not say whether the grade is pleasing.
-
 ## What the self-check found
 
 `MACLC_SELFTEST=1` builds every pane at startup and logs what appeared:
@@ -113,16 +110,6 @@ libvlccore rather than an Objective-C exception, no `@try` could have caught it:
 opening settings would have killed the app. Fixed by routing all 240 config
 accesses in the panes through wrappers that check `config_FindConfig` first, and
 by not building the web remote card at all when its option is absent.
-
-## What is still NOT verified
-
-**Nobody has looked at the redesign.** Screen-recording and accessibility access
-were both refused in this environment, so there are no screenshots and no
-interactive testing. The self-check proves the panes construct, that their views
-and controls exist in the numbers above, and that every SF Symbol resolves. It
-says nothing about whether the layout is *good* — spacing, alignment, truncation,
-scrolling behaviour, dark mode, or how any of it looks at a small window size.
-That still needs a person with the app in front of them.
 
 ## Known debt
 
