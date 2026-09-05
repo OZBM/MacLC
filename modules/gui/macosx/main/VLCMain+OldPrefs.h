@@ -27,6 +27,13 @@
 - (void)resetAndReinitializeUserDefaults;
 - (void)migrateOldPreferences;
 
+/**
+ * Carry settings, library and defaults over from the bundle identifier this
+ * app used to share with upstream VLC. Idempotent, and a no-op once the new
+ * locations exist. Safe to call on every launch.
+ */
+- (void)migrateFromLegacyBundleIdentifier;
+
 - (void)resetPreferences;
 
 @end

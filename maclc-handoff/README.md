@@ -16,10 +16,18 @@ have to rediscover any of it.
 
 ## What was built
 
-- **Rename to MacLC** — bundle name, display name and executable. The bundle
-  identifier stays `org.videolan.vlc` on purpose: changing it moves the
-  preferences domain, the application support directory and the sandbox
-  container, so settings, library and privacy permissions would silently vanish.
+- **Rename to MacLC** — bundle name, display name, executable, icon and bundle
+  identifier. The identifier was initially left as `org.videolan.vlc` to keep
+  user settings in place, but that turned out to be untenable: macOS identifies
+  running apps by it, so with upstream VLC also installed, Stage Manager and the
+  Dock resolved MacLC to `/Applications/VLC.app` and drew its cone — and MacLC
+  was reading and writing the real VLC's configuration and media library. It is
+  now `org.maclc.MacLC`, and `-migrateFromLegacyBundleIdentifier` copies the old
+  preferences directory, application-support directory and user-defaults domain
+  across on first launch. It only ever copies, so an older build still finds
+  everything where it left it. Core `vlcrc` options are read by libvlc before
+  the interface module runs, so those take effect from the second launch;
+  the media library and user defaults are correct immediately.
   Visible strings are substituted *after* `vlc_gettext` returns, which keeps
   every translation in `po/` valid. Sparkle's update feed is blanked so the app
   cannot replace itself with upstream VLC.

@@ -376,6 +376,8 @@ static VLCMain *sharedInstance = nil;
     if (!_p_intf)
         return;
 
+    [self migrateFromLegacyBundleIdentifier];
+
     NSUserDefaults * const defaults = NSUserDefaults.standardUserDefaults;
     if ([defaults integerForKey:kVLCPreferencesVersion] != 4) {
         [defaults setBool:YES forKey:VLCPlaybackEndViewEnabledKey];

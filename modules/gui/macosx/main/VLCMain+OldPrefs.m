@@ -32,7 +32,56 @@
 #import "extensions/NSString+Helpers.h"
 #import "preferences/VLCSimplePrefsController.h"
 
+/* MacLC shipped for a while under upstream VLC's bundle identifier. That kept
+ * user settings in place across the rename, but it also meant macOS could not
+ * tell the two apps apart - Stage Manager and the Dock resolved the identifier
+ * to whichever VLC.app was installed and drew its icon - and MacLC was reading
+ * and writing the real VLC's configuration and media library. */
+static NSString * const kMacLCLegacyBundleIdentifier = @"org.videolan.vlc";
+
 @implementation VLCMain(OldPrefs)
+
+- (void)migrateFromLegacyBundleIdentifier
+{
+    NSString * const identifier = NSBundle.mainBundle.bundleIdentifier;
+    if (identifier == nil || [identifier isEqualToString:kMacLCLegacyBundleIdentifier]) {
+        return;
+    }
+
+    NSFileManager * const fileManager = NSFileManager.defaultManager;
+    NSString * const home = NSHomeDirectory();
+
+    /* Both are named after the bundle identifier; see getAppDependentDir() in
+     * src/darwin/dirs.m. Only ever copy, so a user who goes back to an older
+     * build still finds everything where it was. */
+    for (NSString * const root in @[[home stringByAppendingPathComponent:@"Library/Preferences"],
+                                    [home stringByAppendingPathComponent:@"Library/Application Support"]]) {
+        NSString * const legacyPath = [root stringByAppendingPathComponent:kMacLCLegacyBundleIdentifier];
+        NSString * const currentPath = [root stringByAppendingPathComponent:identifier];
+
+        if ([fileManager fileExistsAtPath:currentPath] ||
+            ![fileManager fileExistsAtPath:legacyPath]) {
+            continue;
+        }
+
+        NSError *error = nil;
+        if ([fileManager copyItemAtPath:legacyPath toPath:currentPath error:&error]) {
+            msg_Info(getIntf(), "carried settings over to %s", currentPath.UTF8String);
+        } else {
+            msg_Warn(getIntf(), "could not carry settings over to %s: %s",
+                     currentPath.UTF8String, error.localizedDescription.UTF8String);
+        }
+    }
+
+    NSUserDefaults * const defaults = NSUserDefaults.standardUserDefaults;
+    if ([defaults persistentDomainForName:identifier].count == 0) {
+        NSDictionary * const legacyDomain =
+            [defaults persistentDomainForName:kMacLCLegacyBundleIdentifier];
+        if (legacyDomain.count > 0) {
+            [defaults setPersistentDomain:legacyDomain forName:identifier];
+        }
+    }
+}
 
 static const int kCurrentPreferencesVersion = 4;
 

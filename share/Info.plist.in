@@ -13,7 +13,7 @@
 	<key>CFBundleIconFile</key>
 	<string>MacLC.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.videolan.vlc</string>
+	<string>org.maclc.MacLC</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
