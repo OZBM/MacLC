@@ -279,8 +279,12 @@
 
 - (void)dealloc
 {
-    intf_thread_t *p_intf = getIntf();
-    msg_Dbg(p_intf, "Deinitializing extensions manager");
+    /* This object can outlive the interface, in which case there is no
+     * interface object left to talk to. */
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf != NULL) {
+        msg_Dbg(p_intf, "Deinitializing extensions manager");
+    }
 
     [self unloadExtensions];
     _extensionDialogProvider = nil;

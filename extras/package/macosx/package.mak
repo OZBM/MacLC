@@ -6,12 +6,14 @@ noinst_DATA = pseudo-bundle
 endif
 
 # Symlink a pseudo-bundle
+# Without contribs there is no Frameworks directory to link to, and the
+# build tree may already carry a real one, so skip that link.
 pseudo-bundle:
 	$(MKDIR_P) $(top_builddir)/bin/Contents/Resources/
 	$(LN_S) -nf $(abs_top_builddir)/modules/gui/macosx/UI $(top_builddir)/bin/Contents/Resources/Base.lproj
 	$(LN_S) -nf $(abs_top_builddir)/modules/gui/macosx/Resources/Assets.car $(top_builddir)/bin/Contents/Resources/Assets.car
 	$(LN_S) -nf $(abs_top_builddir)/share/macosx/Info.plist $(top_builddir)/bin/Contents/Info.plist
-	$(LN_S) -nf $(CONTRIB_DIR)/Frameworks
+	test -z "$(CONTRIB_DIR)" || $(LN_S) -nf $(CONTRIB_DIR)/Frameworks
 	cd $(top_builddir)/bin/Contents/Resources/ && find $(abs_top_srcdir)/modules/gui/macosx/Resources/ -type f -not -path "*.lproj/*" -exec $(LN_S) -f {} \;
 
 macos-install:

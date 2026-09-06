@@ -113,6 +113,7 @@ NSString * const VLCLibraryWindowEmbeddedVideoPlaybackActiveKey = @"embeddedVide
     NSInteger _currentSelectedViewModeSegment;
     VLCVideoWindowCommon *_temporaryAudioDecorativeWindow;
     NSView *_acquiredVideoView;
+    libvlc_int_t *_libvlc;
 }
 
 @property NSTimer *searchInputTimer;
@@ -187,9 +188,12 @@ static int ShowController(vlc_object_t * __unused p_this,
     VLCMain *mainInstance = VLCMain.sharedInstance;
     _playQueueController = [mainInstance playQueueController];
 
-    libvlc_int_t *libvlc = vlc_object_instance(getIntf());
-    var_AddCallback(libvlc, "intf-toggle-fscontrol", ShowFullscreenController, (__bridge void *)self);
-    var_AddCallback(libvlc, "intf-show", ShowController, (__bridge void *)self);
+    /* Keep the instance around so that -dealloc can unregister even when it
+     * runs after the interface has already been torn down and getIntf()
+     * no longer returns a usable object. */
+    _libvlc = vlc_object_instance(getIntf());
+    var_AddCallback(_libvlc, "intf-toggle-fscontrol", ShowFullscreenController, (__bridge void *)self);
+    var_AddCallback(_libvlc, "intf-show", ShowController, (__bridge void *)self);
 
     _libraryTargetView = [[NSView alloc] init];
 
@@ -233,9 +237,11 @@ static int ShowController(vlc_object_t * __unused p_this,
 - (void)dealloc
 {
     [NSNotificationCenter.defaultCenter removeObserver:self];
-    libvlc_int_t *libvlc = vlc_object_instance(getIntf());
-    var_DelCallback(libvlc, "intf-toggle-fscontrol", ShowFullscreenController, (__bridge void *)self);
-    var_DelCallback(libvlc, "intf-show", ShowController, (__bridge void *)self);
+    if (_libvlc != NULL) {
+        var_DelCallback(_libvlc, "intf-toggle-fscontrol", ShowFullscreenController, (__bridge void *)self);
+        var_DelCallback(_libvlc, "intf-show", ShowController, (__bridge void *)self);
+        _libvlc = NULL;
+    }
 }
 
 - (void)encodeRestorableStateWithCoder:(NSCoder *)coder
