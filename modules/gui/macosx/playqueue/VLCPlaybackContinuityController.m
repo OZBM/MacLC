@@ -81,11 +81,16 @@ static NSString *VLCRecentlyPlayedMediaListKey = @"recentlyPlayedMediaList";
 
 - (void)dealloc
 {
-    msg_Dbg(getIntf(), "Deinitializing input manager");
+    /* This object can outlive the interface, in which case there is no
+     * interface object left to talk to. */
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf != NULL) {
+        msg_Dbg(p_intf, "Deinitializing input manager");
+    }
 
     [NSNotificationCenter.defaultCenter removeObserver:self];
 
-    if (_currentInput) {
+    if (p_intf != NULL && _currentInput) {
         /* continue playback where you left off */
         [self storePlaybackPositionForItem:_currentInput player:VLCMain.sharedInstance.playQueueController.playerController];
     }

@@ -257,7 +257,10 @@ static int WindowFloatOnTop(vlc_object_t *obj,
     for (NSValue *key in keys)
         [self removeVoutForDisplay:key];
 
-    if (var_InheritBool(getIntf(), "macosx-dim-keyboard")) {
+    /* This object can outlive the interface, in which case there is no
+     * interface object left to read the configuration from. */
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf != NULL && var_InheritBool(p_intf, "macosx-dim-keyboard")) {
         [_keyboardBacklight switchLightsInstantly:YES];
     }
 }
