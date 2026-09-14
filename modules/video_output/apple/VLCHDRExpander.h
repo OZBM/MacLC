@@ -32,11 +32,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  * Luminance, in cd/m^2, that the expander assigns to SDR diffuse white when
- * encoding PQ. macOS maps PQ 100 cd/m^2 onto the display's SDR white level, so
- * using that value keeps everything below the expansion knee pixel-identical to
- * SDR playback: toggling the feature must not shift mid-tone brightness.
+ * encoding PQ. This is the reference level of ITU-R Report BT.2408, and it is
+ * where macOS puts the display's SDR white: converting BT.2100 PQ to the
+ * extended linear space the compositor works in maps 203 cd/m^2 to exactly 1.0,
+ * and 100 cd/m^2 to 0.49. Anchoring here is what keeps everything below the
+ * expansion knee pixel-identical to SDR playback, so that turning the feature
+ * on lifts highlights without darkening the rest of the picture.
  */
-#define VLC_HDR_EXPANDER_SDR_WHITE_NITS 100.0f
+#define VLC_HDR_EXPANDER_SDR_WHITE_NITS 203.0f
 
 /**
  * Turns an SDR picture into a PQ / BT.2020 one by expanding its highlights into

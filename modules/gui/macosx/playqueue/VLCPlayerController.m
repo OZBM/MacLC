@@ -2196,6 +2196,8 @@ static int BossCallback(vlc_object_t *p_this,
         _esID = p_track->es_id;
         _name = toNSStr(p_track->name);
         _selected = p_track->selected;
+        _videoTransferFunction = (p_track->fmt.i_cat == VIDEO_ES)
+            ? p_track->fmt.video.transfer : TRANSFER_FUNC_UNDEF;
     }
     return self;
 }

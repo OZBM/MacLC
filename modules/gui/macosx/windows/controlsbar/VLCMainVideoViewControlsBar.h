@@ -33,6 +33,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readwrite, weak) IBOutlet NSButton *lyricsButton;
 @property (readwrite, weak) IBOutlet NSButton *floatOnTopButton;
 @property (readwrite, weak) IBOutlet NSButton *playbackRateButton;
+@property (readwrite, weak) IBOutlet NSButton *hdrButton;
 
 - (IBAction)openPlaybackRate:(id)sender;
 - (IBAction)openBookmarks:(id)sender;
@@ -41,6 +42,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (IBAction)openVideoMenu:(id)sender;
 - (IBAction)toggleFloatOnTop:(id)sender;
 - (IBAction)toggleLyrics:(id)sender;
+- (IBAction)toggleHDR:(id)sender;
 
 @end
 

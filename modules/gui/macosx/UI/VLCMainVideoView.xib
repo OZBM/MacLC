@@ -46,6 +46,7 @@
                 <outlet property="floatOnTopButton" destination="8jZ-hd-YVq" id="x53-4o-LsM"/>
                 <outlet property="forwardButton" destination="sF5-Z0-bef" id="H6w-Le-NAK"/>
                 <outlet property="fullscreenButton" destination="dYZ-ri-Kra" id="Cw2-BS-QG9"/>
+                <outlet property="hdrButton" destination="Hdr-Tg-Btn" id="Hdr-Tg-Out"/>
                 <outlet property="jumpBackwardButton" destination="AXA-01-AU8" id="gfa-Yt-ezI"/>
                 <outlet property="jumpForwardButton" destination="aAq-uE-mLW" id="M7n-mW-tNe"/>
                 <outlet property="lyricsButton" destination="Lyr-Ics-Btn" id="Lyr-Ics-Out"/>
@@ -232,6 +233,16 @@
                                                             <action selector="openBookmarks:" target="3" id="o6m-9M-L4U"/>
                                                         </connections>
                                                     </button>
+                                                    <button wantsLayer="YES" horizontalHuggingPriority="500" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Hdr-Tg-Btn" customClass="VLCImageButton">
+                                                        <rect key="frame" x="0.0" y="0.0" width="49" height="28"/>
+                                                        <buttonCell key="cell" type="recessed" title="HDR" bezelStyle="recessed" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Hdr-Tg-Cel">
+                                                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES" changeBackground="YES" changeGray="YES"/>
+                                                            <font key="font" metaFont="systemBold" size="12"/>
+                                                        </buttonCell>
+                                                        <connections>
+                                                            <action selector="toggleHDR:" target="3" id="Hdr-Tg-Act"/>
+                                                        </connections>
+                                                    </button>
                                                     <button wantsLayer="YES" horizontalHuggingPriority="1000" verticalHuggingPriority="750" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="8jZ-hd-YVq" customClass="VLCImageButton">
                                                         <rect key="frame" x="251" y="0.0" width="47" height="28"/>
                                                         <buttonCell key="cell" type="recessed" bezelStyle="recessed" image="play.rectangle.on.rectangle" catalog="system" imagePosition="only" alignment="center" controlSize="large" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="fyV-F5-ogO">
@@ -282,8 +293,10 @@
                                                     <integer value="1000"/>
                                                     <integer value="1000"/>
                                                     <integer value="1000"/>
+                                                    <integer value="1000"/>
                                                 </visibilityPriorities>
                                                 <customSpacing>
+                                                    <real value="3.4028234663852886e+38"/>
                                                     <real value="3.4028234663852886e+38"/>
                                                     <real value="3.4028234663852886e+38"/>
                                                     <real value="3.4028234663852886e+38"/>

@@ -28,6 +28,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// Posted whenever the SDR to HDR expansion is switched on or off, by this
+/// pane or by the button on the video controls bar, so that both stay in step.
+extern NSString * const MacLCHDRExpansionChangedNotification;
+
 @interface MacLCHDRSettingsViewController : NSViewController <MacLCSettingsPane>
 
 - (instancetype)initWithIntf:(intf_thread_t *)intf NS_DESIGNATED_INITIALIZER;
