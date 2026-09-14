@@ -46,7 +46,14 @@
 #include <vlc_es.h>
 #include <vlc_vout.h>
 
+NSString * const MacLCHDRExpansionChangedNotification =
+    @"MacLCHDRExpansionChangedNotification";
+
 #define SDR_NOMINAL_WHITE_NITS 100.0f
+
+/* ITU-R Report BT.2408 reference white, the luminance the expansion encodes
+ * SDR diffuse white at. Keep in step with VLC_HDR_EXPANDER_SDR_WHITE_NITS. */
+#define HDR_REFERENCE_WHITE_NITS 203.0f
 
 #pragma mark - Helper Row View
 
@@ -454,6 +461,8 @@
     MacLCConfigPutInt("macosx-sdr-to-hdr", sdrToHdr ? 1 : 0);
     MacLCConfigPutFloat("macosx-sdr-to-hdr-boost", _currentSdrToHdrBoost);
     [self pushSdrToHdrToRunningVideoOutput];
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:MacLCHDRExpansionChangedNotification object:self];
 
     /* Headroom */
     MacLCConfigPutFloat("macosx-edr-headroom", _currentHeadroom);
@@ -1256,6 +1265,8 @@
                name:VLCPlayerCurrentMediaItemChanged object:nil];
     [nc addObserver:self selector:@selector(playbackChanged:)
                name:VLCPlayerStateChanged object:nil];
+    [nc addObserver:self selector:@selector(expansionChangedElsewhere:)
+               name:MacLCHDRExpansionChangedNotification object:nil];
 
     _observingNotifications = YES;
 }
@@ -1278,6 +1289,21 @@
 - (void)playbackChanged:(NSNotification *)note
 {
     dispatch_async(dispatch_get_main_queue(), ^{
+        [self refreshLiveStatus];
+    });
+}
+
+/* The video controls bar has its own switch for the expansion. Pick up what it
+ * wrote so the checkbox here does not go on showing the previous state. */
+- (void)expansionChangedElsewhere:(NSNotification *)note
+{
+    if (note.object == self)
+        return;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self->_sdrToHdrCheckbox.state = MacLCConfigGetInt("macosx-sdr-to-hdr", 0)
+            ? NSControlStateValueOn : NSControlStateValueOff;
+        [self updateSdrToHdrControls];
         [self refreshLiveStatus];
     });
 }
@@ -1338,9 +1364,11 @@
                       "alone.");
     } else {
         caption = [NSString stringWithFormat:
-            _NS("Highlights reach about %.0f cd/m2. This display currently "
-                "allows %.1fx, and the lower of the two is what is used."),
-            applied * SDR_NOMINAL_WHITE_NITS, screenHeadroom];
+            _NS("Highlights reach about %.0f cd/m2, against the %.0f cd/m2 of "
+                "SDR white. This display currently allows %.1fx, and the lower "
+                "of the two is what is used."),
+            applied * HDR_REFERENCE_WHITE_NITS, HDR_REFERENCE_WHITE_NITS,
+            screenHeadroom];
     }
 
     /* The expansion is part of the default Apple video engine. The OpenGL

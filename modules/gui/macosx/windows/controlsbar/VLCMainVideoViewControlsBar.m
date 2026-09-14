@@ -38,6 +38,11 @@
 #import "playqueue/VLCPlayQueueController.h"
 #import "playqueue/VLCPlayerController.h"
 
+#import "settings/MacLCConfigSafe.h"
+#import "settings/panes/MacLCHDRSettingsViewController.h"
+
+#import <vlc_configuration.h>
+
 #import "windows/video/VLCMainVideoViewController.h"
 #import "windows/video/VLCVideoOutputProvider.h"
 #import "windows/video/VLCVideoWindowCommon.h"
@@ -83,6 +88,12 @@
     self.floatOnTopButton.toolTip = _NS("Float on Top");
     self.floatOnTopButton.accessibilityLabel = self.floatOnTopButton.toolTip;
     self.floatOnTopButton.image = [MacLCDesign symbolNamed:@"play.rectangle.on.rectangle" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Float on Top")];
+
+    self.hdrButton.title = @"HDR";
+    self.hdrButton.accessibilityLabel = _NS("Play SDR video in HDR");
+    self.hdrButton.font =
+        [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleCaption1
+                                              weight:NSFontWeightMedium];
 
     self.pipButton.toolTip = _NS("Picture in Picture");
     self.pipButton.accessibilityLabel = self.pipButton.toolTip;
@@ -147,6 +158,26 @@
                            selector:@selector(fullscreenChanged:)
                                name:VLCPlayerFullscreenChanged
                              object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(hdrExpansionChanged:)
+                               name:MacLCHDRExpansionChangedNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(hdrExpansionChanged:)
+                               name:VLCPlayerTrackListChanged
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(hdrExpansionChanged:)
+                               name:VLCPlayerTrackSelectionChanged
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(hdrExpansionChanged:)
+                               name:NSApplicationDidChangeScreenParametersNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(hdrExpansionChanged:)
+                               name:NSWindowDidChangeScreenNotification
+                             object:nil];
 
     [self update];
 }
@@ -157,6 +188,7 @@
     [self updateFloatOnTopButton];
     [self updatePlaybackRateButton];
     [self updateLyricsButton:nil];
+    [self updateHdrButton];
 }
 
 - (void)floatOnTopChanged:(NSNotification *)notification
@@ -204,6 +236,89 @@
     self.floatOnTopButton.enabled = !isFullscreen;
     self.floatOnTopButton.contentTintColor =
         (floatOnTopEnabled && !isFullscreen) ? MacLCDesign.accent : MacLCDesign.primaryLabel;
+}
+
+/* The expansion only has somewhere to go when the screen the window is on is
+ * currently offering extended range. That is not a fixed property of the
+ * display: it moves with the brightness slider and with what else is on
+ * screen, which is why the button is re-evaluated on screen changes. */
+- (BOOL)hdrExpansionAvailable
+{
+    NSWindow * const window = self.hdrButton.window;
+    NSScreen * const screen = window.screen ?: NSScreen.mainScreen;
+    return screen.maximumExtendedDynamicRangeColorComponentValue > 1.0;
+}
+
+/* The expansion only ever runs on standard range video: a picture that is
+ * already PQ or HLG is passed to the display layer untouched, so the switch
+ * would have nothing to act on and is taken off the bar entirely. Read from the
+ * elementary stream rather than from the video output, which is not up yet at
+ * the point the bar first draws itself. */
+- (BOOL)currentVideoIsAlreadyHDR
+{
+    const video_transfer_func_t transfer =
+        _playerController.selectedVideoTrack.videoTransferFunction;
+    return transfer == TRANSFER_FUNC_SMPTE_ST2084
+        || transfer == TRANSFER_FUNC_HLG;
+}
+
+- (void)hdrExpansionChanged:(NSNotification *)notification
+{
+    [self updateHdrButton];
+}
+
+- (void)updateHdrButton
+{
+    if (self.hdrButton == nil) {
+        return;
+    }
+
+    const BOOL enabled = MacLCConfigGetInt("macosx-sdr-to-hdr", 0) != 0;
+    const BOOL available = [self hdrExpansionAvailable];
+
+    self.hdrButton.hidden = _playerController.currentMediaIsAudioOnly
+                         || [self currentVideoIsAlreadyHDR];
+    self.hdrButton.enabled = available;
+    self.hdrButton.state =
+        enabled ? NSControlStateValueOn : NSControlStateValueOff;
+
+    if (!available) {
+        self.hdrButton.contentTintColor = MacLCDesign.tertiaryLabel;
+        self.hdrButton.toolTip =
+            _NS("This display has no extended range right now, so there is "
+                "nothing to play SDR video into.");
+    } else if (enabled) {
+        self.hdrButton.contentTintColor = MacLCDesign.accent;
+        self.hdrButton.toolTip =
+            _NS("SDR video is playing through the display's extended range. "
+                "Click to go back to standard range.");
+    } else {
+        self.hdrButton.contentTintColor = MacLCDesign.primaryLabel;
+        self.hdrButton.toolTip =
+            _NS("Play SDR video through the display's extended range.");
+    }
+}
+
+/* Writes the same setting the HDR pane writes, and pushes it to whatever is
+ * playing so the picture changes under the click rather than on the next file.
+ * The set finds nothing when the running display module is not the one that
+ * implements the expansion, which is what should happen. */
+- (IBAction)toggleHDR:(id)sender
+{
+    const BOOL enabled = MacLCConfigGetInt("macosx-sdr-to-hdr", 0) == 0;
+
+    MacLCConfigPutInt("macosx-sdr-to-hdr", enabled ? 1 : 0);
+    config_SaveConfigFile(getIntf());
+
+    vout_thread_t * const p_vout = [self windowVoutThread];
+    if (p_vout) {
+        var_SetBool(p_vout, "macosx-sdr-to-hdr", enabled);
+        vout_Release(p_vout);
+    }
+
+    [self updateHdrButton];
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:MacLCHDRExpansionChangedNotification object:self];
 }
 
 - (void)playbackRateChanged:(NSNotification *)notification
@@ -315,6 +430,7 @@
     }
 
     [self updateLyricsButton:nil];
+    [self updateHdrButton];
 }
 
 - (void)playerStateUpdated:(NSNotification *)notification

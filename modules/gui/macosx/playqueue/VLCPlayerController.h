@@ -969,6 +969,13 @@ extern const CGFloat VLCVolumeDefault;
 @property (readonly) NSString *name;
 @property (readonly) BOOL selected;
 
+/**
+ * the transfer function the track's elementary stream is coded with, for video
+ * tracks. TRANSFER_FUNC_UNDEF for tracks of any other category, and for video
+ * that carries no transfer characteristics of its own.
+ */
+@property (readonly) video_transfer_func_t videoTransferFunction;
+
 @end
 
 @interface VLCProgramMetaData : NSObject
