@@ -38,6 +38,11 @@
 #define MACLC_HDR_VAR_PRESENTATION "maclc-hdr-presentation"
 #define MACLC_HDR_VAR_PICTURE      "maclc-hdr-picture"
 
+/* Hint written by the GUI on the vout's parent before it restarts the video
+ * track: the stream carries Dolby Vision even if its container did not say so
+ * (bool). Lets the outputs route it to the one that can apply the RPUs. */
+#define MACLC_HDR_VAR_DOVI_HINT    "maclc-hdr-dovi-hint"
+
 /* State published by the vout (created by the vout, read by the GUI) */
 #define MACLC_HDR_VAR_CAPS         "maclc-hdr-caps"   /* integer bitmask */
 #define MACLC_HDR_VAR_ACTIVE       "maclc-hdr-active" /* string, presentation vocabulary */
