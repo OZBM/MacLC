@@ -180,7 +180,7 @@
     _targetScreenRow.defaultHint = _NS("Default: Default");
     [displayCard.contentStackView addArrangedSubview:_targetScreenRow];
 
-    _onTopRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Float on Top")
+    _onTopRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Keep on Top")
                                            explanation:_NS("Keep the video window above other running application windows.")
                                                  state:NO
                                                 action:^(BOOL checked) {

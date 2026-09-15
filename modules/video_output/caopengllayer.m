@@ -740,6 +740,15 @@ static int Open (vout_display_t *vd,
         if (transfer == TRANSFER_FUNC_UNDEF && vd->source->transfer != TRANSFER_FUNC_UNDEF)
             transfer = vd->source->transfer;
 
+        /* Dolby Vision profile 5 signals no usable transfer of its own: what
+         * reaches the screen is the RPU's PQ output (pl_scale renders it so),
+         * and the layer must be set up for that. */
+        if (fmt->dovi.profile == 5 || vd->source->dovi.profile == 5) {
+            is_hdr = true;
+            transfer = TRANSFER_FUNC_SMPTE_ST2084;
+            primaries = COLOR_PRIMARIES_BT2020;
+        }
+
         int hdr_mode = var_InheritInteger(vd, "macosx-hdr-mode");
         float user_headroom = var_InheritFloat(vd, "macosx-edr-headroom");
         if (user_headroom > 0.0f && user_headroom < 1.0f)

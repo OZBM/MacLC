@@ -382,7 +382,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_open_recent setTitle: _NS("Open Recent")];
     [_recent_streams setTitle: _NS("Recent Streams")];
     [_close_window setTitle: _NS("Close Window")];
-    [_convertandsave setTitle: _NS("Convert & Stream…")];
+    [_convertandsave setTitle: _NS("Convert and Stream…")];
     [_save_playlist setTitle: _NS("Save Playlist…")];
     [_savePlayqueueToLibrary setTitle: _NS("Save Play Queue to Library…")];
     [_revealInFinder setTitle: _NS("Reveal in Finder")];

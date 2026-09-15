@@ -705,22 +705,12 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/browsewindow/bw-Music.png \
 	gui/macosx/Resources/browsewindow/bw-Music@2x.png \
 	gui/macosx/Resources/browsewindow/bw-Music@3x.png \
-	gui/macosx/Resources/browsewindow/bw-Podcast.png \
-	gui/macosx/Resources/browsewindow/bw-Podcast@1,5x.svg \
-	gui/macosx/Resources/browsewindow/bw-Podcast@2x.png \
-	gui/macosx/Resources/browsewindow/bw-Podcast@3x.png \
 	gui/macosx/Resources/browsewindow/bw-Server1.png \
 	gui/macosx/Resources/browsewindow/bw-Server1@2x.png \
 	gui/macosx/Resources/browsewindow/bw-Server1@3x.png \
-	gui/macosx/Resources/browsewindow/bw-blu-ray.png \
-	gui/macosx/Resources/browsewindow/bw-blu-ray@2x.png \
-	gui/macosx/Resources/browsewindow/bw-blu-ray@3x.png \
 	gui/macosx/Resources/browsewindow/bw-home.png \
 	gui/macosx/Resources/browsewindow/bw-home@2x.png \
 	gui/macosx/Resources/browsewindow/bw-home@3x.png \
-	gui/macosx/Resources/browsewindow/bw-phone.png \
-	gui/macosx/Resources/browsewindow/bw-phone@2x.png \
-	gui/macosx/Resources/browsewindow/bw-phone@3x.png \
 	gui/macosx/Resources/browsewindow/bw-server2.png \
 	gui/macosx/Resources/browsewindow/bw-server2@2x.png \
 	gui/macosx/Resources/browsewindow/bw-server2@3x.png \
@@ -730,13 +720,8 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/browsewindow/bw-usb2.png \
 	gui/macosx/Resources/browsewindow/bw-usb2@2x.png \
 	gui/macosx/Resources/browsewindow/bw-usb2@3x.png \
-	gui/macosx/Resources/browsewindow/bw-video.png \
-	gui/macosx/Resources/browsewindow/bw-video@2x.png \
-	gui/macosx/Resources/browsewindow/bw-video@3x.png \
 	gui/macosx/Resources/librarywindow/ellipsis.png \
 	gui/macosx/Resources/librarywindow/ellipsis@2x.png \
-	gui/macosx/Resources/librarywindow/note.png \
-	gui/macosx/Resources/librarywindow/note@2x.png \
 	gui/macosx/Resources/librarywindow/libraryPlay.png \
 	gui/macosx/Resources/librarywindow/libraryPlay@2x.png \
 	gui/macosx/Resources/librarywindow/repeatAll.png \
@@ -749,50 +734,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/librarywindow/shuffleOff@2x.png \
 	gui/macosx/Resources/librarywindow/shuffleOn.png \
 	gui/macosx/Resources/librarywindow/shuffleOn@2x.png \
-	gui/macosx/Resources/mainwindow/album.png \
-	gui/macosx/Resources/mainwindow/album@2x.png \
-	gui/macosx/Resources/mainwindow/artist.png \
-	gui/macosx/Resources/mainwindow/artist@2x.png \
-	gui/macosx/Resources/mainwindow/backward-3btns-pressed.png \
-	gui/macosx/Resources/mainwindow/backward-3btns-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/backward-3btns.png \
-	gui/macosx/Resources/mainwindow/backward-3btns@2x.png \
-	gui/macosx/Resources/mainwindow/backward-6btns-pressed.png \
-	gui/macosx/Resources/mainwindow/backward-6btns-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/backward-6btns.png \
-	gui/macosx/Resources/mainwindow/backward-6btns@2x.png \
-	gui/macosx/Resources/mainwindow/effects-double-buttons-pressed.png \
-	gui/macosx/Resources/mainwindow/effects-double-buttons-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/effects-double-buttons.png \
-	gui/macosx/Resources/mainwindow/effects-double-buttons@2x.png \
-	gui/macosx/Resources/mainwindow/effects-one-button-pressed.png \
-	gui/macosx/Resources/mainwindow/effects-one-button-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/effects-one-button.png \
-	gui/macosx/Resources/mainwindow/effects-one-button@2x.png \
-	gui/macosx/Resources/mainwindow/forward-3btns-pressed.png \
-	gui/macosx/Resources/mainwindow/forward-3btns-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/forward-3btns.png \
-	gui/macosx/Resources/mainwindow/forward-3btns@2x.png \
-	gui/macosx/Resources/mainwindow/forward-6btns-pressed.png \
-	gui/macosx/Resources/mainwindow/forward-6btns-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/forward-6btns.png \
-	gui/macosx/Resources/mainwindow/forward-6btns@2x.png \
-	gui/macosx/Resources/mainwindow/fullscreen-double-buttons-pressed.png \
-	gui/macosx/Resources/mainwindow/fullscreen-double-buttons-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/fullscreen-double-buttons.png \
-	gui/macosx/Resources/mainwindow/fullscreen-double-buttons@2x.png \
-	gui/macosx/Resources/mainwindow/fullscreen-one-button-pressed.png \
-	gui/macosx/Resources/mainwindow/fullscreen-one-button-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/fullscreen-one-button.png \
-	gui/macosx/Resources/mainwindow/fullscreen-one-button@2x.png \
-	gui/macosx/Resources/mainwindow/next-6btns-pressed.png \
-	gui/macosx/Resources/mainwindow/next-6btns-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/next-6btns.png \
-	gui/macosx/Resources/mainwindow/next-6btns@2x.png \
-	gui/macosx/Resources/mainwindow/pause-pressed.png \
-	gui/macosx/Resources/mainwindow/pause-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/pause.png \
-	gui/macosx/Resources/mainwindow/pause@2x.png \
 	gui/macosx/Resources/mainwindow/placeholder-group2.pdf \
 	gui/macosx/Resources/mainwindow/placeholder-group2.png \
 	gui/macosx/Resources/mainwindow/placeholder-group2.svg \
@@ -805,71 +746,12 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow/placeholder-video.png \
 	gui/macosx/Resources/mainwindow/placeholder-video.svg \
 	gui/macosx/Resources/mainwindow/placeholder-video@2x.png \
-	gui/macosx/Resources/mainwindow/play-pressed.png \
-	gui/macosx/Resources/mainwindow/play-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/play.png \
-	gui/macosx/Resources/mainwindow/play@2x.png \
-	gui/macosx/Resources/mainwindow/playlist-1btn-pressed.png \
-	gui/macosx/Resources/mainwindow/playlist-1btn-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/playlist-1btn.png \
-	gui/macosx/Resources/mainwindow/playlist-1btn@2x.png \
-	gui/macosx/Resources/mainwindow/playlist-btn-pressed.png \
-	gui/macosx/Resources/mainwindow/playlist-btn-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/playlist-btn.png \
-	gui/macosx/Resources/mainwindow/playlist-btn@2x.png \
-	gui/macosx/Resources/mainwindow/previous-6btns-pressed.png \
-	gui/macosx/Resources/mainwindow/previous-6btns-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/previous-6btns.png \
-	gui/macosx/Resources/mainwindow/previous-6btns@2x.png \
-	gui/macosx/Resources/mainwindow/repeat-all-pressed.png \
-	gui/macosx/Resources/mainwindow/repeat-all-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/repeat-all.png \
-	gui/macosx/Resources/mainwindow/repeat-all@2x.png \
-	gui/macosx/Resources/mainwindow/repeat-one-pressed.png \
-	gui/macosx/Resources/mainwindow/repeat-one-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/repeat-one.png \
-	gui/macosx/Resources/mainwindow/repeat-one@2x.png \
-	gui/macosx/Resources/mainwindow/repeat-pressed.png \
-	gui/macosx/Resources/mainwindow/repeat-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/repeat.png \
-	gui/macosx/Resources/mainwindow/repeat@2x.png \
-	gui/macosx/Resources/mainwindow/shuffle-blue-pressed.png \
-	gui/macosx/Resources/mainwindow/shuffle-blue-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/shuffle-blue.png \
-	gui/macosx/Resources/mainwindow/shuffle-blue@2x.png \
-	gui/macosx/Resources/mainwindow/shuffle-pressed.png \
-	gui/macosx/Resources/mainwindow/shuffle-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/shuffle.png \
-	gui/macosx/Resources/mainwindow/shuffle@2x.png \
-	gui/macosx/Resources/mainwindow/stop-pressed.png \
-	gui/macosx/Resources/mainwindow/stop-pressed@2x.png \
-	gui/macosx/Resources/mainwindow/stop.png \
-	gui/macosx/Resources/mainwindow/stop@2x.png \
-	gui/macosx/Resources/mainwindow/topbar_background.png \
-	gui/macosx/Resources/mainwindow/video.png \
-	gui/macosx/Resources/mainwindow/video@2x.png \
-	gui/macosx/Resources/mainwindow/volume-high.png \
-	gui/macosx/Resources/mainwindow/volume-high@2x.png \
-	gui/macosx/Resources/mainwindow/volume-low.png \
-	gui/macosx/Resources/mainwindow/volume-low@2x.png \
 	gui/macosx/Resources/noart.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-movie.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-movie@2x.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-music.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-music@2x.png \
-	gui/macosx/Resources/Button-Icons/MacLCStatusBarIcon.pdf \
-	gui/macosx/Resources/Button-Icons/window-close-graphite.png \
-	gui/macosx/Resources/Button-Icons/window-close-graphite@2x.png \
-	gui/macosx/Resources/Button-Icons/window-close-on-graphite.png \
-	gui/macosx/Resources/Button-Icons/window-close-on-graphite@2x.png \
-	gui/macosx/Resources/Button-Icons/window-close-on.png \
-	gui/macosx/Resources/Button-Icons/window-close-on@2x.png \
-	gui/macosx/Resources/Button-Icons/window-close-over-graphite.png \
-	gui/macosx/Resources/Button-Icons/window-close-over-graphite@2x.png \
-	gui/macosx/Resources/Button-Icons/window-close-over.png \
-	gui/macosx/Resources/Button-Icons/window-close-over@2x.png \
-	gui/macosx/Resources/Button-Icons/window-close.png \
-	gui/macosx/Resources/Button-Icons/window-close@2x.png
+	gui/macosx/Resources/Button-Icons/MacLCStatusBarIcon.pdf
 
 libmacosx_plugin_la_RES += \
 	gui/macosx/Resources/dsa_pub.pem \

@@ -40,6 +40,8 @@ struct vlc_object_t;
 // B&W media source images
 @property (class, readonly) NSImage *VLCBWHomeImage;
 @property (class, readonly) NSImage *VLCBWMusicImage;
+@property (class, readonly) NSImage *VLCBWNetworkImage;
+@property (class, readonly) NSImage *VLCBWMediaImage;
 @property (class, readonly) NSImage *VLCBWServer1Image;
 @property (class, readonly) NSImage *VLCBWServer2Image;
 @property (class, readonly) NSImage *VLCBWUsb1Image;
@@ -55,8 +57,6 @@ struct vlc_object_t;
 @property (class, readonly) NSImage *VLCGenericImage;
 
 // Playback control images
-@property (class, readonly) NSImage *VLCStopImage;
-@property (class, readonly) NSImage *VLCStopPressedImage;
 @property (class, readonly) NSImage *VLCShuffleOffImage;
 @property (class, readonly) NSImage *VLCShuffleOnImage;
 @property (class, readonly) NSImage *VLCRepeatAllImage;

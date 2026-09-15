@@ -346,7 +346,7 @@ static __weak NSView *gAnchor;
     _cardPolicyPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     _cardPolicyPopup.controlSize = NSControlSizeSmall;
     _cardPolicyPopup.font = MacLCDesign.footnote;
-    [_cardPolicyPopup addItemsWithTitles:@[_NS("Always"), _NS("When there's a choice"), _NS("Never")]];
+    [_cardPolicyPopup addItemsWithTitles:@[_NS("Always"), _NS("When There’s a Choice"), _NS("Never")]];
     _cardPolicyPopup.target = self;
     _cardPolicyPopup.action = @selector(cardPolicyChanged:);
     _defaultButton = [NSButton buttonWithTitle:_NS("Use for All HDR Videos")

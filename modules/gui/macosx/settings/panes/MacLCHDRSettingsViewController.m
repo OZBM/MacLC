@@ -619,7 +619,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
 
     _cardPolicyPopup = [self popupWithItems:@[
         @[@(MacLCHDRCardPolicyAlways), _NS("Always")],
-        @[@(MacLCHDRCardPolicyWhenThereIsAChoice), _NS("When the Video Offers a Choice")],
+        @[@(MacLCHDRCardPolicyWhenThereIsAChoice), _NS("When There’s a Choice")],
         @[@(MacLCHDRCardPolicyNever), _NS("Never")],
     ]];
 
@@ -632,7 +632,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
                                         explanation:_NS("Accurate keeps the master's intent, Balanced keeps highlight detail on displays dimmer than the master, Bright lifts the image at the cost of highlights and battery.")
                                             control:_defaultPicturePopup
                                             isRisky:NO],
-        [[MacLCSettingsRowView alloc] initWithTitle:_NS("Show the format card")
+        [[MacLCSettingsRowView alloc] initWithTitle:_NS("Format Card")
                                         explanation:_NS("The card appears for a few seconds when playback starts and says what is playing and why.")
                                             control:_cardPolicyPopup
                                             isRisky:NO],

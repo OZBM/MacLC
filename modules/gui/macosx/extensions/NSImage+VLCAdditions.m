@@ -23,6 +23,7 @@
 #import "NSImage+VLCAdditions.h"
 
 #import "NSString+Helpers.h"
+#import "theme/MacLCDesign.h"
 
 #import <QuickLook/QuickLook.h>
 #import <QuickLookThumbnailing/QuickLookThumbnailing.h>
@@ -83,6 +84,25 @@ static NSImage *ImageFromEmoji(NSString *emoji, NSSize size)
     return image;
 }
 
+/* Browse and menu glyphs: SF Symbols in the system accent, like the folders
+ * next to them; the older bitmaps only where symbols do not exist. */
+static NSImage *AccentSymbol(NSString *name, CGFloat pointSize, NSString *fallbackName)
+{
+    NSImage *symbol = [MacLCDesign symbolNamed:name
+                                     pointSize:pointSize
+                                        weight:NSFontWeightRegular
+                            accessibilityLabel:nil];
+    if (symbol == nil)
+        return [NSImage imageNamed:fallbackName];
+    return [symbol imageTintedWithColor:MacLCDesign.accent];
+}
+
+static NSImage *MenuSymbol(NSString *name, NSString *fallbackName)
+{
+    NSImage *symbol = [MacLCDesign symbolNamed:name accessibilityLabel:nil];
+    return symbol ?: [NSImage imageNamed:fallbackName];
+}
+
 @implementation NSImage(VLCAdditions)
 
 + (NSImage *)VLCAppIconImage
@@ -97,42 +117,52 @@ static NSImage *ImageFromEmoji(NSString *emoji, NSSize size)
 
 + (NSImage *)VLCSidebarMovieImage
 {
-    return [NSImage imageNamed:@"sidebar-movie"];
+    return MenuSymbol(@"film", @"sidebar-movie");
 }
 
 + (NSImage *)VLCSidebarMusicImage
 {
-    return [NSImage imageNamed:@"sidebar-music"];
+    return MenuSymbol(@"music.note", @"sidebar-music");
 }
 
 + (NSImage *)VLCBWHomeImage
 {
-    return [NSImage imageNamed:@"bw-home"];
+    return AccentSymbol(@"house.fill", 64.0, @"bw-home");
 }
 
 + (NSImage *)VLCBWMusicImage
 {
-    return [NSImage imageNamed:@"bw-Music"];
+    return AccentSymbol(@"music.note", 64.0, @"bw-Music");
+}
+
++ (NSImage *)VLCBWNetworkImage
+{
+    return AccentSymbol(@"network", 64.0, @"bw-Music");
+}
+
++ (NSImage *)VLCBWMediaImage
+{
+    return AccentSymbol(@"play.rectangle.fill", 64.0, @"bw-Music");
 }
 
 + (NSImage *)VLCBWServer1Image
 {
-    return [NSImage imageNamed:@"bw-Server1"];
+    return AccentSymbol(@"server.rack", 64.0, @"bw-Server1");
 }
 
 + (NSImage *)VLCBWServer2Image
 {
-    return [NSImage imageNamed:@"bw-server2"];
+    return AccentSymbol(@"server.rack", 64.0, @"bw-server2");
 }
 
 + (NSImage *)VLCBWUsb1Image
 {
-    return [NSImage imageNamed:@"bw-usb1"];
+    return AccentSymbol(@"externaldrive.fill", 64.0, @"bw-usb1");
 }
 
 + (NSImage *)VLCBWUsb2Image
 {
-    return [NSImage imageNamed:@"bw-usb2"];
+    return AccentSymbol(@"externaldrive.fill", 64.0, @"bw-usb2");
 }
 
 + (NSImage *)VLCDefaultAppIconImage
@@ -145,16 +175,32 @@ static NSImage *ImageFromEmoji(NSString *emoji, NSSize size)
     return [NSImage imageNamed:@"NXFollow"];
 }
 
-/* Artwork for media that has none: a quiet tile with a media glyph, drawn
- * when displayed so it follows the light or dark appearance. */
-+ (NSImage *)VLCNoArtImage
+/* Artwork for media that has none: a quiet tile with a media glyph, one
+ * bitmap per appearance, rendered once and picked when drawn so it follows
+ * light and dark mode without redrawing gradients in every grid cell. */
+static NSImage *NoArtTile(BOOL dark)
 {
-    static NSImage *image;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        image = [NSImage imageWithSize:NSMakeSize(512.0, 512.0)
-                               flipped:NO
-                        drawingHandler:^BOOL(NSRect rect) {
+    static NSImage *tiles[2];
+    static dispatch_once_t once[2];
+    dispatch_once(&once[dark ? 1 : 0], ^{
+        const NSInteger side = 512;
+        NSBitmapImageRep *rep =
+            [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                                                    pixelsWide:side
+                                                    pixelsHigh:side
+                                                 bitsPerSample:8
+                                               samplesPerPixel:4
+                                                      hasAlpha:YES
+                                                      isPlanar:NO
+                                                colorSpaceName:NSCalibratedRGBColorSpace
+                                                   bytesPerRow:0
+                                                  bitsPerPixel:0];
+        NSAppearance *appearance =
+            [NSAppearance appearanceNamed:dark ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];
+        [NSGraphicsContext saveGraphicsState];
+        NSGraphicsContext.currentContext = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
+        [appearance performAsCurrentDrawingAppearance:^{
+            const NSRect rect = NSMakeRect(0, 0, side, side);
             NSGradient *gradient =
                 [[NSGradient alloc] initWithStartingColor:[NSColor.systemGrayColor colorWithAlphaComponent:0.16]
                                               endingColor:[NSColor.systemGrayColor colorWithAlphaComponent:0.30]];
@@ -163,7 +209,7 @@ static NSImage *ImageFromEmoji(NSString *emoji, NSSize size)
             NSImage *symbol = [NSImage imageWithSystemSymbolName:@"play.rectangle"
                                         accessibilityDescription:nil];
             NSImageSymbolConfiguration *configuration =
-                [NSImageSymbolConfiguration configurationWithPointSize:NSWidth(rect) * 0.26
+                [NSImageSymbolConfiguration configurationWithPointSize:side * 0.26
                                                                 weight:NSFontWeightLight];
             symbol = [[symbol imageWithSymbolConfiguration:configuration]
                       imageTintedWithColor:NSColor.tertiaryLabelColor];
@@ -171,6 +217,26 @@ static NSImage *ImageFromEmoji(NSString *emoji, NSSize size)
             [symbol drawInRect:NSMakeRect(NSMidX(rect) - size.width / 2.0,
                                           NSMidY(rect) - size.height / 2.0,
                                           size.width, size.height)];
+        }];
+        [NSGraphicsContext restoreGraphicsState];
+        NSImage *tile = [[NSImage alloc] initWithSize:NSMakeSize(side, side)];
+        [tile addRepresentation:rep];
+        tiles[dark ? 1 : 0] = tile;
+    });
+    return tiles[dark ? 1 : 0];
+}
+
++ (NSImage *)VLCNoArtImage
+{
+    static NSImage *image;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        image = [NSImage imageWithSize:NSMakeSize(512.0, 512.0)
+                               flipped:NO
+                        drawingHandler:^BOOL(NSRect rect) {
+            NSAppearanceName match = [NSAppearance.currentDrawingAppearance
+                bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]];
+            [NoArtTile([match isEqualToString:NSAppearanceNameDarkAqua]) drawInRect:rect];
             return YES;
         }];
         image.accessibilityDescription = _NS("No artwork");
@@ -209,16 +275,6 @@ static NSImage *EmptyStateImage(NSString *symbolName, NSString *fallbackName)
 + (NSImage *)VLCGenericImage
 {
     return [NSImage imageNamed:@"generic"];
-}
-
-+ (NSImage *)VLCStopImage
-{
-    return [NSImage imageNamed:@"stop"];
-}
-
-+ (NSImage *)VLCStopPressedImage
-{
-    return [NSImage imageNamed:@"stop-pressed"];
 }
 
 + (NSImage *)VLCShuffleOffImage

@@ -87,7 +87,7 @@
     self.playbackRateButton.accessibilityLabel = self.playbackRateButton.toolTip;
     self.playbackRateButton.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleCaption1 weight:NSFontWeightMedium];
 
-    self.floatOnTopButton.toolTip = _NS("Float on Top");
+    self.floatOnTopButton.toolTip = _NS("Keep on Top");
     self.floatOnTopButton.accessibilityLabel = self.floatOnTopButton.toolTip;
     self.floatOnTopButton.image = [MacLCDesign symbolNamed:@"play.rectangle.on.rectangle" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Float on Top")];
 

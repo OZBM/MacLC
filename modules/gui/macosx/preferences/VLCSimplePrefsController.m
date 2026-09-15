@@ -529,7 +529,7 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
     [_video_embeddedCheckbox setTitle: _NS("Show video within the main window")];
     [_video_pauseWhenMinimizedCheckbox setTitle:_NS("Pause the video playback when minimized")];
     [_video_resizeToNativeSizeCheckbox setTitle:_NS("Resize interface to the native video size")];
-    [_video_onTopCheckbox setTitle: _NS("Float on Top")];
+    [_video_onTopCheckbox setTitle: _NS("Keep on Top")];
     [_video_videodecoCheckbox setTitle: _NS("Window decorations")];
 
     [_video_fullscreenBox setTitle:_NS("Fullscreen settings")];

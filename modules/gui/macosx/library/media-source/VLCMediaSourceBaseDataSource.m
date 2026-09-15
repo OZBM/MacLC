@@ -321,7 +321,7 @@ NSString * const VLCMediaSourceTableTagsColumnIdentifier = @"VLCMediaSourceTable
 
         NSImage *placeholder;
         if (mediaSource.category == SD_CAT_LAN) {
-            placeholder = NSImage.VLCBWMusicImage;
+            placeholder = NSImage.VLCBWNetworkImage;
         } else {
             switch (inputType) {
                 case ITEM_TYPE_DIRECTORY:
@@ -350,7 +350,7 @@ NSString * const VLCMediaSourceTableTagsColumnIdentifier = @"VLCMediaSourceTable
                     }
                     break;
                 default:
-                    placeholder = NSImage.VLCBWMusicImage;
+                    placeholder = NSImage.VLCBWMediaImage;
                     break;
             }
         }
@@ -371,7 +371,7 @@ NSString * const VLCMediaSourceTableTagsColumnIdentifier = @"VLCMediaSourceTable
     } else {
         VLCMediaSource * const mediaSource = _mediaSources[indexPath.item];
         viewItem.titleTextField.stringValue = mediaSource.mediaSourceDescription;
-        viewItem.mediaImageView.image = NSImage.VLCBWMusicImage;
+        viewItem.mediaImageView.image = NSImage.VLCBWNetworkImage;
     }
 
     return viewItem;
