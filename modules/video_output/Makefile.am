@@ -92,6 +92,8 @@ if HAVE_DARWIN
 if !HAVE_WATCHOS
 libsamplebufferdisplay_plugin_la_SOURCES = video_output/apple/VLCSampleBufferDisplay.m \
 	video_output/apple/VLCHDRExpander.m video_output/apple/VLCHDRExpander.h \
+	video_output/apple/MacLCHDRToneMapper.m video_output/apple/MacLCHDRToneMapper.h \
+	video_output/apple/maclc_tonemap.h video_output/apple/maclc_hdr_vars.h \
 	codec/vt_utils.c codec/vt_utils.h
 libsamplebufferdisplay_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-arc
 if HAVE_OSX

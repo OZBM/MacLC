@@ -201,6 +201,39 @@ static const char *const hdr_mode_list_text[] = {
     N_("Disable HDR"),
 };
 
+#define HDR_PRESENTATION_TEXT N_("HDR format")
+#define HDR_PRESENTATION_LONGTEXT N_( \
+    "Which of the formats an HDR video carries to show. Automatic lets MacLC " \
+    "pick the best one for your display.")
+static const char *const hdr_presentation_list[] = {
+    "auto", "dolbyvision", "hdr10plus", "hdr10", "hlg", "sdr",
+};
+static const char *const hdr_presentation_list_text[] = {
+    N_("Automatic"), N_("Dolby Vision"), N_("HDR10+"), N_("HDR10"),
+    N_("HLG"), N_("SDR (tone-mapped)"),
+};
+
+#define HDR_PICTURE_TEXT N_("HDR picture")
+#define HDR_PICTURE_LONGTEXT N_( \
+    "How HDR video brighter than your display is fitted into it. Accurate " \
+    "stays faithful to the master, Balanced keeps more highlight detail, " \
+    "Bright lifts mid-tones at the cost of highlight detail and power.")
+static const char *const hdr_picture_list[] = {
+    "auto", "accurate", "balanced", "bright",
+};
+static const char *const hdr_picture_list_text[] = {
+    N_("Automatic"), N_("Accurate"), N_("Balanced"), N_("Bright"),
+};
+
+#define HDR_CARD_TEXT N_("Show HDR options when a video opens")
+#define HDR_CARD_LONGTEXT N_( \
+    "Show a short card with the HDR format, MacLC's recommendation and the " \
+    "choices available when an HDR video starts.")
+static const int hdr_card_list[] = { 0, 1, 2 };
+static const char *const hdr_card_list_text[] = {
+    N_("Always"), N_("When the video offers a choice"), N_("Never"),
+};
+
     set_section(N_("Video output"), 0)
         add_integer("macosx-vdev", 0, VDEV_TEXT, VDEV_LONGTEXT)
         add_float_with_range("macosx-opaqueness", 1, 0, 1, OPAQUENESS_TEXT, OPAQUENESS_LONGTEXT)
@@ -211,6 +244,18 @@ static const char *const hdr_mode_list_text[] = {
         add_bool("macosx-sdr-to-hdr", false, SDR_TO_HDR_TEXT, SDR_TO_HDR_LONGTEXT)
         add_float_with_range("macosx-sdr-to-hdr-boost", 4.0f, 1.0f, 16.0f,
                              SDR_TO_HDR_BOOST_TEXT, SDR_TO_HDR_BOOST_LONGTEXT)
+        add_string("maclc-hdr-presentation", "auto",
+                   HDR_PRESENTATION_TEXT, HDR_PRESENTATION_LONGTEXT)
+            change_string_list(hdr_presentation_list, hdr_presentation_list_text)
+        add_string("maclc-hdr-picture", "auto",
+                   HDR_PICTURE_TEXT, HDR_PICTURE_LONGTEXT)
+            change_string_list(hdr_picture_list, hdr_picture_list_text)
+        add_integer("maclc-hdr-card", 1, HDR_CARD_TEXT, HDR_CARD_LONGTEXT)
+            change_integer_list(hdr_card_list, hdr_card_list_text)
+        add_bool("maclc-hdr-dovi-hint", false,
+                 N_("Video carries Dolby Vision"), NULL)
+            change_private()
+            change_volatile()
 
     add_submodule()
         set_description("Mac OS X Video Output Provider")

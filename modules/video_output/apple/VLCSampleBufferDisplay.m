@@ -32,9 +32,12 @@
 #include <vlc_vout_display.h>
 #include <vlc_atomic.h>
 #include <vlc_modules.h>
+#include <vlc_ancillary.h>
 
 #import "VLCDrawable.h"
 #import "VLCHDRExpander.h"
+#import "MacLCHDRToneMapper.h"
+#include "maclc_hdr_vars.h"
 
 #import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
@@ -570,6 +573,15 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) VLCHDRExpander *hdrExpander;
     @property (nonatomic) BOOL hdrExpanderFailed;
     @property (nonatomic) BOOL hasLoggedExpansion;
+    /* MacLC HDR presentation and picture mode (maclc_hdr_vars.h) */
+    @property (atomic) int maclcPresentation;
+    @property (atomic) int maclcPicture;
+    @property (nonatomic) MacLCHDRToneMapper *toneMapper;
+    @property (nonatomic) BOOL toneMapperFailed;
+    @property (atomic) BOOL hasLoggedToneMap;
+    @property (nonatomic) int64_t seenCaps;
+    @property (nonatomic) int64_t publishedCaps;
+    @property (nonatomic) const char *publishedActive;
     @property (nonatomic) CGFloat currentHeadroom;
     @property (nonatomic) bool warnedToneMapFallback;
     @property (nonatomic) const char *effectivePdrStr;
@@ -595,6 +607,7 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     - (void)placeVideo:(vout_display_place_t)newPlace;
     - (void)updateDynamicRangeAndHeadroom;
     - (AVSampleBufferDisplayLayer *)getOrWaitDisplayLayer;
+    - (int)effectiveHdrMode;
 @end
 
 #pragma mark - Class Implementations
@@ -1037,7 +1050,7 @@ shouldInheritContentsScale:(CGFloat)newScale
 
 #if TARGET_OS_OSX
     vout_display_t *vd = _vd;
-    int hdr_mode = self.hdrMode;
+    int hdr_mode = [self effectiveHdrMode];
 
     NSWindow *nswindow = self.window.window ?: self.displayView.window;
     NSScreen *screen = nswindow.screen ?: [NSScreen mainScreen];
@@ -1365,6 +1378,27 @@ shouldInheritContentsScale:(CGFloat)newScale
     return _hdrExpander;
 }
 
+/* Same lazy construction as the expander: the kernel is only compiled once a
+ * PQ picture actually needs a picture mode that is not the identity. */
+- (MacLCHDRToneMapper *)toneMapper
+{
+    if (_toneMapper == nil && !_toneMapperFailed) {
+        _toneMapper = [MacLCHDRToneMapper toneMapperForObject:VLC_OBJECT(_vd)];
+        if (_toneMapper == nil)
+            _toneMapperFailed = YES;
+    }
+    return _toneMapper;
+}
+
+/* The MacLC "SDR" presentation is the existing tone-map-to-SDR mode; every
+ * other presentation leaves the user's macosx-hdr-mode in charge. */
+- (int)effectiveHdrMode
+{
+    if (self.maclcPresentation == MACLC_HDR_PRESENTATION_SDR)
+        return 2;
+    return self.hdrMode;
+}
+
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
@@ -1373,6 +1407,59 @@ shouldInheritContentsScale:(CGFloat)newScale
 
 #pragma mark -
 #pragma mark Module functions
+
+static int MacLCPresentationCallback(vlc_object_t *obj, char const *name,
+                                     vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    const int presentation = maclc_hdr_presentation_parse(cur.psz_string);
+    const BOOL sdrChanged =
+        (presentation == MACLC_HDR_PRESENTATION_SDR) !=
+        (sys.maclcPresentation == MACLC_HDR_PRESENTATION_SDR);
+    sys.maclcPresentation = presentation;
+    sys.hasLoggedToneMap = NO;
+    sys.hasLoggedEffectiveConfig = NO;
+    msg_Dbg(sys.vd, "HDR presentation requested: %s%s",
+            maclc_hdr_presentation_name(presentation),
+            (presentation == MACLC_HDR_PRESENTATION_DOLBYVISION ||
+             presentation == MACLC_HDR_PRESENTATION_HDR10PLUS)
+                ? " (needs the libplacebo output; the interface restarts the track)"
+                : "");
+    if (sdrChanged)
+        [sys updateDynamicRangeAndHeadroom];
+    return VLC_SUCCESS;
+}
+
+static int MacLCPictureCallback(vlc_object_t *obj, char const *name,
+                                vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.maclcPicture = maclc_hdr_picture_parse(cur.psz_string);
+    sys.hasLoggedToneMap = NO;
+    msg_Dbg(sys.vd, "HDR picture mode requested: %s",
+            maclc_hdr_picture_name(sys.maclcPicture));
+    return VLC_SUCCESS;
+}
+
+/* What this output reports to the interface. Called on the render thread;
+ * the variable API is thread-safe and only a change is written. */
+static void PublishHdrState(vout_display_t *vd, VLCSampleBufferDisplay *sys,
+                            int64_t caps, const char *active)
+{
+    vlc_object_t *vout_obj = vlc_object_parent(vd);
+    if (vout_obj == NULL)
+        return;
+    if (caps != sys.publishedCaps) {
+        sys.publishedCaps = caps;
+        var_SetInteger(vout_obj, MACLC_HDR_VAR_CAPS, caps);
+    }
+    if (active != sys.publishedActive) {
+        sys.publishedActive = active;
+        var_SetString(vout_obj, MACLC_HDR_VAR_ACTIVE, active);
+    }
+}
 
 static int EdrHeadroomCallback(vlc_object_t *obj, char const *name,
                                vlc_value_t prev, vlc_value_t cur, void *data)
@@ -1441,8 +1528,19 @@ static void Close(vout_display_t *vd)
                         (__bridge void*)sys);
         var_DelCallback(vout_obj, "macosx-sdr-to-hdr-boost",
                         SdrToHdrBoostCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, "macosx-hdr-mode", HdrModeCallback,
+                        (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_HDR_VAR_PRESENTATION,
+                        MacLCPresentationCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_HDR_VAR_PICTURE,
+                        MacLCPictureCallback, (__bridge void*)sys);
         var_Destroy(vout_obj, "macosx-sdr-to-hdr");
         var_Destroy(vout_obj, "macosx-sdr-to-hdr-boost");
+        var_Destroy(vout_obj, "macosx-hdr-mode");
+        var_Destroy(vout_obj, MACLC_HDR_VAR_PRESENTATION);
+        var_Destroy(vout_obj, MACLC_HDR_VAR_PICTURE);
+        var_Destroy(vout_obj, MACLC_HDR_VAR_CAPS);
+        var_Destroy(vout_obj, MACLC_HDR_VAR_ACTIVE);
     }
     var_Destroy(vd, "edr-headroom-effective");
 
@@ -1537,11 +1635,23 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
     if (render_fmt.lighting.MaxCLL == 0 && vd->fmt->lighting.MaxCLL != 0)
         render_fmt.lighting = vd->fmt->lighting;
 
-    int hdr_mode = sys.hdrMode;
+    int hdr_mode = [sys effectiveHdrMode];
 
     const bool source_is_hdr =
         render_fmt.transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
         render_fmt.transfer == TRANSFER_FUNC_HLG;
+    const bool source_is_pq = render_fmt.transfer == TRANSFER_FUNC_SMPTE_ST2084;
+    const bool source_is_hlg = render_fmt.transfer == TRANSFER_FUNC_HLG;
+
+    /* Dynamic metadata reaches this output on the pictures even though it
+     * cannot apply it; reporting that it exists is what lets the interface
+     * offer Dolby Vision or HDR10+ for a file whose container did not say. */
+    int64_t caps = sys.seenCaps;
+    if (picture_GetAncillary(pic, VLC_ANCILLARY_ID_DOVI) != NULL)
+        caps |= MACLC_HDR_CAP_DOVI_SEEN;
+    if (picture_GetAncillary(pic, VLC_ANCILLARY_ID_HDR10PLUS) != NULL)
+        caps |= MACLC_HDR_CAP_HDR10PLUS_SEEN;
+    sys.seenCaps = caps;
 
     /* Dynamic range expansion. An SDR picture is re-encoded as PQ / BT.2020 so
      * that the compositor lights up the display's extended range for it; the
@@ -1586,6 +1696,83 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
             }
         }
     }
+
+    /* MacLC picture modes. A PQ picture is re-mapped with MacLC's own curve
+     * (maclc_tonemap.h) for the headroom the display has right now, and then
+     * described as fitting that headroom so the compositor does not tone-map
+     * it a second time. When the master already fits (the common case on XDR
+     * panels in Accurate mode) the curve is the identity and nothing runs. */
+    if (source_is_pq && (hdr_mode == 0 || hdr_mode == 1) &&
+        sys.currentHeadroom > 1.0) {
+        float content_peak = 0.0f;
+        if (render_fmt.lighting.MaxCLL > 0)
+            content_peak = (float)render_fmt.lighting.MaxCLL;
+        else if (render_fmt.mastering.max_luminance > 0)
+            content_peak = render_fmt.mastering.max_luminance / 10000.0f;
+        const float display_peak =
+            (float)sys.currentHeadroom * ITU_BT2408_REFERENCE_WHITE_NITS;
+
+        maclc_tone_mode mode;
+        switch (sys.maclcPicture) {
+            case MACLC_HDR_PICTURE_ACCURATE: mode = MACLC_TONE_ACCURATE; break;
+            case MACLC_HDR_PICTURE_BALANCED: mode = MACLC_TONE_BALANCED; break;
+            case MACLC_HDR_PICTURE_BRIGHT:   mode = MACLC_TONE_BRIGHT;   break;
+            default:
+                /* Automatic follows the interface's advice: faithful when the
+                 * master fits the display, BT.2390 roll-off when it does not. */
+                mode = ((content_peak > 0.0f ? content_peak : 1000.0f) <= display_peak)
+                     ? MACLC_TONE_ACCURATE : MACLC_TONE_BALANCED;
+                break;
+        }
+
+        maclc_tone_params params;
+        maclc_tone_params_init(&params, mode, content_peak, display_peak,
+                               ITU_BT2408_REFERENCE_WHITE_NITS);
+        if (!params.identity) {
+            MacLCHDRToneMapper *mapper = sys.toneMapper;
+            CVPixelBufferRef mapped = (mapper != nil)
+                ? [mapper toneMapPixelBuffer:pixelBuffer params:&params]
+                : NULL;
+            if (mapped != NULL) {
+                CVPixelBufferRelease(pixelBuffer);
+                pixelBuffer = mapped;
+
+                /* Luminances in 0.0001 cd/m^2, per ST 2086. */
+                memset(&render_fmt.mastering, 0, sizeof(render_fmt.mastering));
+                render_fmt.mastering.max_luminance =
+                    (uint32_t)(params.display_peak * 10000.0f);
+                render_fmt.mastering.min_luminance = 1;
+                render_fmt.lighting.MaxCLL = (uint16_t)params.display_peak;
+                render_fmt.lighting.MaxFALL =
+                    (uint16_t)(params.display_peak / 4.0f);
+            }
+            if (!sys.hasLoggedToneMap) {
+                msg_Dbg(vd, "HDR picture mode %s: %s, content %.0f cd/m^2 into "
+                            "%.0f cd/m^2 (headroom %.2f, gain %.2f)",
+                        maclc_hdr_picture_name(sys.maclcPicture),
+                        mapped != NULL ? "tone-mapped on the GPU"
+                                       : "pass-through (tone mapper unavailable)",
+                        params.content_peak, params.display_peak,
+                        sys.currentHeadroom, params.gain);
+                sys.hasLoggedToneMap = YES;
+            }
+        } else if (!sys.hasLoggedToneMap) {
+            msg_Dbg(vd, "HDR picture mode %s: master (%.0f cd/m^2) fits the "
+                        "display (%.0f cd/m^2), shown as graded",
+                    maclc_hdr_picture_name(sys.maclcPicture),
+                    params.content_peak, params.display_peak);
+            sys.hasLoggedToneMap = YES;
+        }
+    }
+
+    const char *active;
+    if (hdr_mode == 2 || hdr_mode == 3 || !source_is_hdr)
+        active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_SDR);
+    else if (source_is_hlg)
+        active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_HLG);
+    else
+        active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_HDR10);
+    PublishHdrState(vd, sys, caps, active);
 
     switch (hdr_mode) {
     case 1: /* Force Native EDR / HDR */
@@ -1962,6 +2149,41 @@ static int Open (vout_display_t *vd,
         return VLC_EGENERIC;
     }
 
+    /* This output hands pictures to the system compositor as they are and
+     * cannot apply Dolby Vision RPUs or HDR10+ dynamic metadata; the OpenGL /
+     * libplacebo output can. Step aside for what only that output renders
+     * correctly, so the module election picks it. */
+    if (!vd->obj.force) {
+        char *request = var_InheritString(vd, MACLC_HDR_VAR_PRESENTATION);
+        const enum maclc_hdr_presentation presentation =
+            maclc_hdr_presentation_parse(request);
+        free(request);
+        const bool has_dovi = fmt->dovi.rpu_present ||
+                              var_InheritBool(vd, MACLC_HDR_VAR_DOVI_HINT);
+
+        if (fmt->dovi.profile == 5) {
+            msg_Dbg(vd, "Dolby Vision profile 5 has no standard base layer; "
+                        "leaving it to an output that applies the RPU");
+            return VLC_EGENERIC;
+        }
+        /* Profiles with an HDR10, SDR or HLG base layer stay here unless
+         * Dolby Vision is asked for: that base layer is a correct picture,
+         * shown by the system's own HDR pipeline at the lowest power cost, and
+         * the interface requests Dolby Vision (restarting the track) when its
+         * per-scene metadata would actually change what the display shows. */
+        if (has_dovi && presentation == MACLC_HDR_PRESENTATION_DOLBYVISION) {
+            msg_Dbg(vd, "Dolby Vision requested; leaving it to an output that "
+                        "applies the RPU");
+            return VLC_EGENERIC;
+        }
+        if (presentation == MACLC_HDR_PRESENTATION_HDR10PLUS &&
+            fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084) {
+            msg_Dbg(vd, "HDR10+ requested; leaving it to an output that applies "
+                        "ST 2094-40 metadata");
+            return VLC_EGENERIC;
+        }
+    }
+
     // Display will only work with CVPX video context
     filter_t *converter = NULL;
     if (!vlc_video_context_GetPrivate(context, VLC_VIDEO_CONTEXT_CVPX)) {
@@ -2033,6 +2255,38 @@ static int Open (vout_display_t *vd,
                        VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
             var_AddCallback(vout_obj, "macosx-sdr-to-hdr-boost",
                             SdrToHdrBoostCallback, (__bridge void*)sys);
+            var_Create(vout_obj, "macosx-hdr-mode",
+                       VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, "macosx-hdr-mode", HdrModeCallback,
+                            (__bridge void*)sys);
+        }
+
+        /* MacLC presentation and picture mode: read once, then kept live on
+         * the video output thread, which is what the interface reaches. */
+        char *presentation = var_InheritString(vd, MACLC_HDR_VAR_PRESENTATION);
+        sys.maclcPresentation = maclc_hdr_presentation_parse(presentation);
+        free(presentation);
+        char *picture = var_InheritString(vd, MACLC_HDR_VAR_PICTURE);
+        sys.maclcPicture = maclc_hdr_picture_parse(picture);
+        free(picture);
+        msg_Dbg(vd, "HDR presentation %s, picture mode %s",
+                maclc_hdr_presentation_name(sys.maclcPresentation),
+                maclc_hdr_picture_name(sys.maclcPicture));
+
+        sys.seenCaps = 0;
+        sys.publishedCaps = -1; /* forces the first publication */
+        sys.publishedActive = NULL;
+        if (vout_obj != NULL) {
+            var_Create(vout_obj, MACLC_HDR_VAR_PRESENTATION,
+                       VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, MACLC_HDR_VAR_PRESENTATION,
+                            MacLCPresentationCallback, (__bridge void*)sys);
+            var_Create(vout_obj, MACLC_HDR_VAR_PICTURE,
+                       VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, MACLC_HDR_VAR_PICTURE,
+                            MacLCPictureCallback, (__bridge void*)sys);
+            var_Create(vout_obj, MACLC_HDR_VAR_CAPS, VLC_VAR_INTEGER);
+            var_Create(vout_obj, MACLC_HDR_VAR_ACTIVE, VLC_VAR_STRING);
         }
 
         vd->sys = (__bridge_retained void*)sys;
