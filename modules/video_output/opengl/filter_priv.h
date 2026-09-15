@@ -55,6 +55,9 @@ struct vlc_gl_filter_priv {
     GLsizei tex_widths[PICTURE_PLANE_MAX];
     GLsizei tex_heights[PICTURE_PLANE_MAX];
     unsigned tex_count;
+    /* The output textures hold half floats (config.float_output, requested
+     * by this filter or inherited from the one it reads) */
+    bool float_out;
 
     /* For multisampling, if msaa_level != 0 */
     GLuint framebuffer_msaa; /* owned */

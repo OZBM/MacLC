@@ -47,6 +47,10 @@
 #define MACLC_HDR_VAR_CAPS         "maclc-hdr-caps"   /* integer bitmask */
 #define MACLC_HDR_VAR_ACTIVE       "maclc-hdr-active" /* string, presentation vocabulary */
 
+/* Published by an OpenGL display on itself for its filters: true while the
+ * surface shows extended-range linear light (EDR), false in SDR mode. */
+#define MACLC_HDR_VAR_EDR_LINEAR   "maclc-hdr-edr-linear" /* bool */
+
 /* maclc-hdr-caps bits */
 #define MACLC_HDR_CAP_DOVI_SEEN        0x1 /* a Dolby Vision RPU reached this vout */
 #define MACLC_HDR_CAP_HDR10PLUS_SEEN   0x2 /* ST 2094-40 metadata reached this vout */

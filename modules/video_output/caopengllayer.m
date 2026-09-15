@@ -100,7 +100,7 @@
 - (void)displayFromVout;
 - (void)vlcClose;
 - (void)markReady;
-- (void)updateDynamicRangeWithHeadroom:(CGFloat)headroom isHDR:(BOOL)isHDR;
+- (BOOL)updateDynamicRangeWithHeadroom:(CGFloat)headroom isHDR:(BOOL)isHDR;
 @end
 
 /**
@@ -255,17 +255,21 @@ static CGLContextObj vlc_CreateCGLContext(vlc_gl_t *gl)
         { (CGLOpenGLProfile)0, "Legacy OpenGL", false },
     };
 
+    /* Half floats first: EDR needs values above 1.0 (SDR white). */
     static const struct {
         int color_size;
         int alpha_size;
+        bool is_float;
     } color_depths[] = {
-        { 64, 16 },
-        { 24, 8 },
+        { 64, 16, true },
+        { 64, 16, false },
+        { 24, 8, false },
     };
 
     const char *success_profile = NULL;
     int success_color = 0;
     int success_alpha = 0;
+    bool success_float = false;
 
     for (size_t p = 0; p < ARRAY_SIZE(profiles); p++) {
         for (size_t c = 0; c < ARRAY_SIZE(color_depths); c++) {
@@ -282,6 +286,8 @@ static CGLContextObj vlc_CreateCGLContext(vlc_gl_t *gl)
             attribs[i++] = kCGLPFADoubleBuffer;
             attribs[i++] = kCGLPFAAccelerated;
             attribs[i++] = kCGLPFANoRecovery;
+            if (color_depths[c].is_float)
+                attribs[i++] = kCGLPFAColorFloat;
             attribs[i++] = kCGLPFAColorSize;
             attribs[i++] = (CGLPixelFormatAttribute)color_depths[c].color_size;
             attribs[i++] = kCGLPFAAlphaSize;
@@ -307,6 +313,7 @@ static CGLContextObj vlc_CreateCGLContext(vlc_gl_t *gl)
                 success_profile = profiles[p].name;
                 success_color = color_depths[c].color_size;
                 success_alpha = color_depths[c].alpha_size;
+                success_float = color_depths[c].is_float;
                 goto found;
             }
         }
@@ -324,8 +331,9 @@ found:
     CGLDestroyPixelFormat(pix);
 
     if (gl != NULL) {
-        msg_Dbg(gl, "Created CGL context with %s profile, %d-bit color (%d-bit alpha)",
-                success_profile, success_color, success_alpha);
+        msg_Dbg(gl, "Created CGL context with %s profile, %d-bit %s color (%d-bit alpha)",
+                success_profile, success_color,
+                success_float ? "floating-point" : "integer", success_alpha);
     }
 
     return ctx;
@@ -500,16 +508,11 @@ static void Close(vout_display_t *vd)
 {
     vout_display_sys_t *sys = vd->sys;
 
-    if (sys != NULL && sys->hdr_vars != NULL) {
+    if (sys != NULL && sys->hdr_vars != NULL)
         var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION,
                         MacLCPresentationCallback, vd);
-        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION);
-        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_PICTURE);
-        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_CAPS);
-        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_ACTIVE);
-        sys->hdr_vars = NULL;
-    }
 
+    bool edr_headroom_created = false;
     if (sys->gl) {
         VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)sys->gl->sys;
         if (view) {
@@ -518,13 +521,27 @@ static void Close(vout_display_t *vd)
             }
             var_DelCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, (__bridge void*)view);
             var_DelCallback(vd, "macosx-hdr-mode", HdrModeCallback, (__bridge void*)view);
-            var_Destroy(vd, "edr-headroom-effective");
+            edr_headroom_created = true;
         }
     }
 
     if (sys->vgl && !vlc_gl_MakeCurrent(sys->gl)) {
         vout_display_opengl_Delete(sys->vgl);
         vlc_gl_ReleaseCurrent(sys->gl);
+    }
+
+    /* After the filters: pl_scale follows the surface and the requests until
+     * it closes. */
+    if (edr_headroom_created) {
+        var_Destroy(vd, "edr-headroom-effective");
+        var_Destroy(vd, MACLC_HDR_VAR_EDR_LINEAR);
+    }
+    if (sys != NULL && sys->hdr_vars != NULL) {
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION);
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_PICTURE);
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_CAPS);
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_ACTIVE);
+        sys->hdr_vars = NULL;
     }
 
 
@@ -745,6 +762,7 @@ static int Open (vout_display_t *vd,
 
         var_Create(vd, "edr-headroom-effective", VLC_VAR_FLOAT);
         var_SetFloat(vd, "edr-headroom-effective", 1.0f);
+        var_Create(vd, MACLC_HDR_VAR_EDR_LINEAR, VLC_VAR_BOOL);
 
         /* Before the OpenGL filters exist: pl_scale looks for these when it
          * opens. This output applies Dolby Vision RPUs and HDR10+ metadata. */
@@ -1023,18 +1041,20 @@ static int Open (vout_display_t *vd,
         effectiveHeadroom = (screenHeadroom > 1.0) ? screenHeadroom : 1.0;
     }
 
+    BOOL linear = NO;
     VLCCAOpenGLLayer *layer = (VLCCAOpenGLLayer *)self.layer;
     if (layer != nil && [layer isKindOfClass:[VLCCAOpenGLLayer class]]) {
         layer.hdrMode = _hdrMode;
         layer.userHeadroom = _userHeadroom;
         layer.primaries = _primaries;
         layer.transfer = _transfer;
-        [layer updateDynamicRangeWithHeadroom:effectiveHeadroom isHDR:_isHDR];
+        linear = [layer updateDynamicRangeWithHeadroom:effectiveHeadroom isHDR:_isHDR];
     }
 
     @synchronized (self) {
         if (_vd != NULL) {
             var_SetFloat(_vd, "edr-headroom-effective", (float)effectiveHeadroom);
+            var_SetBool(_vd, MACLC_HDR_VAR_EDR_LINEAR, linear);
         }
     }
 }
@@ -1242,7 +1262,8 @@ shouldInheritContentsScale:(CGFloat)newScale
     return self;
 }
 
-- (void)updateDynamicRangeWithHeadroom:(CGFloat)headroom isHDR:(BOOL)isHDR
+/* Returns whether the layer now shows extended-range linear light. */
+- (BOOL)updateDynamicRangeWithHeadroom:(CGFloat)headroom isHDR:(BOOL)isHDR
 {
     BOOL effectiveHDR;
     switch (_hdrMode) {
@@ -1276,6 +1297,11 @@ shouldInheritContentsScale:(CGFloat)newScale
         CFStringRef csName;
         if (effectiveHDR) {
             csName = kCGColorSpaceExtendedLinearDisplayP3;
+        } else if (_transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
+                   _transfer == TRANSFER_FUNC_HLG) {
+            /* HDR shown in SDR: the libplacebo filter tone maps it to
+             * sRGB-encoded Display P3. */
+            csName = kCGColorSpaceDisplayP3;
         } else if (_primaries == COLOR_PRIMARIES_DCI_P3) {
             csName = kCGColorSpaceDisplayP3;
         } else if (_transfer == TRANSFER_FUNC_SRGB) {
@@ -1309,6 +1335,7 @@ shouldInheritContentsScale:(CGFloat)newScale
     }
 #endif
     [CATransaction unlock];
+    return effectiveHDR;
 }
 
 - (void)markReady {

@@ -34,6 +34,25 @@
 #include "picture.h"
 #include "sampler.h"
 
+#ifndef GL_RGBA16F
+# define GL_RGBA16F 0x881A
+#endif
+#ifndef GL_HALF_FLOAT
+# define GL_HALF_FLOAT 0x140B
+#endif
+
+static inline GLint
+OutputInternalFormat(const struct vlc_gl_filter_priv *priv)
+{
+    return priv->float_out ? GL_RGBA16F : GL_RGBA;
+}
+
+static inline GLenum
+OutputType(const struct vlc_gl_filter_priv *priv)
+{
+    return priv->float_out ? GL_HALF_FLOAT : GL_UNSIGNED_BYTE;
+}
+
 struct vlc_gl_filter *
 vlc_gl_filter_New(struct vlc_gl_t *gl)
 {
@@ -53,6 +72,7 @@ vlc_gl_filter_New(struct vlc_gl_t *gl)
 
     priv->plane_count = 0;
     priv->tex_count = 0;
+    priv->float_out = false;
 
     priv->has_picture = false;
 
@@ -61,6 +81,7 @@ vlc_gl_filter_New(struct vlc_gl_t *gl)
     filter->config.filter_planes = false;
     filter->config.blend = false;
     filter->config.msaa_level = 0;
+    filter->config.float_output = false;
     filter->ops = NULL;
     filter->sys = NULL;
     filter->module = NULL;
@@ -165,8 +186,8 @@ InitPlane(struct vlc_gl_filter_priv *priv, unsigned plane, GLsizei width,
     GLuint texture = priv->textures_out[plane];
 
     vt->BindTexture(GL_TEXTURE_2D, texture);
-    vt->TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-                   GL_UNSIGNED_BYTE, NULL);
+    vt->TexImage2D(GL_TEXTURE_2D, 0, OutputInternalFormat(priv), width, height,
+                   0, GL_RGBA, OutputType(priv), NULL);
     vt->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     vt->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -236,7 +257,7 @@ InitFramebufferMSAA(struct vlc_gl_filter_priv *priv, unsigned msaa_level)
     vt->GenRenderbuffers(1, &priv->renderbuffer_msaa);
     vt->BindRenderbuffer(GL_RENDERBUFFER, priv->renderbuffer_msaa);
     vt->RenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_level,
-                                       GL_RGBA8,
+                                       priv->float_out ? GL_RGBA16F : GL_RGBA8,
                                        priv->size_out.width,
                                        priv->size_out.height);
 
@@ -327,7 +348,8 @@ vlc_gl_filter_ApplyOutputSize(struct vlc_gl_filter *filter)
     {
         vt->BindRenderbuffer(GL_RENDERBUFFER, priv->renderbuffer_msaa);
         vt->RenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_level,
-                                           GL_RGBA8,
+                                           priv->float_out ? GL_RGBA16F
+                                                           : GL_RGBA8,
                                            priv->size_out.width,
                                            priv->size_out.height);
     }
@@ -342,9 +364,9 @@ vlc_gl_filter_ApplyOutputSize(struct vlc_gl_filter *filter)
         for (unsigned plane = 0; plane < priv->tex_count; ++plane)
         {
             vt->BindTexture(GL_TEXTURE_2D, priv->textures_out[plane]);
-            vt->TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, priv->tex_widths[plane],
-                           priv->tex_heights[plane], 0, GL_RGBA,
-                           GL_UNSIGNED_BYTE, NULL);
+            vt->TexImage2D(GL_TEXTURE_2D, 0, OutputInternalFormat(priv),
+                           priv->tex_widths[plane], priv->tex_heights[plane],
+                           0, GL_RGBA, OutputType(priv), NULL);
         }
     }
 

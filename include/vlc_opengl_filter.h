@@ -151,6 +151,15 @@ struct vlc_gl_filter {
          * the same framebuffer requested a higher MSAA level.
          */
         unsigned msaa_level;
+
+        /**
+         * Output values outside [0, 1], such as extended-range linear light
+         * for HDR: the output textures are half floats instead of 8-bit.
+         * Filters reading from such an output get one as well.
+         *
+         * This flag may be set by the filter module (default is false).
+         */
+        bool float_output;
     } config;
 
     const struct vlc_gl_filter_ops *ops;

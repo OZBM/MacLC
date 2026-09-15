@@ -313,6 +313,12 @@ vlc_gl_filters_CreateNewFilter(struct vlc_gl_filters *filters,
 
     /* A filter operating on planes may not use anti-aliasing. */
     assert(!filter->config.filter_planes || !filter->config.msaa_level);
+
+    /* Extended-range values survive the whole chain once a filter produced
+     * them (desktop OpenGL renders to half floats everywhere). */
+    priv->float_out = !filters->api->is_gles
+        && (filter->config.float_output
+            || (prev_filter != NULL && prev_filter->float_out));
     vlc_gl_filter_InitPlaneSizes(filter);
 
     return priv;
@@ -404,6 +410,12 @@ vlc_gl_filters_Append(struct vlc_gl_filters *filters, const char *name,
 
     /* A filter operating on planes may not use anti-aliasing. */
     assert(!filter->config.filter_planes || !filter->config.msaa_level);
+
+    /* Extended-range values survive the whole chain once a filter produced
+     * them (desktop OpenGL renders to half floats everywhere). */
+    priv->float_out = !filters->api->is_gles
+        && (filter->config.float_output
+            || (prev_filter != NULL && prev_filter->float_out));
 
     if (filter->config.blend)
     {

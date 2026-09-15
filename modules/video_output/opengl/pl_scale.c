@@ -57,6 +57,10 @@
  * above proportionally, and the BT.2390 roll-off that follows keeps the result
  * under the display's peak: brighter mid-tones and highlights, paid for with
  * compressed or clipped highlight detail. */
+#ifndef GL_RGBA16F
+# define GL_RGBA16F 0x881A
+#endif
+
 #define MACLC_BRIGHT_PQ_GAIN 1.08f
 
 /* Accurate: reproduce everything below 90 % of the target peak unchanged and
@@ -91,6 +95,11 @@ struct sys
     _Atomic float headroom;
     float user_headroom;
     bool is_hdr_target;
+    bool filter_float_out;
+    /* The surface shows extended-range linear light (MACLC_HDR_VAR_EDR_LINEAR);
+     * otherwise it expects SDR-encoded values. */
+    _Atomic bool edr_linear;
+    bool user_target_trc;
 
     /* MacLC presentation / picture mode (maclc_hdr_vars.h) */
     struct pl_color_repr repr_base;
@@ -144,13 +153,14 @@ WrapTextures(pl_gpu gpu, unsigned count, const GLuint textures[],
 }
 
 static pl_tex
-WrapFramebuffer(pl_gpu gpu, GLuint framebuffer, unsigned width, unsigned height)
+WrapFramebuffer(pl_gpu gpu, GLuint framebuffer, unsigned width, unsigned height,
+                bool float_out)
 {
     struct pl_opengl_wrap_params opengl_wrap_params = {
         .framebuffer = framebuffer,
         .width = width,
         .height = height,
-        .iformat = GL_RGBA8,
+        .iformat = float_out ? GL_RGBA16F : GL_RGBA8,
     };
 
     return pl_opengl_wrap(gpu, &opengl_wrap_params);
@@ -327,15 +337,29 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         if (headroom <= 0.0f)
             headroom = sys->user_headroom;
 
-        /* On an EDR surface 1.0 is the display's SDR white, which is where
-         * libplacebo puts reference white (PL_COLOR_SDR_WHITE, 203 cd/m2, as
-         * in ITU-R BT.2408); the headroom multiplies that. */
-        if (sdr_target)
+        /* An EDR surface takes linear light where 1.0 is the display's SDR
+         * white. libplacebo writes linear output in exactly those units,
+         * reference white (PL_COLOR_SDR_WHITE, 203 cd/m2, ITU-R BT.2408) at
+         * 1.0 - the same convention macOS uses to show PQ - so the target
+         * peak is that white times the headroom. A surface in SDR mode gets
+         * the video tone mapped to reference white, sRGB encoded. */
+        const bool linear = !sdr_target && sys->filter_float_out
+            && atomic_load_explicit(&sys->edr_linear, memory_order_relaxed);
+        if (!sys->user_target_trc)
+            frame_out->color.transfer = linear ? PL_COLOR_TRC_LINEAR
+                                               : PL_COLOR_TRC_SRGB;
+        if (!linear)
+        {
+            frame_out->color.hdr.min_luma = 0.0f;
             frame_out->color.hdr.max_luma = PL_COLOR_SDR_WHITE;
-        else if (headroom > 0.0f)
-            frame_out->color.hdr.max_luma = PL_COLOR_SDR_WHITE * headroom;
+        }
         else
-            frame_out->color.hdr.max_luma = 1000.0f;
+        {
+            frame_out->color.hdr.min_luma = PL_COLOR_HDR_BLACK;
+            frame_out->color.hdr.max_luma = headroom > 0.0f
+                                          ? PL_COLOR_SDR_WHITE * headroom
+                                          : 1000.0f;
+        }
     }
 
     UpdateToneMapping(sys, presentation, frame_in->color.hdr.max_luma,
@@ -378,7 +402,8 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         frame_in->planes[i].texture = texs_in[i];
 
     pl_tex tex_out = WrapFramebuffer(gpu, final_draw_framebuffer,
-                                     sys->out_width, sys->out_height);
+                                     sys->out_width, sys->out_height,
+                                     sys->filter_float_out);
     if (!tex_out)
         goto destroy_texs_in;
 
@@ -422,6 +447,16 @@ EdrHeadroomCallback(vlc_object_t *obj, const char *var,
     (void) obj; (void) var; (void) oldval;
     _Atomic float *headroom = data;
     atomic_store_explicit(headroom, newval.f_float, memory_order_relaxed);
+    return VLC_SUCCESS;
+}
+
+static int
+EdrLinearCallback(vlc_object_t *obj, const char *var,
+                  vlc_value_t oldval, vlc_value_t newval, void *data)
+{
+    (void) obj; (void) var; (void) oldval;
+    _Atomic bool *edr_linear = data;
+    atomic_store_explicit(edr_linear, newval.b_bool, memory_order_relaxed);
     return VLC_SUCCESS;
 }
 
@@ -481,8 +516,13 @@ Close(struct vlc_gl_filter *filter)
     struct sys *sys = filter->sys;
 
     if (sys->display != NULL)
+    {
         var_DelCallback(sys->display, "edr-headroom-effective",
                         EdrHeadroomCallback, &sys->headroom);
+        if (var_Type(sys->display, MACLC_HDR_VAR_EDR_LINEAR) != 0)
+            var_DelCallback(sys->display, MACLC_HDR_VAR_EDR_LINEAR,
+                            EdrLinearCallback, &sys->edr_linear);
+    }
     if (sys->hdr_vars != NULL)
     {
         var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION,
@@ -624,8 +664,11 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
      * 1. Explicit user configuration via inherited options ("pl-target-prim",
      *    "pl-target-trc", or filter chain "target-prim", "target-trc").
      * 2. Platform display characteristics:
-     *    - For HDR content on macOS, the compositor presents an extended-sRGB
-     *      / Display-P3 surface (PL_COLOR_PRIM_DISPLAY_P3, PL_COLOR_TRC_SRGB).
+     *    - For HDR content on macOS, the compositor presents an extended-range
+     *      linear Display-P3 surface (PL_COLOR_PRIM_DISPLAY_P3,
+     *      PL_COLOR_TRC_LINEAR, 1.0 = SDR white) in half floats; when the
+     *      surface is in SDR mode it takes sRGB-encoded Display P3 instead.
+     *      Draw() follows the surface through MACLC_HDR_VAR_EDR_LINEAR.
      *    - For SDR content, the target matches the input colour space to ensure
      *      8-bit BT.709 playback does not regress and avoids unintended gamut
      *      or transfer curve conversion.
@@ -650,11 +693,12 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
     if (target_trc)
         color_out.transfer = target_trc;
     else if (is_hdr)
-        color_out.transfer = PL_COLOR_TRC_SRGB;
+        color_out.transfer = PL_COLOR_TRC_LINEAR;
     else
         color_out.transfer = sys->frame_in.color.transfer;
 
     sys->is_hdr_target = is_hdr || (target_trc && pl_color_transfer_is_hdr(target_trc));
+    sys->user_target_trc = target_trc != PL_COLOR_TRC_UNKNOWN;
     sys->user_headroom = var_InheritFloat(filter, "macosx-edr-headroom");
 
     if (sys->is_hdr_target)
@@ -674,6 +718,26 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
         if (display != NULL)
             var_AddCallback(display, "edr-headroom-effective",
                             EdrHeadroomCallback, &sys->headroom);
+
+        /* Displays that do not say otherwise take extended-range linear
+         * light whenever the stream is HDR. */
+        bool edr_linear = true;
+        if (display != NULL && var_Type(display, MACLC_HDR_VAR_EDR_LINEAR) != 0)
+        {
+            edr_linear = var_GetBool(display, MACLC_HDR_VAR_EDR_LINEAR);
+            var_AddCallback(display, MACLC_HDR_VAR_EDR_LINEAR,
+                            EdrLinearCallback, &sys->edr_linear);
+        }
+        atomic_init(&sys->edr_linear, edr_linear);
+
+        /* Linear light above SDR white does not fit in 8 bits. */
+        filter->config.float_output = true;
+        sys->filter_float_out = !sys->api.is_gles;
+        if (!sys->filter_float_out)
+            msg_Warn(filter, "no floating-point render target: HDR is shown "
+                             "tone mapped to SDR");
+        else
+            color_out.hdr.min_luma = PL_COLOR_HDR_BLACK;
 
         float effective = headroom;
         if (effective <= 0.0f)
@@ -723,8 +787,13 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
 
 error:
     if (sys->display != NULL)
+    {
         var_DelCallback(sys->display, "edr-headroom-effective",
                         EdrHeadroomCallback, &sys->headroom);
+        if (var_Type(sys->display, MACLC_HDR_VAR_EDR_LINEAR) != 0)
+            var_DelCallback(sys->display, MACLC_HDR_VAR_EDR_LINEAR,
+                            EdrLinearCallback, &sys->edr_linear);
+    }
     if (sys->hdr_vars != NULL)
     {
         var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION,
