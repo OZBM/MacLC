@@ -147,7 +147,10 @@ MOSTLYCLEANFILES = $(noinst_DATA)
 
 if HAVE_OSX
 if BUILD_VLC
-install-data-local:
+# After the programs are installed: as install-data-local this raced the
+# installation of vlc-osx under "make -j" and left no bin/vlc for the
+# MacLC.app packaging rule.
+install-exec-hook:
 	cd "$(DESTDIR)$(bindir)"; mv vlc-osx vlc
 
 endif

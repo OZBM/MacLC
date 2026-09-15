@@ -24,7 +24,8 @@ macos-install:
 
 # MacLC.app for packaging and giving it to your friends
 # use package-macosx to get a nice dmg
-MacLC.app: macos-install
+# (Info.plist is listed so edits to share/Info.plist.in reach the bundle.)
+MacLC.app: macos-install $(top_builddir)/share/macosx/Info.plist
 	rm -Rf $@
 	## Copy Contents
 	cp -R "$(macos_destdir)$(datadir)/macosx/" $@
