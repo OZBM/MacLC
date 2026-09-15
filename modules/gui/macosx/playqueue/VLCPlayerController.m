@@ -93,6 +93,9 @@ const CGFloat VLCVolumeDefault = 1.;
 @interface VLCPlayerController ()
 {
     vlc_player_t *_p_player;
+    /* Serial queue for requests that take a video output's locks */
+    dispatch_queue_t _voutRequestQueue;
+    atomic_bool _terminating;
     vlc_player_listener_id *_playerListenerID;
     vlc_player_timer_id *_playerTimerID;
     vlc_player_aout_listener_id *_playerAoutListenerID;
@@ -657,6 +660,9 @@ static int BossCallback(vlc_object_t *p_this,
         _position = -1.f;
         _time = VLC_TICK_INVALID;
         _p_player = player;
+        _voutRequestQueue = dispatch_queue_create("org.maclc.player.vout-requests",
+                                                  DISPATCH_QUEUE_SERIAL);
+        atomic_init(&_terminating, false);
         vlc_player_Lock(_p_player);
         // FIXME: initialize state machine here
         _playerListenerID = vlc_player_AddListener(_p_player,
@@ -720,6 +726,11 @@ static int BossCallback(vlc_object_t *p_this,
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
 {
+    /* Requests still queued must not reach a player being destroyed. Do not
+     * wait for them here: one may be blocked on a video output that is itself
+     * waiting for the main thread. */
+    atomic_store(&_terminating, true);
+
     intf_thread_t * const p_intf = getIntf();
     if (p_intf != NULL) {
         libvlc_int_t *libvlc = vlc_object_instance(p_intf);
@@ -1770,6 +1781,13 @@ static void SetObjectBool(vlc_object_t *obj, const char *name, bool value)
     var_SetBool(obj, name, value);
 }
 
+static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
+{
+    if (var_Type(obj, name) == 0)
+        var_Create(obj, name, VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+    var_SetFloat(obj, name, value);
+}
+
 /* The main video output, or the player's dummy output when none runs. Its
  * parent is where outputs created later - including the one a track restart
  * brings up - inherit their variables from, so the value is set on both. */
@@ -1806,6 +1824,13 @@ static void SetObjectBool(vlc_object_t *obj, const char *name, bool value)
 {
     [self applyToVideoOutputs:^(vlc_object_t *obj) {
         SetObjectBool(obj, name, value);
+    }];
+}
+
+- (void)setVideoOutputFloat:(float)value forVariable:(const char *)name
+{
+    [self applyToVideoOutputs:^(vlc_object_t *obj) {
+        SetObjectFloat(obj, name, value);
     }];
 }
 
@@ -1992,16 +2017,34 @@ static void SetObjectBool(vlc_object_t *obj, const char *name, bool value)
                                               object:self];
 }
 
+- (void)performVideoOutputRequest:(dispatch_block_t)request
+{
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(_voutRequestQueue, ^{
+        VLCPlayerController *strongSelf = weakSelf;
+        if (strongSelf == nil || atomic_load(&strongSelf->_terminating))
+            return;
+        request();
+    });
+}
+
 - (void)setFullscreen:(BOOL)fullscreen
 {
     // Set the ivar first and then we will receive whatever has been enabled via fullscreenChanged
     [self fullscreenChanged:fullscreen];
-    vlc_player_vout_SetFullscreen(_p_player, fullscreen);
+    vlc_player_t *player = _p_player;
+    [self performVideoOutputRequest:^{
+        vlc_player_vout_SetFullscreen(player, fullscreen);
+    }];
 }
 
 - (void)toggleFullscreen
 {
-    vlc_player_vout_SetFullscreen(_p_player, !_fullscreen);
+    vlc_player_t *player = _p_player;
+    const BOOL fullscreen = !_fullscreen;
+    [self performVideoOutputRequest:^{
+        vlc_player_vout_SetFullscreen(player, fullscreen);
+    }];
 }
 
 - (void)togglePictureInPicture

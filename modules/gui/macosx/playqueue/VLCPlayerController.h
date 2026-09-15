@@ -830,6 +830,9 @@ extern const CGFloat VLCVolumeDefault;
 /** Same as setVideoOutputString:forVariable: for a boolean variable. */
 - (void)setVideoOutputBool:(BOOL)value forVariable:(const char *)name;
 
+/** Same as setVideoOutputString:forVariable: for a float variable. */
+- (void)setVideoOutputFloat:(float)value forVariable:(const char *)name;
+
 /** Reads an integer variable published on the main video output.
  *  \return fallback when there is no output or no such variable. */
 - (int64_t)mainVideoOutputInteger:(const char *)name fallback:(int64_t)fallback;
@@ -880,6 +883,14 @@ extern const CGFloat VLCVolumeDefault;
  * helper function to inverse the current fullscreen state
  */
 - (void)toggleFullscreen;
+
+/**
+ * Runs a request that takes a video output's locks (fullscreen, window state)
+ * off the main thread, in order. A video output that is opening holds those
+ * locks while it waits for the main thread to hand it a view, so the main
+ * thread must never wait for them.
+ */
+- (void)performVideoOutputRequest:(dispatch_block_t)request;
 
 
 - (void)togglePictureInPicture;
