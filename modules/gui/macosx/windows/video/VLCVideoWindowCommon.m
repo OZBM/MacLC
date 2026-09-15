@@ -154,7 +154,7 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
     VLCPlayQueueController * const playQueueController = VLCMain.sharedInstance.playQueueController;
     VLCInputItem * const inputItem = [playQueueController currentlyPlayingInputItem];
     if (inputItem == NULL || _playerController.playerState == VLC_PLAYER_STATE_STOPPED) {
-        [self setTitle:_NS("VLC media player")];
+        [self setTitle:_NS("MacLC")];
         self.representedURL = nil;
         return;
     }

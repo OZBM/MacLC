@@ -488,7 +488,7 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
     [_intf_playbackControlBox setTitle:_NS("Playback control")];
     [_intf_continueplaybackLabel setStringValue:_NS("Continue playback")];
     [_intf_displayEndOfPlaybackViewCheckBox setTitle:_NS("Display end of playback view")];
-    [_intf_statusIconCheckbox setTitle: _NS("Display VLC status menu icon")];
+    [_intf_statusIconCheckbox setTitle: _NS("Display MacLC status menu icon")];
     [_intf_displayTrackNumberPlayQueueCheckBox setTitle: _NS("Display album track numbers in play queue")];
 
     [_intf_playbackBehaviourBox setTitle:_NS("Playback behaviour")];
@@ -1045,8 +1045,8 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
     NSAlert *alert = [[NSAlert alloc] init];
     [alert setAlertStyle:NSAlertStyleInformational];
     [alert setMessageText:_NS("Reset Preferences")];
-    [alert setInformativeText:_NS("This will reset VLC media player's preferences.\n\n"
-                                  "Note that VLC will restart during the process, so your current "
+    [alert setInformativeText:_NS("This will reset MacLC's preferences.\n\n"
+                                  "Note that MacLC will restart during the process, so your current "
                                   "play queue will be emptied and eventual playback, streaming or "
                                   "transcoding activities will stop immediately.\n\n"
                                   "The Media Library will not be affected.\n\n"

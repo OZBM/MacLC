@@ -744,7 +744,7 @@ DQ
                                                                 </textField>
                                                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="192">
                                                                     <rect key="frame" x="15" y="14" width="358" height="28"/>
-                                                                    <textFieldCell key="cell" controlSize="small" sendsActionOnEndEditing="YES" alignment="center" title="You just need to fill one of the three following parameters, VLC will autodetect the other using the original aspect ratio" id="193">
+                                                                    <textFieldCell key="cell" controlSize="small" sendsActionOnEndEditing="YES" alignment="center" title="You just need to fill one of the three following parameters, MacLC will autodetect the other using the original aspect ratio" id="193">
                                                                         <font key="font" metaFont="smallSystem"/>
                                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>

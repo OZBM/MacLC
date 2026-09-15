@@ -110,8 +110,8 @@
 
     NSAlert *alert = [[NSAlert alloc] init];
     [alert setAlertStyle:NSAlertStyleCritical];
-    [alert setMessageText:_NS("VLC has been moved or renamed")];
-    [alert setInformativeText:_NS("To prevent errors, VLC must be relaunched.\n\nIf you cannot quit immediately, click Continue, then quit and relaunch as soon as possible to avoid problems.")];
+    [alert setMessageText:_NS("MacLC has been moved or renamed")];
+    [alert setInformativeText:_NS("To prevent errors, MacLC must be relaunched.\n\nIf you cannot quit immediately, click Continue, then quit and relaunch as soon as possible to avoid problems.")];
     [alert addButtonWithTitle:_NS("Restart")];
     [alert addButtonWithTitle:_NS("Quit")];
     [alert addButtonWithTitle:_NS("Continue (Not Recommended)")];

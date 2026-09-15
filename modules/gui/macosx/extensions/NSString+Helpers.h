@@ -31,15 +31,24 @@
 NSString *toNSStr(const char *str);
 
 /**
+ * The studio that develops MacLC, and the site every outbound link in the
+ * interface points to.
+ */
+extern NSString * const MacLCDeveloperName;
+extern NSString * const MacLCWebsiteURLString;
+
+/**
  * Substitutes VLC brand names with MacLC in user-visible localized strings.
  * Operates post-gettext translation to maintain localization integrity.
  *
  * Rules:
+ * - Links to videolan.org or any of its subdomains -> MacLCWebsiteURLString
  * - "VLC media player" -> "MacLC"
  * - "VLC Media Player" -> "MacLC"
  * - Standalone "VLC" -> "MacLC"
- * Preserves URLs (containing ://), file paths, technical identifiers (VLC_*, VLC#, VLCKit, VLSub, libvlc, etc.),
- * and lowercase vlc references.
+ * - Standalone "VideoLAN" -> MacLCDeveloperName
+ * Leaves every other URL, file paths, technical identifiers (VLC_*, VLC#, VLCKit, VLSub, libvlc, etc.),
+ * e-mail addresses and lowercase vlc references alone.
  *
  * @param input The translated or original NSString.
  * @return The brand-substituted NSString.

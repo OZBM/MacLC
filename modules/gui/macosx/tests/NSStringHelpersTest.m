@@ -359,8 +359,8 @@
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLSub"), @"VLSub");
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@"libvlccore"), @"libvlccore");
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@"vlc://quit"), @"vlc://quit");
-    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"https://www.videolan.org/vlc/"), @"https://www.videolan.org/vlc/");
-    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VideoLAN"), @"VideoLAN");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"https://www.videolan.org/vlc/"), @"https://www.hazenstudio.com");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VideoLAN"), @"Hazen Studio");
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@"vlcrc"), @"vlcrc");
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC_PLUGIN_PATH"), @"VLC_PLUGIN_PATH");
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@"MacLC"), @"MacLC");
@@ -379,6 +379,14 @@
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@"Quit VLC"), @"Quit MacLC");
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@"(VLC)"), @"(MacLC)");
     XCTAssertNil(VLCSubstituteBrandNames(nil));
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VideoLAN Website..."), @"Hazen Studio Website...");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"See forum.videolan.org"), @"See https://www.hazenstudio.com");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"<a href=\"http://wiki.videolan.org/VLC_HowTo\">VLC wiki</a>"),
+                          @"<a href=\"https://www.hazenstudio.com\">MacLC wiki</a>");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"VLC could not open https://example.com/VLC.mkv"),
+                          @"MacLC could not open https://example.com/VLC.mkv");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"Write to vlc-devel@videolan.org"), @"Write to vlc-devel@videolan.org");
+    XCTAssertEqualObjects(VLCSubstituteBrandNames(@"MacLC and VLC"), @"MacLC and MacLC");
     XCTAssertEqualObjects(VLCSubstituteBrandNames(@""), @"");
 }
 

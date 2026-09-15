@@ -200,7 +200,7 @@
                 <menuItem title="MacLC" id="56">
                     <menu key="submenu" title="MacLC" systemMenu="apple" id="57">
                         <items>
-                            <menuItem title="About VLC media player..." id="58">
+                            <menuItem title="About MacLC..." id="58">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="showAbout:" target="-2" id="nAj-Kc-NFC"/>
@@ -241,7 +241,7 @@
                             <menuItem isSeparatorItem="YES" id="1948">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
-                            <menuItem title="Hide VLC" keyEquivalent="h" id="134">
+                            <menuItem title="Hide MacLC" keyEquivalent="h" id="134">
                                 <connections>
                                     <action selector="hide:" target="-3" id="izh-hP-ZVE"/>
                                 </connections>
@@ -260,7 +260,7 @@
                             <menuItem isSeparatorItem="YES" id="149">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
-                            <menuItem title="Quit VLC" keyEquivalent="q" id="136">
+                            <menuItem title="Quit MacLC" keyEquivalent="q" id="136">
                                 <connections>
                                     <action selector="terminate:" target="-3" id="GFp-cr-7zd"/>
                                 </connections>
@@ -820,7 +820,7 @@
                 <menuItem title="Help" id="1134">
                     <menu key="submenu" title="Help" id="1135">
                         <items>
-                            <menuItem title="VLC media player Help" keyEquivalent="?" id="2825">
+                            <menuItem title="MacLC Help" keyEquivalent="?" id="2825">
                                 <connections>
                                     <action selector="showHelp:" target="-2" id="Tuw-ca-6xj"/>
                                 </connections>
@@ -851,7 +851,7 @@
                             <menuItem isSeparatorItem="YES" id="1140">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
-                            <menuItem title="VideoLAN Website" id="1137">
+                            <menuItem title="Hazen Studio Website" id="1137">
                                 <connections>
                                     <action selector="openWebsite:" target="-2" id="Bap-Xg-FsL"/>
                                 </connections>

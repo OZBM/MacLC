@@ -347,7 +347,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 - (void)initStrings
 {
     /* main menu */
-    [_about setTitle: _NS("About VLC media player...")];
+    [_about setTitle: _NS("About MacLC...")];
     [_checkForUpdate setTitle: _NS("Check for Updates...")];
     [_prefs setTitle: _NS("Preferences...")];
     [_extensions setTitle: _NS("Extensions")];
@@ -356,10 +356,10 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_add_intf setTitle: _NS("Add Interface")];
     [_add_intfMenu setTitle: _NS("Add Interface")];
     [_services setTitle: _NS("Services")];
-    [_hide setTitle: _NS("Hide VLC")];
+    [_hide setTitle: _NS("Hide MacLC")];
     [_hide_others setTitle: _NS("Hide Others")];
     [_show_all setTitle: _NS("Show All")];
-    [_quit setTitle: _NS("Quit VLC")];
+    [_quit setTitle: _NS("Quit MacLC")];
 
     /* this special case is needed to due to archaic legacy translations of the File menu
      * on the Mac to the German translation which resulted in 'Ablage' instead of 'Datei'.
@@ -503,10 +503,10 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_bring_atf setTitle: _NS("Bring All to Front")];
 
     [_helpMenu setTitle: _NS("Help")];
-    [_help setTitle: _NS("VLC media player Help...")];
+    [_help setTitle: _NS("MacLC Help...")];
     [_license setTitle: _NS("License")];
     [_documentation setTitle: _NS("Online Documentation...")];
-    [_website setTitle: _NS("VideoLAN Website...")];
+    [_website setTitle: _NS("Hazen Studio Website...")];
     [_donation setTitle: _NS("Make a donation...")];
     [_forum setTitle: _NS("Online Forum...")];
 
@@ -1637,28 +1637,28 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 
 - (IBAction)openDocumentation:(id)sender
 {
-    NSURL *url = [NSURL URLWithString: @"https://www.videolan.org/doc/"];
+    NSURL *url = [NSURL URLWithString: MacLCWebsiteURLString];
 
     [NSWorkspace.sharedWorkspace openURL: url];
 }
 
 - (IBAction)openWebsite:(id)sender
 {
-    NSURL *url = [NSURL URLWithString: @"https://www.videolan.org/"];
+    NSURL *url = [NSURL URLWithString: MacLCWebsiteURLString];
 
     [NSWorkspace.sharedWorkspace openURL: url];
 }
 
 - (IBAction)openForum:(id)sender
 {
-    NSURL *url = [NSURL URLWithString: @"https://forum.videolan.org/"];
+    NSURL *url = [NSURL URLWithString: MacLCWebsiteURLString];
 
     [NSWorkspace.sharedWorkspace openURL: url];
 }
 
 - (IBAction)openDonate:(id)sender
 {
-    NSURL *url = [NSURL URLWithString: @"https://www.videolan.org/contribute.html#paypal"];
+    NSURL *url = [NSURL URLWithString: MacLCWebsiteURLString];
 
     [NSWorkspace.sharedWorkspace openURL: url];
 }

@@ -74,7 +74,7 @@
                             <constraint firstAttribute="height" constant="240" id="JQt-Up-e0A"/>
                             <constraint firstAttribute="width" constant="240" id="k85-B9-511"/>
                         </constraints>
-                        <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyUpOrDown" image="VLC" id="2269"/>
+                        <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyUpOrDown" image="MacLC" id="2269"/>
                     </imageView>
                     <textField verticalHuggingPriority="750" misplaced="YES" allowsCharacterPickerTouchBarItem="YES" translatesAutoresizingMaskIntoConstraints="NO" id="2232">
                         <rect key="frame" x="269" y="274" width="248" height="16"/>
@@ -86,7 +86,7 @@
                     </textField>
                     <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" translatesAutoresizingMaskIntoConstraints="NO" id="2233">
                         <rect key="frame" x="269" y="255" width="221" height="13"/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" sendsActionOnEndEditing="YES" state="on" alignment="left" title="Copyright (c) 1997-2008 the VideoLAN team" id="2271">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" sendsActionOnEndEditing="YES" state="on" alignment="left" title="Copyright © 2026 Hazen Studio" id="2271">
                             <font key="font" metaFont="label"/>
                             <color key="textColor" name="tertiaryLabelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -116,9 +116,9 @@
                         </constraints>
                         <textFieldCell key="cell" sendsActionOnEndEditing="YES" allowsEditingTextAttributes="YES" id="2285">
                             <font key="font" metaFont="system"/>
-                            <string key="title">MacLC is a free and open source media player, encoder and streamer made by the volunteers of the VideoLAN community.
-MacLC uses its internal codecs and works on essentially every popular platform and can read almost every files, CDs, DVDs, network streams, capture cards and other media formats!
-Help and join us!.</string>
+                            <string key="title">MacLC is a free and open source media player for macOS, developed by Hazen Studio.
+MacLC reads almost all files, discs, network streams, capture devices and other media formats, and plays HDR video the way your Mac's display was made to show it.
+www.hazenstudio.com</string>
                             <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                         </textFieldCell>
@@ -161,7 +161,7 @@ Help and join us!.</string>
                                 </button>
                                 <textField verticalHuggingPriority="750" misplaced="YES" allowsCharacterPickerTouchBarItem="YES" translatesAutoresizingMaskIntoConstraints="NO" id="2314">
                                     <rect key="frame" x="181" y="20" width="383" height="13"/>
-                                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="center" title="MacLC and VideoLAN are trademarks of the VideoLAN Association." id="2315">
+                                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="center" title="Developed by Hazen Studio" id="2315">
                                         <font key="font" metaFont="system" size="10"/>
                                         <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
                                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -235,6 +235,6 @@ Help and join us!.</string>
         </window>
     </objects>
     <resources>
-        <image name="VLC" width="512" height="512"/>
+        <image name="MacLC" width="512" height="512"/>
     </resources>
 </document>

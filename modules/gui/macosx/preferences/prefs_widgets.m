@@ -46,7 +46,7 @@
 
 #import "views/VLCUIUnits.h"
 
-NSString * const VLCPrefsWidgetModuleDragType = @"VLC media player module";
+NSString * const VLCPrefsWidgetModuleDragType = @"MacLC module";
 
 #define CONFIG_ITEM_STRING_LIST (CONFIG_ITEM_STRING + 10)
 #define CONFIG_ITEM_RANGED_INTEGER (CONFIG_ITEM_INTEGER + 10)
@@ -1741,7 +1741,7 @@ my_width, tooltip, init_value)                                              \
                 if (p_config->i_type == CONFIG_SUBCATEGORY &&
                     p_config->value.i == p_item->min.i) {
 
-                    o_modulelongname = toNSStr(module_GetLongName(p_parser));
+                    o_modulelongname = VLCSubstituteBrandNames(toNSStr(module_GetLongName(p_parser)));
                     o_modulename = toNSStr(module_get_object(p_parser));
 
                     if (p_item->value.psz &&
@@ -1781,7 +1781,7 @@ o_moduleenabled = [NSNumber numberWithBool:NO];\
 
         } else if (module_provides(p_parser, p_item->psz_type)) {
 
-            NSString *o_modulelongname = toNSStr(module_GetLongName(p_parser));
+            NSString *o_modulelongname = VLCSubstituteBrandNames(toNSStr(module_GetLongName(p_parser)));
             NSString *o_modulename = toNSStr(module_get_object(p_parser));
 
             NSNumber *o_moduleenabled = nil;

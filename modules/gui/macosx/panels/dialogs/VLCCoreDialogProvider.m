@@ -71,8 +71,8 @@ static void displayErrorCallback(void *p_data,
 {
     @autoreleasepool {
         VLCCoreDialogProvider *dialogProvider = (__bridge VLCCoreDialogProvider *)p_data;
-        NSString *title = toNSStr(psz_title);
-        NSString *text = toNSStr(psz_text);
+        NSString *title = VLCSubstituteBrandNames(toNSStr(psz_title));
+        NSString *text = VLCSubstituteBrandNames(toNSStr(psz_text));
         dispatch_async(dispatch_get_main_queue(), ^{
             [dialogProvider displayErrorWithTitle:title text:text];
         });
@@ -88,8 +88,8 @@ static void displayLoginCallback(void *p_data,
 {
     @autoreleasepool {
         VLCCoreDialogProvider *dialogProvider = (__bridge VLCCoreDialogProvider *)p_data;
-        NSString *title = toNSStr(psz_title);
-        NSString *text = toNSStr(psz_text);
+        NSString *title = VLCSubstituteBrandNames(toNSStr(psz_title));
+        NSString *text = VLCSubstituteBrandNames(toNSStr(psz_text));
         NSString *defaultUsername = toNSStr(psz_default_username);
         dispatch_async(dispatch_get_main_queue(), ^{
             [dialogProvider displayLoginDialog:p_id
@@ -112,11 +112,11 @@ static void displayQuestionCallback(void *p_data,
 {
     @autoreleasepool {
         VLCCoreDialogProvider *dialogProvider = (__bridge  VLCCoreDialogProvider *)p_data;
-        NSString *title = toNSStr(psz_title);
-        NSString *text = toNSStr(psz_text);
-        NSString *cancelText = toNSStr(psz_cancel);
-        NSString *action1Text = toNSStr(psz_action1);
-        NSString *action2Text = toNSStr(psz_action2);
+        NSString *title = VLCSubstituteBrandNames(toNSStr(psz_title));
+        NSString *text = VLCSubstituteBrandNames(toNSStr(psz_text));
+        NSString *cancelText = VLCSubstituteBrandNames(toNSStr(psz_cancel));
+        NSString *action1Text = VLCSubstituteBrandNames(toNSStr(psz_action1));
+        NSString *action2Text = VLCSubstituteBrandNames(toNSStr(psz_action2));
         dispatch_async(dispatch_get_main_queue(), ^{
             [dialogProvider displayQuestion:p_id
                                       title:title
@@ -141,11 +141,11 @@ static void displayProgressCallback(void *p_data,
         VLCCoreDialogProvider *dialogProvider = (__bridge VLCCoreDialogProvider *)p_data;
         dispatch_async(dispatch_get_main_queue(), ^{
             [dialogProvider displayProgressDialog:p_id
-                                            title:toNSStr(psz_title)
-                                             text:toNSStr(psz_text)
+                                            title:VLCSubstituteBrandNames(toNSStr(psz_title))
+                                             text:VLCSubstituteBrandNames(toNSStr(psz_text))
                                     indeterminate:b_indeterminate
                                          position:f_position
-                                      cancelTitle:toNSStr(psz_cancel)];
+                                      cancelTitle:VLCSubstituteBrandNames(toNSStr(psz_cancel))];
         });
     }
 }
@@ -170,7 +170,7 @@ static void updateProgressCallback(void *p_data,
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
             [dialogProvider updateDisplayedProgressDialog:p_id
                                                  position:f_value
-                                                     text:toNSStr(psz_text)];
+                                                     text:VLCSubstituteBrandNames(toNSStr(psz_text))];
         });
     }
 }

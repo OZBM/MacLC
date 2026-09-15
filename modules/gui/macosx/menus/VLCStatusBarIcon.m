@@ -139,7 +139,7 @@
 
     [self inputItemChanged:nil];
 
-    [self setMetadataTitle:_NS("VLC media player") artist:_NS("Nothing playing") album:nil andCover:NSImage.VLCNoArtImage];
+    [self setMetadataTitle:_NS("MacLC") artist:_NS("Nothing playing") album:nil andCover:NSImage.VLCNoArtImage];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath
@@ -336,7 +336,7 @@
         album = inputItem.album;
     } else {
         /* Nothing playing */
-        title = _NS("VLC media player");
+        title = _NS("MacLC");
         artist = _NS("Nothing playing");
     }
 

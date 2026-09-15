@@ -23,7 +23,6 @@
 
 #import "VLCHelpWindowController.h"
 
-#import <vlc_intf_strings.h>
 #import <vlc_about.h>
 
 #import "extensions/NSString+Helpers.h"
@@ -44,7 +43,7 @@
 
 - (void)windowDidLoad
 {
-    self.window.title = _NS("VLC media player Help");
+    self.window.title = _NS("MacLC Help");
     self.window.tabbingMode = NSWindowTabbingModeDisallowed;
 
     _helpWebView = [[WKWebView alloc] initWithFrame:self.window.contentView.bounds];
@@ -71,8 +70,20 @@
 - (IBAction)helpGoHome:(id)sender
 {
     NSString * const style = @"<style>body { font-family: -apple-system, Helvetica Neue; }</style>";
-    NSString * const htmlWithStyle = [style stringByAppendingString:NSTR(I_LONGHELP)];
-    NSURL * const baseURL = [NSURL URLWithString:@"https://videolan.org"];
+    NSString * const help = [NSString stringWithFormat:_NS("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /></head><body>"
+        "<h2>Welcome to MacLC Help</h2>"
+        "<p>MacLC is a media player for macOS, developed by %@.</p>"
+        "<h3>Playing media</h3>"
+            "<p>Choose <em>File &gt; Open File...</em>, or drag files onto the MacLC window or its Dock icon. "
+            "Discs and network streams open from the same <em>File</em> menu.</p>"
+        "<h3>Settings and shortcuts</h3>"
+            "<p>Choose <em>MacLC &gt; Preferences...</em> to change how MacLC behaves. "
+            "Every keyboard shortcut is listed, and can be changed, in the Shortcuts pane.</p>"
+        "<h3>Documentation and support</h3>"
+            "<p>Documentation, news and support are on the %@ website: <a href=\"%@\">www.hazenstudio.com</a>.</p>"
+        "</body></html>"), MacLCDeveloperName, MacLCDeveloperName, MacLCWebsiteURLString];
+    NSString * const htmlWithStyle = [style stringByAppendingString:help];
+    NSURL * const baseURL = [NSURL URLWithString:MacLCWebsiteURLString];
     [self.helpWebView loadHTMLString:htmlWithStyle baseURL:baseURL];
 }
 

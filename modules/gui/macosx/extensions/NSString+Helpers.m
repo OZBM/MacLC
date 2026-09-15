@@ -342,30 +342,45 @@ unsigned int CocoaKeyToVLC(unichar i_key)
     return (unsigned int)i_key;
 }
 
+NSString * const MacLCDeveloperName = @"Hazen Studio";
+NSString * const MacLCWebsiteURLString = @"https://www.hazenstudio.com";
+
+static NSString *VLCSubstituteBrandNamesInText(NSString *text)
+{
+    static NSRegularExpression *brandRegex = nil;
+    static NSRegularExpression *organisationRegex = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // Matches "VLC media player", "VLC Media Player", and standalone "VLC"
+        // Negative lookbehind ensures no preceding alphanumeric, _, ., #, /, or \ or -
+        // Negative lookahead ensures no succeeding alphanumeric, _, #, /, - or file extension like .app
+        brandRegex = [NSRegularExpression regularExpressionWithPattern:@"(?<![a-zA-Z0-9_.#/\\\\-])(VLC media player|VLC Media Player|VLC)(?![a-zA-Z0-9_#/-])(?!\\.[a-zA-Z0-9])"
+                                                               options:0
+                                                                 error:nil];
+        organisationRegex = [NSRegularExpression regularExpressionWithPattern:@"(?<![a-zA-Z0-9_.#/@\\\\-])VideoLAN(?![a-zA-Z0-9_#/@-])(?!\\.[a-zA-Z0-9])"
+                                                                      options:0
+                                                                        error:nil];
+    });
+
+    NSString *result = [brandRegex stringByReplacingMatchesInString:text
+                                                            options:0
+                                                              range:NSMakeRange(0, text.length)
+                                                       withTemplate:@"MacLC"];
+    return [organisationRegex stringByReplacingMatchesInString:result
+                                                       options:0
+                                                         range:NSMakeRange(0, result.length)
+                                                  withTemplate:[NSRegularExpression escapedTemplateForString:MacLCDeveloperName]];
+}
+
 NSString * _Nullable VLCSubstituteBrandNames(NSString * _Nullable input)
 {
     if (input == nil || input.length == 0) {
         return input;
     }
 
-    // Fast-path: return untouched if "VLC" is not present
-    if ([input rangeOfString:@"VLC"].location == NSNotFound) {
-        return input;
-    }
-
-    // Guard against recursion
-    static __thread BOOL in_brand_substitution = NO;
-    if (in_brand_substitution) {
-        return input;
-    }
-
-    // Guard against already-substituted text
-    if ([input rangeOfString:@"MacLC"].location != NSNotFound) {
-        return input;
-    }
-
-    // Never touch URLs / URIs
-    if ([input rangeOfString:@"://"].location != NSNotFound) {
+    // Fast-path: return untouched if neither brand is present
+    if ([input rangeOfString:@"VLC"].location == NSNotFound &&
+        [input rangeOfString:@"videolan" options:NSCaseInsensitiveSearch].location == NSNotFound) {
         return input;
     }
 
@@ -375,29 +390,41 @@ NSString * _Nullable VLCSubstituteBrandNames(NSString * _Nullable input)
         return input;
     }
 
-    in_brand_substitution = YES;
-
-    static NSRegularExpression *brandRegex = nil;
+    static NSRegularExpression *videolanLinkRegex = nil;
+    static NSRegularExpression *urlRegex = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        // Matches "VLC media player", "VLC Media Player", and standalone "VLC"
-        // Negative lookbehind ensures no preceding alphanumeric, _, ., #, /, or \ or -
-        // Negative lookahead ensures no succeeding alphanumeric, _, #, /, - or file extension like .app
-        NSString *pattern = @"(?<![a-zA-Z0-9_.#/\\\\-])(VLC media player|VLC Media Player|VLC)(?![a-zA-Z0-9_#/-])(?!\\.[a-zA-Z0-9])";
-        NSError *error = nil;
-        brandRegex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:&error];
-        if (error) {
-            NSLog(@"VLCSubstituteBrandNames regex creation failed: %@", error);
-        }
+        // videolan.org and its subdomains, with or without a scheme, but not
+        // the domain part of an e-mail address
+        videolanLinkRegex = [NSRegularExpression regularExpressionWithPattern:@"(?<![a-zA-Z0-9_.@-])(?:https?://)?(?:[a-zA-Z0-9-]+\\.)*videolan\\.org(?::[0-9]+)?(?:/[^\\s\"'<>]*)?"
+                                                                      options:NSRegularExpressionCaseInsensitive
+                                                                        error:nil];
+        urlRegex = [NSRegularExpression regularExpressionWithPattern:@"[a-zA-Z][a-zA-Z0-9+.-]*://[^\\s\"'<>]*"
+                                                             options:0
+                                                               error:nil];
     });
 
-    NSString *result = [brandRegex stringByReplacingMatchesInString:input
-                                                            options:0
-                                                              range:NSMakeRange(0, input.length)
-                                                       withTemplate:@"MacLC"];
+    // Every link that led to VideoLAN now leads to the studio's site
+    NSString *linked = [videolanLinkRegex stringByReplacingMatchesInString:input
+                                                                   options:0
+                                                                     range:NSMakeRange(0, input.length)
+                                                              withTemplate:[NSRegularExpression escapedTemplateForString:MacLCWebsiteURLString]];
 
-    in_brand_substitution = NO;
-    return result;
+    // Rename the brand in the text between URLs, never inside one
+    NSMutableString *result = [NSMutableString stringWithCapacity:linked.length];
+    __block NSUInteger cursor = 0;
+    [urlRegex enumerateMatchesInString:linked
+                               options:0
+                                 range:NSMakeRange(0, linked.length)
+                            usingBlock:^(NSTextCheckingResult *match, NSMatchingFlags flags, BOOL *stop) {
+        NSRange text = NSMakeRange(cursor, match.range.location - cursor);
+        [result appendString:VLCSubstituteBrandNamesInText([linked substringWithRange:text])];
+        [result appendString:[linked substringWithRange:match.range]];
+        cursor = NSMaxRange(match.range);
+    }];
+    [result appendString:VLCSubstituteBrandNamesInText([linked substringFromIndex:cursor])];
+
+    return [result copy];
 }
 
 /* takes a good old const c string and converts it to NSString without UTF8 loss */

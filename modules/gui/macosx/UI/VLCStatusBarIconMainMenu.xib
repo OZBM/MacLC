@@ -83,7 +83,7 @@
                         <constraint firstAttribute="width" secondItem="0kw-t4-DcN" secondAttribute="height" multiplier="1:1" id="W9c-ff-1ds"/>
                         <constraint firstAttribute="height" constant="62" id="z6W-PJ-dk5"/>
                     </constraints>
-                    <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" image="VLC" id="7Ns-2s-EgU"/>
+                    <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" image="MacLC" id="7Ns-2s-EgU"/>
                 </imageView>
                 <textField horizontalHuggingPriority="251" verticalHuggingPriority="749" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="Byt-pH-60l">
                     <rect key="frame" x="74" y="40" width="167" height="19"/>
@@ -316,7 +316,7 @@
         </customView>
     </objects>
     <resources>
-        <image name="VLC" width="512" height="512"/>
+        <image name="MacLC" width="512" height="512"/>
         <image name="VLCNextTemplate" width="128" height="128"/>
         <image name="VLCPauseTemplate" width="128" height="128"/>
         <image name="VLCPlayTemplate" width="128" height="128"/>

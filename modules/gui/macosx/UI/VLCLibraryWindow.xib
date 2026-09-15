@@ -689,7 +689,7 @@
                             </connections>
                         </button>
                     </toolbarItem>
-                    <toolbarItem implicitItemIdentifier="068A0B88-812C-44BE-8997-704367CF5226" label="MacLC" paletteLabel="MacLC" image="VLC" title="MacLC" id="XND-sc-TDa">
+                    <toolbarItem implicitItemIdentifier="068A0B88-812C-44BE-8997-704367CF5226" label="MacLC" paletteLabel="MacLC" image="MacLC" title="MacLC" id="XND-sc-TDa">
                         <nil key="toolTip"/>
                         <size key="minSize" width="28" height="28"/>
                         <size key="maxSize" width="28" height="28"/>
@@ -699,7 +699,7 @@
                                 <constraint firstAttribute="width" constant="28" id="Vst-mC-big"/>
                                 <constraint firstAttribute="width" secondItem="KR4-pI-siG" secondAttribute="height" multiplier="1:1" id="Y7q-Mz-W5J"/>
                             </constraints>
-                            <imageCell key="cell" controlSize="small" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" image="VLC" id="AiE-o7-B5v"/>
+                            <imageCell key="cell" controlSize="small" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" image="MacLC" id="AiE-o7-B5v"/>
                         </imageView>
                     </toolbarItem>
                 </allowedToolbarItems>
@@ -1857,7 +1857,7 @@
             <subviews>
                 <imageView horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fgK-fZ-95P" userLabel="Video Placeholder Image View" customClass="VLCDropDisabledImageView">
                     <rect key="frame" x="253" y="228" width="188" height="120"/>
-                    <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" imageFrameStyle="grayBezel" image="VLC" id="1yO-EP-f8Q"/>
+                    <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" imageFrameStyle="grayBezel" image="MacLC" id="1yO-EP-f8Q"/>
                 </imageView>
                 <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="V2G-WY-Ewc" userLabel="Browse Button" customClass="VLCCustomEmptyLibraryBrowseButton">
                     <rect key="frame" x="298" y="141" width="99" height="28"/>
@@ -1923,7 +1923,7 @@
         <image name="NSLeftFacingTriangleTemplate" width="12" height="17"/>
         <image name="NSListViewTemplate" width="21" height="15"/>
         <image name="NSRightFacingTriangleTemplate" width="12" height="17"/>
-        <image name="VLC" width="512" height="512"/>
+        <image name="MacLC" width="512" height="512"/>
         <image name="VLCBackwardTemplate" width="128" height="128"/>
         <image name="VLCForwardTemplate" width="128" height="128"/>
         <image name="VLCFullscreenOffTemplate" width="128" height="128"/>

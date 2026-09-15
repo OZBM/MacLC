@@ -93,7 +93,7 @@
     [o_copyright_field setStringValue: copyrightText];
 
     /* l10n */
-    [[self window] setTitle: _NS("About VLC media player")];
+    [[self window] setTitle: _NS("About MacLC")];
     NSDictionary *stringAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt:NSUnderlineStyleSingle], NSUnderlineStyleAttributeName, [NSColor secondaryLabelColor], NSForegroundColorAttributeName, [NSFont systemFontOfSize:13], NSFontAttributeName, nil];
     NSAttributedString *attrStr;
     attrStr = [[NSAttributedString alloc] initWithString:_NS("Credits") attributes:stringAttributes];
@@ -102,7 +102,7 @@
     [o_gpl_btn setAttributedTitle:attrStr];
     attrStr = [[NSAttributedString alloc] initWithString:_NS("Authors") attributes:stringAttributes];
     [o_authors_btn setAttributedTitle:attrStr];
-    [o_trademarks_txt setStringValue:_NS("VLC media player and VideoLAN are trademarks of the VideoLAN Association.")];
+    [o_trademarks_txt setStringValue:[NSString stringWithFormat:_NS("Developed by %@"), MacLCDeveloperName]];
 
     /* setup the creator / revision field */
     NSString *compiler;
@@ -114,9 +114,13 @@
     [o_revision_field setStringValue: [NSString stringWithFormat:@"Compiled by %s with %@ (%s %s)", VLC_CompileBy(), compiler, __DATE__, __TIME__]];
 
     /* Setup the nameversion field */
-    [o_name_version_field setStringValue: [NSString stringWithFormat:@"Version %s (%s)", VERSION_MESSAGE, PLATFORM]];
+    [o_name_version_field setStringValue: [NSString stringWithFormat:@"Version %s \u201C%s\u201D (%s)", VERSION, VERSION_CODENAME, PLATFORM]];
 
     NSMutableArray *tmpArray = [NSMutableArray arrayWithArray: [toNSStr(psz_authors) componentsSeparatedByString:@"\n\n"]];
+    /* The list opens with a line addressed on behalf of the upstream project;
+     * credit the same people in MacLC's own voice. */
+    if (tmpArray.count > 0)
+        [tmpArray replaceObjectAtIndex:0 withObject:_NS("MacLC is built on the work of the following open source contributors:")];
     NSUInteger count = [tmpArray count];
     for (NSUInteger i = 0; i < count; i++) {
         [tmpArray replaceObjectAtIndex:i withObject:[[tmpArray objectAtIndex:i]stringByReplacingOccurrencesOfString:@"\n" withString:@", "]];
@@ -127,15 +131,12 @@
     _authorsString = [tmpArray componentsJoinedByString:@"\n\n"];
 
     /* setup join us! */
-    NSString *joinus = toNSStr(_(""
-                                 "<p>MacLC is a free and open source media player, encoder, and "
-                                 "streamer made by the volunteers of the <a href=\"https://www.videolan.org/"
-                                 "\"><span style=\" text-decoration: underline; color:#0057ae;\">VideoLAN</"
-                                 "span></a> community.</p><p>MacLC uses its internal codecs, works on "
-                                 "essentially every popular platform, and can read almost all files, CDs, "
-                                 "DVDs, network streams, capture cards and other media formats!</p><p><a href="
-                                 "\"https://www.videolan.org/contribute/\"><span style=\" text-decoration: "
-                                 "underline; color:#0057ae;\">Help and join us!</span></a>"));
+    NSString *joinus = [NSString stringWithFormat:_NS("<p>MacLC is a free and open source media player for macOS, developed by "
+                                                      "<a href=\"%@\"><span style=\" text-decoration: underline; color:#0057ae;\">%@</span></a>.</p>"
+                                                      "<p>MacLC reads almost all files, discs, network streams, capture devices "
+                                                      "and other media formats, and plays HDR video the way your Mac's display was made to show it.</p>"
+                                                      "<p><a href=\"%@\"><span style=\" text-decoration: underline; color:#0057ae;\">www.hazenstudio.com</span></a></p>"),
+                                                  MacLCWebsiteURLString, MacLCDeveloperName, MacLCWebsiteURLString];
 
     NSString *joinUsWithStyle = [NSString stringWithFormat:@"<div style=\"text-align:left;font-family: -apple-system, Helvetica Neue;\">%@</div>", joinus];
     NSMutableAttributedString *joinus_readytorender = [[NSMutableAttributedString alloc] initWithHTML:[joinUsWithStyle dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:YES]
@@ -181,11 +182,27 @@
     NSString *stringToDisplay;
     if (sender == o_authors_btn)
         stringToDisplay = _authorsString;
-    else if (sender == o_credits_btn)
-        stringToDisplay = [toNSStr(psz_thanks) stringByReplacingOccurrencesOfString:@"\n" withString:@" "
+    else if (sender == o_credits_btn) {
+        NSString *thanks = [toNSStr(psz_thanks) stringByReplacingOccurrencesOfString:@"\n" withString:@" "
                                                                             options:0 range:NSRangeFromString(@"680 2")];
-    else
-        stringToDisplay = toNSStr(psz_license);
+        /* The upstream thanks to its own donators and testers were addressed
+         * on behalf of that project, not MacLC, so they are not repeated here. */
+        NSRange donators = [thanks rangeOfString:@"\nThe VideoLAN team would like to thank"];
+        if (donators.location != NSNotFound)
+            thanks = [thanks substringToIndex:donators.location];
+        /* Only the introduction is rewritten: the lines below it are the
+         * copyright notices of third-party libraries and must stay as their
+         * holders wrote them. */
+        stringToDisplay = [thanks stringByReplacingOccurrencesOfString:@"Some VLC plugins"
+                                                            withString:@"Some MacLC plugins"
+                                                               options:NSAnchoredSearch
+                                                                 range:NSMakeRange(0, thanks.length)];
+    } else
+        stringToDisplay = [NSString stringWithFormat:@"%@\n%@\n\n%@",
+                           toNSStr(COPYRIGHT_MESSAGE),
+                           [NSString stringWithFormat:_NS("Portions copyright \u00A9 %@ the contributors listed under Authors and Credits."),
+                                                      toNSStr(COPYRIGHT_YEARS)],
+                           toNSStr(psz_license)];
 
     NSAttributedString *attributedString = [[NSAttributedString alloc] initWithString:stringToDisplay
                                                                            attributes:@{NSForegroundColorAttributeName : [NSColor secondaryLabelColor],

@@ -264,7 +264,7 @@ static struct {
                                               target:self
                                               action:@selector(showAllSettingsAction:)];
     showAllBtn.bezelStyle = NSBezelStyleRounded;
-    _showAllRow = [MacLCSettingsRow rowWithTitle:_NS("Full VLC Preferences Tree")
+    _showAllRow = [MacLCSettingsRow rowWithTitle:_NS("Full MacLC Preferences Tree")
                                      explanation:_NS("Open the exhaustive preferences tree to adjust low-level engine parameters.")
                                          control:showAllBtn];
     [advancedCard.contentStackView addArrangedSubview:_showAllRow];
