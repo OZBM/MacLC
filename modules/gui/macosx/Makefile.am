@@ -484,6 +484,26 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/settings/panes/MacLCVideoSettingsViewController.h \
 	gui/macosx/settings/panes/MacLCVideoSettingsViewController.m \
 	gui/macosx/shaders/VLCShaderTypes.h \
+	gui/macosx/hdr/MacLCDisplayInfo.h \
+	gui/macosx/hdr/MacLCDisplayInfo.m \
+	gui/macosx/hdr/MacLCHDRAdvisor.h \
+	gui/macosx/hdr/MacLCHDRAdvisor.m \
+	gui/macosx/hdr/MacLCHDRCardView.h \
+	gui/macosx/hdr/MacLCHDRCardView.m \
+	gui/macosx/hdr/MacLCHDRController.h \
+	gui/macosx/hdr/MacLCHDRController.m \
+	gui/macosx/hdr/MacLCHDRMenuController.h \
+	gui/macosx/hdr/MacLCHDRMenuController.m \
+	gui/macosx/hdr/MacLCHDRPanelViewController.h \
+	gui/macosx/hdr/MacLCHDRPanelViewController.m \
+	gui/macosx/hdr/MacLCHDRStreamInfo.h \
+	gui/macosx/hdr/MacLCHDRStreamInfo.m \
+	gui/macosx/hdr/MacLCHDRTypes.h \
+	gui/macosx/hdr/MacLCHDRTypes.m \
+	gui/macosx/hdr/MacLCToneCurveView.h \
+	gui/macosx/hdr/MacLCToneCurveView.m \
+	gui/macosx/hdr/MacLCTradeoffMeterView.h \
+	gui/macosx/hdr/MacLCTradeoffMeterView.m \
 	gui/macosx/theme/MacLCCardView.h \
 	gui/macosx/theme/MacLCCardView.m \
 	gui/macosx/theme/MacLCDesign.h \

@@ -1738,6 +1738,115 @@ static int BossCallback(vlc_object_t *p_this,
     return [self selectedTrackMetadataOfCategory:VIDEO_ES];
 }
 
+- (BOOL)copySelectedVideoFormat:(video_format_t *)fmt
+{
+    if (fmt == NULL)
+        return NO;
+    BOOL found = NO;
+    vlc_player_Lock(_p_player);
+    const struct vlc_player_track * const p_track =
+        vlc_player_GetSelectedTrack(_p_player, VIDEO_ES);
+    if (p_track != NULL && p_track->fmt.i_cat == VIDEO_ES) {
+        *fmt = p_track->fmt.video;
+        fmt->p_palette = NULL;
+        found = YES;
+    }
+    vlc_player_Unlock(_p_player);
+    return found;
+}
+
+/* Sets a variable on an object, creating it first when it does not exist. */
+static void SetObjectString(vlc_object_t *obj, const char *name, const char *value)
+{
+    if (var_Type(obj, name) == 0)
+        var_Create(obj, name, VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+    var_SetString(obj, name, value);
+}
+
+static void SetObjectBool(vlc_object_t *obj, const char *name, bool value)
+{
+    if (var_Type(obj, name) == 0)
+        var_Create(obj, name, VLC_VAR_BOOL | VLC_VAR_DOINHERIT);
+    var_SetBool(obj, name, value);
+}
+
+/* The main video output, or the player's dummy output when none runs. Its
+ * parent is where outputs created later - including the one a track restart
+ * brings up - inherit their variables from, so the value is set on both. */
+- (void)applyToVideoOutputs:(void (^)(vlc_object_t *obj))apply
+{
+    vout_thread_t *main_vout = vlc_player_vout_Hold(_p_player);
+    if (main_vout != NULL) {
+        vlc_object_t *obj = VLC_OBJECT(main_vout);
+        apply(obj);
+        vlc_object_t *parent = vlc_object_parent(obj);
+        if (parent != NULL)
+            apply(parent);
+        vout_Release(main_vout);
+    }
+
+    size_t count = 0;
+    vout_thread_t **vouts = vlc_player_vout_HoldAll(_p_player, &count);
+    for (size_t i = 0; i < count; i++) {
+        apply(VLC_OBJECT(vouts[i]));
+        vout_Release(vouts[i]);
+    }
+    free(vouts);
+}
+
+- (void)setVideoOutputString:(nullable NSString *)value forVariable:(const char *)name
+{
+    const char *psz = value.UTF8String ?: "";
+    [self applyToVideoOutputs:^(vlc_object_t *obj) {
+        SetObjectString(obj, name, psz);
+    }];
+}
+
+- (void)setVideoOutputBool:(BOOL)value forVariable:(const char *)name
+{
+    [self applyToVideoOutputs:^(vlc_object_t *obj) {
+        SetObjectBool(obj, name, value);
+    }];
+}
+
+- (int64_t)mainVideoOutputInteger:(const char *)name fallback:(int64_t)fallback
+{
+    int64_t value = fallback;
+    vout_thread_t *vout = vlc_player_vout_Hold(_p_player);
+    if (vout != NULL) {
+        if ((var_Type(vout, name) & VLC_VAR_CLASS) == VLC_VAR_INTEGER)
+            value = var_GetInteger(vout, name);
+        vout_Release(vout);
+    }
+    return value;
+}
+
+- (nullable NSString *)mainVideoOutputString:(const char *)name
+{
+    NSString *value = nil;
+    vout_thread_t *vout = vlc_player_vout_Hold(_p_player);
+    if (vout != NULL) {
+        if ((var_Type(vout, name) & VLC_VAR_CLASS) == VLC_VAR_STRING) {
+            char *psz = var_GetString(vout, name);
+            if (psz != NULL && psz[0] != '\0')
+                value = toNSStr(psz);
+            free(psz);
+        }
+        vout_Release(vout);
+    }
+    return value;
+}
+
+- (void)restartSelectedVideoTrack
+{
+    vlc_player_Lock(_p_player);
+    const struct vlc_player_track * const p_track =
+        vlc_player_GetSelectedTrack(_p_player, VIDEO_ES);
+    if (p_track != NULL)
+        vlc_player_RestartTrack(_p_player, p_track);
+    vlc_player_Unlock(_p_player);
+}
+
 - (BOOL)audioTracksEnabled
 {
     vlc_player_Lock(_p_player);

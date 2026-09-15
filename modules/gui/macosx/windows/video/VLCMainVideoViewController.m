@@ -56,6 +56,9 @@
 #import "windows/video/VLCVideoOutputProvider.h"
 #import "windows/video/VLCVideoWindowCommon.h"
 
+#import "hdr/MacLCHDRCardView.h"
+#import "hdr/MacLCHDRController.h"
+
 NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerLayoutKey";
 
 @interface PIPVoutViewController : NSViewController
@@ -158,6 +161,10 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
                                selector:@selector(pictureInPictureChanged:)
                                    name:VLCPlayerPictureInPictureChanged
                                  object:nil];
+        [notificationCenter addObserver:self
+                               selector:@selector(hdrCardShouldAppear:)
+                                   name:MacLCHDRCardShouldAppearNotification
+                                 object:nil];
 
         Class PIPViewControllerClass = NSClassFromString(@"PIPViewController");
         _pipViewController = [[PIPViewControllerClass alloc] init];
@@ -165,6 +172,22 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         _pipViewController.userCanResize = true;
     }
     return self;
+}
+
+/* The HDR card belongs to the video the user is watching: only the visible
+ * video view that is actually showing a picture presents it. */
+- (void)hdrCardShouldAppear:(NSNotification *)notification
+{
+    NSWindow * const window = self.view.window;
+    if (window == nil || !window.isVisible || self.view.hiddenOrHasHiddenAncestor)
+        return;
+    if (!(window.occlusionState & NSWindowOcclusionStateVisible))
+        return;
+    VLCPlayerController * const player =
+        VLCMain.sharedInstance.playQueueController.playerController;
+    if (player.currentMediaIsAudioOnly)
+        return;
+    [MacLCHDRCardView presentInView:self.view fullScreen:player.fullscreen];
 }
 
 - (void)setupAudioDecorativeView

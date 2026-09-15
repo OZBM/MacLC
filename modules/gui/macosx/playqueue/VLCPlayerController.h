@@ -804,6 +804,39 @@ extern const CGFloat VLCVolumeDefault;
 
 @property (readonly) VLCTrackMetaData *selectedVideoTrack;
 
+/**
+ * Copies the full video format (colorimetry, mastering volume, content light
+ * level, Dolby Vision configuration) of the selected video track, under the
+ * player lock. The palette pointer is cleared.
+ * \return NO when no video track is selected.
+ */
+- (BOOL)copySelectedVideoFormat:(video_format_t *)fmt;
+
+/**
+ * Restarts the selected video track: its decoder and video output are
+ * recreated, so a new output module is elected with the current options.
+ * Used to switch between HDR presentations that need different outputs.
+ */
+- (void)restartSelectedVideoTrack;
+
+/**
+ * Sets a string variable where the video outputs look for it: on the player
+ * object, so outputs created later inherit it, and on every running output,
+ * so a display module that watches it reacts now. Creates the variable where
+ * it does not exist yet.
+ */
+- (void)setVideoOutputString:(nullable NSString *)value forVariable:(const char *)name;
+
+/** Same as setVideoOutputString:forVariable: for a boolean variable. */
+- (void)setVideoOutputBool:(BOOL)value forVariable:(const char *)name;
+
+/** Reads an integer variable published on the main video output.
+ *  \return fallback when there is no output or no such variable. */
+- (int64_t)mainVideoOutputInteger:(const char *)name fallback:(int64_t)fallback;
+
+/** Reads a string variable published on the main video output, or nil. */
+- (nullable NSString *)mainVideoOutputString:(const char *)name;
+
 @property (readonly) BOOL audioTracksEnabled;
 
 @property (readonly) VLCTrackMetaData *selectedAudioTrack;

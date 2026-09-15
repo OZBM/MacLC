@@ -57,6 +57,8 @@
 #import "main/VLCApplication.h"
 
 #import "menus/VLCMainMenu.h"
+#import "hdr/MacLCHDRController.h"
+#import "hdr/MacLCHDRMenuController.h"
 #import "menus/VLCStatusBarIcon.h"
 
 #import "os-integration/VLCClickerManager.h"
@@ -357,6 +359,11 @@ static VLCMain *sharedInstance = nil;
 #endif
 
     [[NSBundle mainBundle] loadNibNamed:@"MainMenu" owner:_mainmenu topLevelObjects:nil];
+
+    /* HDR: start following the player before the first file opens, and
+     * give the Video menu its HDR submenu. */
+    [MacLCHDRController sharedController];
+    [[MacLCHDRMenuController sharedMenuController] installInVideoMenu:_mainmenu.videoMenu];
 
     NSImage *appIconImage = [VLCApplication.sharedApplication vlcAppIconImage];
     [VLCApplication.sharedApplication

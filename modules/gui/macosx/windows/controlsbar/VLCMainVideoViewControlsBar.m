@@ -40,6 +40,8 @@
 
 #import "settings/MacLCConfigSafe.h"
 #import "settings/panes/MacLCHDRSettingsViewController.h"
+#import "hdr/MacLCHDRController.h"
+#import "hdr/MacLCHDRPanelViewController.h"
 
 #import <vlc_configuration.h>
 
@@ -91,9 +93,7 @@
 
     self.hdrButton.title = @"HDR";
     self.hdrButton.accessibilityLabel = _NS("Play SDR video in HDR");
-    self.hdrButton.font =
-        [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleCaption1
-                                              weight:NSFontWeightMedium];
+    self.hdrButton.font = MacLCDesign.badgeFont;
 
     self.pipButton.toolTip = _NS("Picture in Picture");
     self.pipButton.accessibilityLabel = self.pipButton.toolTip;
@@ -177,6 +177,10 @@
     [notificationCenter addObserver:self
                            selector:@selector(hdrExpansionChanged:)
                                name:NSWindowDidChangeScreenNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(hdrExpansionChanged:)
+                               name:MacLCHDRStateDidChangeNotification
                              object:nil];
 
     [self update];
@@ -267,44 +271,89 @@
     [self updateHdrButton];
 }
 
+/* The HDR control is a format badge. For HDR video it names what is being
+ * shown (DOLBY VISION, HDR10+, HDR10, HLG) and opens the HDR panel; for SDR
+ * video on a display with extended range it switches SDR-to-HDR expansion. */
+- (void)styleHdrBadgeWithTitle:(NSString *)title filled:(BOOL)filled dimmed:(BOOL)dimmed
+{
+    NSColor * const color = dimmed ? MacLCDesign.tertiaryLabel : MacLCDesign.primaryLabel;
+    self.hdrButton.attributedTitle =
+        [[NSAttributedString alloc] initWithString:title
+                                        attributes:[MacLCDesign badgeTextAttributesWithColor:color]];
+    self.hdrButton.wantsLayer = YES;
+    self.hdrButton.layer.cornerRadius = 4.0;
+    self.hdrButton.layer.borderWidth = 1.0;
+    [self.hdrButton.effectiveAppearance performAsCurrentDrawingAppearance:^{
+        self.hdrButton.layer.borderColor = color.CGColor;
+        self.hdrButton.layer.backgroundColor =
+            filled ? [MacLCDesign.primaryLabel colorWithAlphaComponent:0.14].CGColor
+                   : NSColor.clearColor.CGColor;
+    }];
+}
+
 - (void)updateHdrButton
 {
     if (self.hdrButton == nil) {
         return;
     }
 
+    if (_playerController.currentMediaIsAudioOnly) {
+        self.hdrButton.hidden = YES;
+        return;
+    }
+    self.hdrButton.hidden = NO;
+
+    if ([self currentVideoIsAlreadyHDR]) {
+        MacLCHDRController * const hdr = [MacLCHDRController sharedController];
+        NSString * const name = MacLCHDRPresentationDisplayName(hdr.activePresentation);
+        self.hdrButton.enabled = YES;
+        self.hdrButton.state = NSControlStateValueOff;
+        [self styleHdrBadgeWithTitle:MacLCHDRPresentationBadgeTitle(hdr.activePresentation)
+                              filled:YES
+                              dimmed:NO];
+        self.hdrButton.toolTip =
+            [NSString stringWithFormat:_NS("Playing in %@. Click for HDR options."), name];
+        self.hdrButton.accessibilityLabel =
+            [NSString stringWithFormat:_NS("HDR options, playing in %@"), name];
+        return;
+    }
+
     const BOOL enabled = MacLCConfigGetInt("macosx-sdr-to-hdr", 0) != 0;
     const BOOL available = [self hdrExpansionAvailable];
 
-    self.hdrButton.hidden = _playerController.currentMediaIsAudioOnly
-                         || [self currentVideoIsAlreadyHDR];
     self.hdrButton.enabled = available;
     self.hdrButton.state =
         enabled ? NSControlStateValueOn : NSControlStateValueOff;
+    [self styleHdrBadgeWithTitle:@"HDR" filled:(enabled && available) dimmed:!available];
+    self.hdrButton.accessibilityLabel = _NS("Play SDR video in HDR");
 
     if (!available) {
-        self.hdrButton.contentTintColor = MacLCDesign.tertiaryLabel;
         self.hdrButton.toolTip =
             _NS("This display has no extended range right now, so there is "
                 "nothing to play SDR video into.");
     } else if (enabled) {
-        self.hdrButton.contentTintColor = MacLCDesign.accent;
         self.hdrButton.toolTip =
             _NS("SDR video is playing through the display's extended range. "
                 "Click to go back to standard range.");
     } else {
-        self.hdrButton.contentTintColor = MacLCDesign.primaryLabel;
         self.hdrButton.toolTip =
-            _NS("Play SDR video through the display's extended range.");
+            _NS("Play SDR video through the display's extended range. "
+                "Highlights get brighter; the picture is no longer the original "
+                "grade and uses more power.");
     }
 }
 
-/* Writes the same setting the HDR pane writes, and pushes it to whatever is
- * playing so the picture changes under the click rather than on the next file.
- * The set finds nothing when the running display module is not the one that
- * implements the expansion, which is what should happen. */
+/* HDR video: open the HDR panel. SDR video: write the same setting the HDR
+ * pane writes, and push it to whatever is playing so the picture changes under
+ * the click rather than on the next file. */
 - (IBAction)toggleHDR:(id)sender
 {
+    if ([self currentVideoIsAlreadyHDR]) {
+        [MacLCHDRPanelViewController showRelativeToView:self.hdrButton
+                                          preferredEdge:NSRectEdgeMaxY];
+        return;
+    }
+
     const BOOL enabled = MacLCConfigGetInt("macosx-sdr-to-hdr", 0) == 0;
 
     MacLCConfigPutInt("macosx-sdr-to-hdr", enabled ? 1 : 0);
