@@ -336,6 +336,20 @@
     return font ?: baseFont;
 }
 
++ (NSFont *)badgeFont
+{
+    return [NSFont systemFontOfSize:10.0 weight:NSFontWeightSemibold];
+}
+
++ (NSDictionary<NSAttributedStringKey, id> *)badgeTextAttributesWithColor:(nullable NSColor *)color
+{
+    return @{
+        NSFontAttributeName: [self badgeFont],
+        NSForegroundColorAttributeName: color ?: [self secondaryLabel],
+        NSKernAttributeName: @(0.6),
+    };
+}
+
 
 #pragma mark - Spacing (8-pt grid)
 
@@ -425,6 +439,34 @@
 + (CGFloat)cornerRadiusCapsule
 {
     return CGFLOAT_MAX;
+}
+
+
+#pragma mark - Layout Tokens (DESIGN_SPEC §3)
+
++ (CGFloat)overlayInsetWindowed
+{
+    return 16.0;
+}
+
++ (CGFloat)overlayInsetFullScreen
+{
+    return 24.0;
+}
+
++ (CGFloat)capsuleCornerRadius
+{
+    return 22.0;
+}
+
++ (CGFloat)cardCornerRadius
+{
+    return 18.0;
+}
+
++ (CGFloat)minimumHitTarget
+{
+    return 28.0;
 }
 
 
@@ -555,6 +597,52 @@
 
 #pragma mark - Motion
 
++ (NSTimeInterval)motionQuickDuration
+{
+    return 0.15;
+}
+
++ (NSTimeInterval)motionStandardDuration
+{
+    return 0.25;
+}
+
++ (NSTimeInterval)motionEmphasizedDuration
+{
+    return 0.42;
+}
+
++ (NSTimeInterval)controlsIdleDelay
+{
+    return 2.5;
+}
+
++ (NSTimeInterval)hudLinger
+{
+    return 1.2;
+}
+
++ (NSTimeInterval)hdrCardLinger
+{
+    return 6.0;
+}
+
++ (CASpringAnimation *)emphasizedSpringForKeyPath:(NSString *)keyPath
+{
+    CASpringAnimation *spring = [CASpringAnimation animationWithKeyPath:keyPath];
+    spring.mass = 1.0;
+    spring.stiffness = 220.0;
+    spring.damping = 26.0;
+    spring.initialVelocity = 0.0;
+    spring.duration = spring.settlingDuration;
+    return spring;
+}
+
++ (BOOL)reduceTransparency
+{
+    return NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceTransparency;
+}
+
 + (NSTimeInterval)animationDuration
 {
     return 0.25;
@@ -584,6 +672,112 @@
             actions();
         }];
     }
+}
+
++ (void)animateEntranceOfView:(NSView *)view
+{
+    if (!view) {
+        return;
+    }
+    view.wantsLayer = YES;
+    CALayer *layer = view.layer;
+    if (!layer) {
+        view.hidden = NO;
+        return;
+    }
+
+    CALayer *pLayer = (CALayer *)[layer presentationLayer];
+    const BOOL wasAnimating = ([layer animationForKey:@"MacLCEntranceOpacity"] != nil ||
+                               [layer animationForKey:@"MacLCExitOpacity"] != nil ||
+                               [layer animationForKey:@"MacLCEntranceTransform"] != nil);
+
+    CGFloat fromOpacity = (wasAnimating && pLayer) ? pLayer.opacity : 0.0;
+    CATransform3D fromTransform;
+    if (wasAnimating && pLayer) {
+        fromTransform = pLayer.transform;
+    } else {
+        const CGFloat startY = view.isFlipped ? 8.0 : -8.0;
+        fromTransform = CATransform3DScale(CATransform3DMakeTranslation(0.0, startY, 0.0), 0.96, 0.96, 1.0);
+    }
+
+    [layer removeAnimationForKey:@"MacLCEntranceOpacity"];
+    [layer removeAnimationForKey:@"MacLCEntranceTransform"];
+    [layer removeAnimationForKey:@"MacLCExitOpacity"];
+
+    view.hidden = NO;
+    layer.opacity = 1.0;
+    layer.transform = CATransform3DIdentity;
+
+    if (self.reducedMotion) {
+        CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        fade.fromValue = @(fromOpacity);
+        fade.toValue = @(1.0);
+        fade.duration = 0.2;
+        fade.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+        [layer addAnimation:fade forKey:@"MacLCEntranceOpacity"];
+    } else {
+        CASpringAnimation *opacityAnim = [self emphasizedSpringForKeyPath:@"opacity"];
+        opacityAnim.fromValue = @(fromOpacity);
+        opacityAnim.toValue = @(1.0);
+        [layer addAnimation:opacityAnim forKey:@"MacLCEntranceOpacity"];
+
+        CASpringAnimation *transformAnim = [self emphasizedSpringForKeyPath:@"transform"];
+        transformAnim.fromValue = [NSValue valueWithCATransform3D:fromTransform];
+        transformAnim.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+        [layer addAnimation:transformAnim forKey:@"MacLCEntranceTransform"];
+    }
+}
+
++ (void)animateExitOfView:(NSView *)view completion:(nullable void (^)(void))completion
+{
+    if (!view) {
+        if (completion) {
+            completion();
+        }
+        return;
+    }
+    view.wantsLayer = YES;
+    CALayer *layer = view.layer;
+    if (!layer) {
+        view.hidden = YES;
+        if (completion) {
+            completion();
+        }
+        return;
+    }
+
+    CALayer *pLayer = (CALayer *)[layer presentationLayer];
+    const BOOL wasAnimating = ([layer animationForKey:@"MacLCEntranceOpacity"] != nil ||
+                               [layer animationForKey:@"MacLCExitOpacity"] != nil);
+    CGFloat fromOpacity = (wasAnimating && pLayer) ? pLayer.opacity : layer.opacity;
+
+    [layer removeAnimationForKey:@"MacLCEntranceOpacity"];
+    [layer removeAnimationForKey:@"MacLCEntranceTransform"];
+    [layer removeAnimationForKey:@"MacLCExitOpacity"];
+
+    layer.opacity = 0.0;
+
+    const NSTimeInterval duration = self.reducedMotion ? 0.2 : self.motionStandardDuration;
+
+    [CATransaction begin];
+    [CATransaction setCompletionBlock:^{
+        if (layer.opacity == 0.0 && [layer animationForKey:@"MacLCExitOpacity"] == nil) {
+            view.hidden = YES;
+        }
+        if (completion) {
+            completion();
+        }
+    }];
+
+    CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    fade.fromValue = @(fromOpacity);
+    fade.toValue = @(0.0);
+    fade.duration = duration;
+    fade.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    fade.removedOnCompletion = YES;
+    [layer addAnimation:fade forKey:@"MacLCExitOpacity"];
+
+    [CATransaction commit];
 }
 
 

@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import <QuartzCore/QuartzCore.h>
 
 @class MacLCCardView;
 
@@ -261,6 +262,26 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (NSFont *)monospacedDigitFontForTextStyle:(NSFontTextStyle)style weight:(NSFontWeight)weight;
 
+/**
+ * Format badge typography: 10 pt semibold font (DESIGN_SPEC §4).
+ * Use for presentation format badges (DOLBY VISION, HDR10, etc.).
+ */
+@property (class, readonly) NSFont *badgeFont;
+
+/**
+ * Convenience method returning `badgeFont`.
+ */
++ (NSFont *)badgeFont;
+
+/**
+ * Text attributes dictionary for format badges configured with the specified
+ * text colour and +0.6 pt letter spacing (tracking/kerning) (DESIGN_SPEC §4).
+ *
+ * @param color The text colour to apply. Pass nil to default to `secondaryLabel`.
+ * @return An attributes dictionary suitable for NSString or NSAttributedString drawing.
+ */
++ (NSDictionary<NSAttributedStringKey, id> *)badgeTextAttributesWithColor:(nullable NSColor *)color;
+
 
 #pragma mark - Spacing (8-pt grid)
 
@@ -369,6 +390,34 @@ NS_ASSUME_NONNULL_BEGIN
 @property (class, readonly) CGFloat cornerRadiusCapsule;
 
 
+#pragma mark - Layout Tokens (DESIGN_SPEC §3)
+
+/**
+ * Overlay margin inset from video boundaries in windowed playback mode: 16 pt.
+ */
+@property (class, readonly) CGFloat overlayInsetWindowed;
+
+/**
+ * Overlay margin inset from video boundaries in full-screen playback mode: 24 pt.
+ */
+@property (class, readonly) CGFloat overlayInsetFullScreen;
+
+/**
+ * Corner radius for playback transport capsules and OSD capsules: 22 pt.
+ */
+@property (class, readonly) CGFloat capsuleCornerRadius;
+
+/**
+ * Corner radius for HDR information cards and elevated overlays: 18 pt.
+ */
+@property (class, readonly) CGFloat cardCornerRadius;
+
+/**
+ * Minimum touch and pointer hit target dimension: 28 pt (≥ 28×28 pt).
+ */
+@property (class, readonly) CGFloat minimumHitTarget;
+
+
 #pragma mark - Materials
 
 /**
@@ -447,13 +496,61 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Motion
 
 /**
+ * Quick motion duration: 0.15 s ease-out (DESIGN_SPEC §7).
+ * Use for hover states, button presses, and scrubber thumb appearance.
+ */
+@property (class, readonly) NSTimeInterval motionQuickDuration;
+
+/**
+ * Standard motion duration: 0.25 s ease-in-out (DESIGN_SPEC §7).
+ * Use for showing/hiding overlays and badge swaps.
+ */
+@property (class, readonly) NSTimeInterval motionStandardDuration;
+
+/**
+ * Emphasized motion settling duration: ~0.42 s (DESIGN_SPEC §7).
+ * Settling duration for the emphasized spring animation.
+ */
+@property (class, readonly) NSTimeInterval motionEmphasizedDuration;
+
+/**
+ * Standard delay before playback controls auto-hide during playback: 2.5 s (DESIGN_SPEC §7).
+ */
+@property (class, readonly) NSTimeInterval controlsIdleDelay;
+
+/**
+ * On-screen display (OSD) HUD linger duration before fade-out: 1.2 s (DESIGN_SPEC §7).
+ */
+@property (class, readonly) NSTimeInterval hudLinger;
+
+/**
+ * HDR announcement card linger duration before auto-dismissal: 6.0 s (DESIGN_SPEC §7).
+ */
+@property (class, readonly) NSTimeInterval hdrCardLinger;
+
+/**
+ * Creates and returns a CASpringAnimation configured with the emphasized spring curve
+ * (mass: 1.0, stiffness: 220.0, damping: 26.0, initialVelocity: 0.0, duration: settlingDuration).
+ *
+ * @param keyPath The layer property key path to animate (e.g. @"transform", @"opacity").
+ * @return A configured CASpringAnimation instance.
+ */
++ (CASpringAnimation *)emphasizedSpringForKeyPath:(NSString *)keyPath;
+
+/**
+ * Indicates whether the user has enabled Reduce Transparency in System Settings.
+ * Reads `NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceTransparency` live.
+ */
+@property (class, readonly) BOOL reduceTransparency;
+
+/**
  * Standard animation duration for macOS interface transitions (0.25 seconds).
  */
 @property (class, readonly) NSTimeInterval animationDuration;
 
 /**
  * Indicates whether the user has enabled Reduced Motion in System Settings.
- * Reads `NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion`.
+ * Reads `NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion` live.
  */
 @property (class, readonly) BOOL reducedMotion;
 
@@ -466,6 +563,30 @@ NS_ASSUME_NONNULL_BEGIN
  * @param actions The block containing view or layout animations.
  */
 + (void)performAnimated:(void(^)(void))actions;
+
+/**
+ * Animates the entrance of a view using standard motion design:
+ * - Fade 0 -> 1
+ * - Translate 8 pt up into place
+ * - Scale 0.96 -> 1.0
+ * using the emphasized spring on the view's layer.
+ * When Reduced Motion is enabled, performs a 0.2 s cross-fade only.
+ * Sets `wantsLayer` on the view and interrupts cleanly from presentation values.
+ *
+ * @param view The layer-backed NSView to animate into view.
+ */
++ (void)animateEntranceOfView:(NSView *)view;
+
+/**
+ * Animates the exit of a view with a clean fade-out over `motionStandardDuration`.
+ * When Reduced Motion is enabled, performs a 0.2 s cross-fade.
+ * Sets `wantsLayer` on the view, interrupts cleanly from presentation values,
+ * and sets `view.hidden = YES` on successful completion.
+ *
+ * @param view The layer-backed NSView to animate out.
+ * @param completion An optional block called when the exit animation completes.
+ */
++ (void)animateExitOfView:(NSView *)view completion:(nullable void (^)(void))completion;
 
 
 #pragma mark - Card Helper
