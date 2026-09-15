@@ -58,6 +58,9 @@ static const NSTimeInterval kPollInterval = 1.0;
     BOOL _outputKnown;
     BOOL _outputCheckPending;
     NSUInteger _restartsForMedia;
+    /* The user's default format when the file did not show it yet (HDR10+
+     * and Dolby Vision can be found only while decoding). */
+    MacLCHDRPresentation _awaitedDefault;
     CGFloat _publishedDisplayPeak;
     NSTimer *_pollTimer;
 }
@@ -233,6 +236,7 @@ static const NSTimeInterval kPollInterval = 1.0;
     _outputKnown = NO;
     _outputCheckPending = NO;
     _restartsForMedia = 0;
+    _awaitedDefault = MacLCHDRPresentationAuto;
     _stream = nil;
     _recommendation = nil;
     _reportedActive = MacLCHDRPresentationAuto;
@@ -322,7 +326,12 @@ static const NSTimeInterval kPollInterval = 1.0;
 
     if (stream != nil && stream.isHDR && !_decidedForMedia)
         [self decideForCurrentMedia];
-    else if (_outputCheckPending)
+    else if (_awaitedDefault != MacLCHDRPresentationAuto
+             && [stream.availablePresentations containsObject:@(_awaitedDefault)]) {
+        const MacLCHDRPresentation presentation = _awaitedDefault;
+        _awaitedDefault = MacLCHDRPresentationAuto;
+        [self requestPresentation:presentation userInitiated:NO];
+    } else if (_outputCheckPending)
         [self reconcileOutput];
 
     if (stream != nil && stream.isHDR && !_cardPostedForMedia)
@@ -374,8 +383,13 @@ static const NSTimeInterval kPollInterval = 1.0;
     _decidedForMedia = YES;
     MacLCHDRPresentation target = _requestedPresentation;
     if (target == MacLCHDRPresentationAuto
-        || ![_stream.availablePresentations containsObject:@(target)])
+        || ![_stream.availablePresentations containsObject:@(target)]) {
+        /* A default the file may still reveal is applied when it does. */
+        if (target == MacLCHDRPresentationHDR10Plus
+            || target == MacLCHDRPresentationDolbyVision)
+            _awaitedDefault = target;
         target = _recommendation.presentation;
+    }
     if (target == MacLCHDRPresentationAuto)
         return;
     [self requestPresentation:target userInitiated:NO];
@@ -421,9 +435,11 @@ static const NSTimeInterval kPollInterval = 1.0;
                      forVariable:MACLC_HDR_VAR_PRESENTATION];
 
     /* The restart budget guards against automatic ping-pong, not against
-     * the user changing their mind. */
-    if (userInitiated)
+     * the user changing their mind - who also overrides an awaited default. */
+    if (userInitiated) {
         _restartsForMedia = 0;
+        _awaitedDefault = MacLCHDRPresentationAuto;
+    }
     _outputCheckPending = YES;
     [self reconcileOutput];
 
