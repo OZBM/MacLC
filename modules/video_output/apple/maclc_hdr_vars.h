@@ -22,6 +22,7 @@
 #ifndef MACLC_HDR_VARS_H
 #define MACLC_HDR_VARS_H
 
+#include <stdbool.h>
 #include <string.h>
 
 /*
@@ -42,6 +43,11 @@
  * track: the stream carries Dolby Vision even if its container did not say so
  * (bool). Lets the outputs route it to the one that can apply the RPUs. */
 #define MACLC_HDR_VAR_DOVI_HINT    "maclc-hdr-dovi-hint"
+
+/* Written by the GUI on the player: the peak luminance (cd/m2) its advice
+ * assumes for the display showing the video, 0 when unknown (float). Lets an
+ * output that opens before the GUI has decided apply the same rule to "auto". */
+#define MACLC_HDR_VAR_DISPLAY_PEAK "maclc-hdr-display-peak"
 
 /* State published by the vout (created by the vout, read by the GUI) */
 #define MACLC_HDR_VAR_CAPS         "maclc-hdr-caps"   /* integer bitmask */
@@ -74,6 +80,29 @@ enum maclc_hdr_picture
     MACLC_HDR_PICTURE_BALANCED,
     MACLC_HDR_PICTURE_BRIGHT,
 };
+
+/* The brightest the video gets, in cd/m2: its content light level, else its
+ * mastering display, else what HDR masters usually use.
+ * mastering_max is in units of 0.0001 cd/m2, as in video_format_t. */
+static inline float
+maclc_hdr_content_peak(unsigned max_cll, unsigned mastering_max, bool is_hdr)
+{
+    if (max_cll > 0)
+        return (float)max_cll;
+    if (mastering_max > 0)
+        return mastering_max / 10000.0f;
+    return is_hdr ? 1000.0f : 100.0f;
+}
+
+/* The one rule behind "auto": a master brighter than the display (5 %
+ * tolerance, so a 1,000-nit master on a ~1,000-nit panel fits) must be tone
+ * mapped, which is when Dolby Vision or HDR10+ per-scene metadata changes the
+ * picture. When it fits, every format shows the same image. */
+static inline bool
+maclc_hdr_needs_tone_mapping(float content_peak, float display_peak)
+{
+    return display_peak > 0.0f && content_peak > display_peak * 1.05f;
+}
 
 static inline enum maclc_hdr_presentation
 maclc_hdr_presentation_parse(const char *s)

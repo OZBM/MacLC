@@ -58,6 +58,7 @@ static const NSTimeInterval kPollInterval = 1.0;
     BOOL _outputKnown;
     BOOL _outputCheckPending;
     NSUInteger _restartsForMedia;
+    CGFloat _publishedDisplayPeak;
     NSTimer *_pollTimer;
 }
 
@@ -76,6 +77,7 @@ static const NSTimeInterval kPollInterval = 1.0;
     self = [super init];
     if (self) {
         _display = [MacLCDisplayInfo displayInfoForScreen:[self videoScreen]];
+        [self publishDisplayPeak:_display];
         _processable = [NSSet set];
         _requestedPresentation = [self defaultPresentation];
         _requestedPicture = [self defaultPicture];
@@ -250,11 +252,24 @@ static const NSTimeInterval kPollInterval = 1.0;
 
 #pragma mark - Refresh
 
+/* Outputs that open before this controller has decided apply the same rule to
+ * "auto" with this number, so they usually pick the right kind first. */
+- (void)publishDisplayPeak:(MacLCDisplayInfo *)display
+{
+    const CGFloat peak = display.contentPeakNits;
+    if (fabs(peak - _publishedDisplayPeak) < 1.0)
+        return;
+    _publishedDisplayPeak = peak;
+    [self.playerController setVideoOutputFloat:(float)peak
+                                   forVariable:MACLC_HDR_VAR_DISPLAY_PEAK];
+}
+
 - (void)refresh
 {
     VLCPlayerController *player = self.playerController;
 
     MacLCDisplayInfo *display = [MacLCDisplayInfo displayInfoForScreen:[self videoScreen]];
+    [self publishDisplayPeak:display];
 
     video_format_t fmt;
     const BOOL hasVideo = [player copySelectedVideoFormat:&fmt];

@@ -256,6 +256,10 @@ static const char *const hdr_card_list_text[] = {
                  N_("Video carries Dolby Vision"), NULL)
             change_private()
             change_volatile()
+        add_float("maclc-hdr-display-peak", 0.0f,
+                  N_("Display peak luminance assumed for HDR"), NULL)
+            change_private()
+            change_volatile()
 
     add_submodule()
         set_description("Mac OS X Video Output Provider")

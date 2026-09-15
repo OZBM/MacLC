@@ -22,6 +22,8 @@
 
 #import "MacLCHDRAdvisor.h"
 
+#include "../../video_output/apple/maclc_hdr_vars.h"
+
 #if __has_include("extensions/NSString+Helpers.h")
 #import "extensions/NSString+Helpers.h"
 #elif __has_include("gui/macosx/extensions/NSString+Helpers.h")
@@ -107,7 +109,8 @@
      * now, i.e. some tone mapping has to happen (5 % tolerance so a 1,000-nit
      * master on a ~1,000-nit panel is not flagged). */
     const BOOL contentNeedsToneMapping =
-        stream.contentPeakNits > display.contentPeakNits * 1.05f;
+        maclc_hdr_needs_tone_mapping((float)stream.contentPeakNits,
+                                     (float)display.contentPeakNits);
     /* Set when Dolby Vision / HDR10+ are present but HDR10 was picked because
      * the master fits the display; the reason line then says why. */
     BOOL preferredNativeOverDynamic = NO;

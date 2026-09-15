@@ -25,6 +25,8 @@
 #include <math.h>
 #include <vlc_fourcc.h>
 
+#include "../../video_output/apple/maclc_hdr_vars.h"
+
 @implementation MacLCHDRStreamInfo
 
 @synthesize availablePresentations = _availablePresentations;
@@ -166,18 +168,13 @@
 
 - (CGFloat)contentPeakNits
 {
-    if (self.maxCLL > 0) {
-        return (CGFloat)self.maxCLL;
-    }
-    if (self.masteringPeakNits > 0.0f) {
-        return (CGFloat)self.masteringPeakNits;
-    }
-    if (self.transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
-        self.transfer == TRANSFER_FUNC_HLG ||
-        self.doviProfile >= 0) {
-        return 1000.0;
-    }
-    return 100.0;
+    /* Same numbers as the video outputs use for "auto". */
+    const bool isHDR = self.transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
+                       self.transfer == TRANSFER_FUNC_HLG ||
+                       self.doviProfile >= 0;
+    return (CGFloat)maclc_hdr_content_peak((unsigned)self.maxCLL,
+                                           (unsigned)lroundf(self.masteringPeakNits * 10000.0f),
+                                           isHDR);
 }
 
 - (BOOL)isEqual:(id)object

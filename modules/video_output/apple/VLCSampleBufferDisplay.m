@@ -2176,6 +2176,27 @@ static int Open (vout_display_t *vd,
                         "applies the RPU");
             return VLC_EGENERIC;
         }
+        /* "auto" before the interface has decided: its rule, with the display
+         * peak it published. A master brighter than the display is where the
+         * RPU changes the picture. */
+        if (has_dovi && presentation == MACLC_HDR_PRESENTATION_AUTO) {
+            const float display_peak =
+                var_InheritFloat(vd, MACLC_HDR_VAR_DISPLAY_PEAK);
+            const unsigned max_cll = fmt->lighting.MaxCLL
+                                   ? fmt->lighting.MaxCLL
+                                   : vd->source->lighting.MaxCLL;
+            const unsigned mastering_max = fmt->mastering.max_luminance
+                                         ? fmt->mastering.max_luminance
+                                         : vd->source->mastering.max_luminance;
+            const float content_peak =
+                maclc_hdr_content_peak(max_cll, mastering_max, true);
+            if (maclc_hdr_needs_tone_mapping(content_peak, display_peak)) {
+                msg_Dbg(vd, "Dolby Vision master (%.0f cd/m2) brighter than the "
+                            "display (%.0f cd/m2); leaving it to an output that "
+                            "applies the RPU", content_peak, display_peak);
+                return VLC_EGENERIC;
+            }
+        }
         if (presentation == MACLC_HDR_PRESENTATION_HDR10PLUS &&
             fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084) {
             msg_Dbg(vd, "HDR10+ requested; leaving it to an output that applies "
