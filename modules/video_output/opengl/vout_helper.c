@@ -119,7 +119,14 @@ CreateFilters(vlc_gl_t *gl, const struct vlc_gl_api *api,
 
     int upscaler = var_InheritInteger(gl, "gl-upscaler");
     int downscaler = var_InheritInteger(gl, "gl-downscaler");
-    int has_dovi = fmt_in->dovi.rpu_present && !fmt_in->dovi.el_present; /* can't handle EL yet */
+    /* Dual-layer streams (profile 7) are processed from their base layer and
+     * RPU; the enhancement layer is not decoded, which is exact for MEL and a
+     * close approximation for FEL. Profile 5 always needs the RPU. */
+    int has_dovi = fmt_in->dovi.rpu_present || fmt_in->dovi.profile == 5;
+    if (fmt_in->dovi.rpu_present && fmt_in->dovi.el_present)
+        msg_Dbg(gl, "Dolby Vision profile %u: rendering the base layer and "
+                    "RPU, the enhancement layer is ignored",
+                (unsigned) fmt_in->dovi.profile);
     bool has_hdr = fmt_in->transfer == TRANSFER_FUNC_SMPTE_ST2084 ||
                    fmt_in->transfer == TRANSFER_FUNC_HLG;
 
