@@ -55,6 +55,9 @@ static const NSTimeInterval kPollInterval = 1.0;
     BOOL _decidedForMedia;
     BOOL _cardPostedForMedia;
     BOOL _restartPending;
+    BOOL _outputKnown;
+    BOOL _outputCheckPending;
+    NSUInteger _restartsForMedia;
     NSTimer *_pollTimer;
 }
 
@@ -160,9 +163,11 @@ static const NSTimeInterval kPollInterval = 1.0;
 
 #pragma mark - Defaults
 
+/* Inherited rather than read from the configuration, so an option given on
+ * the command line wins over the saved preference. */
 - (MacLCHDRPresentation)defaultPresentation
 {
-    char *value = MacLCConfigGetPsz(MACLC_HDR_VAR_PRESENTATION);
+    char *value = var_InheritString(getIntf(), MACLC_HDR_VAR_PRESENTATION);
     MacLCHDRPresentation p = value ? MacLCHDRPresentationFromString(@(value))
                                    : MacLCHDRPresentationAuto;
     free(value);
@@ -171,7 +176,7 @@ static const NSTimeInterval kPollInterval = 1.0;
 
 - (MacLCHDRPictureMode)defaultPicture
 {
-    char *value = MacLCConfigGetPsz(MACLC_HDR_VAR_PICTURE);
+    char *value = var_InheritString(getIntf(), MACLC_HDR_VAR_PICTURE);
     MacLCHDRPictureMode m = value ? MacLCHDRPictureModeFromString(@(value))
                                   : MacLCHDRPictureModeAuto;
     free(value);
@@ -223,6 +228,9 @@ static const NSTimeInterval kPollInterval = 1.0;
     _decidedForMedia = NO;
     _cardPostedForMedia = NO;
     _restartPending = NO;
+    _outputKnown = NO;
+    _outputCheckPending = NO;
+    _restartsForMedia = 0;
     _stream = nil;
     _recommendation = nil;
     _reportedActive = MacLCHDRPresentationAuto;
@@ -257,6 +265,9 @@ static const NSTimeInterval kPollInterval = 1.0;
                                                  : MacLCHDRPresentationAuto;
     const BOOL reportedChanged = reported != _reportedActive;
     _reportedActive = reported;
+    /* The libplacebo output announces itself when it opens, the native one
+     * with its first picture. */
+    _outputKnown = hasVideo && ((_caps & MACLC_HDR_CAP_CAN_DOVI) != 0 || active != nil);
 
     MacLCHDRStreamInfo *stream = nil;
     if (hasVideo) {
@@ -296,6 +307,8 @@ static const NSTimeInterval kPollInterval = 1.0;
 
     if (stream != nil && stream.isHDR && !_decidedForMedia)
         [self decideForCurrentMedia];
+    else if (_outputCheckPending)
+        [self reconcileOutput];
 
     if (stream != nil && stream.isHDR && !_cardPostedForMedia)
         [self scheduleCardIfNeeded];
@@ -392,26 +405,52 @@ static const NSTimeInterval kPollInterval = 1.0;
     [player setVideoOutputString:MacLCHDRPresentationToString(presentation)
                      forVariable:MACLC_HDR_VAR_PRESENTATION];
 
-    /* Keep each presentation on the output built for it: Dolby Vision and
-     * HDR10+ need the libplacebo output, the others are cheapest on the
-     * native one. A running output that is the wrong kind is replaced by
-     * restarting the video track; SDR is served live by both. */
-    const BOOL runningLibplacebo = (_caps & MACLC_HDR_CAP_CAN_DOVI) != 0;
-    const BOOL needsLibplacebo = [self presentationNeedsLibplaceboOutput:presentation];
-    if (presentation != MacLCHDRPresentationSDR
-        && needsLibplacebo != runningLibplacebo && !_restartPending) {
-        _restartPending = YES;
-        [player restartSelectedVideoTrack];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)),
-                       dispatch_get_main_queue(), ^{
-            self->_restartPending = NO;
-            [self refresh];
-        });
-    }
+    /* The restart budget guards against automatic ping-pong, not against
+     * the user changing their mind. */
+    if (userInitiated)
+        _restartsForMedia = 0;
+    _outputCheckPending = YES;
+    [self reconcileOutput];
 
     if (userInitiated)
         [NSNotificationCenter.defaultCenter postNotificationName:MacLCHDRStateDidChangeNotification
                                                           object:self];
+}
+
+/* Keeps each presentation on the output built for it: Dolby Vision and HDR10+
+ * need the libplacebo output, the others are cheapest on the native one. A
+ * running output of the wrong kind is replaced by restarting the video track;
+ * SDR is served live by both. Until an output has said which kind it is there
+ * is nothing to replace: the one being opened reads the request itself. */
+- (void)reconcileOutput
+{
+    if (!_outputKnown || _restartPending || _stream == nil)
+        return;
+    _outputCheckPending = NO;
+
+    const MacLCHDRPresentation presentation = _requestedPresentation;
+    if (presentation == MacLCHDRPresentationAuto || presentation == MacLCHDRPresentationSDR)
+        return;
+
+    const BOOL runningLibplacebo = (_caps & MACLC_HDR_CAP_CAN_DOVI) != 0;
+    if ([self presentationNeedsLibplaceboOutput:presentation] == runningLibplacebo)
+        return;
+
+    /* An output that keeps coming back as the wrong kind is not worth a
+     * third interruption: keep playing with what it can do. */
+    if (_restartsForMedia >= 2)
+        return;
+    _restartsForMedia++;
+    _restartPending = YES;
+    [self.playerController restartSelectedVideoTrack];
+    NSString *key = _mediaKey;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        if (key != self->_mediaKey && ![key isEqualToString:self->_mediaKey])
+            return;
+        self->_restartPending = NO;
+        [self refresh];
+    });
 }
 
 #pragma mark - Public actions
