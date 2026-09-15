@@ -278,6 +278,7 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
             [_playerController performVideoOutputRequest:^{
                 var_SetBool(p_vout, "video-on-top", false);
                 var_SetBool(p_vout, "fullscreen", true);
+            } cleanup:^{
                 vout_Release(p_vout);
             }];
         }
@@ -323,6 +324,7 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
                 var_SetBool(p_vout, "fullscreen", false);
                 if (onTop)
                     var_SetBool(p_vout, "video-on-top", true);
+            } cleanup:^{
                 vout_Release(p_vout);
             }];
         }
@@ -520,6 +522,7 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
             [_playerController performVideoOutputRequest:^{
                 var_SetBool(p_vout, "video-on-top", false);
                 var_SetBool(p_vout, "fullscreen", true);
+            } cleanup:^{
                 vout_Release(p_vout);
             }];
         }
@@ -660,6 +663,7 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
                 var_SetBool(p_vout, "fullscreen", false);
                 if (onTop)
                     var_SetBool(p_vout, "video-on-top", true);
+            } cleanup:^{
                 vout_Release(p_vout);
             }];
         }

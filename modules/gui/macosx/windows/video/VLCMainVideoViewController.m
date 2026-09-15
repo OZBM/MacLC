@@ -209,13 +209,20 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         return;
     if (!(window.occlusionState & NSWindowOcclusionStateVisible))
         return;
+    VLCPlayerController * const player =
+        VLCMain.sharedInstance.playQueueController.playerController;
+    /* One capsule at a time: the view the video plays in, or - for audio,
+     * which has no video output - the one in the key window. */
+    vout_thread_t * const hosted = self.voutView.voutThread; /* held */
+    if (hosted != NULL)
+        vout_Release(hosted);
+    if (hosted == NULL && !(window.isKeyWindow && player.currentMediaIsAudioOnly))
+        return;
     NSDictionary *info = notification.userInfo;
     if ([info[MacLCOSDOnlyWithoutControlsKey] boolValue]
         && self.mainControlsView.alphaValue > 0.5)
         return;
 
-    VLCPlayerController * const player =
-        VLCMain.sharedInstance.playQueueController.playerController;
     const CGFloat inset = player.fullscreen ? MacLCDesign.overlayInsetFullScreen
                                             : MacLCDesign.overlayInsetWindowed;
     if (_osdView == nil) {

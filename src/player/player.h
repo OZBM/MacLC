@@ -568,6 +568,13 @@ vlc_player_aout_Deinit(vlc_player_t *player);
 void
 vlc_player_osd_Message(vlc_player_t *player, const char *fmt, ...);
 
+/* Like vlc_player_osd_Message(), and also published, as "source<TAB>text",
+ * in the player's "maclc-osd-text" variable when an interface created it, for
+ * interfaces that draw their own on-screen messages. */
+void
+vlc_player_osd_MessageFrom(vlc_player_t *player, const char *source,
+                           const char *fmt, ...);
+
 void
 vlc_player_osd_Icon(vlc_player_t *player, vlc_osd_widget_type type);
 

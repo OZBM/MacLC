@@ -82,7 +82,7 @@ NSString *VLCPlayerWallpaperModeChanged = @"VLCPlayerWallpaperModeChanged";
 NSString *VLCPlayerListOfVideoOutputThreadsChanged = @"VLCPlayerListOfVideoOutputThreadsChanged";
 NSString *VLCPlayerVolumeChanged = @"VLCPlayerVolumeChanged";
 NSString *VLCPlayerMuteChanged = @"VLCPlayerMuteChanged";
-NSString * const VLCPlayerCoreVideoSettingMessage = @"VLCPlayerCoreVideoSettingMessage";
+NSString * const VLCPlayerCoreOSDMessage = @"VLCPlayerCoreOSDMessage";
 NSString * const VLCPlayerCoreMessageSourceKey = @"VLCPlayerCoreMessageSource";
 NSString * const VLCPlayerCoreMessageTextKey = @"VLCPlayerCoreMessageText";
 NSString * const VLCPlayerLyricsAvailableChanged = @"VLCPlayerLyricsAvailableChanged";
@@ -629,7 +629,7 @@ static const struct vlc_player_aout_cbs player_aout_callbacks = {
 };
 
 /* The core publishes "variable<TAB>text" here (src/player/osd.c). */
-static int CoreVideoSettingMessageCallback(vlc_object_t *p_this,
+static int CoreOSDMessageCallback(vlc_object_t *p_this,
                                            const char *psz_var,
                                            vlc_value_t oldval,
                                            vlc_value_t new_val,
@@ -646,7 +646,7 @@ static int CoreVideoSettingMessageCallback(vlc_object_t *p_this,
             VLCPlayerCoreMessageTextKey: [payload substringFromIndex:NSMaxRange(tab)],
         };
         dispatch_async(dispatch_get_main_queue(), ^{
-            [NSNotificationCenter.defaultCenter postNotificationName:VLCPlayerCoreVideoSettingMessage
+            [NSNotificationCenter.defaultCenter postNotificationName:VLCPlayerCoreOSDMessage
                                                               object:nil
                                                             userInfo:info];
         });
@@ -739,7 +739,7 @@ static int BossCallback(vlc_object_t *p_this,
         if (_playerObject != NULL) {
             var_Create(_playerObject, "maclc-osd-text", VLC_VAR_STRING);
             var_AddCallback(_playerObject, "maclc-osd-text",
-                            CoreVideoSettingMessageCallback, NULL);
+                            CoreOSDMessageCallback, NULL);
         }
     }
 
@@ -777,7 +777,7 @@ static int BossCallback(vlc_object_t *p_this,
 
     if (_playerObject != NULL) {
         var_DelCallback(_playerObject, "maclc-osd-text",
-                        CoreVideoSettingMessageCallback, NULL);
+                        CoreOSDMessageCallback, NULL);
         var_Destroy(_playerObject, "maclc-osd-text");
         _playerObject = NULL;
     }
@@ -2079,12 +2079,19 @@ static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
 
 - (void)performVideoOutputRequest:(dispatch_block_t)request
 {
+    [self performVideoOutputRequest:request cleanup:nil];
+}
+
+- (void)performVideoOutputRequest:(dispatch_block_t)request
+                          cleanup:(nullable dispatch_block_t)cleanup
+{
     __weak typeof(self) weakSelf = self;
     dispatch_async(_voutRequestQueue, ^{
         VLCPlayerController *strongSelf = weakSelf;
-        if (strongSelf == nil || atomic_load(&strongSelf->_terminating))
-            return;
-        request();
+        if (strongSelf != nil && !atomic_load(&strongSelf->_terminating))
+            request();
+        if (cleanup != nil)
+            cleanup();
     });
 }
 

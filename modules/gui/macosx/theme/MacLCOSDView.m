@@ -39,6 +39,7 @@ static const CGFloat kOSDLevelBarHeight = 4.0;
     NSLayoutConstraint *_levelTrackWidth;
     NSStackView *_stack;
     NSTimer *_lingerTimer;
+    NSTimer *_announceTimer;
     BOOL _presented;
 }
 
@@ -151,12 +152,15 @@ static const CGFloat kOSDLevelBarHeight = 4.0;
     if (newWindow == nil) {
         [_lingerTimer invalidate];
         _lingerTimer = nil;
+        [_announceTimer invalidate];
+        _announceTimer = nil;
     }
 }
 
 - (void)dealloc
 {
     [_lingerTimer invalidate];
+    [_announceTimer invalidate];
 }
 
 - (void)showMessage:(NSString *)message
@@ -182,11 +186,22 @@ static const CGFloat kOSDLevelBarHeight = 4.0;
         }];
     }
 
+    /* VoiceOver hears the value the user settles on, not every step of a
+     * held key or a scrub. */
     self.accessibilityLabel = message;
-    NSAccessibilityPostNotificationWithUserInfo(NSApp.mainWindow ?: (id)self,
-        NSAccessibilityAnnouncementRequestedNotification,
-        @{ NSAccessibilityAnnouncementKey: message,
-           NSAccessibilityPriorityKey: @(NSAccessibilityPriorityMedium) });
+    [_announceTimer invalidate];
+    __weak typeof(self) weakAnnouncer = self;
+    _announceTimer = [NSTimer scheduledTimerWithTimeInterval:0.6
+                                                     repeats:NO
+                                                       block:^(NSTimer *timer) {
+        typeof(self) strongSelf = weakAnnouncer;
+        if (strongSelf == nil)
+            return;
+        NSAccessibilityPostNotificationWithUserInfo(NSApp.mainWindow ?: (id)strongSelf,
+            NSAccessibilityAnnouncementRequestedNotification,
+            @{ NSAccessibilityAnnouncementKey: strongSelf.accessibilityLabel ?: @"",
+               NSAccessibilityPriorityKey: @(NSAccessibilityPriorityMedium) });
+    }];
 
     if (!_presented) {
         _presented = YES;

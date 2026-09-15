@@ -243,13 +243,16 @@ extern NSString *VLCPlayerVolumeChanged;
 extern NSString *VLCPlayerMuteChanged;
 
 /**
- * Posted on the main thread when the core reports a change of a video setting
- * (aspect ratio, crop, zoom, deinterlacing, subtitle position), whatever made
- * it: keyboard shortcuts, menus, remote control. userInfo carries the setting
- * (VLCPlayerCoreMessageSourceKey, the variable name) and the core's text
+ * Posted on the main thread when the core reports an on-screen message about
+ * something someone asked for: a video setting (aspect ratio, crop, zoom,
+ * deinterlacing, subtitle position - the source is the variable name) or a
+ * track, chapter, title or program selection (sources "audio-track",
+ * "subtitle-track", "video-track", "chapter", "title", "program"), whatever
+ * made it: keyboard shortcuts, menus, remote control. userInfo carries the
+ * source (VLCPlayerCoreMessageSourceKey) and the core's text
  * (VLCPlayerCoreMessageTextKey).
  */
-extern NSString * const VLCPlayerCoreVideoSettingMessage;
+extern NSString * const VLCPlayerCoreOSDMessage;
 extern NSString * const VLCPlayerCoreMessageSourceKey;
 extern NSString * const VLCPlayerCoreMessageTextKey;
 
@@ -902,6 +905,11 @@ extern const CGFloat VLCVolumeDefault;
  * thread must never wait for them.
  */
 - (void)performVideoOutputRequest:(dispatch_block_t)request;
+
+/** Same, with a cleanup that runs even when the request is dropped because the
+ *  application is terminating (releasing a held video output, for instance). */
+- (void)performVideoOutputRequest:(dispatch_block_t)request
+                          cleanup:(nullable dispatch_block_t)cleanup;
 
 
 - (void)togglePictureInPicture;

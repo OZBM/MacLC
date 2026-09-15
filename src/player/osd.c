@@ -86,6 +86,37 @@ vouts_osd_Slider(vout_thread_t **vouts, size_t count, int position, vlc_osd_widg
         vout_OSDSlider(vouts[i], channel, position, type);
 }
 
+static void
+osd_Publish(vlc_player_t *player, const char *source, const char *text)
+{
+    vlc_object_t *obj = VLC_OBJECT(player);
+    if ((var_Type(obj, "maclc-osd-text") & VLC_VAR_CLASS) != VLC_VAR_STRING)
+        return;
+    char *payload;
+    if (asprintf(&payload, "%s\t%s", source, text) >= 0)
+    {
+        var_SetString(obj, "maclc-osd-text", payload);
+        free(payload);
+    }
+}
+
+void
+vlc_player_osd_MessageFrom(vlc_player_t *player, const char *source,
+                           const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *text;
+    int len = vasprintf(&text, fmt, args);
+    va_end(args);
+    if (len < 0)
+        return;
+
+    vlc_player_osd_Message(player, "%s", text);
+    osd_Publish(player, source, text);
+    free(text);
+}
+
 void
 vlc_player_osd_Message(vlc_player_t *player, const char *fmt, ...)
 {
@@ -172,6 +203,19 @@ vlc_player_osd_Volume(vlc_player_t *player, bool mute_action)
     vlc_player_osd_ReleaseAll(player, vouts, count);
 }
 
+/* Which track list a selection message is about, for interfaces. */
+static const char *
+TrackSource(enum es_format_category_e cat)
+{
+    switch (cat)
+    {
+        case AUDIO_ES: return "audio-track";
+        case SPU_ES:   return "subtitle-track";
+        case VIDEO_ES: return "video-track";
+        default:       return "track";
+    }
+}
+
 void
 vlc_player_osd_Track(vlc_player_t *player, vlc_es_id_t *id, bool select)
 {
@@ -183,7 +227,8 @@ vlc_player_osd_Track(vlc_player_t *player, vlc_es_id_t *id, bool select)
     const char *cat_name = es_format_category_to_string(cat);
     assert(cat_name);
     const char *track_name = select ? track->name : _("N/A");
-    vlc_player_osd_Message(player, _("%s track: %s"), cat_name, track_name);
+    vlc_player_osd_MessageFrom(player, TrackSource(cat), _("%s track: %s"),
+                               cat_name, track_name);
 }
 
 void
@@ -226,7 +271,8 @@ vlc_player_osd_Tracks(vlc_player_t *player, vlc_es_id_t * const *selected, vlc_e
 
     if (tracks_count == 0)
     {
-        vlc_player_osd_Message(player, _("%s track: %s"), cat_name, _("N/A"));
+        vlc_player_osd_MessageFrom(player, TrackSource(cat), _("%s track: %s"),
+                                   cat_name, _("N/A"));
         return;
     }
 
@@ -235,18 +281,19 @@ vlc_player_osd_Tracks(vlc_player_t *player, vlc_es_id_t * const *selected, vlc_e
         return;
 
     if (tracks_count == 1)
-        vlc_player_osd_Message(player, _("%s track: %s"), cat_name,
-                               stream.ptr);
+        vlc_player_osd_MessageFrom(player, TrackSource(cat), _("%s track: %s"),
+                                   cat_name, stream.ptr);
     else
-        vlc_player_osd_Message(player, _("%s tracks: %s"), cat_name,
-                               stream.ptr);
+        vlc_player_osd_MessageFrom(player, TrackSource(cat), _("%s tracks: %s"),
+                                   cat_name, stream.ptr);
     free(stream.ptr);
 }
 
 void
 vlc_player_osd_Program(vlc_player_t *player, const char *name)
 {
-    vlc_player_osd_Message(player, _("Program Service ID: %s"), name);
+    vlc_player_osd_MessageFrom(player, "program", _("Program Service ID: %s"),
+                               name);
 }
 
 /* Draws a message about a video setting and publishes it, as "variable<TAB>
@@ -266,17 +313,7 @@ vout_osd_Report(vlc_player_t *player, vout_thread_t *vout, const char *varname,
         return;
 
     vouts_osd_Message(&vout, 1, "%s", text);
-
-    vlc_object_t *obj = VLC_OBJECT(player);
-    if ((var_Type(obj, "maclc-osd-text") & VLC_VAR_CLASS) == VLC_VAR_STRING)
-    {
-        char *payload;
-        if (asprintf(&payload, "%s\t%s", varname, text) >= 0)
-        {
-            var_SetString(obj, "maclc-osd-text", payload);
-            free(payload);
-        }
-    }
+    osd_Publish(player, varname, text);
     free(text);
 }
 
