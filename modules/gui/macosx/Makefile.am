@@ -853,12 +853,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow/volume-low.png \
 	gui/macosx/Resources/mainwindow/volume-low@2x.png \
 	gui/macosx/Resources/noart.png \
-	gui/macosx/Resources/Pref-Icons/VLCAudioCone.png \
-	gui/macosx/Resources/Pref-Icons/VLCHotkeysCone.png \
-	gui/macosx/Resources/Pref-Icons/VLCInputCone.png \
-	gui/macosx/Resources/Pref-Icons/VLCInterfaceCone.png \
-	gui/macosx/Resources/Pref-Icons/VLCSubtitleCone.png \
-	gui/macosx/Resources/Pref-Icons/VLCVideoCone.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-movie.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-movie@2x.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-music.png \

@@ -349,7 +349,10 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
     [toolbarItem setPaletteLabel:desc];
 
     [toolbarItem setToolTip:desc];
-    [toolbarItem setImage:[NSImage imageNamed:img]];
+    /* SF Symbols, like the settings window: the old toolbar art was the
+     * upstream player's. */
+    NSImage *image = [NSImage imageWithSystemSymbolName:img accessibilityDescription:name];
+    [toolbarItem setImage:image ?: [NSImage imageNamed:img]];
 
     [toolbarItem setTarget:target];
     [toolbarItem setAction:selector];
@@ -367,19 +370,19 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
     NSToolbarItem *toolbarItem = nil;
 
     if ([itemIdent isEqual: VLCIntfSettingToolbarIdentifier]) {
-        CreateToolbarItem(NSTR(INTF_TITLE), NSTR(INTF_TOOLTIP), @"VLCInterfaceCone", showInterfaceSettings);
+        CreateToolbarItem(NSTR(INTF_TITLE), NSTR(INTF_TOOLTIP), @"macwindow", showInterfaceSettings);
     } else if ([itemIdent isEqual: VLCAudioSettingToolbarIdentifier]) {
-        CreateToolbarItem(NSTR(AUDIO_TITLE), NSTR(AUDIO_TOOLTIP), @"VLCAudioCone", showAudioSettings);
+        CreateToolbarItem(NSTR(AUDIO_TITLE), NSTR(AUDIO_TOOLTIP), @"speaker.wave.2", showAudioSettings);
     } else if ([itemIdent isEqual: VLCVideoSettingToolbarIdentifier]) {
-        CreateToolbarItem(NSTR(VIDEO_TITLE), NSTR(VIDEO_TOOLTIP), @"VLCVideoCone", showVideoSettings);
+        CreateToolbarItem(NSTR(VIDEO_TITLE), NSTR(VIDEO_TOOLTIP), @"film", showVideoSettings);
     } else if ([itemIdent isEqual: VLCOSDSettingToolbarIdentifier]) {
-        CreateToolbarItem(NSTR(SUBPIC_TITLE), NSTR(SUBPIC_TOOLTIP), @"VLCSubtitleCone", showOSDSettings);
+        CreateToolbarItem(NSTR(SUBPIC_TITLE), NSTR(SUBPIC_TOOLTIP), @"captions.bubble", showOSDSettings);
     } else if ([itemIdent isEqual: VLCInputSettingToolbarIdentifier]) {
-        CreateToolbarItem(NSTR(INPUT_TITLE), NSTR(INPUT_TOOLTIP), @"VLCInputCone", showInputSettings);
+        CreateToolbarItem(NSTR(INPUT_TITLE), NSTR(INPUT_TOOLTIP), @"cpu", showInputSettings);
     } else if ([itemIdent isEqual: VLCMediaLibrarySettingToolbarIdentifier]) {
-        CreateToolbarItem(NSTR(ML_TITLE), NSTR(ML_TOOLTIP), @"NXHelpBacktrack", showMediaLibrarySettings);
+        CreateToolbarItem(NSTR(ML_TITLE), NSTR(ML_TOOLTIP), @"books.vertical", showMediaLibrarySettings);
     } else if ([itemIdent isEqual: VLCHotkeysSettingToolbarIdentifier]) {
-        CreateToolbarItem(NSTR(HOTKEYS_TITLE), NSTR(HOTKEYS_TOOLTIP), @"VLCHotkeysCone", showHotkeySettings);
+        CreateToolbarItem(NSTR(HOTKEYS_TITLE), NSTR(HOTKEYS_TOOLTIP), @"keyboard", showHotkeySettings);
     }
 
     return toolbarItem;
