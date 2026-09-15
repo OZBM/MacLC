@@ -187,6 +187,11 @@ onlyWithoutControls:(BOOL)onlyWithoutControls
         NSString *title = media.title.length > 0 ? media.title : media.name;
         if (title.length == 0 || player.currentMediaIsAudioOnly)
             return;
+        /* A file without a title in its metadata is named after the file:
+         * "fight.mp4" reads "fight". */
+        NSString *fileName = [NSURL URLWithString:media.MRL].lastPathComponent;
+        if ([title isEqualToString:fileName] && title.pathExtension.length > 0)
+            title = title.stringByDeletingPathExtension;
         [strongSelf post:title symbol:@"play.rectangle" level:-1.0 onlyWithoutControls:NO];
     });
 }
