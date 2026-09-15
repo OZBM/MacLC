@@ -488,6 +488,16 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/theme/MacLCCardView.m \
 	gui/macosx/theme/MacLCDesign.h \
 	gui/macosx/theme/MacLCDesign.m \
+	gui/macosx/theme/MacLCFormatBadgeView.h \
+	gui/macosx/theme/MacLCFormatBadgeView.m \
+	gui/macosx/theme/MacLCGlassContainerView.h \
+	gui/macosx/theme/MacLCGlassContainerView.m \
+	gui/macosx/theme/MacLCGlassView.h \
+	gui/macosx/theme/MacLCGlassView.m \
+	gui/macosx/theme/MacLCOSDView.h \
+	gui/macosx/theme/MacLCOSDView.m \
+	gui/macosx/theme/MacLCSymbolButton.h \
+	gui/macosx/theme/MacLCSymbolButton.m \
 	gui/macosx/views/iCarousel/iCarousel.h \
 	gui/macosx/views/iCarousel/iCarousel.m \
 	gui/macosx/views/VLCBasicView.h \
