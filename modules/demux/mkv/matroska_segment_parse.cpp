@@ -362,6 +362,42 @@ void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
         {
             debug( vars, "Track Max BlockAdditionID=%d", static_cast<uint32_t>( mbl ) ) ;
         }
+        E_CASE( KaxBlockAdditionMapping, bam )
+        {
+            /* Dolby Vision decoder configuration record (the ISOBMFF dvcC,
+             * dvvC and dvwC boxes), carried as the extra data of a block
+             * addition mapping. Same layout the MP4 demuxer reads: version
+             * major, version minor, then profile (7 bits), level (6), and the
+             * rpu, el and bl presence flags (1 each). */
+            ONLY_FMT(VIDEO);
+            auto *p_type = FindChild<KaxBlockAddIDType>( bam );
+            auto *p_extra = FindChild<KaxBlockAddIDExtraData>( bam );
+            if ( p_type == nullptr || p_extra == nullptr )
+                return;
+
+            const uint32_t type = static_cast<uint32_t>( *p_type );
+            if ( type != 0x64766343 /* dvcC */ && type != 0x64767643 /* dvvC */ &&
+                 type != 0x64767743 /* dvwC */ )
+                return;
+
+            const binary *p_buf = p_extra->GetBuffer();
+            if ( p_buf == nullptr || p_extra->GetSize() < 4 )
+                return;
+
+            const uint16_t flags = GetWBE( &p_buf[2] );
+            video_format_t *v = &vars.tk->fmt.video;
+            v->dovi.version_major = p_buf[0];
+            v->dovi.version_minor = p_buf[1];
+            v->dovi.profile       = (flags >> 9) & 0x7f;
+            v->dovi.level         = (flags >> 3) & 0x3f;
+            v->dovi.rpu_present   = (flags >> 2) & 0x01;
+            v->dovi.el_present    = (flags >> 1) & 0x01;
+            v->dovi.bl_present    =  flags       & 0x01;
+            debug( vars, "Dolby Vision configuration: profile %u, level %u, rpu %u, el %u, bl %u",
+                   (unsigned) v->dovi.profile, (unsigned) v->dovi.level,
+                   (unsigned) v->dovi.rpu_present, (unsigned) v->dovi.el_present,
+                   (unsigned) v->dovi.bl_present );
+        }
         E_CASE( KaxTrackName, tname )
         {
             free(vars.tk->fmt.psz_description);

@@ -64,6 +64,7 @@
 
 #include "opengl/renderer.h"
 #include "opengl/vout_helper.h"
+#include "apple/maclc_hdr_vars.h"
 
 /**
  * Protocol declaration that drawable-nsobject should follow
@@ -154,6 +155,13 @@ typedef struct vout_display_sys_t {
     bool change_projection;
     video_projection_mode_t projection;
     vlc_viewpoint_t viewpoint;
+
+    /* MacLC HDR presentation (maclc_hdr_vars.h). The request variables and
+     * the published state live on the video output object, where both the
+     * interface and the pl_scale filter find them. */
+    vlc_object_t *hdr_vars;
+    int user_hdr_mode;
+    bool sdr_presentation;
 } vout_display_sys_t;
 
 #pragma mark -
@@ -450,15 +458,57 @@ static int HdrModeCallback(vlc_object_t *obj, char const *name,
 {
     VLC_UNUSED(name); VLC_UNUSED(prev);
     VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)data;
-    view.hdrMode = (int)cur.i_int;
-    msg_Dbg(obj, "HDR mode updated via variable callback: %d", (int)cur.i_int);
+    int mode = (int)cur.i_int;
+    vout_display_t *vd = view.vd;
+    if (vd != NULL && vd->sys != NULL) {
+        vout_display_sys_t *sys = vd->sys;
+        sys->user_hdr_mode = mode;
+        if (sys->sdr_presentation)
+            mode = 2; /* the SDR presentation keeps the layer in SDR */
+    }
+    view.hdrMode = mode;
+    msg_Dbg(obj, "HDR mode updated via variable callback: %d", mode);
     [view updateDynamicRangeProperties];
+    return VLC_SUCCESS;
+}
+
+/* The SDR presentation is the tone-map-to-SDR mode at the layer level; the
+ * pl_scale filter lowers its own target on the same variable. */
+static int MacLCPresentationCallback(vlc_object_t *obj, char const *name,
+                                     vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(name); VLC_UNUSED(prev);
+    vout_display_t *vd = data;
+    vout_display_sys_t *sys = vd->sys;
+    const bool sdr = maclc_hdr_presentation_parse(cur.psz_string)
+                     == MACLC_HDR_PRESENTATION_SDR;
+    if (sdr == sys->sdr_presentation || sys->gl == NULL)
+        return VLC_SUCCESS;
+    sys->sdr_presentation = sdr;
+    VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)sys->gl->sys;
+    const int mode = sdr ? 2 : sys->user_hdr_mode;
+    msg_Dbg(obj, "HDR presentation %s: layer HDR mode %d",
+            sdr ? "sdr" : "hdr", mode);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        view.hdrMode = mode;
+        [view updateDynamicRangeProperties];
+    });
     return VLC_SUCCESS;
 }
 
 static void Close(vout_display_t *vd)
 {
     vout_display_sys_t *sys = vd->sys;
+
+    if (sys != NULL && sys->hdr_vars != NULL) {
+        var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION,
+                        MacLCPresentationCallback, vd);
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION);
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_PICTURE);
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_CAPS);
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_ACTIVE);
+        sys->hdr_vars = NULL;
+    }
 
     if (sys->gl) {
         VLCVideoLayerView *view = (__bridge VLCVideoLayerView *)sys->gl->sys;
@@ -695,6 +745,33 @@ static int Open (vout_display_t *vd,
 
         var_Create(vd, "edr-headroom-effective", VLC_VAR_FLOAT);
         var_SetFloat(vd, "edr-headroom-effective", 1.0f);
+
+        /* Before the OpenGL filters exist: pl_scale looks for these when it
+         * opens. This output applies Dolby Vision RPUs and HDR10+ metadata. */
+        sys->user_hdr_mode = hdr_mode;
+        sys->hdr_vars = vlc_object_parent(vd);
+        if (sys->hdr_vars != NULL) {
+            vlc_object_t *hv = sys->hdr_vars;
+            var_Create(hv, MACLC_HDR_VAR_PRESENTATION,
+                       VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+            var_Create(hv, MACLC_HDR_VAR_PICTURE,
+                       VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+            var_Create(hv, MACLC_HDR_VAR_CAPS, VLC_VAR_INTEGER);
+            var_SetInteger(hv, MACLC_HDR_VAR_CAPS,
+                           MACLC_HDR_CAP_CAN_DOVI | MACLC_HDR_CAP_CAN_HDR10PLUS);
+            var_Create(hv, MACLC_HDR_VAR_ACTIVE, VLC_VAR_STRING);
+            var_SetString(hv, MACLC_HDR_VAR_ACTIVE,
+                !is_hdr ? "sdr" : (transfer == TRANSFER_FUNC_HLG ? "hlg" : "hdr10"));
+
+            char *request = var_GetString(hv, MACLC_HDR_VAR_PRESENTATION);
+            sys->sdr_presentation = maclc_hdr_presentation_parse(request)
+                                    == MACLC_HDR_PRESENTATION_SDR;
+            free(request);
+            if (sys->sdr_presentation)
+                hdr_mode = 2;
+            var_AddCallback(hv, MACLC_HDR_VAR_PRESENTATION,
+                            MacLCPresentationCallback, vd);
+        }
 
         dispatch_sync(dispatch_get_main_queue(), ^{
 

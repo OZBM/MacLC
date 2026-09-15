@@ -46,8 +46,22 @@
 #include "video_output/opengl/gl_util.h"
 #include "video_output/opengl/sampler.h"
 #include "video_output/libplacebo/utils.h"
+#include "video_output/apple/maclc_hdr_vars.h"
+
+#include <libplacebo/tone_mapping.h>
 
 #define CFG_PREFIX "plscale-"
+
+/* "Bright" lifts the PQ signal before tone mapping. A 8 % gain in PQ code
+ * values raises reference white (203 cd/m2) to about 310 cd/m2 and everything
+ * above proportionally, and the BT.2390 roll-off that follows keeps the result
+ * under the display's peak: brighter mid-tones and highlights, paid for with
+ * compressed or clipped highlight detail. */
+#define MACLC_BRIGHT_PQ_GAIN 1.08f
+
+/* Accurate: reproduce everything below 90 % of the target peak unchanged and
+ * fold the rest into a Moebius shoulder (same intent as maclc_tonemap.h). */
+#define MACLC_ACCURATE_KNEE 0.9f
 
 static const char *const filter_options[] = {
     "upscaler", "downscaler", "target-prim", "target-trc", NULL,
@@ -77,6 +91,22 @@ struct sys
     _Atomic float headroom;
     float user_headroom;
     bool is_hdr_target;
+
+    /* MacLC presentation / picture mode (maclc_hdr_vars.h) */
+    struct pl_color_repr repr_base;
+    struct pl_color_space color_base;
+    struct pl_color_map_params color_map;
+    struct pl_color_adjustment color_adjust;
+    bool dovi_profile5;
+    vlc_object_t *hdr_vars;          /* object holding the request variables */
+    _Atomic int presentation;
+    _Atomic int picture;
+    int applied_picture;
+    int applied_presentation;
+    bool applied_fits;
+    int64_t seen_caps;
+    int64_t published_caps;
+    const char *published_active;
 };
 
 static void
@@ -124,6 +154,77 @@ WrapFramebuffer(pl_gpu gpu, GLuint framebuffer, unsigned width, unsigned height)
     };
 
     return pl_opengl_wrap(gpu, &opengl_wrap_params);
+}
+
+/* Picks the libplacebo tone mapping for the requested picture mode. Cheap
+ * enough to call per frame: it only rewrites the parameters when the mode,
+ * the presentation or the "does the master fit the display" answer changes. */
+static void
+UpdateToneMapping(struct sys *sys, int presentation, float src_peak,
+                  float dst_peak)
+{
+    int picture = atomic_load_explicit(&sys->picture, memory_order_relaxed);
+    const bool fits = src_peak > 0.0f && dst_peak > 0.0f && src_peak <= dst_peak;
+    if (picture == sys->applied_picture &&
+        presentation == sys->applied_presentation &&
+        fits == sys->applied_fits)
+        return;
+
+    sys->applied_picture = picture;
+    sys->applied_presentation = presentation;
+    sys->applied_fits = fits;
+
+    /* Same rule as the native output and the interface's advice. */
+    if (picture == MACLC_HDR_PICTURE_AUTO)
+        picture = fits ? MACLC_HDR_PICTURE_ACCURATE : MACLC_HDR_PICTURE_BALANCED;
+
+    sys->color_map = pl_color_map_default_params;
+    sys->color_adjust = pl_color_adjustment_neutral;
+
+    switch (picture)
+    {
+        case MACLC_HDR_PICTURE_ACCURATE:
+            sys->color_map.tone_mapping_function = &pl_tone_map_mobius;
+            sys->color_map.tone_constants.linear_knee = MACLC_ACCURATE_KNEE;
+            break;
+        case MACLC_HDR_PICTURE_BRIGHT:
+            sys->color_map.tone_mapping_function = &pl_tone_map_bt2390;
+            sys->color_adjust.contrast = MACLC_BRIGHT_PQ_GAIN;
+            break;
+        case MACLC_HDR_PICTURE_BALANCED:
+        default:
+            sys->color_map.tone_mapping_function = &pl_tone_map_bt2390;
+            break;
+    }
+
+    /* Which metadata the tone mapper may use: HDR10 means the static values
+     * only, HDR10+ prefers its dynamic ST 2094-40 values. */
+    if (presentation == MACLC_HDR_PRESENTATION_HDR10)
+        sys->color_map.metadata = PL_HDR_METADATA_HDR10;
+    else if (presentation == MACLC_HDR_PRESENTATION_HDR10PLUS)
+        sys->color_map.metadata = PL_HDR_METADATA_HDR10PLUS;
+    else
+        sys->color_map.metadata = PL_HDR_METADATA_ANY;
+
+    sys->render_params.color_map_params = &sys->color_map;
+    sys->render_params.color_adjustment = &sys->color_adjust;
+}
+
+static void
+PublishHdrState(struct sys *sys, int64_t caps, const char *active)
+{
+    if (sys->hdr_vars == NULL)
+        return;
+    if (caps != sys->published_caps)
+    {
+        sys->published_caps = caps;
+        var_SetInteger(sys->hdr_vars, MACLC_HDR_VAR_CAPS, caps);
+    }
+    if (active != sys->published_active)
+    {
+        sys->published_active = active;
+        var_SetString(sys->hdr_vars, MACLC_HDR_VAR_ACTIVE, active);
+    }
 }
 
 static int
@@ -179,9 +280,30 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         r->y1 = coords[3] * h;
     }
 
+    const int presentation =
+        atomic_load_explicit(&sys->presentation, memory_order_relaxed);
+
+    /* Which metadata drives this frame. Dolby Vision RPUs are applied per
+     * picture whenever they are present - also for files whose container did
+     * not announce them - unless another presentation was asked for; profile
+     * 5 has no usable base layer, so its RPUs are always applied. */
+    const bool want_dovi = sys->dovi_profile5
+        || presentation == MACLC_HDR_PRESENTATION_AUTO
+        || presentation == MACLC_HDR_PRESENTATION_DOLBYVISION;
+    const bool use_rpu = meta->dovi_rpu != NULL && want_dovi;
+    const bool use_hdr10plus = meta->hdr10plus != NULL && !use_rpu
+        && (presentation == MACLC_HDR_PRESENTATION_AUTO
+            || presentation == MACLC_HDR_PRESENTATION_HDR10PLUS);
+
+    frame_in->repr = sys->repr_base;
+    frame_in->color = sys->color_base;
     frame_in->color.hdr = sys->hdr_static;
 
-    if (frame_in->repr.dovi && meta->dovi_rpu) {
+    if (use_rpu) {
+        frame_in->color.primaries = PL_COLOR_PRIM_BT_2020;
+        frame_in->color.transfer = PL_COLOR_TRC_PQ;
+        frame_in->repr.sys = PL_COLOR_SYSTEM_DOLBYVISION;
+        frame_in->repr.dovi = &sys->dovi_metadata;
         vlc_placebo_DoviMetadata(meta->dovi_rpu, &sys->dovi_metadata);
         struct pl_hdr_metadata *hdr = &frame_in->color.hdr;
         const float scale = 1.0f / ((1 << 12) - 1);
@@ -189,23 +311,56 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
                                        scale * meta->dovi_rpu->source_min_pq);
         hdr->max_luma = pl_hdr_rescale(PL_HDR_PQ, PL_HDR_NITS,
                                        scale * meta->dovi_rpu->source_max_pq);
+    } else if (frame_in->repr.sys == PL_COLOR_SYSTEM_DOLBYVISION) {
+        /* Announced as Dolby Vision but rendered from the base layer. */
+        frame_in->repr.sys = PL_COLOR_SYSTEM_BT_2020_NC;
+        frame_in->repr.dovi = NULL;
     }
 
-    if (meta->hdr10plus) {
+    if (use_hdr10plus)
         vlc_placebo_HdrMetadata(meta->hdr10plus, &frame_in->color.hdr);
-    }
 
+    const bool sdr_target = presentation == MACLC_HDR_PRESENTATION_SDR;
     if (sys->is_hdr_target)
     {
         float headroom = atomic_load_explicit(&sys->headroom, memory_order_relaxed);
         if (headroom <= 0.0f)
             headroom = sys->user_headroom;
 
-        if (headroom > 0.0f)
-            frame_out->color.hdr.max_luma = 100.0f * headroom;
+        /* On an EDR surface 1.0 is the display's SDR white, which is where
+         * libplacebo puts reference white (PL_COLOR_SDR_WHITE, 203 cd/m2, as
+         * in ITU-R BT.2408); the headroom multiplies that. */
+        if (sdr_target)
+            frame_out->color.hdr.max_luma = PL_COLOR_SDR_WHITE;
+        else if (headroom > 0.0f)
+            frame_out->color.hdr.max_luma = PL_COLOR_SDR_WHITE * headroom;
         else
             frame_out->color.hdr.max_luma = 1000.0f;
     }
+
+    UpdateToneMapping(sys, presentation, frame_in->color.hdr.max_luma,
+                      frame_out->color.hdr.max_luma);
+
+    /* Report what reached us and what we render, for the interface. */
+    int64_t caps = sys->seen_caps;
+    if (meta->dovi_rpu != NULL)
+        caps |= MACLC_HDR_CAP_DOVI_SEEN;
+    if (meta->hdr10plus != NULL)
+        caps |= MACLC_HDR_CAP_HDR10PLUS_SEEN;
+    sys->seen_caps = caps;
+    const char *active;
+    if (sdr_target || !pl_color_space_is_hdr(&frame_in->color))
+        active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_SDR);
+    else if (use_rpu)
+        active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_DOLBYVISION);
+    else if (use_hdr10plus)
+        active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_HDR10PLUS);
+    else if (frame_in->color.transfer == PL_COLOR_TRC_HLG)
+        active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_HLG);
+    else
+        active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_HDR10);
+    PublishHdrState(sys, caps | MACLC_HDR_CAP_CAN_DOVI | MACLC_HDR_CAP_CAN_HDR10PLUS,
+                    active);
 
     GLint value;
     vt->GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &value);
@@ -281,6 +436,45 @@ FindEdrHeadroomSource(struct vlc_gl_filter *filter)
     return NULL;
 }
 
+static int
+PresentationCallback(vlc_object_t *obj, const char *var,
+                     vlc_value_t oldval, vlc_value_t newval, void *data)
+{
+    (void) var; (void) oldval;
+    struct sys *sys = data;
+    const int presentation = maclc_hdr_presentation_parse(newval.psz_string);
+    atomic_store_explicit(&sys->presentation, presentation, memory_order_relaxed);
+    msg_Dbg(obj, "HDR presentation requested: %s",
+            maclc_hdr_presentation_name(presentation));
+    return VLC_SUCCESS;
+}
+
+static int
+PictureCallback(vlc_object_t *obj, const char *var,
+                vlc_value_t oldval, vlc_value_t newval, void *data)
+{
+    (void) var; (void) oldval;
+    struct sys *sys = data;
+    const int picture = maclc_hdr_picture_parse(newval.psz_string);
+    atomic_store_explicit(&sys->picture, picture, memory_order_relaxed);
+    msg_Dbg(obj, "HDR picture mode requested: %s",
+            maclc_hdr_picture_name(picture));
+    return VLC_SUCCESS;
+}
+
+/* The display module creates the request and state variables on the video
+ * output object; find it by walking up from the filter. */
+static vlc_object_t *
+FindHdrVarsHolder(struct vlc_gl_filter *filter)
+{
+    for (vlc_object_t *obj = VLC_OBJECT(filter); obj != NULL; obj = vlc_object_parent(obj))
+    {
+        if (var_Type(obj, MACLC_HDR_VAR_CAPS) != 0)
+            return obj;
+    }
+    return NULL;
+}
+
 static void
 Close(struct vlc_gl_filter *filter)
 {
@@ -289,6 +483,13 @@ Close(struct vlc_gl_filter *filter)
     if (sys->display != NULL)
         var_DelCallback(sys->display, "edr-headroom-effective",
                         EdrHeadroomCallback, &sys->headroom);
+    if (sys->hdr_vars != NULL)
+    {
+        var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION,
+                        PresentationCallback, sys);
+        var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PICTURE,
+                        PictureCallback, sys);
+    }
 
     pl_renderer_destroy(&sys->pl_renderer);
     pl_opengl_destroy(&sys->pl_opengl);
@@ -371,12 +572,42 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
     };
 
     sys->hdr_static = sys->frame_in.color.hdr;
+    /* What the base layer is on its own; Draw() switches to Dolby Vision per
+     * picture when an RPU is there and wanted. */
+    sys->repr_base = sys->frame_in.repr;
+    sys->color_base = sys->frame_in.color;
+    sys->dovi_profile5 = sampler->fmt_in.dovi.profile == 5;
 
-    if (sampler->fmt_in.dovi.rpu_present && !sampler->fmt_in.dovi.el_present) {
+    if (sampler->fmt_in.dovi.rpu_present || sys->dovi_profile5) {
         sys->frame_in.color.primaries = PL_COLOR_PRIM_BT_2020;
         sys->frame_in.color.transfer = PL_COLOR_TRC_PQ;
         sys->frame_in.repr.sys = PL_COLOR_SYSTEM_DOLBYVISION;
         sys->frame_in.repr.dovi = &sys->dovi_metadata; /* to be filled later */
+        if (sys->dovi_profile5) {
+            /* No standard base layer: never render it without the RPU. */
+            sys->repr_base = sys->frame_in.repr;
+            sys->color_base = sys->frame_in.color;
+        }
+    }
+
+    /* MacLC presentation and picture mode, live when the display module
+     * provides the variables, read once otherwise. */
+    char *request = var_InheritString(filter, MACLC_HDR_VAR_PRESENTATION);
+    atomic_init(&sys->presentation, maclc_hdr_presentation_parse(request));
+    free(request);
+    request = var_InheritString(filter, MACLC_HDR_VAR_PICTURE);
+    atomic_init(&sys->picture, maclc_hdr_picture_parse(request));
+    free(request);
+    sys->applied_picture = -1;
+    sys->applied_presentation = -1;
+    sys->published_caps = -1;
+    sys->hdr_vars = FindHdrVarsHolder(filter);
+    if (sys->hdr_vars != NULL)
+    {
+        var_AddCallback(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION,
+                        PresentationCallback, sys);
+        var_AddCallback(sys->hdr_vars, MACLC_HDR_VAR_PICTURE,
+                        PictureCallback, sys);
     }
 
     /* Initialize frame_in.planes */
@@ -401,7 +632,7 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
      * 3. Peak luminance and EDR headroom:
      *    - For HDR content, prefer the effective display headroom published
      *      by the vout display module via "edr-headroom-effective". Target
-     *      peak luminance is 100.0f * headroom nits.
+     *      peak luminance is PL_COLOR_SDR_WHITE (203 cd/m2) * headroom.
      *    - Fall back to explicit user override from "macosx-edr-headroom" (> 0.0f).
      *    - Fall back last to a fixed 1000.0 cd/m² peak (the sustained capability
      *      of Apple Silicon Liquid Retina XDR displays).
@@ -449,7 +680,7 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
             effective = sys->user_headroom;
 
         if (effective > 0.0f)
-            color_out.hdr.max_luma = 100.0f * effective;
+            color_out.hdr.max_luma = PL_COLOR_SDR_WHITE * effective;
         else
             color_out.hdr.max_luma = 1000.0f;
     }
@@ -494,6 +725,13 @@ error:
     if (sys->display != NULL)
         var_DelCallback(sys->display, "edr-headroom-effective",
                         EdrHeadroomCallback, &sys->headroom);
+    if (sys->hdr_vars != NULL)
+    {
+        var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION,
+                        PresentationCallback, sys);
+        var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PICTURE,
+                        PictureCallback, sys);
+    }
     pl_renderer_destroy(&sys->pl_renderer);
     pl_opengl_destroy(&sys->pl_opengl);
     pl_log_destroy(&sys->pl_log);
