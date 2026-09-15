@@ -111,6 +111,7 @@ DeleteFramebuffersOut(struct vlc_gl_filter_priv *priv)
 
     vt->DeleteFramebuffers(priv->tex_count, priv->framebuffers_out);
     vt->DeleteTextures(priv->tex_count, priv->textures_out);
+    priv->tex_count = 0;
 }
 
 static void
@@ -120,6 +121,8 @@ DeleteFramebufferMSAA(struct vlc_gl_filter_priv *priv)
 
     vt->DeleteFramebuffers(1, &priv->framebuffer_msaa);
     vt->DeleteRenderbuffers(1, &priv->renderbuffer_msaa);
+    priv->framebuffer_msaa = 0;
+    priv->renderbuffer_msaa = 0;
 }
 
 void
@@ -257,8 +260,10 @@ vlc_gl_filter_InitFramebuffers(struct vlc_gl_filter *filter, bool has_out)
 {
     struct vlc_gl_filter_priv *priv = vlc_gl_filter_PRIV(filter);
 
+    /* The chain is initialized again when a filter is replaced: keep what the
+     * filters already in place have allocated. */
     unsigned msaa_level = priv->filter.config.msaa_level;
-    if (msaa_level)
+    if (msaa_level && priv->framebuffer_msaa == 0)
     {
         int ret = InitFramebufferMSAA(priv, msaa_level);
         if (ret != VLC_SUCCESS)
@@ -266,7 +271,7 @@ vlc_gl_filter_InitFramebuffers(struct vlc_gl_filter *filter, bool has_out)
     }
 
     /* Every non-blend filter needs its own framebuffer, except the last one */
-    if (has_out)
+    if (has_out && priv->tex_count == 0)
     {
         int ret = InitFramebuffersOut(priv);
         if (ret != VLC_SUCCESS)

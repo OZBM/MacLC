@@ -216,6 +216,17 @@ vlc_gl_filters_Delete(struct vlc_gl_filters *filters)
     free(filters);
 }
 
+/* Intermediate filters output plain RGBA pictures, but the renderer at the end
+ * of the chain still needs to know how the source is laid out (360°, stereo). */
+static void
+CopySourceGeometry(video_format_t *dst, const video_format_t *src)
+{
+    dst->projection_mode = src->projection_mode;
+    dst->multiview_mode = src->multiview_mode;
+    dst->b_multiview_right_eye_first = src->b_multiview_right_eye_first;
+    dst->pose = src->pose;
+}
+
 static struct vlc_gl_filter_priv *
 vlc_gl_filters_CreateNewFilter(struct vlc_gl_filters *filters,
                                struct vlc_gl_filter_priv *prev_filter,
@@ -255,6 +266,7 @@ vlc_gl_filters_CreateNewFilter(struct vlc_gl_filters *filters,
         video_format_Init(fmt, chroma);
         fmt->i_width = fmt->i_visible_width = prev_filter->size_out.width;
         fmt->i_height = fmt->i_visible_height = prev_filter->size_out.height;
+        CopySourceGeometry(fmt, &filters->importer->glfmt.fmt);
 
         glfmt->tex_target = GL_TEXTURE_2D;
         glfmt->tex_count = prev_filter->plane_count;
@@ -345,6 +357,7 @@ vlc_gl_filters_Append(struct vlc_gl_filters *filters, const char *name,
         video_format_Init(fmt, chroma);
         fmt->i_width = fmt->i_visible_width = prev_filter->size_out.width;
         fmt->i_height = fmt->i_visible_height = prev_filter->size_out.height;
+        CopySourceGeometry(fmt, &filters->importer->glfmt.fmt);
 
         glfmt->tex_target = GL_TEXTURE_2D;
         glfmt->tex_count = prev_filter->plane_count;
@@ -430,8 +443,17 @@ vlc_gl_filters_Replace(struct vlc_gl_filters *filters, struct vlc_gl_filter *old
                        const char *name, const config_chain_t *config)
 {
     struct vlc_gl_filter_priv *old_priv = vlc_gl_filter_PRIV(old_filter);
-    struct vlc_gl_filter *prev_filter = NULL;
-    struct vlc_gl_filter_priv *priv_prev = vlc_gl_filter_PRIV(prev_filter);
+
+    /* The replacement reads from whatever fed the old filter: the importer
+     * when it was first, the output of the filter before it otherwise. */
+    struct vlc_gl_filter_priv *priv_prev = NULL;
+    struct vlc_gl_filter_priv *it;
+    vlc_list_foreach(it, &filters->list, node)
+    {
+        if (it == old_priv)
+            break;
+        priv_prev = it;
+    }
 
     struct vlc_gl_filter_priv *new_filter = vlc_gl_filters_CreateNewFilter(filters, priv_prev, name, config);
     if (new_filter == NULL)

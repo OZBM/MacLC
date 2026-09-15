@@ -250,6 +250,11 @@ static int RestartRenderer(vout_display_opengl_t *vgl,
 int vout_display_opengl_ChangeProjection(vout_display_opengl_t *vgl,
                                          video_projection_mode_t projection)
 {
+    /* The core reports the source projection again when the output starts:
+     * rebuilding an identical renderer would only drop a frame. */
+    if (projection == vgl->projection)
+        return VLC_SUCCESS;
+
     struct renderer_config config = {
         .projection = projection,
         .stereo_mode = vgl->stereo_mode,
