@@ -197,6 +197,7 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         VLCMain.sharedInstance.playQueueController.playerController;
     if (player.currentMediaIsAudioOnly)
         return;
+    msg_Dbg(getIntf(), "presenting the HDR format card");
     [MacLCHDRCardView presentInView:self.view fullScreen:player.fullscreen];
 }
 
