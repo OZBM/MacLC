@@ -397,6 +397,27 @@ void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
                    (unsigned) v->dovi.profile, (unsigned) v->dovi.level,
                    (unsigned) v->dovi.rpu_present, (unsigned) v->dovi.el_present,
                    (unsigned) v->dovi.bl_present );
+
+            /* Without a Colour element the base layer's transfer is only
+             * known once the decoder has read the VUI. The configuration says
+             * what that base layer is (dv_bl_signal_compatibility_id), so
+             * players can offer HDR10 / HLG from the start. */
+            if ( v->transfer == TRANSFER_FUNC_UNDEF && p_extra->GetSize() >= 5 )
+            {
+                const unsigned compat = p_buf[4] >> 4;
+                if ( v->dovi.profile == 7 || compat == 1 || compat == 6 )
+                {
+                    v->transfer  = TRANSFER_FUNC_SMPTE_ST2084;
+                    v->primaries = COLOR_PRIMARIES_BT2020;
+                    v->space     = COLOR_SPACE_BT2020;
+                }
+                else if ( compat == 4 )
+                {
+                    v->transfer  = TRANSFER_FUNC_HLG;
+                    v->primaries = COLOR_PRIMARIES_BT2020;
+                    v->space     = COLOR_SPACE_BT2020;
+                }
+            }
         }
         E_CASE( KaxTrackName, tname )
         {
