@@ -1918,8 +1918,17 @@ static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
     vlc_player_Lock(_p_player);
     const struct vlc_player_track * const p_track =
         vlc_player_GetSelectedTrack(_p_player, VIDEO_ES);
-    if (p_track != NULL)
+    if (p_track != NULL) {
         vlc_player_RestartTrack(_p_player, p_track);
+        /* A restarted decoder waits for the next random access point, which
+         * can be a whole GOP away (ten seconds of frozen picture on some
+         * films). Seeking to where playback is makes the demuxer resume from
+         * the previous one; the frames up to now are decoded, not shown. */
+        const vlc_tick_t time = vlc_player_GetTime(_p_player);
+        if (time != VLC_TICK_INVALID && vlc_player_CanSeek(_p_player))
+            vlc_player_SeekByTime(_p_player, time, VLC_PLAYER_SEEK_PRECISE,
+                                  VLC_PLAYER_WHENCE_ABSOLUTE);
+    }
     vlc_player_Unlock(_p_player);
 }
 
