@@ -702,26 +702,6 @@ endif
 
 libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/App-Icons/MacLC.icns \
-	gui/macosx/Resources/File-Icons/aiff.icns \
-	gui/macosx/Resources/File-Icons/audio.icns \
-	gui/macosx/Resources/File-Icons/avi.icns \
-	gui/macosx/Resources/File-Icons/flv.icns \
-	gui/macosx/Resources/File-Icons/generic.icns \
-	gui/macosx/Resources/File-Icons/m4a.icns \
-	gui/macosx/Resources/File-Icons/m4v.icns \
-	gui/macosx/Resources/File-Icons/mkv.icns \
-	gui/macosx/Resources/File-Icons/mov.icns \
-	gui/macosx/Resources/File-Icons/movie.icns \
-	gui/macosx/Resources/File-Icons/mp3.icns \
-	gui/macosx/Resources/File-Icons/mpeg.icns \
-	gui/macosx/Resources/File-Icons/ogg.icns \
-	gui/macosx/Resources/File-Icons/playlist.icns \
-	gui/macosx/Resources/File-Icons/rm.icns \
-	gui/macosx/Resources/File-Icons/subtitle.icns \
-	gui/macosx/Resources/File-Icons/vob.icns \
-	gui/macosx/Resources/File-Icons/wav.icns \
-	gui/macosx/Resources/File-Icons/wma.icns \
-	gui/macosx/Resources/File-Icons/wmv.icns \
 	gui/macosx/Resources/browsewindow/bw-Music.png \
 	gui/macosx/Resources/browsewindow/bw-Music@2x.png \
 	gui/macosx/Resources/browsewindow/bw-Music@3x.png \
@@ -883,20 +863,7 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/sidebar-icons/sidebar-movie@2x.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-music.png \
 	gui/macosx/Resources/sidebar-icons/sidebar-music@2x.png \
-	gui/macosx/Resources/Button-Icons/VLCNextTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCPauseTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCPlayTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCPreviousTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCShuffleTemplate.pdf \
 	gui/macosx/Resources/Button-Icons/MacLCStatusBarIcon.pdf \
-	gui/macosx/Resources/Button-Icons/VLCBackwardTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCForwardTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCFullscreenOnTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCFullscreenOffTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCVolumeOnTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCVolumeOffTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCClearLogTemplate.pdf \
-	gui/macosx/Resources/Button-Icons/VLCSaveTemplate.pdf \
 	gui/macosx/Resources/Button-Icons/window-close-graphite.png \
 	gui/macosx/Resources/Button-Icons/window-close-graphite@2x.png \
 	gui/macosx/Resources/Button-Icons/window-close-on-graphite.png \

@@ -392,6 +392,7 @@ static int ShowController(vlc_object_t * __unused p_this,
 
     [self displayLibraryView:self.emptyLibraryView];
     self.placeholderImageView.image = image;
+    self.placeholderImageView.contentTintColor = NSColor.tertiaryLabelColor;
     self.placeholderLabel.stringValue = message;
     self.placeholderLabel.font = MacLCDesign.title3;
     self.placeholderLabel.textColor = MacLCDesign.secondaryLabel;

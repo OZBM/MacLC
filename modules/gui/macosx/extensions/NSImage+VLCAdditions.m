@@ -145,64 +145,70 @@ static NSImage *ImageFromEmoji(NSString *emoji, NSSize size)
     return [NSImage imageNamed:@"NXFollow"];
 }
 
+/* Artwork for media that has none: a quiet tile with a media glyph, drawn
+ * when displayed so it follows the light or dark appearance. */
 + (NSImage *)VLCNoArtImage
 {
-    return [NSImage imageNamed:@"noart.png"];
+    static NSImage *image;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        image = [NSImage imageWithSize:NSMakeSize(512.0, 512.0)
+                               flipped:NO
+                        drawingHandler:^BOOL(NSRect rect) {
+            NSGradient *gradient =
+                [[NSGradient alloc] initWithStartingColor:[NSColor.systemGrayColor colorWithAlphaComponent:0.16]
+                                              endingColor:[NSColor.systemGrayColor colorWithAlphaComponent:0.30]];
+            [gradient drawInRect:rect angle:-90.0];
+
+            NSImage *symbol = [NSImage imageWithSystemSymbolName:@"play.rectangle"
+                                        accessibilityDescription:nil];
+            NSImageSymbolConfiguration *configuration =
+                [NSImageSymbolConfiguration configurationWithPointSize:NSWidth(rect) * 0.26
+                                                                weight:NSFontWeightLight];
+            symbol = [[symbol imageWithSymbolConfiguration:configuration]
+                      imageTintedWithColor:NSColor.tertiaryLabelColor];
+            const NSSize size = symbol.size;
+            [symbol drawInRect:NSMakeRect(NSMidX(rect) - size.width / 2.0,
+                                          NSMidY(rect) - size.height / 2.0,
+                                          size.width, size.height)];
+            return YES;
+        }];
+        image.accessibilityDescription = _NS("No artwork");
+    });
+    return image;
+}
+
+/* The large glyph an empty library section shows, the way the system's own
+ * apps draw their empty states. */
+static NSImage *EmptyStateImage(NSString *symbolName, NSString *fallbackName)
+{
+    NSImage *symbol = [NSImage imageWithSystemSymbolName:symbolName accessibilityDescription:nil];
+    if (symbol == nil)
+        return [NSImage imageNamed:fallbackName];
+    /* A template: the image view tints it, in the current appearance. */
+    NSImageSymbolConfiguration *configuration =
+        [NSImageSymbolConfiguration configurationWithPointSize:96.0 weight:NSFontWeightThin];
+    return [symbol imageWithSymbolConfiguration:configuration];
 }
 
 + (NSImage *)VLCPlaceholderVideoImage
 {
-    return [NSImage imageNamed:@"placeholder-video"];
+    return EmptyStateImage(@"film", @"placeholder-video");
 }
 
 + (NSImage *)VLCPlaceholderGroupImage
 {
-    return [NSImage imageNamed:@"placeholder-group2"];
+    return EmptyStateImage(@"rectangle.stack", @"placeholder-group2");
 }
 
 + (NSImage *)VLCPlaceholderMusicImage
 {
-    return [NSImage imageNamed:@"placeholder-music"];
+    return EmptyStateImage(@"music.note", @"placeholder-music");
 }
 
 + (NSImage *)VLCGenericImage
 {
     return [NSImage imageNamed:@"generic"];
-}
-
-+ (NSImage *)VLCPlayTemplateImage
-{
-    return [NSImage imageNamed:@"VLCPlayTemplate"];
-}
-
-+ (NSImage *)VLCPauseTemplateImage
-{
-    return [NSImage imageNamed:@"VLCPauseTemplate"];
-}
-
-+ (NSImage *)VLCBackwardTemplateImage
-{
-    return [NSImage imageNamed:@"VLCBackwardTemplate"];
-}
-
-+ (NSImage *)VLCForwardTemplateImage
-{
-    return [NSImage imageNamed:@"VLCForwardTemplate"];
-}
-
-+ (NSImage *)VLCFullscreenOffTemplateImage
-{
-    return [NSImage imageNamed:@"VLCFullscreenOffTemplate"];
-}
-
-+ (NSImage *)VLCVolumeOnTemplateImage
-{
-    return [NSImage imageNamed:@"VLCVolumeOnTemplate"];
-}
-
-+ (NSImage *)VLCVolumeOffTemplateImage
-{
-    return [NSImage imageNamed:@"VLCVolumeOffTemplate"];
 }
 
 + (NSImage *)VLCStopImage

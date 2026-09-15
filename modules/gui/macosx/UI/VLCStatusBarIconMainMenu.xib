@@ -184,7 +184,7 @@
                         <constraint firstAttribute="height" constant="24" id="5IV-1l-2UV"/>
                         <constraint firstAttribute="width" secondItem="p8X-zU-PwN" secondAttribute="height" multiplier="1:1" id="lkX-DA-UeD"/>
                     </constraints>
-                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="VLCPreviousTemplate" imagePosition="overlaps" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="PSI-Wi-u0R">
+                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="backward.end.fill" catalog="system" imagePosition="overlaps" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="PSI-Wi-u0R">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
@@ -198,7 +198,7 @@
                         <constraint firstAttribute="height" constant="24" id="VH7-ja-clp"/>
                         <constraint firstAttribute="width" secondItem="lvI-lN-t4O" secondAttribute="height" multiplier="1:1" id="kzq-fw-PfK"/>
                     </constraints>
-                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="VLCPlayTemplate" imagePosition="only" alignment="center" alternateImage="VLCPauseTemplate" imageScaling="proportionallyUpOrDown" inset="2" id="nqu-wV-vI1">
+                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="play.fill" catalog="system" imagePosition="only" alignment="center" alternateImage="pause.fill" imageScaling="proportionallyUpOrDown" inset="2" id="nqu-wV-vI1">
                         <behavior key="behavior" pushIn="YES" changeContents="YES" lightByContents="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
@@ -215,7 +215,7 @@
                         <constraint firstAttribute="width" secondItem="NHj-Vf-SPF" secondAttribute="height" multiplier="1:1" id="WY1-gG-mtJ"/>
                         <constraint firstAttribute="height" constant="24" id="YJ5-t2-qjF"/>
                     </constraints>
-                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="VLCNextTemplate" imagePosition="overlaps" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="BIa-Vy-yD2">
+                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="forward.end.fill" catalog="system" imagePosition="overlaps" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="BIa-Vy-yD2">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
@@ -229,7 +229,7 @@
                         <constraint firstAttribute="height" constant="21" id="7y1-o7-Gbn"/>
                         <constraint firstAttribute="width" secondItem="PaW-Fe-vxo" secondAttribute="height" multiplier="1:1" id="vLQ-Kw-bgS"/>
                     </constraints>
-                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="VLCShuffleTemplate" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="VEm-qG-2cc">
+                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="shuffle" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="VEm-qG-2cc">
                         <behavior key="behavior" pushIn="YES" changeContents="YES" lightByContents="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
@@ -317,10 +317,10 @@
     </objects>
     <resources>
         <image name="MacLC" width="512" height="512"/>
-        <image name="VLCNextTemplate" width="128" height="128"/>
-        <image name="VLCPauseTemplate" width="128" height="128"/>
-        <image name="VLCPlayTemplate" width="128" height="128"/>
-        <image name="VLCPreviousTemplate" width="128" height="128"/>
-        <image name="VLCShuffleTemplate" width="128" height="128"/>
+        <image name="forward.end.fill" catalog="system" width="15" height="15"/>
+        <image name="pause.fill" catalog="system" width="15" height="15"/>
+        <image name="play.fill" catalog="system" width="15" height="15"/>
+        <image name="backward.end.fill" catalog="system" width="15" height="15"/>
+        <image name="shuffle" catalog="system" width="15" height="15"/>
     </resources>
 </document>

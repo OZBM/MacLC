@@ -55,8 +55,6 @@
 	<string>VLCApplication</string>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
-	<key>NSAccentColorName</key>
-	<string>VLCAccentColor</string>
 	<!-- TODO: point at a MacLC appcast -->
 	<key>SUFeedURL</key>
 	<string></string>
@@ -105,8 +103,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>flv.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Flash Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -121,8 +119,8 @@
 			<array>
 				<string>gvp</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>playlist.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Google Video Playlist</string>
 			<key>CFBundleTypeRole</key>
@@ -133,8 +131,8 @@
 			<array>
 				<string>dvdmedia</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DVD Media Document</string>
 			<key>CFBundleTypeRole</key>
@@ -147,8 +145,8 @@
 			<array>
 				<string>xspf</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>playlist.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/xspf+xml</string>
@@ -163,8 +161,8 @@
 			<array>
 				<string>xa</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>The Sims Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -175,16 +173,16 @@
 			<array>
 				<string>xesc</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Expression Encoder Screen Capture File</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>playlist.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Shoutcast playlist</string>
 			<key>CFBundleTypeRole</key>
@@ -195,8 +193,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>playlist.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Playlist file</string>
 			<key>CFBundleTypeRole</key>
@@ -211,16 +209,16 @@
 			<array>
 				<string>org.videolan.vlc</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>playlist.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MacLC file</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>playlist.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>ASX file</string>
 			<key>CFBundleTypeRole</key>
@@ -235,8 +233,8 @@
 			<array>
 				<string>b4s</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>playlist.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>B4S file</string>
 			<key>CFBundleTypeRole</key>
@@ -247,8 +245,8 @@
 			<array>
 				<string>ape</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Monkey&apos;s Audio Lossless Audio Compression</string>
 			<key>CFBundleTypeRole</key>
@@ -259,8 +257,8 @@
 			<string>Binary</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>FLAC Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -275,8 +273,8 @@
 			<array>
 				<string>wv</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>WavePack Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -291,8 +289,8 @@
 			<array>
 				<string>tta</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>True Audio Free Lossless Audio</string>
 			<key>CFBundleTypeRole</key>
@@ -307,16 +305,16 @@
 			<array>
 				<string>mpc</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Musepack Audio File</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>rm.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>RealPlayer Media Files</string>
 			<key>CFBundleTypeRole</key>
@@ -333,8 +331,8 @@
 			<array>
 				<string>img</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>generic.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>IMG Disk Image</string>
 			<key>CFBundleTypeRole</key>
@@ -346,8 +344,8 @@
 				<string>mod</string>
 				<string>xm</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MOD Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -358,8 +356,8 @@
 			<array>
 				<string>it</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Impulse Tracker Module File</string>
 			<key>CFBundleTypeRole</key>
@@ -370,8 +368,8 @@
 			<array>
 				<string>xm</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>XM audio file</string>
 			<key>CFBundleTypeRole</key>
@@ -382,8 +380,8 @@
 			<string>Binary</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>aiff.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>AIFF file</string>
 			<key>CFBundleTypeRole</key>
@@ -395,8 +393,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Apple Lossless Audio Codec File</string>
 			<key>CFBundleTypeRole</key>
@@ -411,8 +409,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Adaptive Multi-Rate Codec File</string>
 			<key>CFBundleTypeRole</key>
@@ -427,16 +425,16 @@
 			<array>
 				<string>aob</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DVD-Audio Audio Object File</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>AU File</string>
 			<key>CFBundleTypeRole</key>
@@ -451,16 +449,16 @@
 			<array>
 				<string>dts</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DTS Encoded Audio File</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DSD Stream File</string>
 			<key>CFBundleTypeRole</key>
@@ -471,8 +469,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DAV Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -483,8 +481,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DSD Interchange File</string>
 			<key>CFBundleTypeRole</key>
@@ -499,8 +497,8 @@
 			<array>
 				<string>spx</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>ogg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>audio/ogg</string>
@@ -515,16 +513,16 @@
 			<array>
 				<string>sdp</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>generic.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Session Description Protocol File</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>wav.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>WAVE Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -539,8 +537,8 @@
 			<array>
 				<string>vob</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>vob.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>VOB File (DVD Video)</string>
 			<key>CFBundleTypeRole</key>
@@ -551,8 +549,8 @@
 			<array>
 				<string>vp6</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>video.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>VP6 File</string>
 			<key>CFBundleTypeRole</key>
@@ -563,8 +561,8 @@
 			<array>
 				<string>dat</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>generic.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DAT file</string>
 			<key>CFBundleTypeRole</key>
@@ -575,8 +573,8 @@
 			<array>
 				<string>cue</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>generic.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>CUE file</string>
 			<key>CFBundleTypeRole</key>
@@ -587,16 +585,16 @@
 			<array>
 				<string>cdg</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Compact Disc Plus Graphics Image file</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>generic.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>ISO file</string>
 			<key>CFBundleTypeRole</key>
@@ -611,16 +609,16 @@
 			<array>
 				<string>idx</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Index file</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Digital Audio</string>
 			<key>CFBundleTypeRole</key>
@@ -631,8 +629,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>AAC file</string>
 			<key>CFBundleTypeRole</key>
@@ -647,8 +645,8 @@
 			<array>
 				<string>opus</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>ogg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>audio/opus</string>
@@ -668,8 +666,8 @@
 			<array>
 				<string>ogm</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Ogg MPEG-4 Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -680,8 +678,8 @@
 			<array>
 				<string>ogg</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>ogg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>audio/ogg</string>
@@ -696,8 +694,8 @@
 			<array>
 				<string>oga</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>ogg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>audio/ogg</string>
@@ -712,8 +710,8 @@
 			<array>
 				<string>ogv</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>video/ogg</string>
@@ -732,8 +730,8 @@
 			<array>
 				<string>ogx</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>ogg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/ogg</string>
@@ -752,8 +750,8 @@
 			<array>
 				<string>audio/atrac3</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Sony OpenMG Music File</string>
 			<key>CFBundleTypeRole</key>
@@ -764,8 +762,8 @@
 			<array>
 				<string>voc</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Creative Labs Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -776,8 +774,8 @@
 			<array>
 				<string>vqf</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>TwinVQ Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -788,8 +786,8 @@
 			<array>
 				<string>anx</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>generic.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/annodex</string>
@@ -804,8 +802,8 @@
 			<array>
 				<string>axa</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>audio/annodex</string>
@@ -820,8 +818,8 @@
 			<array>
 				<string>axv</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>video/annodex</string>
@@ -836,8 +834,8 @@
 			<array>
 				<string>gxf</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>General eXchange Format File</string>
 			<key>CFBundleTypeRole</key>
@@ -848,8 +846,8 @@
 			<string>Binary</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>3G2A Mobile Phone Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -864,8 +862,8 @@
 			<array>
 				<string>mxf</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Material Exchange Format</string>
 			<key>CFBundleTypeRole</key>
@@ -876,8 +874,8 @@
 			<string>Binary</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>avi.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>AVI container</string>
 			<key>CFBundleTypeRole</key>
@@ -892,8 +890,8 @@
 			<array>
 				<string>bik</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Bink Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -904,8 +902,8 @@
 			<array>
 				<string>crf</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>CRF Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -916,16 +914,16 @@
 			<array>
 				<string>evo</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>EVO Video File</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>mov.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Apple QuickTime container</string>
 			<key>CFBundleTypeRole</key>
@@ -940,16 +938,16 @@
 			<array>
 				<string>divx</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DivX file</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DV file</string>
 			<key>CFBundleTypeRole</key>
@@ -960,8 +958,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Advanced Streaming Format</string>
 			<key>CFBundleTypeRole</key>
@@ -972,8 +970,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>wma.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Windows Media Audio</string>
 			<key>CFBundleTypeRole</key>
@@ -984,8 +982,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>wmv.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Windows Media Video</string>
 			<key>CFBundleTypeRole</key>
@@ -1001,16 +999,16 @@
 			<array>
 				<string>wtv</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Windows Recorded TV Show</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>mpeg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>multiplexed MPEG-1/2</string>
 			<key>CFBundleTypeRole</key>
@@ -1025,8 +1023,8 @@
 			<array>
 				<string>m1v</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>mpeg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG-1 Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -1037,8 +1035,8 @@
 			<array>
 				<string>m2a</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>mpeg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG-1/2 Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -1049,16 +1047,16 @@
 			<array>
 				<string>mp1</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>mpeg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG Audio Layer 1</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>mpeg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG Audio Layer 2</string>
 			<key>CFBundleTypeRole</key>
@@ -1069,8 +1067,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>mp3.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG Audio Layer 3</string>
 			<key>CFBundleTypeRole</key>
@@ -1086,8 +1084,8 @@
 				<string>m2p</string>
 				<string>ps</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>mpeg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG-2 Program Stream</string>
 			<key>CFBundleTypeRole</key>
@@ -1104,8 +1102,8 @@
 				<string>mts</string>
 				<string>mt2s</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>mpeg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>video/mp2t</string>
@@ -1116,8 +1114,8 @@
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>mpeg.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG-2 Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -1132,16 +1130,16 @@
 			<array>
 				<string>mpa</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG-2 Audio File</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>m4v.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG-4 File</string>
 			<key>CFBundleTypeRole</key>
@@ -1154,8 +1152,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>m4a.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG-4 Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -1166,8 +1164,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>m4a.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MPEG-4 Audiobook File</string>
 			<key>CFBundleTypeRole</key>
@@ -1180,8 +1178,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>3GPP File</string>
 			<key>CFBundleTypeRole</key>
@@ -1192,8 +1190,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>MIDI File</string>
 			<key>CFBundleTypeRole</key>
@@ -1208,16 +1206,16 @@
 			<array>
 				<string>mlp</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Meridian Lossless Packing Audio File</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Matroska Audio File</string>
 			<key>CFBundleTypeRole</key>
@@ -1232,8 +1230,8 @@
 			<array>
 				<string>mkv</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>mkv.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Matroska Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -1244,8 +1242,8 @@
 			<array>
 				<string>webm</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>mkv.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>WebM Video File</string>
 			<key>CFBundleTypeRole</key>
@@ -1256,8 +1254,8 @@
 			<array>
 				<string>rar</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>generic.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>WinRAR Compressed Archive</string>
 			<key>CFBundleTypeRole</key>
@@ -1272,8 +1270,8 @@
 			<array>
 				<string>rec</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Topfield PVR Recording</string>
 			<key>CFBundleTypeRole</key>
@@ -1284,8 +1282,8 @@
 			<array>
 				<string>rmi</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>RMID MIDI File</string>
 			<key>CFBundleTypeRole</key>
@@ -1296,8 +1294,8 @@
 			<array>
 				<string>s3m</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>audio.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>ScreamTracker 3 Module</string>
 			<key>CFBundleTypeRole</key>
@@ -1308,8 +1306,8 @@
 			<array>
 				<string>vro</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>DVD Video Recording Format</string>
 			<key>CFBundleTypeRole</key>
@@ -1320,8 +1318,8 @@
 			<array>
 				<string>tod</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>JVC Everio Video Capture File</string>
 			<key>CFBundleTypeRole</key>
@@ -1332,8 +1330,8 @@
 			<array>
 				<string>mks</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>mkv.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Matroska Elementry Stream</string>
 			<key>CFBundleTypeRole</key>
@@ -1344,8 +1342,8 @@
 			<array>
 				<string>nsv</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>video/nsv</string>
@@ -1364,8 +1362,8 @@
 			<array>
 				<string>nuv</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>movie.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>NuppleVideo File</string>
 			<key>CFBundleTypeRole</key>
@@ -1385,8 +1383,8 @@
 				<string>ssa</string>
 				<string>ass</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Sub Station Alpha Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1401,8 +1399,8 @@
 			<array>
 				<string>usf</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>USF Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1417,8 +1415,8 @@
 			<array>
 				<string>utf</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>UTF Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1429,8 +1427,8 @@
 			<array>
 				<string>srt</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Subrip Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1445,8 +1443,8 @@
 			<array>
 				<string>rt</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>RealText Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1461,8 +1459,8 @@
 			<array>
 				<string>smi</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>SAMI Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1477,8 +1475,8 @@
 			<array>
 				<string>aqt</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>AQTitle Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1493,8 +1491,8 @@
 			<array>
 				<string>jss</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>JACOSub Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1509,8 +1507,8 @@
 			<array>
 				<string>pjs</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Phoenix Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1525,8 +1523,8 @@
 			<array>
 				<string>psb</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>PowerDivX Subtitle File</string>
 			<key>CFBundleTypeRole</key>
@@ -1542,8 +1540,8 @@
 				<string>sub</string>
 				<string>mpsub</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>subtitle.icns</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>CFBundleTypeName</key>
 			<string>Subtitle File</string>
 			<key>CFBundleTypeRole</key>

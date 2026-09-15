@@ -411,14 +411,14 @@ IA
                 <allowedToolbarItems>
                     <toolbarItem implicitItemIdentifier="NSToolbarSpaceItem" id="kAx-MM-EeR"/>
                     <toolbarItem implicitItemIdentifier="NSToolbarFlexibleSpaceItem" id="D2F-Ah-mBO"/>
-                    <toolbarItem implicitItemIdentifier="DED22896-62F8-4A8C-87D1-207BDD8C3D12" label="Clear" paletteLabel="Clear" image="VLCClearLogTemplate" id="hpb-18-o94">
+                    <toolbarItem implicitItemIdentifier="DED22896-62F8-4A8C-87D1-207BDD8C3D12" label="Clear" paletteLabel="Clear" image="trash" catalog="system" id="hpb-18-o94">
                         <nil key="toolTip"/>
                         <size key="minSize" width="42" height="28"/>
                         <size key="maxSize" width="42" height="32"/>
                         <button key="view" verticalHuggingPriority="750" id="zr5-l7-GjP">
                             <rect key="frame" x="0.0" y="14" width="42" height="28"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                            <buttonCell key="cell" type="roundTextured" bezelStyle="texturedRounded" image="VLCClearLogTemplate" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="fwS-lM-cr8">
+                            <buttonCell key="cell" type="roundTextured" bezelStyle="texturedRounded" image="trash" catalog="system" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="fwS-lM-cr8">
                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                 <font key="font" metaFont="system"/>
                             </buttonCell>
@@ -449,14 +449,14 @@ IA
                             </connections>
                         </searchField>
                     </toolbarItem>
-                    <toolbarItem implicitItemIdentifier="9A3E885E-18F4-404E-BD7E-276CBAADC258" label="Save..." paletteLabel="Save..." image="VLCSaveTemplate" id="FN6-f1-moV">
+                    <toolbarItem implicitItemIdentifier="9A3E885E-18F4-404E-BD7E-276CBAADC258" label="Save..." paletteLabel="Save..." image="square.and.arrow.down" catalog="system" id="FN6-f1-moV">
                         <nil key="toolTip"/>
                         <size key="minSize" width="42" height="28"/>
                         <size key="maxSize" width="42" height="32"/>
                         <button key="view" verticalHuggingPriority="750" id="wEO-3t-jcc">
                             <rect key="frame" x="1" y="14" width="42" height="28"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                            <buttonCell key="cell" type="roundTextured" bezelStyle="texturedRounded" image="VLCSaveTemplate" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="iFC-ts-0dh">
+                            <buttonCell key="cell" type="roundTextured" bezelStyle="texturedRounded" image="square.and.arrow.down" catalog="system" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="iFC-ts-0dh">
                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                 <font key="font" metaFont="system"/>
                             </buttonCell>
@@ -517,7 +517,7 @@ IA
     <resources>
         <image name="NSQuickLookTemplate" width="19" height="12"/>
         <image name="NSRefreshTemplate" width="11" height="15"/>
-        <image name="VLCClearLogTemplate" width="30" height="30"/>
-        <image name="VLCSaveTemplate" width="30" height="30"/>
+        <image name="trash" catalog="system" width="15" height="15"/>
+        <image name="square.and.arrow.down" catalog="system" width="15" height="15"/>
     </resources>
 </document>

@@ -502,7 +502,7 @@
                                         <shadow key="shadow" blurRadius="30">
                                             <color key="color" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                         </shadow>
-                                        <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="play.fill" catalog="system" imagePosition="only" alignment="center" alternateImage="VLCPauseTemplate" imageScaling="proportionallyUpOrDown" inset="2" id="Jk0-sw-EOp">
+                                        <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="play.fill" catalog="system" imagePosition="only" alignment="center" alternateImage="pause.fill" imageScaling="proportionallyUpOrDown" inset="2" id="Jk0-sw-EOp">
                                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                             <font key="font" metaFont="system"/>
                                         </buttonCell>
@@ -715,7 +715,7 @@
     <resources>
         <image name="NSLeftFacingTriangleTemplate" width="12" height="17"/>
         <image name="NSListViewTemplate" width="21" height="15"/>
-        <image name="VLCPauseTemplate" width="128" height="128"/>
+        <image name="pause.fill" catalog="system" width="15" height="15"/>
         <image name="arrow.trianglehead.clockwise" catalog="system" width="15" height="17"/>
         <image name="arrow.trianglehead.counterclockwise" catalog="system" width="15" height="17"/>
         <image name="arrow.up.left.and.arrow.down.right" catalog="system" width="16" height="15"/>

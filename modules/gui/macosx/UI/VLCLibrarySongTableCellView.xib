@@ -41,7 +41,7 @@
                         <constraint firstAttribute="width" secondItem="NFZ-x0-t5c" secondAttribute="height" multiplier="1:1" id="Hv5-J8-wdk"/>
                         <constraint firstAttribute="height" constant="16" id="bai-RH-huE"/>
                     </constraints>
-                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="VLCPlayTemplate" imagePosition="only" alignment="left" imageScaling="proportionallyDown" inset="2" id="5MR-Gt-X4p">
+                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="play.fill" catalog="system" imagePosition="only" alignment="left" imageScaling="proportionallyDown" inset="2" id="5MR-Gt-X4p">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
@@ -107,7 +107,7 @@
         </customView>
     </objects>
     <resources>
-        <image name="VLCPlayTemplate" width="128" height="128"/>
+        <image name="play.fill" catalog="system" width="15" height="15"/>
         <namedColor name="VLCAccentColor">
             <color red="1" green="0.37999999523162842" blue="0.039999999105930328" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>

@@ -54,7 +54,7 @@
                                             </button>
                                             <button translatesAutoresizingMaskIntoConstraints="NO" id="jGc-Xw-GYI" userLabel="Prev Button">
                                                 <rect key="frame" x="40" y="8" width="24" height="24"/>
-                                                <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="VLCBackwardTemplate" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="wXL-JO-q9Q">
+                                                <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="backward.fill" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="wXL-JO-q9Q">
                                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                                     <font key="font" metaFont="system"/>
                                                 </buttonCell>
@@ -82,7 +82,7 @@
                                             </button>
                                             <button translatesAutoresizingMaskIntoConstraints="NO" id="dPD-MZ-5oT" userLabel="Next Button">
                                                 <rect key="frame" x="124" y="8" width="24" height="24"/>
-                                                <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="VLCForwardTemplate" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="DYw-1X-kJ4">
+                                                <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="forward.fill" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="DYw-1X-kJ4">
                                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                                     <font key="font" metaFont="system"/>
                                                 </buttonCell>
@@ -205,7 +205,7 @@
                                                                     <subviews>
                                                                         <button wantsLayer="YES" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="f5c-zt-tHy">
                                                                             <rect key="frame" x="8" y="8" width="24" height="24"/>
-                                                                            <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="VLCFullscreenOffTemplate" imagePosition="only" alignment="center" imageScaling="proportionallyDown" inset="2" id="ewW-8p-s67">
+                                                                            <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="arrow.down.right.and.arrow.up.left" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyDown" inset="2" id="ewW-8p-s67">
                                                                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                                                                 <font key="font" metaFont="system"/>
                                                                             </buttonCell>
@@ -376,7 +376,7 @@
                                                     </slider>
                                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="75c-FF-mgb">
                                                         <rect key="frame" x="134" y="14" width="12" height="12"/>
-                                                        <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="VLCVolumeOnTemplate" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" id="a9Z-7I-lXJ">
+                                                        <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="speaker.wave.2.fill" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" id="a9Z-7I-lXJ">
                                                             <behavior key="behavior" lightByContents="YES"/>
                                                             <font key="font" metaFont="system" size="10"/>
                                                         </buttonCell>
@@ -390,7 +390,7 @@
                                                     </button>
                                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="IAy-58-UPp">
                                                         <rect key="frame" x="0.0" y="14" width="12" height="12"/>
-                                                        <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="VLCVolumeOffTemplate" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" id="qTN-dX-Oj5">
+                                                        <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="speaker.slash.fill" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" id="qTN-dX-Oj5">
                                                             <behavior key="behavior" lightByContents="YES"/>
                                                             <font key="font" metaFont="system" size="10"/>
                                                         </buttonCell>
@@ -1924,11 +1924,11 @@
         <image name="NSListViewTemplate" width="21" height="15"/>
         <image name="NSRightFacingTriangleTemplate" width="12" height="17"/>
         <image name="MacLC" width="512" height="512"/>
-        <image name="VLCBackwardTemplate" width="128" height="128"/>
-        <image name="VLCForwardTemplate" width="128" height="128"/>
-        <image name="VLCFullscreenOffTemplate" width="128" height="128"/>
-        <image name="VLCVolumeOffTemplate" width="128" height="128"/>
-        <image name="VLCVolumeOnTemplate" width="128" height="128"/>
+        <image name="backward.fill" catalog="system" width="15" height="15"/>
+        <image name="forward.fill" catalog="system" width="15" height="15"/>
+        <image name="arrow.down.right.and.arrow.up.left" catalog="system" width="15" height="15"/>
+        <image name="speaker.slash.fill" catalog="system" width="15" height="15"/>
+        <image name="speaker.wave.2.fill" catalog="system" width="15" height="15"/>
         <image name="antenna.radiowaves.left.and.right" catalog="system" width="16" height="14"/>
         <image name="arrow.trianglehead.clockwise" catalog="system" width="15" height="17"/>
         <image name="arrow.trianglehead.counterclockwise" catalog="system" width="15" height="17"/>
