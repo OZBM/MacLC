@@ -180,12 +180,12 @@
         [NSFont monospacedDigitSystemFontOfSize:NSFont.smallSystemFontSize
                                          weight:NSFontWeightRegular];
     _hoverLabel.alignment = NSTextAlignmentCenter;
-    _hoverLabel.textColor = NSColor.controlTextColor;
+    _hoverLabel.textColor = NSColor.whiteColor;
 
     NSView * const contentView = [[NSView alloc] initWithFrame:NSZeroRect];
     contentView.wantsLayer = YES;
     contentView.layer.borderWidth = 0.5;
-    contentView.layer.cornerRadius = 3.0;
+    contentView.layer.cornerRadius = 9.0;
     [contentView addSubview:_hoverLabel];
 
     _hoverWindow = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 60, 20)
@@ -209,12 +209,10 @@
     }
     NSView * const contentView = _hoverWindow.contentView;
     if (@available(macOS 11.0, *)) {
-        _hoverWindow.appearance = self.effectiveAppearance;
-        [self.effectiveAppearance performAsCurrentDrawingAppearance:^{
-            contentView.layer.backgroundColor =
-                [NSColor.controlBackgroundColor colorWithAlphaComponent:0.95].CGColor;
-            contentView.layer.borderColor = NSColor.gridColor.CGColor;
-        }];
+        /* Always a dark capsule: it floats over the picture. */
+        _hoverWindow.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+        contentView.layer.backgroundColor = [NSColor colorWithWhite:0.08 alpha:0.82].CGColor;
+        contentView.layer.borderColor = [NSColor colorWithWhite:1.0 alpha:0.18].CGColor;
         return;
     }
     if (@available(macOS 10.14, *)) {
@@ -250,9 +248,9 @@
     [_hoverLabel sizeToFit];
 
     const NSSize textSize = _hoverLabel.frame.size;
-    const CGFloat horizontalPadding = 6.0;
-    const CGFloat verticalPadding = 2.0;
-    const CGFloat verticalGap = 6.0;
+    const CGFloat horizontalPadding = 9.0;
+    const CGFloat verticalPadding = 3.0;
+    const CGFloat verticalGap = 8.0;
     const NSSize windowSize = NSMakeSize(textSize.width + horizontalPadding * 2.0,
                                          textSize.height + verticalPadding * 2.0);
     _hoverLabel.frame = NSMakeRect(horizontalPadding, verticalPadding,
@@ -304,6 +302,7 @@
 
 - (void)mouseEntered:(NSEvent *)event
 {
+    [(VLCPlaybackProgressSliderCell *)self.cell setHovered:YES];
     [self reportHoverAtPoint:[self convertPoint:event.locationInWindow fromView:nil]];
 }
 
@@ -314,6 +313,7 @@
 
 - (void)mouseExited:(NSEvent *)event
 {
+    [(VLCPlaybackProgressSliderCell *)self.cell setHovered:NO];
     [self hideHoverWindow];
 }
 

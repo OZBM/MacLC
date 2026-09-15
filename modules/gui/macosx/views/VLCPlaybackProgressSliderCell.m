@@ -141,24 +141,48 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
 #pragma mark -
 #pragma mark Normal slider drawing
 
+/* Apple TV-style scrubber: a thin rounded track that thickens under the
+ * pointer, filled in the label colour, with a round knob that only appears
+ * while the pointer is over it (or the knob is being dragged). */
+static const CGFloat kTrackThickness = 4.0;
+static const CGFloat kTrackThicknessHovered = 8.0;
+static const CGFloat kKnobDiameter = 14.0;
+
+- (NSRect)trackRectForBarRect:(NSRect)rect
+{
+    const CGFloat thickness = _hovered ? kTrackThicknessHovered : kTrackThickness;
+    return NSMakeRect(NSMinX(rect), NSMidY(rect) - thickness / 2.0,
+                      NSWidth(rect), thickness);
+}
+
 - (void)drawKnob:(NSRect)knobRect
 {
-    if (self.knobHidden) {
+    if (self.knobHidden || !(_hovered || self.isHighlighted)) {
         return;
     }
 
-    [super drawKnob:knobRect];
+    const NSRect circle = NSMakeRect(NSMidX(knobRect) - kKnobDiameter / 2.0,
+                                     NSMidY(knobRect) - kKnobDiameter / 2.0,
+                                     kKnobDiameter, kKnobDiameter);
+    [NSGraphicsContext saveGraphicsState];
+    NSShadow * const shadow = [[NSShadow alloc] init];
+    shadow.shadowBlurRadius = 3.0;
+    shadow.shadowOffset = NSMakeSize(0, -1);
+    shadow.shadowColor = [NSColor colorWithWhite:0.0 alpha:0.35];
+    [shadow set];
+    [NSColor.whiteColor setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:circle] fill];
+    [NSGraphicsContext restoreGraphicsState];
 }
 
 - (void)drawBarInside:(NSRect)rect flipped:(BOOL)flipped
 {
-    static const CGFloat trackBorderRadius = 1;
+    const NSRect track = [self trackRectForBarRect:rect];
+    const CGFloat radius = NSHeight(track) / 2.0;
 
-    // Empty Track Drawing
+    // Empty track
     NSBezierPath * const emptyTrackPath =
-        [NSBezierPath bezierPathWithRoundedRect:rect
-                                        xRadius:trackBorderRadius
-                                        yRadius:trackBorderRadius];
+        [NSBezierPath bezierPathWithRoundedRect:track xRadius:radius yRadius:radius];
     [_emptySliderBackgroundColor setFill];
     [emptyTrackPath fill];
 
@@ -166,19 +190,23 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
         return;
     }
 
-    // Calculate filled track
-    NSRect filledTrackRect = rect;
+    // Filled track, up to the knob centre
+    NSRect filledTrackRect = track;
     const NSRect knobRect = [self knobRectFlipped:NO];
-    filledTrackRect.size.width = knobRect.origin.x + (knobRect.size.width / 2);
+    filledTrackRect.size.width = MAX(NSMidX(knobRect) - NSMinX(track), 0.0);
 
-    // Filled Track Drawing
-    NSBezierPath * const filledTrackPath = 
-        [NSBezierPath bezierPathWithRoundedRect:filledTrackRect
-                                        xRadius:trackBorderRadius
-                                        yRadius:trackBorderRadius];
-
-    [NSColor.VLCAccentColor setFill];
+    NSBezierPath * const filledTrackPath =
+        [NSBezierPath bezierPathWithRoundedRect:filledTrackRect xRadius:radius yRadius:radius];
+    [NSColor.labelColor setFill];
     [filledTrackPath fill];
+}
+
+- (void)setHovered:(BOOL)hovered
+{
+    if (_hovered == hovered)
+        return;
+    _hovered = hovered;
+    self.controlView.needsDisplay = YES;
 }
 
 #pragma mark -

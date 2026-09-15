@@ -26,6 +26,8 @@
 
 @property (readwrite, nonatomic) BOOL indefinite;
 @property (readwrite, nonatomic) BOOL knobHidden;
+/// Pointer over the scrubber: the track thickens and the knob appears.
+@property (readwrite, nonatomic) BOOL hovered;
 
 - (void)setSliderStyleLight;
 - (void)setSliderStyleDark;

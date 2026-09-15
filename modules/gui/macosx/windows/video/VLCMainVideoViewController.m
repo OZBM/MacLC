@@ -57,6 +57,7 @@
 #import "windows/video/VLCVideoWindowCommon.h"
 
 #import "hdr/MacLCHDRCardView.h"
+#import "theme/MacLCGlassView.h"
 #import "hdr/MacLCHDRController.h"
 
 NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerLayoutKey";
@@ -275,19 +276,71 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         [self.bottomBarView addSubview:controlsBackgroundView positioned:NSWindowBelow relativeTo:self.bottomBarView.subviews.firstObject];
         [controlsBackgroundView applyConstraintsToFillSuperview];
     } else {
-        self.bottomBarView.wantsLayer = YES;
-        self.bottomBarView.layer.cornerRadius = MacLCDesign.cornerRadiusLarge;
-        self.bottomBarView.layer.masksToBounds = YES;
+        [self installGlassSurfaces];
+    }
+}
 
-        NSVisualEffectView * const hudView = [MacLCDesign floatingHUDMaterialView];
-        hudView.translatesAutoresizingMaskIntoConstraints = NO;
-        hudView.wantsLayer = YES;
-        hudView.layer.cornerRadius = MacLCDesign.cornerRadiusLarge;
-        hudView.layer.masksToBounds = YES;
-        hudView.layer.borderWidth = VLCUIUnits.borderThickness;
-        hudView.layer.borderColor = MacLCDesign.separator.CGColor;
-        [self.bottomBarView addSubview:hudView positioned:NSWindowBelow relativeTo:self.bottomBarView.subviews.firstObject];
-        [hudView applyConstraintsToFillSuperview];
+/* Liquid Glass for everything that floats over the picture (macOS 26; a HUD
+ * material with a hairline edge elsewhere or under Reduce Transparency):
+ * the controls capsule at the bottom, a pill behind the central transport
+ * controls, and round glass behind the back and play queue buttons. The
+ * controls themselves stay where the layout puts them; the glass sits under
+ * them and follows their frames. */
+- (void)installGlassSurfaces
+{
+    self.bottomBarView.wantsLayer = YES;
+    self.bottomBarView.layer.cornerRadius = MacLCDesign.capsuleCornerRadius;
+    self.bottomBarView.layer.masksToBounds = NO;
+
+    MacLCGlassView * const barGlass = [[MacLCGlassView alloc] initWithFrame:self.bottomBarView.bounds];
+    barGlass.translatesAutoresizingMaskIntoConstraints = NO;
+    barGlass.cornerRadius = MacLCDesign.capsuleCornerRadius;
+    barGlass.forcesDarkAppearance = YES;
+    [self.bottomBarView addSubview:barGlass
+                        positioned:NSWindowBelow
+                        relativeTo:self.bottomBarView.subviews.firstObject];
+    [barGlass applyConstraintsToFillSuperview];
+
+    NSView * const container = self.centralControlsStackView.superview;
+    if (container != nil) {
+        MacLCGlassView * const transportGlass = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
+        transportGlass.translatesAutoresizingMaskIntoConstraints = NO;
+        transportGlass.forcesDarkAppearance = YES;
+        /* Capsule: the radius is clamped to half the height whatever the
+         * button size (32, 48 or 64 pt) the window size selects. */
+        transportGlass.cornerRadius = 40.0;
+        [container addSubview:transportGlass
+                   positioned:NSWindowBelow
+                   relativeTo:self.centralControlsStackView];
+        [NSLayoutConstraint activateConstraints:@[
+            [transportGlass.leadingAnchor constraintEqualToAnchor:self.centralControlsStackView.leadingAnchor constant:-20.0],
+            [transportGlass.trailingAnchor constraintEqualToAnchor:self.centralControlsStackView.trailingAnchor constant:20.0],
+            [transportGlass.topAnchor constraintEqualToAnchor:self.centralControlsStackView.topAnchor constant:-8.0],
+            [transportGlass.bottomAnchor constraintEqualToAnchor:self.centralControlsStackView.bottomAnchor constant:8.0],
+        ]];
+        [transportGlass bind:NSHiddenBinding
+                    toObject:self.centralControlsStackView
+                 withKeyPath:@"hidden"
+                     options:nil];
+    }
+
+    for (NSButton * const button in @[self.returnButton, self.playQueueButton]) {
+        NSView * const parent = button.superview;
+        if (parent == nil)
+            continue;
+        button.shadow = nil;
+        MacLCGlassView * const circle = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
+        circle.translatesAutoresizingMaskIntoConstraints = NO;
+        circle.forcesDarkAppearance = YES;
+        circle.cornerRadius = 18.0;
+        [parent addSubview:circle positioned:NSWindowBelow relativeTo:button];
+        [NSLayoutConstraint activateConstraints:@[
+            [circle.centerXAnchor constraintEqualToAnchor:button.centerXAnchor],
+            [circle.centerYAnchor constraintEqualToAnchor:button.centerYAnchor],
+            [circle.widthAnchor constraintEqualToConstant:36.0],
+            [circle.heightAnchor constraintEqualToConstant:36.0],
+        ]];
+        [circle bind:NSHiddenBinding toObject:button withKeyPath:@"hidden" options:nil];
     }
 }
 

@@ -92,9 +92,30 @@
     }
 }
 
+/* A radius larger than half the smaller side means "capsule": clamp it so the
+ * shape stays a capsule at any size. */
+- (CGFloat)effectiveCornerRadius
+{
+    const CGFloat half = MIN(NSWidth(self.bounds), NSHeight(self.bounds)) / 2.0;
+    return (half > 0.0) ? MIN(_cornerRadius, half) : _cornerRadius;
+}
+
+- (void)layout
+{
+    [super layout];
+    const CGFloat radius = [self effectiveCornerRadius];
+    if (fabs(self.layer.cornerRadius - radius) > 0.01)
+        [self applyCornerRadius:radius];
+}
+
 - (void)setCornerRadius:(CGFloat)cornerRadius
 {
     _cornerRadius = cornerRadius;
+    [self applyCornerRadius:[self effectiveCornerRadius]];
+}
+
+- (void)applyCornerRadius:(CGFloat)cornerRadius
+{
     self.layer.cornerRadius = cornerRadius;
 
     if (@available(macOS 26.0, *)) {
@@ -148,7 +169,7 @@
                 NSGlassEffectView *glass = [[NSGlassEffectView alloc] initWithFrame:self.bounds];
                 glass.translatesAutoresizingMaskIntoConstraints = NO;
                 glass.style = NSGlassEffectViewStyleRegular;
-                glass.cornerRadius = _cornerRadius;
+                glass.cornerRadius = [self effectiveCornerRadius];
                 glass.tintColor = _tintColor;
                 _glassEffectView = glass;
             }
@@ -156,7 +177,7 @@
 
         if (@available(macOS 26.0, *)) {
             NSGlassEffectView *glass = (NSGlassEffectView *)_glassEffectView;
-            glass.cornerRadius = _cornerRadius;
+            glass.cornerRadius = [self effectiveCornerRadius];
             glass.tintColor = _tintColor;
 
             if (glass.superview != self) {
@@ -197,7 +218,7 @@
             _fallbackVisualEffectView.wantsLayer = YES;
         }
 
-        _fallbackVisualEffectView.layer.cornerRadius = _cornerRadius;
+        _fallbackVisualEffectView.layer.cornerRadius = [self effectiveCornerRadius];
         _fallbackVisualEffectView.layer.masksToBounds = (_cornerRadius > 0.0);
         _fallbackVisualEffectView.layer.borderWidth = 0.5;
         _fallbackVisualEffectView.layer.borderColor = MacLCDesign.separator.CGColor;
