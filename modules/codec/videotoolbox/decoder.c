@@ -589,6 +589,10 @@ struct vt_hevc_context
     bool b_dovi_warned;
     bool b_dovi_bits_warned;
     bool b_hdr10plus_logged;
+    /* ST 2094-40 metadata applies until the next message: many streams only
+     * send it at scene changes or random access points. */
+    bool has_last_hdr10plus;
+    vlc_video_hdr_dynamic_metadata_t last_hdr10plus;
 };
 
 struct vt_frame_info_t
@@ -618,6 +622,7 @@ static bool InitHEVC(decoder_t *p_dec)
     ctx->b_dovi_warned = false;
     ctx->b_dovi_bits_warned = false;
     ctx->b_hdr10plus_logged = false;
+    ctx->has_last_hdr10plus = false;
     memset(&ctx->dovi_state, 0, sizeof(ctx->dovi_state));
     hxxx_helper_init(&ctx->hh, VLC_OBJECT(p_dec),
                      p_dec->fmt_in->i_codec, 0, 4);
@@ -1564,6 +1569,8 @@ static bool FillReorderInfoHEVC(decoder_t *p_dec, const block_t *p_block,
                                            &p_vt_info->hdr10plus))
                     {
                         p_vt_info->has_hdr10plus = true;
+                        hevcctx->last_hdr10plus = p_vt_info->hdr10plus;
+                        hevcctx->has_last_hdr10plus = true;
                         if (!hevcctx->b_hdr10plus_logged)
                         {
                             msg_Dbg(p_dec, "HDR10+ dynamic metadata detected and parsed");
@@ -1571,6 +1578,12 @@ static bool FillReorderInfoHEVC(decoder_t *p_dec, const block_t *p_block,
                         }
                     }
                 }
+            }
+
+            if (!p_vt_info->has_hdr10plus && hevcctx->has_last_hdr10plus)
+            {
+                p_vt_info->hdr10plus = hevcctx->last_hdr10plus;
+                p_vt_info->has_hdr10plus = true;
             }
 
             if (p_rpu_nal)
@@ -1654,6 +1667,9 @@ static void CodecFlushHEVC(decoder_t *p_dec)
     decoder_sys_t *p_sys = p_dec->p_sys;
     struct vt_hevc_context *hevcctx = p_sys->p_codec_context;
     hevc_poc_cxt_init(&hevcctx->poc);
+    /* After a seek, wait for the next message rather than apply one that
+     * belongs to another scene. */
+    hevcctx->has_last_hdr10plus = false;
 }
 
 #define ConfigureVoutHEVC ConfigureVoutH264

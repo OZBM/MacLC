@@ -221,7 +221,8 @@ UpdateToneMapping(struct sys *sys, int presentation, float src_peak,
 }
 
 static void
-PublishHdrState(struct sys *sys, int64_t caps, const char *active)
+PublishHdrState(vlc_object_t *obj, struct sys *sys, int64_t caps,
+                const char *active)
 {
     if (sys->hdr_vars == NULL)
         return;
@@ -233,6 +234,7 @@ PublishHdrState(struct sys *sys, int64_t caps, const char *active)
     if (active != sys->published_active)
     {
         sys->published_active = active;
+        msg_Dbg(obj, "HDR presentation rendered: %s", active);
         var_SetString(sys->hdr_vars, MACLC_HDR_VAR_ACTIVE, active);
     }
 }
@@ -383,7 +385,8 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_HLG);
     else
         active = maclc_hdr_presentation_name(MACLC_HDR_PRESENTATION_HDR10);
-    PublishHdrState(sys, caps | MACLC_HDR_CAP_CAN_DOVI | MACLC_HDR_CAP_CAN_HDR10PLUS,
+    PublishHdrState(VLC_OBJECT(filter), sys,
+                    caps | MACLC_HDR_CAP_CAN_DOVI | MACLC_HDR_CAP_CAN_HDR10PLUS,
                     active);
 
     GLint value;
