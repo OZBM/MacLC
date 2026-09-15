@@ -26,6 +26,8 @@
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
 #import "extensions/NSString+Helpers.h"
+#import "hdr/MacLCHDRTypes.h"
+#import "hdr/MacLCHDRController.h"
 
 #import "main/VLCMain.h"
 #import "playqueue/VLCPlayQueueController.h"
@@ -238,6 +240,11 @@ NSString * const MacLCHDRExpansionChangedNotification =
     NSArray<NSButton *> *_hdrModeRadioButtons;
     NSInteger _currentHdrMode;
 
+    // Per-file defaults (maclc-hdr-presentation, -picture, -card)
+    NSPopUpButton *_defaultFormatPopup;
+    NSPopUpButton *_defaultPicturePopup;
+    NSPopUpButton *_cardPolicyPopup;
+
     // SDR to HDR (macosx-sdr-to-hdr, macosx-sdr-to-hdr-boost)
     NSButton *_sdrToHdrCheckbox;
     NSSlider *_sdrToHdrBoostSlider;
@@ -324,6 +331,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
     ]];
 
     [self buildStatusCard];
+    [self buildOpeningDefaultsCard];
     [self buildPrimaryControlCard];
     [self buildSDRToHDRCard];
     [self buildHeadroomCard];
@@ -367,6 +375,8 @@ NSString * const MacLCHDRExpansionChangedNotification =
         @"sdr to hdr", @"convert sdr", @"macosx-sdr-to-hdr",
         @"macosx-sdr-to-hdr-boost",
         @"macosx-hdr-mode", @"macosx-edr-headroom", @"force-darwin-legacy-display",
+        @"format", @"hdr10+", @"hdr10", @"accurate", @"balanced", @"bright",
+        @"format card", @"maclc-hdr-presentation", @"maclc-hdr-picture", @"maclc-hdr-card",
         @"gl-tone-mapping-function", @"gl-tone-mapping-param", @"gl-gamut-mapping",
         @"gl-inverse-tone-mapping", @"gl-upscaler", @"gl-downscaler",
         @"dither-algo", @"vout", @"videotoolbox-hw-decoder-only",
@@ -402,6 +412,17 @@ NSString * const MacLCHDRExpansionChangedNotification =
     for (NSButton *btn in _hdrModeRadioButtons) {
         btn.state = (btn.tag == _currentHdrMode) ? NSControlStateValueOn : NSControlStateValueOff;
     }
+
+    /* What a new HDR file starts with */
+    char *psz_presentation = MacLCConfigGetPsz("maclc-hdr-presentation");
+    [_defaultFormatPopup selectItemWithTag:
+        MacLCHDRPresentationFromString(psz_presentation ? @(psz_presentation) : nil)];
+    free(psz_presentation);
+    char *psz_picture = MacLCConfigGetPsz("maclc-hdr-picture");
+    [_defaultPicturePopup selectItemWithTag:
+        MacLCHDRPictureModeFromString(psz_picture ? @(psz_picture) : nil)];
+    free(psz_picture);
+    [_cardPolicyPopup selectItemWithTag:[MacLCHDRController sharedController].cardPolicy];
 
     /* SDR to HDR */
     _sdrToHdrCheckbox.state = MacLCConfigGetInt("macosx-sdr-to-hdr", 0)
@@ -456,6 +477,14 @@ NSString * const MacLCHDRExpansionChangedNotification =
     /* Primary */
     MacLCConfigPutInt("macosx-hdr-mode", _currentHdrMode);
 
+    /* What a new HDR file starts with */
+    MacLCConfigPutPsz("maclc-hdr-presentation",
+        MacLCHDRPresentationToString((MacLCHDRPresentation)_defaultFormatPopup.selectedTag).UTF8String);
+    MacLCConfigPutPsz("maclc-hdr-picture",
+        MacLCHDRPictureModeToString((MacLCHDRPictureMode)_defaultPicturePopup.selectedTag).UTF8String);
+    [MacLCHDRController sharedController].cardPolicy =
+        (MacLCHDRCardPolicy)_cardPolicyPopup.selectedTag;
+
     /* SDR to HDR */
     const BOOL sdrToHdr = (_sdrToHdrCheckbox.state == NSControlStateValueOn);
     MacLCConfigPutInt("macosx-sdr-to-hdr", sdrToHdr ? 1 : 0);
@@ -493,6 +522,10 @@ NSString * const MacLCHDRExpansionChangedNotification =
 
 - (void)resetToDefaults
 {
+    [_defaultFormatPopup selectItemWithTag:MacLCHDRPresentationAuto];
+    [_defaultPicturePopup selectItemWithTag:MacLCHDRPictureModeAuto];
+    [_cardPolicyPopup selectItemWithTag:MacLCHDRCardPolicyWhenThereIsAChoice];
+
     _currentHdrMode = 0;
     for (NSButton *btn in _hdrModeRadioButtons) {
         btn.state = (btn.tag == 0) ? NSControlStateValueOn : NSControlStateValueOff;
@@ -533,18 +566,81 @@ NSString * const MacLCHDRExpansionChangedNotification =
     card.translatesAutoresizingMaskIntoConstraints = NO;
 
     _statusDisplayRow = [[MacLCStatusRowView alloc] initWithTitle:_NS("CONNECTED DISPLAY")
-                                                     initialValue:_NS("Detecting display...")];
+                                                     initialValue:_NS("Detecting display…")];
     _statusHeadroomRow = [[MacLCStatusRowView alloc] initWithTitle:_NS("EDR HEADROOM")
-                                                      initialValue:_NS("Measuring headroom...")];
+                                                      initialValue:_NS("Measuring headroom…")];
     _statusEngineRow = [[MacLCStatusRowView alloc] initWithTitle:_NS("ACTIVE VIDEO ENGINE")
-                                                    initialValue:_NS("Querying engine...")];
+                                                    initialValue:_NS("Querying engine…")];
     _statusPlaybackRow = [[MacLCStatusRowView alloc] initWithTitle:_NS("PLAYBACK STREAM & TONE-MAPPING")
-                                                      initialValue:_NS("Checking playback...")];
+                                                      initialValue:_NS("Checking playback…")];
 
     [card.contentStackView addArrangedSubview:_statusDisplayRow];
     [card.contentStackView addArrangedSubview:_statusHeadroomRow];
     [card.contentStackView addArrangedSubview:_statusEngineRow];
     [card.contentStackView addArrangedSubview:_statusPlaybackRow];
+
+    [_mainStackView addArrangedSubview:card];
+    [card.widthAnchor constraintEqualToAnchor:_mainStackView.widthAnchor constant:-2 * MacLCDesign.windowContentMargin].active = YES;
+}
+
+- (NSPopUpButton *)popupWithItems:(NSArray<NSArray *> *)items
+{
+    NSPopUpButton *popup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    popup.target = self;
+    popup.action = @selector(controlValueChanged:);
+    for (NSArray *item in items) {
+        [popup addItemWithTitle:item[1]];
+        popup.lastItem.tag = [item[0] integerValue];
+    }
+    return popup;
+}
+
+/* The choices the format card and the HDR panel offer for one file, made the
+ * starting point for every file. */
+- (void)buildOpeningDefaultsCard
+{
+    MacLCCardView *card = [MacLCCardView cardViewWithTitle:_NS("When an HDR Video Opens")];
+    card.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSMutableArray<NSArray *> *formats = [NSMutableArray arrayWithObject:
+        @[@(MacLCHDRPresentationAuto), _NS("Automatic (Recommended)")]];
+    for (NSNumber *p in @[@(MacLCHDRPresentationDolbyVision), @(MacLCHDRPresentationHDR10Plus),
+                          @(MacLCHDRPresentationHDR10), @(MacLCHDRPresentationHLG),
+                          @(MacLCHDRPresentationSDR)])
+        [formats addObject:@[p, MacLCHDRPresentationDisplayName(p.integerValue)]];
+    _defaultFormatPopup = [self popupWithItems:formats];
+
+    _defaultPicturePopup = [self popupWithItems:@[
+        @[@(MacLCHDRPictureModeAuto), _NS("Automatic (Recommended)")],
+        @[@(MacLCHDRPictureModeAccurate), _NS("Accurate")],
+        @[@(MacLCHDRPictureModeBalanced), _NS("Balanced")],
+        @[@(MacLCHDRPictureModeBright), _NS("Bright")],
+    ]];
+
+    _cardPolicyPopup = [self popupWithItems:@[
+        @[@(MacLCHDRCardPolicyAlways), _NS("Always")],
+        @[@(MacLCHDRCardPolicyWhenThereIsAChoice), _NS("When the Video Offers a Choice")],
+        @[@(MacLCHDRCardPolicyNever), _NS("Never")],
+    ]];
+
+    NSArray *rows = @[
+        [[MacLCSettingsRowView alloc] initWithTitle:_NS("Format")
+                                        explanation:_NS("Automatic compares the video with your display: Dolby Vision or HDR10+ when their scene-by-scene data improves the picture, HDR10 when the whole video fits your display. A format the video does not carry falls back to Automatic.")
+                                            control:_defaultFormatPopup
+                                            isRisky:NO],
+        [[MacLCSettingsRowView alloc] initWithTitle:_NS("Picture")
+                                        explanation:_NS("Accurate keeps the master's intent, Balanced keeps highlight detail on displays dimmer than the master, Bright lifts the image at the cost of highlights and battery.")
+                                            control:_defaultPicturePopup
+                                            isRisky:NO],
+        [[MacLCSettingsRowView alloc] initWithTitle:_NS("Show the format card")
+                                        explanation:_NS("The card appears for a few seconds when playback starts and says what is playing and why.")
+                                            control:_cardPolicyPopup
+                                            isRisky:NO],
+    ];
+    for (MacLCSettingsRowView *row in rows) {
+        [card.contentStackView addArrangedSubview:row];
+        [row.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
+    }
 
     [_mainStackView addArrangedSubview:card];
     [card.widthAnchor constraintEqualToAnchor:_mainStackView.widthAnchor constant:-2 * MacLCDesign.windowContentMargin].active = YES;

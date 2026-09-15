@@ -85,7 +85,7 @@
     NSMenuItem *appendItem = [[NSMenuItem alloc] initWithTitle:_NS("Append to Play Queue") action:@selector(appendToPlayQueue:) keyEquivalent:@""];
     appendItem.target = self;
 
-    NSMenuItem *addItem = [[NSMenuItem alloc] initWithTitle:_NS("Add Media Folder...") action:@selector(addMedia:) keyEquivalent:@""];
+    NSMenuItem *addItem = [[NSMenuItem alloc] initWithTitle:_NS("Add Media Folder…") action:@selector(addMedia:) keyEquivalent:@""];
     addItem.target = self;
 
     NSMenuItem *revealItem = [[NSMenuItem alloc] initWithTitle:_NS("Reveal in Finder") action:@selector(revealInFinder:) keyEquivalent:@""];
@@ -97,7 +97,7 @@
     NSMenuItem *markUnseenItem = [[NSMenuItem alloc] initWithTitle:_NS("Mark as Unseen") action:@selector(markUnseen:) keyEquivalent:@""];
     markUnseenItem.target = self;
 
-    _informationItem = [[NSMenuItem alloc] initWithTitle:_NS("Information...") action:@selector(showInformation:) keyEquivalent:@""];
+    _informationItem = [[NSMenuItem alloc] initWithTitle:_NS("Get Info") action:@selector(showInformation:) keyEquivalent:@""];
     _informationItem.target = self;
 
     NSMenuItem * const bookmarkItem = [[NSMenuItem alloc] initWithTitle:_NS("Toggle Bookmark")

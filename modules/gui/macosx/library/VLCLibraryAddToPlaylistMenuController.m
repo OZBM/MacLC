@@ -108,7 +108,7 @@
     [menu removeAllItems];
 
     NSMenuItem * const newPlaylistItem =
-        [[NSMenuItem alloc] initWithTitle:_NS("New Playlist...")
+        [[NSMenuItem alloc] initWithTitle:_NS("New Playlist…")
                                    action:@selector(createNewPlaylist:)
                             keyEquivalent:@""];
     newPlaylistItem.target = self;

@@ -86,13 +86,13 @@
     _revealInFinderMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Reveal in Finder") action:@selector(revealInFinder:) keyEquivalent:@""];
     _revealInFinderMenuItem.target = self;
 
-    _informationMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Information...") action:@selector(showInformationPanel:) keyEquivalent:@""];
+    _informationMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Get Info") action:@selector(showInformationPanel:) keyEquivalent:@""];
     _informationMenuItem.target = self;
 
     _addToPlaylistMenuController = [[VLCLibraryAddToPlaylistMenuController alloc] init];
     _addToPlaylistMenuItem = [_addToPlaylistMenuController createAddToPlaylistMenuItem];
 
-    _addFilesToPlayQueueMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Add File...") action:@selector(addFilesToPlayQueue:) keyEquivalent:@""];
+    _addFilesToPlayQueueMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Add File…") action:@selector(addFilesToPlayQueue:) keyEquivalent:@""];
     _addFilesToPlayQueueMenuItem.target = self;
 
     _clearPlayQueueMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Clear Play Queue") action:@selector(clearPlayQueue:) keyEquivalent:@""];

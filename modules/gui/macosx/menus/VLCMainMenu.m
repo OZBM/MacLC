@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 #import "VLCMainMenu.h"
+#import "coreinteraction/MacLCOSDController.h"
 
 #import "extensions/NSMenuItem+VLCAdditions.h"
 #import "extensions/NSScreen+VLCAdditions.h"
@@ -153,7 +154,8 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_checkForUpdate setAction:@selector(checkForUpdates:)];
     [_checkForUpdate setTarget:VLCMain.sharedInstance.sparkleUpdaterController];
 #else
-    [_checkForUpdate setEnabled:NO];
+    /* Nothing to check against: say nothing rather than show a dead item. */
+    _checkForUpdate.hidden = YES;
 #endif
 
     [self initStrings];
@@ -258,6 +260,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     VLCExtensionsManager *extMgr = VLCMain.sharedInstance.extensionsManager;
     [extMgr buildMenu:_extensionsMenu];
     [_extensions setEnabled:([_extensionsMenu numberOfItems] > 0)];
+    _extensions.hidden = [_extensionsMenu numberOfItems] == 0;
 
     /* setup post-proc menu */
     [_postprocessingMenu removeAllItems];
@@ -347,13 +350,17 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 - (void)initStrings
 {
     /* main menu */
-    [_about setTitle: _NS("About MacLC...")];
-    [_checkForUpdate setTitle: _NS("Check for Updates...")];
-    [_prefs setTitle: _NS("Preferences...")];
+    [_about setTitle: _NS("About MacLC")];
+    [_checkForUpdate setTitle: _NS("Check for Updates…")];
+    [_prefs setTitle: _NS("Settings…")];
     [_extensions setTitle: _NS("Extensions")];
     [_extensionsMenu setTitle: _NS("Extensions")];
-    [_addonManager setTitle: _NS("Addons Manager")];
+    [_addonManager setTitle: _NS("Add-ons")];
+    /* Developer-era tools with no place in a player menu; the settings keep
+     * what they configure. */
+    _addonManager.hidden = YES;
     [_add_intf setTitle: _NS("Add Interface")];
+    _add_intf.hidden = YES;
     [_add_intfMenu setTitle: _NS("Add Interface")];
     [_services setTitle: _NS("Services")];
     [_hide setTitle: _NS("Hide MacLC")];
@@ -366,18 +373,18 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
      * This remains until the present day and does not affect the Windows world. */
      /* xgettext: Label for the macOS main "File" menu */
     [_fileMenu setTitle: _PNS("macOS MainMenu", "File")];
-    [_open_generic setTitle: _NS("Advanced Open File...")];
-    [_open_file setTitle: _NS("Open File...")];
-    [_open_disc setTitle: _NS("Open Disc...")];
-    [_open_net setTitle: _NS("Open Stream...")];
-    [_open_capture setTitle: _NS("Open Capture Device...")];
-    [_connect_to_server setTitle: _NS("Connect to Server...")];
+    [_open_generic setTitle: _NS("Open with Options…")];
+    [_open_file setTitle: _NS("Open…")];
+    [_open_disc setTitle: _NS("Open Disc…")];
+    [_open_net setTitle: _NS("Open Network Stream…")];
+    [_open_capture setTitle: _NS("Open Capture Device…")];
+    [_connect_to_server setTitle: _NS("Connect to Server…")];
     [_open_recent setTitle: _NS("Open Recent")];
     [_recent_streams setTitle: _NS("Recent Streams")];
     [_close_window setTitle: _NS("Close Window")];
-    [_convertandsave setTitle: _NS("Convert / Stream...")];
-    [_save_playlist setTitle: _NS("Save Playlist...")];
-    [_savePlayqueueToLibrary setTitle: _NS("Save Play Queue to Library...")];
+    [_convertandsave setTitle: _NS("Convert & Stream…")];
+    [_save_playlist setTitle: _NS("Save Playlist…")];
+    [_savePlayqueueToLibrary setTitle: _NS("Save Play Queue to Library…")];
     [_revealInFinder setTitle: _NS("Reveal in Finder")];
 
     [_editMenu setTitle: _NS("Edit")];
@@ -386,7 +393,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_pasteItem setTitle: _NS("Paste")];
     [_clearItem setTitle: _NS("Delete")];
     [_select_all setTitle: _NS("Select All")];
-    [_findItem setTitle: _NS("Find")];
+    [_findItem setTitle: _NS("Find…")];
 
     [_viewMenu setTitle: _NS("View")];
 
@@ -403,18 +410,18 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_trackSynchronization setTitle: _NS("Track Synchronization")];
     [_previous setTitle: _NS("Previous")];
     [_next setTitle: _NS("Next")];
-    [_random setTitle: _NS("Random")];
+    [_random setTitle: _NS("Shuffle")];
     [_repeat setTitle: _NS("Repeat")];
     [_AtoBloop setTitle: _NS("A→B Loop")];
     [_lyrics setTitle: _NS("Lyrics")];
     [_libraryPlayQueueMode setTitle: _NS("Library Play Queue Mode")];
     [_sortPlayQueue setTitle: _NS("Sort Play Queue")];
-    [_quitAfterPB setTitle: _NS("Quit after Playback")];
+    [_quitAfterPB setTitle: _NS("Quit After Playback")];
     [_fwd setTitle: _NS("Step Forward")];
     [_bwd setTitle: _NS("Step Backward")];
-    [_jumpToTime setTitle: _NS("Jump to Time")];
-    [_rendererMenuItem setTitle:_NS("Renderer")];
-    [_rendererNoneItem setTitle:_NS("No renderer")];
+    [_jumpToTime setTitle: _NS("Go to Time…")];
+    [_rendererMenuItem setTitle:_NS("Play On")];
+    [_rendererNoneItem setTitle:_NS("This Mac")];
     [_program setTitle: _NS("Program")];
     [_programMenu setTitle: _NS("Program")];
     [_title setTitle: _NS("Title")];
@@ -428,43 +435,43 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_mute setTitle: _NS("Mute")];
     [_audiotrack setTitle: _NS("Audio Track")];
     [_audiotrackMenu setTitle: _NS("Audio Track")];
-    [_channels setTitle: _NS("Stereo audio mode")];
-    [_channelsMenu setTitle: _NS("Stereo audio mode")];
-    [_audioDevice setTitle: _NS("Audio Device")];
-    [_audioDeviceMenu setTitle: _NS("Audio Device")];
+    [_channels setTitle: _NS("Stereo Mode")];
+    [_channelsMenu setTitle: _NS("Stereo Mode")];
+    [_audioDevice setTitle: _NS("Output Device")];
+    [_audioDeviceMenu setTitle: _NS("Output Device")];
     [_visual setTitle: _NS("Visualizations")];
     [_visualMenu setTitle: _NS("Visualizations")];
 
     [_videoMenu setTitle: _NS("Video")];
     [_half_window setTitle: _NS("Half Size")];
-    [_normal_window setTitle: _NS("Normal Size")];
+    [_normal_window setTitle: _NS("Actual Size")];
     [_double_window setTitle: _NS("Double Size")];
     [_fittoscreen setTitle: _NS("Fit to Screen")];
-    [_fullscreenItem setTitle: _NS("Fullscreen")];
-    [_floatontop setTitle: _NS("Float on Top")];
-    [_snapshot setTitle: _NS("Snapshot")];
+    [_fullscreenItem setTitle: _NS("Full Screen")];
+    [_floatontop setTitle: _NS("Keep on Top")];
+    [_snapshot setTitle: _NS("Take Snapshot")];
     [_videotrack setTitle: _NS("Video Track")];
     [_videotrackMenu setTitle: _NS("Video Track")];
-    [_aspect_ratio setTitle: _NS("Aspect ratio")];
-    [_aspect_ratioMenu setTitle: _NS("Aspect ratio")];
+    [_aspect_ratio setTitle: _NS("Aspect Ratio")];
+    [_aspect_ratioMenu setTitle: _NS("Aspect Ratio")];
     [_crop setTitle: _NS("Crop")];
     [_cropMenu setTitle: _NS("Crop")];
-    [_screen setTitle: _NS("Fullscreen Video Device")];
-    [_screenMenu setTitle: _NS("Fullscreen Video Device")];
+    [_screen setTitle: _NS("Full Screen Display")];
+    [_screenMenu setTitle: _NS("Full Screen Display")];
     [_deinterlace setTitle: _NS("Deinterlace")];
     [_deinterlaceMenu setTitle: _NS("Deinterlace")];
-    [_deinterlace_mode setTitle: _NS("Deinterlace mode")];
-    [_deinterlace_modeMenu setTitle: _NS("Deinterlace mode")];
-    [_postprocessing setTitle: _NS("Post processing")];
-    [_postprocessingMenu setTitle: _NS("Post processing")];
+    [_deinterlace_mode setTitle: _NS("Deinterlace Mode")];
+    [_deinterlace_modeMenu setTitle: _NS("Deinterlace Mode")];
+    [_postprocessing setTitle: _NS("Post-Processing")];
+    [_postprocessingMenu setTitle: _NS("Post-Processing")];
 
     [_subtitlesMenu setTitle:_NS("Subtitles")];
-    [_openSubtitleFile setTitle: _NS("Add Subtitle File...")];
-    [_subtitle_track setTitle: _NS("Subtitles Track")];
-    [_subtitle_tracksMenu setTitle: _NS("Subtitles Track")];
+    [_openSubtitleFile setTitle: _NS("Add Subtitle File…")];
+    [_subtitle_track setTitle: _NS("Subtitle Track")];
+    [_subtitle_tracksMenu setTitle: _NS("Subtitle Track")];
     [_subtitleSizeView setAutoresizingMask: NSViewWidthSizable];
     [_subtitleSize setView: _subtitleSizeView];
-    [_subtitleSizeLabel setStringValue: _NS("Subtitles Size")];
+    [_subtitleSizeLabel setStringValue: _NS("Subtitle Size")];
     [_subtitleSizeSmallerLabel setStringValue: _NS("Smaller")];
     [_subtitleSizeLargerLabel setStringValue: _NS("Larger")];
     [_subtitle_textcolor setTitle: _NS("Text Color")];
@@ -488,27 +495,31 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_windowMenu setTitle: _NS("Window")];
     [_minimize setTitle: _NS("Minimize")];
     [_zoom_window setTitle: _NS("Zoom")];
-    [_player setTitle: _NS("Player...")];
-    [_controller setTitle: _NS("Main Window...")];
-    [_audioeffects setTitle: _NS("Audio Effects...")];
-    [_videoeffects setTitle: _NS("Video Effects...")];
-    [_bookmarks setTitle: _NS("Bookmarks...")];
-    [_playQueue setTitle: _NS("Play Queue...")];
+    [_player setTitle: _NS("Player")];
+    [_controller setTitle: _NS("Library")];
+    [_audioeffects setTitle: _NS("Audio Effects")];
+    [_videoeffects setTitle: _NS("Video Effects")];
+    [_bookmarks setTitle: _NS("Bookmarks")];
+    [_playQueue setTitle: _NS("Play Queue")];
 
-    [_detachedAudioWindow setTitle: _NS("Detached Audio Window...")];
-    [_info setTitle: _NS("Media Information...")];
-    [_messages setTitle: _NS("Messages...")];
-    [_errorsAndWarnings setTitle: _NS("Errors and Warnings...")];
+    [_detachedAudioWindow setTitle: _NS("Audio Player")];
+    [_info setTitle: _NS("Media Information")];
+    [_messages setTitle: _NS("Log")];
+    [_errorsAndWarnings setTitle: _NS("Errors and Warnings")];
 
     [_bring_atf setTitle: _NS("Bring All to Front")];
 
     [_helpMenu setTitle: _NS("Help")];
-    [_help setTitle: _NS("MacLC Help...")];
+    [_help setTitle: _NS("MacLC Help")];
     [_license setTitle: _NS("License")];
-    [_documentation setTitle: _NS("Online Documentation...")];
-    [_website setTitle: _NS("Hazen Studio Website...")];
-    [_donation setTitle: _NS("Make a donation...")];
-    [_forum setTitle: _NS("Online Forum...")];
+    [_documentation setTitle: _NS("Online Documentation")];
+    /* The website covers documentation, support and news in one place. */
+    _documentation.hidden = YES;
+    [_website setTitle: _NS("Hazen Studio Website")];
+    [_donation setTitle: _NS("Make a Donation")];
+    _donation.hidden = YES;
+    [_forum setTitle: _NS("Online Forum")];
+    _forum.hidden = YES;
 
     /* dock menu */
     [_dockMenuplay setTitle: _NS("Play")];
@@ -522,18 +533,18 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_voutMenustop setTitle: _NS("Stop")];
     [_voutMenuprev setTitle: _NS("Previous")];
     [_voutMenunext setTitle: _NS("Next")];
-    [_voutMenuvolup setTitle: _NS("Volume Up")];
-    [_voutMenuvoldown setTitle: _NS("Volume Down")];
+    [_voutMenuvolup setTitle: _NS("Increase Volume")];
+    [_voutMenuvoldown setTitle: _NS("Decrease Volume")];
     [_voutMenumute setTitle: _NS("Mute")];
     [_voutMenuAudiotrack setTitle: _NS("Audio Track")];
     [_voutMenuAudiotrackMenu setTitle: _NS("Audio Track")];
     [_voutMenuVideotrack setTitle: _NS("Video Track")];
     [_voutMenuVideotrackMenu setTitle: _NS("Video Track")];
-    [_voutMenuOpenSubtitleFile setTitle:_NS("Add Subtitle File...")];
-    [_voutMenuSubtitlestrack setTitle: _NS("Subtitles Track")];
-    [_voutMenuSubtitlestrackMenu setTitle: _NS("Subtitles Track")];
-    [_voutMenufullscreen setTitle: _NS("Fullscreen")];
-    [_voutMenusnapshot setTitle: _NS("Snapshot")];
+    [_voutMenuOpenSubtitleFile setTitle:_NS("Add Subtitle File…")];
+    [_voutMenuSubtitlestrack setTitle: _NS("Subtitle Track")];
+    [_voutMenuSubtitlestrackMenu setTitle: _NS("Subtitle Track")];
+    [_voutMenufullscreen setTitle: _NS("Full Screen")];
+    [_voutMenusnapshot setTitle: _NS("Take Snapshot")];
 
     /* File menu */
     [_open_generic vlc_setActionImageWithSystemSymbolName:@"doc.badge.ellipsis"];
@@ -1340,6 +1351,8 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 - (IBAction)createVideoSnapshot:(id)sender
 {
     [_playerController takeSnapshot];
+    [[MacLCOSDController sharedController] showMessage:_NS("Snapshot Taken")
+                                            symbolName:@"camera.fill"];
 }
 
 - (void)_disablePostProcessing

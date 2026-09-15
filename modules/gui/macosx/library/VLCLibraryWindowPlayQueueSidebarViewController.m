@@ -83,7 +83,7 @@
     self.tableView.rowHeight = VLCUIUnits.mediumTableViewRowHeight;
     [self.tableView reloadData];
 
-    self.openMediaButton.title = _NS("Open media...");
+    self.openMediaButton.title = _NS("Open Media…");
 
     /* The drop zone used to be a dashed rectangle around a large grey arrow,
      * which is not a shape macOS uses anywhere. Replace it with the standard

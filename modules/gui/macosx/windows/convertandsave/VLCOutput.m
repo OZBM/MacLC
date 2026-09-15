@@ -66,7 +66,7 @@
     [[_outputMethodMatrix cellAtRow:0 column:0] setTitle: _NS("File")];
     [[_outputMethodMatrix cellAtRow:1 column:0] setTitle: _NS("Stream")];
     [_dumpCheckbox setTitle: _NS("Dump raw input")];
-    [_browseButton setTitle: _NS("Browse...")];
+    [_browseButton setTitle: _NS("Browse…")];
     [_streamAddressLabel setStringValue: _NS("Address")];
     [_streamPortLabel setStringValue: _NS("Port")];
     [_streamTTLLabel setStringValue: @"TTL"];

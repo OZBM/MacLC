@@ -945,7 +945,7 @@ my_width, tooltip, init_value)                                              \
 
         /* build the button */
         ADD_RIGHT_BUTTON(o_button, mainFrame, 0, 0, o_itemTooltip,
-                         _NS("Browse..."))
+                         _NS("Browse…"))
         [o_button setAutoresizingMask:NSViewMinXMargin ];
         [self addSubview: o_button];
 

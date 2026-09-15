@@ -462,7 +462,7 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
 
     /* input */
     [_input_recordBox setTitle: _NS("Record directory or filename")];
-    [_input_recordButton setTitle: _NS("Browse...")];
+    [_input_recordButton setTitle: _NS("Browse…")];
     [_input_recordButton setToolTip: _NS("Directory or filename where the records will be stored")];
     [_input_aviLabel setStringValue: _NS("Repair AVI Files")];
     [_input_cachelevelLabel setStringValue: _NS("Default Caching Level")];
@@ -507,7 +507,7 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
     /* Subtitles and OSD */
     [_osd_encodingLabel setStringValue: _NS("Default Encoding")];
     [_osd_fontBox setTitle: _NS("Display Settings")];
-    [_osd_fontButton setTitle: _NS("Choose...")];
+    [_osd_fontButton setTitle: _NS("Choose…")];
     [_osd_font_colorLabel setStringValue: _NS("Font color")];
     [_osd_font_sizeLabel setStringValue: _NS("Font size")];
     [_osd_fontLabel setStringValue: _NS("Font")];
@@ -536,7 +536,7 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
     [_video_deviceLabel setStringValue: _NS("Fullscreen Video Device")];
 
     [_video_snapBox setTitle: _NS("Video snapshots")];
-    [_video_snap_folderButton setTitle: _NS("Browse...")];
+    [_video_snap_folderButton setTitle: _NS("Browse…")];
     [_video_snap_folderLabel setStringValue: _NS("Folder")];
     [_video_snap_formatLabel setStringValue: _NS("Format")];
     [_video_snap_prefixLabel setStringValue: _NS("Prefix")];
@@ -551,7 +551,7 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
     [_video_edrHeadroomLabel setStringValue: _NS("EDR headroom")];
 
     /* media library */
-    [_mediaLibraryAddFolderButton setTitle:_NS("Add Folder...")];
+    [_mediaLibraryAddFolderButton setTitle:_NS("Add Folder…")];
     [_mediaLibraryBanFolderButton setTitle:_NS("Ban Folder")];
     [_mediaLibraryRemoveFolderButton setTitle:_NS("Remove Folder")];
     [_mediaLibraryReloadFolderButton setTitle:_NS("Reload Folder")];

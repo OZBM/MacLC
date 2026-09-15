@@ -356,12 +356,12 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     [_profilePopup addItemsWithTitles:[self nonDefaultProfileNames]];
 
     [[_profilePopup menu] addItem:[NSMenuItem separatorItem]];
-    [_profilePopup addItemWithTitle:_NS("Duplicate current profile...")];
+    [_profilePopup addItemWithTitle:_NS("Duplicate Current Profile…")];
     [[_profilePopup lastItem] setTarget: self];
     [[_profilePopup lastItem] setAction: @selector(addAudioEffectsProfile:)];
 
     if ([[self nonDefaultProfileNames] count] > 0) {
-        [_profilePopup addItemWithTitle:_NS("Organize Profiles...")];
+        [_profilePopup addItemWithTitle:_NS("Organize Profiles…")];
         [[_profilePopup lastItem] setTarget: self];
         [[_profilePopup lastItem] setAction: @selector(removeAudioEffectsProfile:)];
     }
@@ -675,12 +675,12 @@ static bool GetEqualizerStatus(intf_thread_t *__unused p_custom_intf,
     [_equalizerPresetsPopup removeAllItems];
     [_equalizerPresetsPopup addItemsWithTitles:[[NSUserDefaults standardUserDefaults] objectForKey:VLCAudioEffectsEqualizerProfileTitlesKey]];
     [[_equalizerPresetsPopup menu] addItem:[NSMenuItem separatorItem]];
-    [_equalizerPresetsPopup addItemWithTitle:_NS("Add new Preset...")];
+    [_equalizerPresetsPopup addItemWithTitle:_NS("Add New Preset…")];
     [[_equalizerPresetsPopup lastItem] setTarget: self];
     [[_equalizerPresetsPopup lastItem] setAction: @selector(addPresetAction:)];
 
     if ([presets count] > 1) {
-        [_equalizerPresetsPopup addItemWithTitle:_NS("Organize Presets...")];
+        [_equalizerPresetsPopup addItemWithTitle:_NS("Organize Presets…")];
         [[_equalizerPresetsPopup lastItem] setTarget: self];
         [[_equalizerPresetsPopup lastItem] setAction: @selector(deletePresetAction:)];
     }

@@ -459,12 +459,12 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     [_profilePopup addItemsWithTitles:[self nonDefaultProfileNames]];
 
     [[_profilePopup menu] addItem:[NSMenuItem separatorItem]];
-    [_profilePopup addItemWithTitle:_NS("Duplicate current profile...")];
+    [_profilePopup addItemWithTitle:_NS("Duplicate Current Profile…")];
     [[_profilePopup lastItem] setTarget: self];
     [[_profilePopup lastItem] setAction: @selector(addProfile:)];
 
     if ([[self nonDefaultProfileNames] count] > 0) {
-        [_profilePopup addItemWithTitle:_NS("Organize profiles...")];
+        [_profilePopup addItemWithTitle:_NS("Organize Profiles…")];
         [[_profilePopup lastItem] setTarget: self];
         [[_profilePopup lastItem] setAction: @selector(removeProfile:)];
     }
