@@ -407,8 +407,8 @@ int InitVideoEnc( vlc_object_t *p_this )
 "%s.\n"
 "If you don't know how to fix this, ask for support from your distribution.\n"
 "\n"
-"This is not an error inside VLC media player.\n"
-"Do not contact the VideoLAN project about this issue.\n"),
+"This is not an error inside MacLC.\n"
+"Do not contact Hazen Studio about this issue.\n"),
             psz_namecodec );
 #endif
 

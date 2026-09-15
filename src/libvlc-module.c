@@ -1707,7 +1707,7 @@ vlc_module_begin ()
                  MOUSE_HIDE_TIMEOUT_LONGTEXT )
     set_section( N_("Snapshot") , NULL )
     add_directory("snapshot-path", NULL, SNAP_PATH_TEXT, SNAP_PATH_LONGTEXT)
-    add_string( "snapshot-prefix", "vlcsnap-", SNAP_PREFIX_TEXT,
+    add_string( "snapshot-prefix", "maclcsnap-", SNAP_PREFIX_TEXT,
                    NULL )
     add_string( "snapshot-format", "png", SNAP_FORMAT_TEXT,
                    SNAP_FORMAT_LONGTEXT )

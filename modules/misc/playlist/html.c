@@ -101,7 +101,7 @@ int Export_HTML( vlc_object_t *p_this )
 "<head>\n"
 "  <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n"
 "  <meta name=\"Generator\" content=\"VLC media player\" />\n"
-"  <meta name=\"Author\" content=\"VLC, http://www.videolan.org/vlc/\" />\n"
+"  <meta name=\"Author\" content=\"MacLC, https://www.hazenstudio.com\" />\n"
 "  <title>VLC generated playlist</title>\n"
 "  <style type=\"text/css\">\n"
 "    body {\n"

@@ -338,13 +338,13 @@
 
     _snapPrefixRow = [MacLCSettingsRow textFieldRowWithTitle:_NS("Filename Prefix")
                                                  explanation:_NS("Initial text added to the beginning of saved snapshot filenames.")
-                                                        text:@"vlcsnap-"
-                                                 placeholder:@"vlcsnap-"
+                                                        text:@"maclcsnap-"
+                                                 placeholder:@"maclcsnap-"
                                                     isSecure:NO
                                                       action:^(NSString *text) {
         weakSelf.hasUnsavedChanges = YES;
     }];
-    _snapPrefixRow.defaultHint = _NS("Default: vlcsnap-");
+    _snapPrefixRow.defaultHint = _NS("Default: maclcsnap-");
     [snapCard.contentStackView addArrangedSubview:_snapPrefixRow];
 
     _snapFormatRow = [MacLCSettingsRow popUpRowWithTitle:_NS("Snapshot Format")
@@ -437,7 +437,7 @@
     free(snapPath);
 
     char *snapPrefix = MacLCConfigGetPsz("snapshot-prefix");
-    _snapPrefixRow.textField.stringValue = snapPrefix ? toNSStr(snapPrefix) : @"vlcsnap-";
+    _snapPrefixRow.textField.stringValue = snapPrefix ? toNSStr(snapPrefix) : @"maclcsnap-";
     free(snapPrefix);
 
     char *snapFormat = MacLCConfigGetPsz("snapshot-format");
@@ -513,7 +513,7 @@
     if ((item = config_FindConfig("crop"))) MacLCConfigPutPsz("crop", item->orig.psz ? item->orig.psz : "");
     if ((item = config_FindConfig("macosx-lock-aspect-ratio"))) MacLCConfigPutInt("macosx-lock-aspect-ratio", item->orig.i);
     if ((item = config_FindConfig("snapshot-path"))) MacLCConfigPutPsz("snapshot-path", item->orig.psz ? item->orig.psz : "");
-    if ((item = config_FindConfig("snapshot-prefix"))) MacLCConfigPutPsz("snapshot-prefix", item->orig.psz ? item->orig.psz : "vlcsnap-");
+    if ((item = config_FindConfig("snapshot-prefix"))) MacLCConfigPutPsz("snapshot-prefix", item->orig.psz ? item->orig.psz : "maclcsnap-");
     if ((item = config_FindConfig("snapshot-format"))) MacLCConfigPutPsz("snapshot-format", item->orig.psz ? item->orig.psz : "png");
     if ((item = config_FindConfig("snapshot-sequential"))) MacLCConfigPutInt("snapshot-sequential", item->orig.i);
 

@@ -422,7 +422,7 @@ input_item_GetType( input_item_t *p_i, bool *is_network )
  * Record prefix string.
  * TODO make it configurable.
  */
-#define INPUT_RECORD_PREFIX "vlc-record-%Y-%m-%d-%Hh%Mm%Ss-$ N-$ p"
+#define INPUT_RECORD_PREFIX "maclc-record-%Y-%m-%d-%Hh%Mm%Ss-$ N-$ p"
 
 /**
  * This function creates a sane filename path.
