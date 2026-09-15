@@ -104,6 +104,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/coreinteraction/VLCHotkeysController.m \
 	gui/macosx/coreinteraction/VLCVideoFilterHelper.h \
 	gui/macosx/coreinteraction/VLCVideoFilterHelper.m \
+	gui/macosx/coreinteraction/MacLCOSDController.h \
+	gui/macosx/coreinteraction/MacLCOSDController.m \
 	gui/macosx/extensions/NSAppearance+VLCAdditions.h \
 	gui/macosx/extensions/NSAppearance+VLCAdditions.m \
 	gui/macosx/extensions/NSAnimationContext+VLCAdditions.h \

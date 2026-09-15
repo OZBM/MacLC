@@ -58,7 +58,10 @@
 
 #import "hdr/MacLCHDRCardView.h"
 #import "theme/MacLCGlassView.h"
+#import "theme/MacLCDesign.h"
+#import "theme/MacLCOSDView.h"
 #import "hdr/MacLCHDRController.h"
+#import "coreinteraction/MacLCOSDController.h"
 
 NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerLayoutKey";
 
@@ -115,6 +118,8 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     NSLayoutConstraint *_playQueueButtonBottomConstraint;
     PIPViewController *_pipViewController;
     PIPVoutViewController *_voutViewController;
+    MacLCOSDView *_osdView;
+    NSLayoutConstraint *_osdTopConstraint;
 
     BOOL _isFadingIn;
 }
@@ -166,6 +171,10 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
                                selector:@selector(hdrCardShouldAppear:)
                                    name:MacLCHDRCardShouldAppearNotification
                                  object:nil];
+        [notificationCenter addObserver:self
+                               selector:@selector(osdShouldShow:)
+                                   name:MacLCOSDShouldShowNotification
+                                 object:nil];
 
         Class PIPViewControllerClass = NSClassFromString(@"PIPViewController");
         _pipViewController = [[PIPViewControllerClass alloc] init];
@@ -189,6 +198,47 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     if (player.currentMediaIsAudioOnly)
         return;
     [MacLCHDRCardView presentInView:self.view fullScreen:player.fullscreen];
+}
+
+/* Messages over the video (volume, speed, tracks...) go to the video the
+ * user is watching; those the controls already show wait until they hide. */
+- (void)osdShouldShow:(NSNotification *)notification
+{
+    NSWindow * const window = self.view.window;
+    if (window == nil || !window.isVisible || self.view.hiddenOrHasHiddenAncestor)
+        return;
+    if (!(window.occlusionState & NSWindowOcclusionStateVisible))
+        return;
+    NSDictionary *info = notification.userInfo;
+    if ([info[MacLCOSDOnlyWithoutControlsKey] boolValue]
+        && self.mainControlsView.alphaValue > 0.5)
+        return;
+
+    VLCPlayerController * const player =
+        VLCMain.sharedInstance.playQueueController.playerController;
+    const CGFloat inset = player.fullscreen ? MacLCDesign.overlayInsetFullScreen
+                                            : MacLCDesign.overlayInsetWindowed;
+    if (_osdView == nil) {
+        _osdView = [[MacLCOSDView alloc] initWithFrame:NSZeroRect];
+        [self.view addSubview:_osdView positioned:NSWindowAbove relativeTo:nil];
+        _osdTopConstraint = [_osdView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor
+                                                               constant:inset];
+        [NSLayoutConstraint activateConstraints:@[
+            [_osdView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+            [_osdView.widthAnchor constraintLessThanOrEqualToAnchor:self.view.widthAnchor
+                                                         multiplier:0.8],
+            _osdTopConstraint,
+        ]];
+    } else {
+        _osdTopConstraint.constant = inset;
+        /* Stay above whatever was added since (the HDR card, panels). */
+        [self.view addSubview:_osdView positioned:NSWindowAbove relativeTo:nil];
+    }
+
+    NSNumber *level = info[MacLCOSDLevelKey];
+    [_osdView showMessage:info[MacLCOSDMessageKey]
+               symbolName:info[MacLCOSDSymbolKey]
+                    level:level ? level.doubleValue : -1.0];
 }
 
 - (void)setupAudioDecorativeView

@@ -23,6 +23,7 @@
 #import "extensions/NSString+Helpers.h"
 #import "hdr/MacLCHDRController.h"
 #import "hdr/MacLCHDRPanelViewController.h"
+#import "coreinteraction/MacLCOSDController.h"
 
 @implementation MacLCHDRMenuController
 {
@@ -149,12 +150,18 @@
 
 - (void)choosePresentation:(NSMenuItem *)sender
 {
-    [[MacLCHDRController sharedController] applyPresentation:(MacLCHDRPresentation)sender.tag];
+    const MacLCHDRPresentation presentation = (MacLCHDRPresentation)sender.tag;
+    [[MacLCHDRController sharedController] applyPresentation:presentation];
+    [[MacLCOSDController sharedController] showMessage:MacLCHDRPresentationDisplayName(presentation)
+                                            symbolName:@"sun.max.fill"];
 }
 
 - (void)choosePicture:(NSMenuItem *)sender
 {
     [[MacLCHDRController sharedController] applyPictureMode:(MacLCHDRPictureMode)sender.tag];
+    [[MacLCOSDController sharedController]
+        showMessage:[NSString stringWithFormat:_NS("Picture: %@"), sender.title]
+         symbolName:@"slider.horizontal.3"];
 }
 
 @end
