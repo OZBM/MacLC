@@ -89,6 +89,7 @@ static const double kJumpThresholdSeconds = 2.5;
             VLCPlayerStateChanged: NSStringFromSelector(@selector(stateChanged:)),
             VLCPlayerTimeAndPositionChanged: NSStringFromSelector(@selector(timeChanged:)),
             VLCPlayerListOfVideoOutputThreadsChanged: NSStringFromSelector(@selector(videoOutputsChanged:)),
+            VLCPlayerCoreVideoSettingMessage: NSStringFromSelector(@selector(videoSettingChanged:)),
         };
         NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
         [observed enumerateKeysAndObjectsUsingBlock:^(NSNotificationName name, NSString *selector, BOOL *stop) {
@@ -127,6 +128,7 @@ onlyWithoutControls:(BOOL)onlyWithoutControls
 {
     if (![self enabled])
         return;
+    msg_Dbg(getIntf(), "on-screen message: %s", message.UTF8String);
     NSMutableDictionary *info = [NSMutableDictionary dictionaryWithDictionary:@{
         MacLCOSDMessageKey: message,
         MacLCOSDLevelKey: @(level),
@@ -292,6 +294,51 @@ static NSString *DelayString(vlc_tick_t delay)
         [self post:_NS("Paused") symbol:@"pause.fill" level:-1.0 onlyWithoutControls:YES];
     else if (state == VLC_PLAYER_STATE_PLAYING && previous == VLC_PLAYER_STATE_PAUSED)
         [self post:_NS("Playing") symbol:@"play.fill" level:-1.0 onlyWithoutControls:YES];
+}
+
+/* Aspect ratio, crop, zoom, deinterlacing, subtitle position: the core
+ * reports them with their current value; say it the way the menus do. */
+- (void)videoSettingChanged:(NSNotification *)notification
+{
+    NSString *source = notification.userInfo[VLCPlayerCoreMessageSourceKey];
+    NSString *text = notification.userInfo[VLCPlayerCoreMessageTextKey];
+    if (text.length == 0)
+        return;
+
+    static NSDictionary<NSString *, NSArray<NSString *> *> *styles;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        /* variable: title for "title value" messages, symbol */
+        styles = @{
+            @"aspect-ratio": @[_NS("Aspect Ratio"), @"aspectratio"],
+            @"crop": @[_NS("Crop"), @"crop"],
+            @"zoom": @[_NS("Zoom"), @"plus.magnifyingglass"],
+            @"autoscale": @[@"", @"arrow.up.left.and.arrow.down.right"],
+            @"deinterlace": @[@"", @"rectangle.split.1x2"],
+            @"deinterlace-mode": @[@"", @"rectangle.split.1x2"],
+        };
+    });
+    NSArray<NSString *> *style = styles[source];
+    NSString *symbol = style ? style[1]
+                     : ([source hasPrefix:@"crop"] ? @"crop" : @"captions.bubble");
+
+    /* "Aspect ratio: 16:9" reads "Aspect Ratio 16:9", like the menu. */
+    NSString *message = text;
+    const NSRange colon = [text rangeOfString:@": "];
+    if (style[0].length > 0 && colon.location != NSNotFound) {
+        NSString *value = [text substringFromIndex:NSMaxRange(colon)];
+        /* Zoom presets are named "2:1 Double" and the like: say "2×". */
+        int num = 0, den = 0;
+        if ([source isEqualToString:@"zoom"]
+            && sscanf(value.UTF8String, "%d:%d", &num, &den) == 2 && den > 0) {
+            NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
+            formatter.maximumFractionDigits = 2;
+            value = [NSString stringWithFormat:@"%@×",
+                     [formatter stringFromNumber:@((double)num / den)]];
+        }
+        message = [NSString stringWithFormat:@"%@ %@", style[0], value];
+    }
+    [self post:message symbol:symbol level:-1.0 onlyWithoutControls:NO];
 }
 
 /* The player does not say why the time changed: a jump is a change the

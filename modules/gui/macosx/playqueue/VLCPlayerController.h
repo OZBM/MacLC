@@ -243,6 +243,17 @@ extern NSString *VLCPlayerVolumeChanged;
 extern NSString *VLCPlayerMuteChanged;
 
 /**
+ * Posted on the main thread when the core reports a change of a video setting
+ * (aspect ratio, crop, zoom, deinterlacing, subtitle position), whatever made
+ * it: keyboard shortcuts, menus, remote control. userInfo carries the setting
+ * (VLCPlayerCoreMessageSourceKey, the variable name) and the core's text
+ * (VLCPlayerCoreMessageTextKey).
+ */
+extern NSString * const VLCPlayerCoreVideoSettingMessage;
+extern NSString * const VLCPlayerCoreMessageSourceKey;
+extern NSString * const VLCPlayerCoreMessageTextKey;
+
+/**
  * Listen to VLCPlayerLyricsAvailableChanged to be notified if the current media has synchronized lyrics available
  * @note the affected player object will be the object of the notification
  */

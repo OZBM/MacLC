@@ -249,8 +249,40 @@ vlc_player_osd_Program(vlc_player_t *player, const char *name)
     vlc_player_osd_Message(player, _("Program Service ID: %s"), name);
 }
 
+/* Draws a message about a video setting and publishes it, as "variable<TAB>
+ * text", in the player's "maclc-osd-text" variable when an interface created
+ * it: interfaces that show their own on-screen messages (with the core's
+ * turned off through "osd") can still report these changes. */
+static void
+vout_osd_Report(vlc_player_t *player, vout_thread_t *vout, const char *varname,
+                const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *text;
+    int len = vasprintf(&text, fmt, args);
+    va_end(args);
+    if (len < 0)
+        return;
+
+    vouts_osd_Message(&vout, 1, "%s", text);
+
+    vlc_object_t *obj = VLC_OBJECT(player);
+    if ((var_Type(obj, "maclc-osd-text") & VLC_VAR_CLASS) == VLC_VAR_STRING)
+    {
+        char *payload;
+        if (asprintf(&payload, "%s\t%s", varname, text) >= 0)
+        {
+            var_SetString(obj, "maclc-osd-text", payload);
+            free(payload);
+        }
+    }
+    free(text);
+}
+
 static bool
-vout_osd_PrintVariableText(vout_thread_t *vout, const char *varname, int vartype,
+vout_osd_PrintVariableText(vlc_player_t *player, vout_thread_t *vout,
+                           const char *varname, int vartype,
                            vlc_value_t varval, const char *osdfmt)
 {
     bool found = false;
@@ -267,7 +299,7 @@ vout_osd_PrintVariableText(vout_thread_t *vout, const char *varname, int vartype
                  strcmp(choices[i].psz_string, varval.psz_string) == 0) ||
                 (!isvarstring && choices[i].f_float == varval.f_float))
             {
-                vouts_osd_Message(&vout, 1, osdfmt, choices_text[i]);
+                vout_osd_Report(player, vout, varname, osdfmt, choices_text[i]);
                 found = true;
             }
         if (isvarstring)
@@ -286,30 +318,31 @@ vlc_player_vout_OSDCallback(vlc_object_t *this, const char *var,
     VLC_UNUSED(oldval);
 
     vout_thread_t *vout = (vout_thread_t *)this;
+    vlc_player_t *player = data;
 
     if (strcmp(var, "aspect-ratio") == 0)
-        vout_osd_PrintVariableText(vout, var, VLC_VAR_STRING,
+        vout_osd_PrintVariableText(player, vout, var, VLC_VAR_STRING,
                                    newval, _("Aspect ratio: %s"));
 
     else if (strcmp(var, "autoscale") == 0)
-        vouts_osd_Message(&vout, 1, newval.b_bool ?
+        vout_osd_Report(player, vout, var, newval.b_bool ?
                           _("Scaled to screen") : _("Original size"));
 
     else if (strcmp(var, "crop") == 0)
-        vout_osd_PrintVariableText(vout, var, VLC_VAR_STRING, newval,
+        vout_osd_PrintVariableText(player, vout, var, VLC_VAR_STRING, newval,
                                    _("Crop: %s"));
 
     else if (strcmp(var, "crop-bottom") == 0)
-        vouts_osd_Message(&vout, 1, _("Bottom crop: %d px"), newval.i_int);
+        vout_osd_Report(player, vout, var, _("Bottom crop: %d px"), newval.i_int);
 
     else if (strcmp(var, "crop-top") == 0)
-        vouts_osd_Message(&vout, 1, _("Top crop: %d px"), newval.i_int);
+        vout_osd_Report(player, vout, var, _("Top crop: %d px"), newval.i_int);
 
     else if (strcmp(var, "crop-left") == 0)
-        vouts_osd_Message(&vout, 1, _("Left crop: %d px"), newval.i_int);
+        vout_osd_Report(player, vout, var, _("Left crop: %d px"), newval.i_int);
 
     else if (strcmp(var, "crop-right") == 0)
-        vouts_osd_Message(&vout, 1, _("Right crop: %d px"), newval.i_int);
+        vout_osd_Report(player, vout, var, _("Right crop: %d px"), newval.i_int);
 
     else if (strcmp(var, "deinterlace") == 0 ||
              strcmp(var, "deinterlace-mode") == 0)
@@ -319,34 +352,33 @@ vlc_player_vout_OSDCallback(vlc_object_t *this, const char *var,
             newval.i_int : var_GetInteger(vout, "deinterlace");
         char *mode = varmode ?
             newval.psz_string : var_GetString(vout, "deinterlace-mode");
-        vouts_osd_Message(&vout, 1, _("Deinterlace %s (%s)"),
+        vout_osd_Report(player, vout, var, _("Deinterlace %s (%s)"),
                           on == 1 ? _("On") : _("Off"), mode);
         if (!varmode)
             free(mode);
     }
 
     else if (strcmp(var, "sub-margin") == 0 && newval.i_int != oldval.i_int)
-        vouts_osd_Message(&vout, 1, _("Subtitle position %d px"), newval.i_int);
+        vout_osd_Report(player, vout, var, _("Subtitle position %d px"), newval.i_int);
 
     else if (strcmp(var, "secondary-sub-margin") == 0 && newval.i_int != oldval.i_int)
-        vouts_osd_Message(&vout, 1, _("Secondary subtitle position %d px"), newval.i_int);
+        vout_osd_Report(player, vout, var, _("Secondary subtitle position %d px"), newval.i_int);
 
     else if (strcmp(var, "sub-text-scale") == 0)
-        vouts_osd_Message(&vout, 1, _("Subtitle text scale %d%%"), newval.i_int);
+        vout_osd_Report(player, vout, var, _("Subtitle text scale %d%%"), newval.i_int);
 
     else if (strcmp(var, "zoom") == 0)
     {
         if (newval.f_float == 1.f)
-            vouts_osd_Message(&vout, 1, _("Zooming reset"));
+            vout_osd_Report(player, vout, var, _("Zooming reset"));
         else
         {
-            bool found =  vout_osd_PrintVariableText(vout, var, VLC_VAR_FLOAT,
+            bool found =  vout_osd_PrintVariableText(player, vout, var, VLC_VAR_FLOAT,
                                                      newval, _("Zoom mode: %s"));
             if (!found)
-                vouts_osd_Message(&vout, 1, _("Zoom: x%.2f"), newval.f_float);
+                vout_osd_Report(player, vout, var, _("Zoom: x%.2f"), newval.f_float);
         }
     }
 
-    (void) data;
     return VLC_SUCCESS;
 }

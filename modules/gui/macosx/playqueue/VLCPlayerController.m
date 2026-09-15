@@ -82,6 +82,9 @@ NSString *VLCPlayerWallpaperModeChanged = @"VLCPlayerWallpaperModeChanged";
 NSString *VLCPlayerListOfVideoOutputThreadsChanged = @"VLCPlayerListOfVideoOutputThreadsChanged";
 NSString *VLCPlayerVolumeChanged = @"VLCPlayerVolumeChanged";
 NSString *VLCPlayerMuteChanged = @"VLCPlayerMuteChanged";
+NSString * const VLCPlayerCoreVideoSettingMessage = @"VLCPlayerCoreVideoSettingMessage";
+NSString * const VLCPlayerCoreMessageSourceKey = @"VLCPlayerCoreMessageSource";
+NSString * const VLCPlayerCoreMessageTextKey = @"VLCPlayerCoreMessageText";
 NSString * const VLCPlayerLyricsAvailableChanged = @"VLCPlayerLyricsAvailableChanged";
 NSString * const VLCPlayerShowLyricsChanged = @"VLCPlayerShowLyricsChanged";
 
@@ -96,6 +99,8 @@ const CGFloat VLCVolumeDefault = 1.;
     /* Serial queue for requests that take a video output's locks */
     dispatch_queue_t _voutRequestQueue;
     atomic_bool _terminating;
+    /* The player object, parent of every video output (for its variables) */
+    vlc_object_t *_playerObject;
     vlc_player_listener_id *_playerListenerID;
     vlc_player_timer_id *_playerTimerID;
     vlc_player_aout_listener_id *_playerAoutListenerID;
@@ -623,6 +628,32 @@ static const struct vlc_player_aout_cbs player_aout_callbacks = {
     NULL,
 };
 
+/* The core publishes "variable<TAB>text" here (src/player/osd.c). */
+static int CoreVideoSettingMessageCallback(vlc_object_t *p_this,
+                                           const char *psz_var,
+                                           vlc_value_t oldval,
+                                           vlc_value_t new_val,
+                                           void *p_data)
+{
+    VLC_UNUSED(p_this); VLC_UNUSED(psz_var); VLC_UNUSED(oldval); VLC_UNUSED(p_data);
+    @autoreleasepool {
+        NSString *payload = toNSStr(new_val.psz_string);
+        const NSRange tab = [payload rangeOfString:@"\t"];
+        if (tab.location == NSNotFound)
+            return VLC_SUCCESS;
+        NSDictionary *info = @{
+            VLCPlayerCoreMessageSourceKey: [payload substringToIndex:tab.location],
+            VLCPlayerCoreMessageTextKey: [payload substringFromIndex:NSMaxRange(tab)],
+        };
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [NSNotificationCenter.defaultCenter postNotificationName:VLCPlayerCoreVideoSettingMessage
+                                                              object:nil
+                                                            userInfo:info];
+        });
+    }
+    return VLC_SUCCESS;
+}
+
 static int BossCallback(vlc_object_t *p_this,
                         const char *psz_var,
                         vlc_value_t oldval,
@@ -697,6 +728,19 @@ static int BossCallback(vlc_object_t *p_this,
 
         libvlc_int_t *libvlc = vlc_object_instance(getIntf());
         var_AddCallback(libvlc, "intf-boss", BossCallback, (__bridge void *)self);
+
+        /* The player keeps a video output at all times (a placeholder when
+         * nothing plays); its parent is the player object. */
+        vout_thread_t *vout = vlc_player_vout_Hold(_p_player);
+        if (vout != NULL) {
+            _playerObject = vlc_object_parent(VLC_OBJECT(vout));
+            vout_Release(vout);
+        }
+        if (_playerObject != NULL) {
+            var_Create(_playerObject, "maclc-osd-text", VLC_VAR_STRING);
+            var_AddCallback(_playerObject, "maclc-osd-text",
+                            CoreVideoSettingMessageCallback, NULL);
+        }
     }
 
     return self;
@@ -730,6 +774,13 @@ static int BossCallback(vlc_object_t *p_this,
      * wait for them here: one may be blocked on a video output that is itself
      * waiting for the main thread. */
     atomic_store(&_terminating, true);
+
+    if (_playerObject != NULL) {
+        var_DelCallback(_playerObject, "maclc-osd-text",
+                        CoreVideoSettingMessageCallback, NULL);
+        var_Destroy(_playerObject, "maclc-osd-text");
+        _playerObject = NULL;
+    }
 
     intf_thread_t * const p_intf = getIntf();
     if (p_intf != NULL) {

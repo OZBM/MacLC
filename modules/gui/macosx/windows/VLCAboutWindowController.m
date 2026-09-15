@@ -78,7 +78,6 @@
     [o_credits_textview setHidden:YES];
     [o_joinus_txt setHidden:NO];
     [o_copyright_field setHidden:NO];
-    [o_revision_field setHidden:NO];
     [o_name_version_field setHidden:NO];
     [o_credits_textview scrollPoint:NSMakePoint(0, 0)];
 
@@ -104,17 +103,12 @@
     [o_authors_btn setAttributedTitle:attrStr];
     [o_trademarks_txt setStringValue:[NSString stringWithFormat:_NS("Developed by %@"), MacLCDeveloperName]];
 
-    /* setup the creator / revision field */
-    NSString *compiler;
-#ifdef __clang__
-    compiler = [NSString stringWithFormat:@"clang %s", __clang_version__];
-#else
-    compiler = [NSString stringWithFormat:@"llvm-gcc %s", __VERSION__];
-#endif
-    [o_revision_field setStringValue: [NSString stringWithFormat:@"Compiled by %s with %@ (%s %s)", VLC_CompileBy(), compiler, __DATE__, __TIME__]];
-
-    /* Setup the nameversion field */
-    [o_name_version_field setStringValue: [NSString stringWithFormat:@"Version %s \u201C%s\u201D (%s)", VERSION, VERSION_CODENAME, PLATFORM]];
+    /* Name, version and release, the way macOS's own About panels read. The
+     * build machine and compiler are for the log, not for people. */
+    [o_revision_field setStringValue:@""];
+    [o_revision_field setHidden:YES];
+    [o_name_version_field setStringValue:[NSString stringWithFormat:_NS("Version %s (%s)"),
+                                          VERSION, VERSION_CODENAME]];
 
     NSMutableArray *tmpArray = [NSMutableArray arrayWithArray: [toNSStr(psz_authors) componentsSeparatedByString:@"\n\n"]];
     /* The list opens with a line addressed on behalf of the upstream project;
