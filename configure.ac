@@ -37,7 +37,7 @@ LIBVLC_ABI_MINOR=0
 LIBVLC_ABI_MICRO=0
 
 CONFIGURE_LINE="`echo "$0 $ac_configure_args" | sed -e 's/\\\/\\\\\\\/g'`"
-CODENAME="Otto Chriek"
+CODENAME="Dawn"
 COPYRIGHT_YEARS="1996-2026"
 
 AC_CONFIG_SRCDIR([src/libvlc.c])
@@ -5235,8 +5235,9 @@ dnl
 dnl  Stuff used by the program
 dnl
 VERSION_MESSAGE="${VERSION} ${CODENAME}"
-COPYRIGHT_MESSAGE="Copyright © ${COPYRIGHT_YEARS} the VideoLAN team"
+COPYRIGHT_MESSAGE="Copyright © 2026 Hazen Studio"
 AC_DEFINE_UNQUOTED([VERSION_MESSAGE], "${VERSION_MESSAGE}", [Simple version string])
+AC_DEFINE_UNQUOTED([VERSION_CODENAME], "${CODENAME}", [Release name of this version])
 AC_DEFINE_UNQUOTED([COPYRIGHT_MESSAGE], "${COPYRIGHT_MESSAGE}", [Copyright string])
 AC_DEFINE_UNQUOTED([COPYRIGHT_YEARS], "${COPYRIGHT_YEARS}", [The copyright years])
 AC_DEFINE_UNQUOTED([CONFIGURE_LINE], "${CONFIGURE_LINE}", [The ./configure command line])

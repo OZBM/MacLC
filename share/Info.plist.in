@@ -29,7 +29,7 @@
 	<key>BreakpadProduct</key>
 	<string>MacLC</string>
 	<key>BreakpadVendor</key>
-	<string>VideoLAN</string>
+	<string>Hazen Studio</string>
 	<key>BreakpadRequestComments</key>
 	<string>1</string>
 	<key>BreakpadURL</key>
@@ -65,7 +65,7 @@
 	<key>SUPublicEDKey</key>
 	<string>rfrJyjRvcZoQ+3xo9Qf4jtSMsMFpiQQsiVhtKaOQCNI=</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright (c) @COPYRIGHT_YEARS@ MacLC authors and VideoLAN</string>
+	<string>@COPYRIGHT_MESSAGE@</string>
 	<key>NSCameraUsageDescription</key>
 	<string>MacLC wants to access the camera as requested by the user.</string>
 	<key>NSMicrophoneUsageDescription</key>
