@@ -48,24 +48,6 @@
 
 #import <VideoToolbox/VideoToolbox.h>
 
-/*
- * ITU-R Report BT.2408 specifies 203 cd/m^2 (nits) as the reference level for
- * diffuse white in HDR production (e.g. PQ/HLG subtitles and graphics).
- * Standard SDR nominal peak white is 100 cd/m^2.
- * When EDR headroom H > 1.0, the display allows highlights up to H * SDR white.
- *
- * Rather than a hard cliff where factor = 203 / (100 * H) is clamped to 1.0
- * (which leaves headroom 1.0 <= H <= 2.03 completely unattenuated and causes an
- * abrupt drop beyond 2.03), we apply a smooth, monotonic luminance transfer:
- *   factor = ITU_BT2408_REFERENCE_WHITE_NITS /
- *            (ITU_BT2408_REFERENCE_WHITE_NITS + SDR_NOMINAL_WHITE_NITS * (headroom - 1.0)).
- * This ensures factor == 1.0 when headroom <= 1.0 (pure SDR), decreases continuously
- * and monotonically as headroom rises, and asymptotically approaches the BT.2408
- * relationship 203 / (100 * headroom) at large headroom.
- */
-#define ITU_BT2408_REFERENCE_WHITE_NITS 203.0f
-#define SDR_NOMINAL_WHITE_NITS          100.0f
-#define SUBTITLE_MIN_LUMINANCE_FACTOR   0.15f
 #define DISPLAY_LAYER_INIT_TIMEOUT_SEC  1.0
 
 #if __is_target_os(ios)
@@ -589,8 +571,6 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) const char *effectiveEdrStr;
     @property (nonatomic) float effectiveHeadroomVal;
     @property (nonatomic) BOOL hasLoggedEffectiveConfig;
-    @property (nonatomic) CGFloat lastSubtitleScale;
-    @property (nonatomic) BOOL hasComputedSubtitleScale;
     @property (nonatomic) BOOL warnedWantsEDRUnavailable;
     @property (nonatomic) BOOL warnedPdrUnavailable;
     @property (nonatomic) BOOL warnedTmmUnavailable;
@@ -837,8 +817,6 @@ shouldInheritContentsScale:(CGFloat)newScale
     _effectiveEdrStr = "None";
     _effectiveHeadroomVal = 1.0f;
     _hasLoggedEffectiveConfig = NO;
-    _lastSubtitleScale = 1.0;
-    _hasComputedSubtitleScale = NO;
     _warnedWantsEDRUnavailable = NO;
     _warnedPdrUnavailable = NO;
     _warnedTmmUnavailable = NO;
@@ -1083,6 +1061,8 @@ shouldInheritContentsScale:(CGFloat)newScale
     } else {
         effectiveHeadroom = (screenHeadroom > 1.0) ? screenHeadroom : 1.0;
     }
+    if (fabs(effectiveHeadroom - _currentHeadroom) > 0.001)
+        _hasLoggedToneMap = NO;
     _currentHeadroom = effectiveHeadroom;
     var_SetFloat(vd, "edr-headroom-effective", (float)effectiveHeadroom);
 
@@ -1254,7 +1234,9 @@ shouldInheritContentsScale:(CGFloat)newScale
     _effectiveHeadroomVal = applied_headroom;
     _hasLoggedEffectiveConfig = NO;
 
-    /* Subtitle layer tagging and luminance adaptation (Defect 4) */
+    /* Subtitles stay standard range, at the display's SDR white: that is
+     * where HDR video puts MACLC_HDR_REFERENCE_WHITE, below its diffuse
+     * white, so they need no dimming. */
     if (self.spuView) {
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
         if (@available(macOS 10.15, *)) {
@@ -1266,22 +1248,7 @@ shouldInheritContentsScale:(CGFloat)newScale
             self.spuView.layer.contentsHeadroom = 1.0;
         }
 #endif
-        CGFloat factor = 1.0;
-        if (hdr_mode != 2 && hdr_mode != 3 && effectiveHeadroom > 1.0) {
-            factor = (CGFloat)(ITU_BT2408_REFERENCE_WHITE_NITS /
-                (ITU_BT2408_REFERENCE_WHITE_NITS + SDR_NOMINAL_WHITE_NITS * (effectiveHeadroom - 1.0)));
-            if (factor > 1.0)
-                factor = 1.0;
-            else if (factor < SUBTITLE_MIN_LUMINANCE_FACTOR)
-                factor = SUBTITLE_MIN_LUMINANCE_FACTOR;
-        }
-        if (fabs(_lastSubtitleScale - factor) > 0.001f || !_hasComputedSubtitleScale) {
-            msg_Dbg(vd, "Subtitle reference-white scale factor computed: %.3f (derived from headroom %.2f, reference white %.0f nits)",
-                    (float)factor, (float)effectiveHeadroom, ITU_BT2408_REFERENCE_WHITE_NITS);
-            _lastSubtitleScale = factor;
-            _hasComputedSubtitleScale = YES;
-        }
-        self.spuView.layer.opacity = (float)factor;
+        self.spuView.layer.opacity = 1.0f;
     }
 
     [CATransaction commit];
@@ -1697,11 +1664,13 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         }
     }
 
-    /* MacLC picture modes. A PQ picture is re-mapped with MacLC's own curve
-     * (maclc_tonemap.h) for the headroom the display has right now, and then
-     * described as fitting that headroom so the compositor does not tone-map
-     * it a second time. When the master already fits (the common case on XDR
-     * panels in Accurate mode) the curve is the identity and nothing runs. */
+    /* MacLC picture modes. The compositor runs its own video tone curve on
+     * every PQ picture it is given - one that dims mid-tones to keep room for
+     * highlights - but shows extended-range linear pictures untouched. A PQ
+     * picture is therefore mapped with MacLC's curve (maclc_tonemap.h) into
+     * what the display can show right now, and handed over as linear light
+     * with MACLC_HDR_REFERENCE_WHITE at the display's SDR white: the anchor
+     * macOS itself gives PQ, and the one the OpenGL output uses too. */
     if (source_is_pq && (hdr_mode == 0 || hdr_mode == 1) &&
         sys.currentHeadroom > 1.0) {
         float content_peak = 0.0f;
@@ -1710,7 +1679,7 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         else if (render_fmt.mastering.max_luminance > 0)
             content_peak = render_fmt.mastering.max_luminance / 10000.0f;
         const float display_peak =
-            (float)sys.currentHeadroom * ITU_BT2408_REFERENCE_WHITE_NITS;
+            maclc_hdr_peak_for_headroom((float)sys.currentHeadroom);
 
         maclc_tone_mode mode;
         switch (sys.maclcPicture) {
@@ -1720,47 +1689,43 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
             default:
                 /* Automatic follows the interface's advice: faithful when the
                  * master fits the display, BT.2390 roll-off when it does not. */
-                mode = ((content_peak > 0.0f ? content_peak : 1000.0f) <= display_peak)
-                     ? MACLC_TONE_ACCURATE : MACLC_TONE_BALANCED;
+                mode = maclc_hdr_needs_tone_mapping(
+                           content_peak > 0.0f ? content_peak : 1000.0f,
+                           display_peak)
+                     ? MACLC_TONE_BALANCED : MACLC_TONE_ACCURATE;
                 break;
         }
 
         maclc_tone_params params;
         maclc_tone_params_init(&params, mode, content_peak, display_peak,
-                               ITU_BT2408_REFERENCE_WHITE_NITS);
-        if (!params.identity) {
-            MacLCHDRToneMapper *mapper = sys.toneMapper;
-            CVPixelBufferRef mapped = (mapper != nil)
-                ? [mapper toneMapPixelBuffer:pixelBuffer params:&params]
-                : NULL;
-            if (mapped != NULL) {
-                CVPixelBufferRelease(pixelBuffer);
-                pixelBuffer = mapped;
+                               MACLC_HDR_REFERENCE_WHITE);
+        MacLCHDRToneMapper *mapper = sys.toneMapper;
+        CVPixelBufferRef mapped = (mapper != nil)
+            ? [mapper toneMapPixelBuffer:pixelBuffer
+                                  params:&params
+                          referenceWhite:MACLC_HDR_REFERENCE_WHITE]
+            : NULL;
+        if (mapped != NULL) {
+            CVPixelBufferRelease(pixelBuffer);
+            pixelBuffer = mapped;
 
-                /* Luminances in 0.0001 cd/m^2, per ST 2086. */
-                memset(&render_fmt.mastering, 0, sizeof(render_fmt.mastering));
-                render_fmt.mastering.max_luminance =
-                    (uint32_t)(params.display_peak * 10000.0f);
-                render_fmt.mastering.min_luminance = 1;
-                render_fmt.lighting.MaxCLL = (uint16_t)params.display_peak;
-                render_fmt.lighting.MaxFALL =
-                    (uint16_t)(params.display_peak / 4.0f);
-            }
-            if (!sys.hasLoggedToneMap) {
-                msg_Dbg(vd, "HDR picture mode %s: %s, content %.0f cd/m^2 into "
-                            "%.0f cd/m^2 (headroom %.2f, gain %.2f)",
-                        maclc_hdr_picture_name(sys.maclcPicture),
-                        mapped != NULL ? "tone-mapped on the GPU"
-                                       : "pass-through (tone mapper unavailable)",
-                        params.content_peak, params.display_peak,
-                        sys.currentHeadroom, params.gain);
-                sys.hasLoggedToneMap = YES;
-            }
-        } else if (!sys.hasLoggedToneMap) {
-            msg_Dbg(vd, "HDR picture mode %s: master (%.0f cd/m^2) fits the "
-                        "display (%.0f cd/m^2), shown as graded",
+            render_fmt.transfer = TRANSFER_FUNC_LINEAR;
+            render_fmt.primaries = COLOR_PRIMARIES_BT2020;
+            memset(&render_fmt.mastering, 0, sizeof(render_fmt.mastering));
+            memset(&render_fmt.lighting, 0, sizeof(render_fmt.lighting));
+        }
+        if (!sys.hasLoggedToneMap) {
+            msg_Dbg(vd, "HDR picture mode %s (%s): content %.0f cd/m^2 shown "
+                        "up to %.0f cd/m^2 with %.0f cd/m^2 at SDR white "
+                        "(headroom %.2f, gain %.2f), %s",
                     maclc_hdr_picture_name(sys.maclcPicture),
-                    params.content_peak, params.display_peak);
+                    mode == MACLC_TONE_ACCURATE ? "accurate"
+                        : mode == MACLC_TONE_BALANCED ? "balanced" : "bright",
+                    params.content_peak, params.display_peak,
+                    MACLC_HDR_REFERENCE_WHITE, sys.currentHeadroom,
+                    params.gain,
+                    mapped != NULL ? "linear light from the GPU"
+                                   : "PQ as decoded (tone mapper unavailable)");
             sys.hasLoggedToneMap = YES;
         }
     }
@@ -1776,7 +1741,8 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
 
     switch (hdr_mode) {
     case 1: /* Force Native EDR / HDR */
-        if (render_fmt.transfer != TRANSFER_FUNC_HLG)
+        if (render_fmt.transfer != TRANSFER_FUNC_HLG &&
+            render_fmt.transfer != TRANSFER_FUNC_LINEAR)
             render_fmt.transfer = TRANSFER_FUNC_SMPTE_ST2084;
         render_fmt.primaries = COLOR_PRIMARIES_BT2020;
         render_fmt.space = COLOR_SPACE_BT2020;

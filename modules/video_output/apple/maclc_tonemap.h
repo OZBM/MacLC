@@ -112,7 +112,7 @@ typedef struct {
     maclc_tone_mode mode;
     float content_peak;     /* Content peak luminance (cd/m²), >= 100.0 */
     float display_peak;     /* Target display peak luminance (cd/m²), clamped to [100, 10000] */
-    float reference_white;  /* Reference / diffuse white (cd/m², default 203 BT.2408) */
+    float reference_white;  /* Luminance shown at SDR white (cd/m², default 100, MACLC_HDR_REFERENCE_WHITE) */
     float gain;             /* Input luminance gain: 1.0 for ACCURATE/BALANCED, 1.0..1.6 for BRIGHT */
     float knee_pq;          /* Knee start in PQ: eK for ACCURATE, normalized KS for BALANCED/BRIGHT */
     float src_peak_pq;      /* Effective source peak luminance in PQ [0, 1] (after gain) */
@@ -155,9 +155,10 @@ static inline void maclc_tone_params_init(maclc_tone_params *p,
     else if (content_peak_nits > 10000.0f)
         content_peak_nits = 10000.0f;
 
-    /* reference_white <= 0: use ITU-R BT.2408 diffuse white (203 cd/m²) */
+    /* reference_white <= 0: MacLC's anchor, 100 cd/m² at SDR white
+     * (MACLC_HDR_REFERENCE_WHITE in maclc_hdr_vars.h) */
     if (reference_white_nits <= 0.0f)
-        reference_white_nits = 203.0f;
+        reference_white_nits = 100.0f;
 
     /* display_peak clamps to [100, 10000] cd/m² */
     if (display_peak_nits < 100.0f)

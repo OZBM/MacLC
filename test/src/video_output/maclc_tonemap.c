@@ -23,6 +23,7 @@
 #include <stdbool.h>
 
 #include "../../../modules/video_output/apple/maclc_tonemap.h"
+#include "../../../modules/video_output/apple/maclc_hdr_vars.h"
 
 #define CHECK(cond) do { \
     if (!(cond)) { \
@@ -230,6 +231,53 @@ int main(void)
                 CHECK(out >= prev_pq);
                 CHECK(out <= p.dst_peak_pq);
                 prev_pq = out;
+            }
+        }
+    }
+
+    /*
+     * 10. MacLC's 100 cd/m2 anchor. An XDR panel (potential headroom 16) is a
+     * 1,600-nit display; at full brightness (SDR white 600 cd/m2, headroom
+     * 1600/600) a 1,000-nit master is mapped into 267 cd/m2 of video, which
+     * the panel shows at 1,600 cd/m2.
+     */
+    {
+        CHECK(maclc_hdr_peak_for_headroom(16.0f) == 1600.0f);
+        CHECK(maclc_hdr_peak_for_headroom(0.5f) == MACLC_HDR_REFERENCE_WHITE);
+
+        const float display_peak = maclc_hdr_peak_for_headroom(1600.0f / 600.0f);
+        CHECK(fabsf(display_peak - 266.67f) < 0.1f);
+        CHECK(maclc_hdr_needs_tone_mapping(1000.0f, display_peak));
+        CHECK(!maclc_hdr_needs_tone_mapping(1000.0f, maclc_hdr_peak_for_headroom(16.0f)));
+
+        maclc_tone_params bal, bright, acc;
+        maclc_tone_params_init(&bal, MACLC_TONE_BALANCED, 1000.0f, display_peak,
+                               MACLC_HDR_REFERENCE_WHITE);
+        maclc_tone_params_init(&bright, MACLC_TONE_BRIGHT, 1000.0f, display_peak,
+                               MACLC_HDR_REFERENCE_WHITE);
+        maclc_tone_params_init(&acc, MACLC_TONE_ACCURATE, 1000.0f, display_peak,
+                               MACLC_HDR_REFERENCE_WHITE);
+
+        /* Same mid-tone lift as with the BT.2408 anchor: it only depends on
+         * the headroom. */
+        CHECK(fabsf(bright.gain - 0.55f * 1600.0f / 600.0f) < 0.001f);
+
+        /* Faces and skies below the knee are left alone; highlights fold
+         * into the display without ever reaching past it. */
+        CHECK(fabsf(maclc_tone_map_nits(&bal, 50.0f) - 50.0f) < 0.05f);
+        CHECK(fabsf(maclc_tone_map_nits(&acc, 200.0f) - 200.0f) < 0.05f);
+        CHECK(maclc_tone_map_nits(&bright, 100.0f) > maclc_tone_map_nits(&bal, 100.0f));
+        CHECK(maclc_tone_map_nits(&bal, 1000.0f) <= display_peak);
+        CHECK(maclc_tone_map_nits(&bal, 1000.0f) > 0.95f * display_peak);
+
+        float prev[3] = { -1.0f, -1.0f, -1.0f };
+        for (float nits = 0.0f; nits <= 10000.0f; nits += 2.5f) {
+            const maclc_tone_params *ps[3] = { &acc, &bal, &bright };
+            for (int m = 0; m < 3; m++) {
+                float out = maclc_tone_map_nits(ps[m], nits);
+                CHECK(out >= prev[m]);
+                CHECK(out <= display_peak + 0.01f);
+                prev[m] = out;
             }
         }
     }

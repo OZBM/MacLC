@@ -54,8 +54,25 @@
 #define MACLC_HDR_VAR_ACTIVE       "maclc-hdr-active" /* string, presentation vocabulary */
 
 /* Published by an OpenGL display on itself for its filters: true while the
- * surface shows extended-range linear light (EDR), false in SDR mode. */
+ * surface shows extended-range linear light (EDR, 1.0 = SDR white =
+ * MACLC_HDR_REFERENCE_WHITE), false in SDR mode. */
 #define MACLC_HDR_VAR_EDR_LINEAR   "maclc-hdr-edr-linear" /* bool */
+
+/* The luminance MacLC shows at the display's SDR white (EDR value 1.0) when it
+ * presents PQ video. It is the anchor macOS itself uses for a PQ surface
+ * (measured on macOS 26: a layer tagged ITU-R 2100 PQ shows 100 cd/m2 at 1.0,
+ * and a 1,600-nit XDR panel reports a potential headroom of 16), so MacLC is
+ * as bright as any player that hands PQ to the system, and PQ is shown
+ * absolutely when SDR white is set to 100 cd/m2. */
+#define MACLC_HDR_REFERENCE_WHITE  100.0f
+
+/* The brightest PQ luminance, in cd/m2, a display can show without clipping
+ * when it has this much EDR headroom. */
+static inline float
+maclc_hdr_peak_for_headroom(float headroom)
+{
+    return MACLC_HDR_REFERENCE_WHITE * (headroom > 1.0f ? headroom : 1.0f);
+}
 
 /* maclc-hdr-caps bits */
 #define MACLC_HDR_CAP_DOVI_SEEN        0x1 /* a Dolby Vision RPU reached this vout */

@@ -30,6 +30,8 @@
 /* kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange, spelled as a literal like
  * VLCHDRExpander.m does. */
 #define MACLC_CVPX_FORMAT_P010 ((OSType)'x420')
+/* kCVPixelFormatType_64RGBAHalf */
+#define MACLC_CVPX_FORMAT_RGBA_HALF ((OSType)'RGhA')
 
 /* The ten bits of x420 sit at the top of a 16-bit word, so a normalised 16-bit
  * read yields code/65472 rather than code/1023. */
@@ -45,11 +47,11 @@ typedef struct
     float srcPeakPQ;
     float dstPeakPQ;
     float inputScale;
+    float outputScale;
     uint32_t mode;
     uint32_t identity;
-    uint32_t chromaW;
-    uint32_t chromaH;
-    uint32_t padding;
+    uint32_t width;
+    uint32_t height;
 } MacLCToneMapUniforms;
 
 _Static_assert(sizeof(MacLCToneMapUniforms) == 48,
@@ -72,11 +74,11 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"    float srcPeakPQ;\n"
     @"    float dstPeakPQ;\n"
     @"    float inputScale;\n"
+    @"    float outputScale;\n"
     @"    uint  mode;\n"
     @"    uint  identity;\n"
-    @"    uint  chromaW;\n"
-    @"    uint  chromaH;\n"
-    @"    uint  padding;\n"
+    @"    uint  width;\n"
+    @"    uint  height;\n"
     @"};\n"
     @"\n"
     @"constant float PQ_M1 = 2610.0f / 16384.0f;\n"
@@ -166,11 +168,6 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"    return clamp(Eout, 0.0f, u.dstPeakPQ);\n"
     @"}\n"
     @"\n"
-    @"static inline uint2 clamp_read(uint2 c, uint w, uint h)\n"
-    @"{\n"
-    @"    return uint2(min(c.x, w - 1u), min(c.y, h - 1u));\n"
-    @"}\n"
-    @"\n"
     @"/* BT.2020 non-constant-luminance, 10-bit limited range. */\n"
     @"static inline float3 decode_ycc(float y, float2 c)\n"
     @"{\n"
@@ -183,67 +180,38 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"    return clamp(float3(r, g, b), 0.0f, 1.0f);\n"
     @"}\n"
     @"\n"
-    @"static inline float encode_luma10(float3 pq)\n"
-    @"{\n"
-    @"    float y = 0.2627f * pq.r + 0.6780f * pq.g + 0.0593f * pq.b;\n"
-    @"    return round(clamp(y * 876.0f + 64.0f, 0.0f, 1023.0f)) * (64.0f / 65535.0f);\n"
-    @"}\n"
-    @"\n"
-    @"static inline float2 encode_chroma10(float3 pq)\n"
-    @"{\n"
-    @"    float y  = 0.2627f * pq.r + 0.6780f * pq.g + 0.0593f * pq.b;\n"
-    @"    float cb = (pq.b - y) / 1.8814f;\n"
-    @"    float cr = (pq.r - y) / 1.4746f;\n"
-    @"    return round(float2(clamp(cb * 896.0f + 512.0f, 0.0f, 1023.0f),\n"
-    @"                        clamp(cr * 896.0f + 512.0f, 0.0f, 1023.0f)))\n"
-    @"           * (64.0f / 65535.0f);\n"
-    @"}\n"
-    @"\n"
     @"/* Curve on the largest component, linear triplet scaled by the result:\n"
-    @" * brightness changes, hue and saturation do not. */\n"
-    @"static inline float3 tone_map_rgb(float3 pq, constant MacLCToneMapUniforms &u)\n"
+    @" * brightness changes, hue and saturation do not. Returns cd/m2. */\n"
+    @"static inline float3 tone_map_nits(float3 pq, constant MacLCToneMapUniforms &u)\n"
     @"{\n"
+    @"    float3 nits = float3(pq_to_nits(pq.r), pq_to_nits(pq.g), pq_to_nits(pq.b));\n"
     @"    float m = max(max(pq.r, pq.g), pq.b);\n"
-    @"    if (m <= 0.0f) return pq;\n"
-    @"    float mOut = maclc_tone_map_pq(u, m);\n"
-    @"    float inNits = pq_to_nits(m);\n"
-    @"    if (inNits <= 0.0f) return pq;\n"
-    @"    float s = pq_to_nits(mOut) / inNits;\n"
-    @"    return float3(nits_to_pq(pq_to_nits(pq.r) * s),\n"
-    @"                  nits_to_pq(pq_to_nits(pq.g) * s),\n"
-    @"                  nits_to_pq(pq_to_nits(pq.b) * s));\n"
+    @"    float inNits = max(max(nits.r, nits.g), nits.b);\n"
+    @"    if (m <= 0.0f || inNits <= 0.0f) return float3(0.0f);\n"
+    @"    return nits * (pq_to_nits(maclc_tone_map_pq(u, m)) / inNits);\n"
     @"}\n"
     @"\n"
-    @"kernel void maclc_tone_map_biplanar(\n"
-    @"    texture2d<float, access::read>  inLuma    [[texture(0)]],\n"
-    @"    texture2d<float, access::read>  inChroma  [[texture(1)]],\n"
-    @"    texture2d<float, access::write> outLuma   [[texture(2)]],\n"
-    @"    texture2d<float, access::write> outChroma [[texture(3)]],\n"
-    @"    constant MacLCToneMapUniforms&  u         [[buffer(0)]],\n"
+    @"kernel void maclc_tone_map_to_linear(\n"
+    @"    texture2d<float, access::read>   inLuma   [[texture(0)]],\n"
+    @"    texture2d<float, access::sample> inChroma [[texture(1)]],\n"
+    @"    texture2d<float, access::write>  outRGBA  [[texture(2)]],\n"
+    @"    constant MacLCToneMapUniforms&   u        [[buffer(0)]],\n"
     @"    uint2 gid [[thread_position_in_grid]])\n"
     @"{\n"
-    @"    if (gid.x >= u.chromaW || gid.y >= u.chromaH)\n"
+    @"    if (gid.x >= u.width || gid.y >= u.height)\n"
     @"        return;\n"
     @"\n"
-    @"    float2 cc = inChroma.read(clamp_read(gid, inChroma.get_width(),\n"
-    @"                                         inChroma.get_height())).rg\n"
-    @"                * u.inputScale;\n"
+    @"    constexpr sampler bilinear(coord::normalized, address::clamp_to_edge,\n"
+    @"                               filter::linear);\n"
+    @"    float y = inLuma.read(gid).r * u.inputScale;\n"
+    @"    /* 4:2:0 chroma, co-sited with the left luma sample and centred\n"
+    @"     * between the two rows (the HEVC and BT.2020 default). */\n"
+    @"    float2 pos = float2((float(gid.x) * 0.5f + 0.5f) / float(inChroma.get_width()),\n"
+    @"                        (float(gid.y) * 0.5f + 0.25f) / float(inChroma.get_height()));\n"
+    @"    float2 c = inChroma.sample(bilinear, pos).rg * u.inputScale;\n"
     @"\n"
-    @"    float3 sum = float3(0.0f);\n"
-    @"    for (uint i = 0u; i < 4u; ++i) {\n"
-    @"        uint2 lc = gid * 2u + uint2(i & 1u, i >> 1u);\n"
-    @"        float y = inLuma.read(clamp_read(lc, inLuma.get_width(),\n"
-    @"                                         inLuma.get_height())).r\n"
-    @"                  * u.inputScale;\n"
-    @"        float3 pq = tone_map_rgb(decode_ycc(y, cc), u);\n"
-    @"        sum += pq;\n"
-    @"        if (lc.x < outLuma.get_width() && lc.y < outLuma.get_height())\n"
-    @"            outLuma.write(float4(encode_luma10(pq), 0.0f, 0.0f, 1.0f), lc);\n"
-    @"    }\n"
-    @"\n"
-    @"    float2 c = encode_chroma10(sum * 0.25f);\n"
-    @"    if (gid.x < outChroma.get_width() && gid.y < outChroma.get_height())\n"
-    @"        outChroma.write(float4(c.x, c.y, 0.0f, 1.0f), gid);\n"
+    @"    float3 nits = tone_map_nits(decode_ycc(y, c), u);\n"
+    @"    outRGBA.write(float4(nits * u.outputScale, 1.0f), gid);\n"
     @"}\n";
 
 @interface MacLCHDRToneMapper ()
@@ -308,7 +276,7 @@ static NSString * const kMacLCToneMapperShaderSource =
     }
 
     id<MTLFunction> function =
-        [library newFunctionWithName:@"maclc_tone_map_biplanar"];
+        [library newFunctionWithName:@"maclc_tone_map_to_linear"];
     if (function == nil) {
         msg_Err(obj, "HDR picture modes: kernel missing from the library");
         return nil;
@@ -358,8 +326,11 @@ static NSString * const kMacLCToneMapperShaderSource =
         return nil;
     }
 
-    const size_t width = IOSurfaceGetWidthOfPlane(surface, plane);
-    const size_t height = IOSurfaceGetHeightOfPlane(surface, plane);
+    const bool planar = IOSurfaceGetPlaneCount(surface) > 0;
+    const size_t width = planar ? IOSurfaceGetWidthOfPlane(surface, plane)
+                                : IOSurfaceGetWidth(surface);
+    const size_t height = planar ? IOSurfaceGetHeightOfPlane(surface, plane)
+                                 : IOSurfaceGetHeight(surface);
     if (width == 0 || height == 0)
         return nil;
 
@@ -393,7 +364,7 @@ static NSString * const kMacLCToneMapperShaderSource =
 
     NSDictionary *attributes = @{
         (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey:
-            @(MACLC_CVPX_FORMAT_P010),
+            @(MACLC_CVPX_FORMAT_RGBA_HALF),
         (__bridge NSString *)kCVPixelBufferWidthKey: @(width),
         (__bridge NSString *)kCVPixelBufferHeightKey: @(height),
         (__bridge NSString *)kCVPixelBufferIOSurfacePropertiesKey: @{},
@@ -424,8 +395,9 @@ static NSString * const kMacLCToneMapperShaderSource =
 
 - (nullable CVPixelBufferRef)toneMapPixelBuffer:(CVPixelBufferRef)pixelBuffer
                                          params:(const maclc_tone_params *)params
+                                 referenceWhite:(float)referenceWhite
 {
-    if (pixelBuffer == NULL || params == NULL || params->identity)
+    if (pixelBuffer == NULL || params == NULL || referenceWhite <= 0.0f)
         return NULL;
     if (![self canToneMapPixelFormat:CVPixelBufferGetPixelFormatType(pixelBuffer)])
         return NULL;
@@ -440,8 +412,7 @@ static NSString * const kMacLCToneMapperShaderSource =
     /* Everything ARC owns is declared before the first jump to `failure`. */
     id<MTLTexture> inLuma = nil;
     id<MTLTexture> inChroma = nil;
-    id<MTLTexture> outLuma = nil;
-    id<MTLTexture> outChroma = nil;
+    id<MTLTexture> outRGBA = nil;
     id<MTLCommandBuffer> commandBuffer = nil;
     id<MTLComputeCommandEncoder> encoder = nil;
 
@@ -455,11 +426,9 @@ static NSString * const kMacLCToneMapperShaderSource =
                          pixelFormat:MTLPixelFormatR16Unorm writable:NO];
     inChroma = [self textureFromBuffer:pixelBuffer plane:1
                            pixelFormat:MTLPixelFormatRG16Unorm writable:NO];
-    outLuma = [self textureFromBuffer:output plane:0
-                          pixelFormat:MTLPixelFormatR16Unorm writable:YES];
-    outChroma = [self textureFromBuffer:output plane:1
-                            pixelFormat:MTLPixelFormatRG16Unorm writable:YES];
-    if (inLuma == nil || inChroma == nil || outLuma == nil || outChroma == nil)
+    outRGBA = [self textureFromBuffer:output plane:0
+                          pixelFormat:MTLPixelFormatRGBA16Float writable:YES];
+    if (inLuma == nil || inChroma == nil || outRGBA == nil)
         goto failure;
 
     MacLCToneMapUniforms uniforms;
@@ -471,10 +440,11 @@ static NSString * const kMacLCToneMapperShaderSource =
     uniforms.srcPeakPQ = params->src_peak_pq;
     uniforms.dstPeakPQ = params->dst_peak_pq;
     uniforms.inputScale = MACLC_10BIT_READ_SCALE;
+    uniforms.outputScale = 1.0f / referenceWhite;
     uniforms.mode = (uint32_t)params->mode;
     uniforms.identity = params->identity ? 1u : 0u;
-    uniforms.chromaW = (uint32_t)((width + 1) / 2);
-    uniforms.chromaH = (uint32_t)((height + 1) / 2);
+    uniforms.width = (uint32_t)MIN(width, outRGBA.width);
+    uniforms.height = (uint32_t)MIN(height, outRGBA.height);
 
     commandBuffer = [_queue commandBuffer];
     encoder = [commandBuffer computeCommandEncoder];
@@ -484,8 +454,7 @@ static NSString * const kMacLCToneMapperShaderSource =
     [encoder setComputePipelineState:_pipeline];
     [encoder setTexture:inLuma atIndex:0];
     [encoder setTexture:inChroma atIndex:1];
-    [encoder setTexture:outLuma atIndex:2];
-    [encoder setTexture:outChroma atIndex:3];
+    [encoder setTexture:outRGBA atIndex:2];
     [encoder setBytes:&uniforms length:sizeof(uniforms) atIndex:0];
 
     NSUInteger groupWidth = 16;
@@ -495,16 +464,15 @@ static NSString * const kMacLCToneMapperShaderSource =
         groupHeight /= 2;
 
     [encoder dispatchThreadgroups:
-                 MTLSizeMake((uniforms.chromaW + groupWidth - 1) / groupWidth,
-                             (uniforms.chromaH + groupHeight - 1) / groupHeight, 1)
+                 MTLSizeMake((uniforms.width + groupWidth - 1) / groupWidth,
+                             (uniforms.height + groupHeight - 1) / groupHeight, 1)
             threadsPerThreadgroup:MTLSizeMake(groupWidth, groupHeight, 1)];
     [encoder endEncoding];
 
 #if TARGET_OS_OSX
     if (_storageMode == MTLStorageModeManaged) {
         id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
-        [blit synchronizeResource:outLuma];
-        [blit synchronizeResource:outChroma];
+        [blit synchronizeResource:outRGBA];
         [blit endEncoding];
     }
 #endif
@@ -519,6 +487,14 @@ static NSString * const kMacLCToneMapperShaderSource =
         goto failure;
     }
 
+    /* Linear light keeps the source's BT.2020 primaries; the compositor
+     * converts them to the display. */
+    CVBufferSetAttachment(output, kCVImageBufferColorPrimariesKey,
+                          kCVImageBufferColorPrimaries_ITU_R_2020,
+                          kCVAttachmentMode_ShouldPropagate);
+    CVBufferSetAttachment(output, kCVImageBufferTransferFunctionKey,
+                          kCVImageBufferTransferFunction_Linear,
+                          kCVAttachmentMode_ShouldPropagate);
     return output;
 
 failure:

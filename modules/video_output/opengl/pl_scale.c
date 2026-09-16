@@ -22,6 +22,7 @@
 # include "config.h"
 #endif
 
+#include <math.h>
 #include <stdatomic.h>
 
 #include "limits.h"
@@ -39,6 +40,7 @@
 #include <libplacebo/gpu.h>
 #include <libplacebo/opengl.h>
 #include <libplacebo/renderer.h>
+#include <libplacebo/shaders/custom.h>
 
 #include "video_output/opengl/gl_api.h"
 #include "video_output/opengl/gl_common.h"
@@ -100,6 +102,11 @@ struct sys
      * otherwise it expects SDR-encoded values. */
     _Atomic bool edr_linear;
     bool user_target_trc;
+
+    /* Rescales libplacebo's linear output to MacLC's reference white */
+    struct pl_hook white_hook;
+    const struct pl_hook *white_hooks[1];
+    char white_shader[64];
 
     /* MacLC presentation / picture mode (maclc_hdr_vars.h) */
     struct pl_color_repr repr_base;
@@ -166,6 +173,51 @@ WrapFramebuffer(pl_gpu gpu, GLuint framebuffer, unsigned width, unsigned height,
     return pl_opengl_wrap(gpu, &opengl_wrap_params);
 }
 
+/* libplacebo writes linear light with its own reference white
+ * (PL_COLOR_SDR_WHITE, 203 cd/m2) at 1.0, while macOS shows PQ with
+ * MACLC_HDR_REFERENCE_WHITE at the display's SDR white. This hook runs once
+ * the picture is in the target colour space and moves it to MacLC's anchor. */
+static struct pl_hook_res
+ScaleToReferenceWhite(void *priv, const struct pl_hook_params *params)
+{
+    struct sys *sys = priv;
+
+    if (params->color.transfer != PL_COLOR_TRC_LINEAR)
+        return (struct pl_hook_res) { .output = PL_HOOK_SIG_NONE };
+
+    /* libplacebo accepts a colour hook at this stage only from a shader
+     * sized like the picture, and its direct sampling leaves the size open:
+     * fix it to the picture's rectangle, which is what that size is. */
+    int width = 0, height = 0;
+    if (!pl_shader_output_size(params->sh, &width, &height))
+    {
+        width = (int) lroundf(fabsf(pl_rect_w(params->rect)));
+        height = (int) lroundf(fabsf(pl_rect_h(params->rect)));
+    }
+    else
+        width = height = 0; /* already fixed */
+
+    const struct pl_custom_shader scale = {
+        .description = "MacLC reference white",
+        .body = sys->white_shader,
+        .input = PL_SHADER_SIG_COLOR,
+        .output = PL_SHADER_SIG_COLOR,
+        .output_w = width,
+        .output_h = height,
+    };
+    if (!pl_shader_custom(params->sh, &scale))
+        return (struct pl_hook_res) { .failed = true };
+
+    return (struct pl_hook_res) {
+        .output = PL_HOOK_SIG_COLOR,
+        .sh = params->sh,
+        .repr = params->repr,
+        .color = params->color,
+        .components = params->components,
+        .rect = params->rect,
+    };
+}
+
 /* Picks the libplacebo tone mapping for the requested picture mode. Cheap
  * enough to call per frame: it only rewrites the parameters when the mode,
  * the presentation or the "does the master fit the display" answer changes. */
@@ -174,7 +226,8 @@ UpdateToneMapping(struct sys *sys, int presentation, float src_peak,
                   float dst_peak)
 {
     int picture = atomic_load_explicit(&sys->picture, memory_order_relaxed);
-    const bool fits = src_peak > 0.0f && dst_peak > 0.0f && src_peak <= dst_peak;
+    const bool fits = src_peak > 0.0f && dst_peak > 0.0f
+                   && !maclc_hdr_needs_tone_mapping(src_peak, dst_peak);
     if (picture == sys->applied_picture &&
         presentation == sys->applied_presentation &&
         fits == sys->applied_fits)
@@ -190,6 +243,10 @@ UpdateToneMapping(struct sys *sys, int presentation, float src_peak,
 
     sys->color_map = pl_color_map_default_params;
     sys->color_adjust = pl_color_adjustment_neutral;
+    /* The BT.2390 knee as the Recommendation defines it (libplacebo defaults
+     * to an earlier one): the same curve as maclc_tonemap.h, which the native
+     * output runs and the interface draws. */
+    sys->color_map.tone_constants.knee_offset = 0.5f;
 
     switch (picture)
     {
@@ -340,11 +397,12 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
             headroom = sys->user_headroom;
 
         /* An EDR surface takes linear light where 1.0 is the display's SDR
-         * white. libplacebo writes linear output in exactly those units,
-         * reference white (PL_COLOR_SDR_WHITE, 203 cd/m2, ITU-R BT.2408) at
-         * 1.0 - the same convention macOS uses to show PQ - so the target
-         * peak is that white times the headroom. A surface in SDR mode gets
-         * the video tone mapped to reference white, sRGB encoded. */
+         * white, and macOS puts MACLC_HDR_REFERENCE_WHITE (100 cd/m2) there
+         * when it shows PQ. The video is tone mapped to what fits under the
+         * headroom at that anchor, and ScaleToReferenceWhite() moves
+         * libplacebo's linear output (203 cd/m2 at 1.0) onto it. A surface in
+         * SDR mode gets the video tone mapped to reference white, sRGB
+         * encoded. */
         const bool linear = !sdr_target && sys->filter_float_out
             && atomic_load_explicit(&sys->edr_linear, memory_order_relaxed);
         if (!sys->user_target_trc)
@@ -354,13 +412,17 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         {
             frame_out->color.hdr.min_luma = 0.0f;
             frame_out->color.hdr.max_luma = PL_COLOR_SDR_WHITE;
+            render_params->hooks = NULL;
+            render_params->num_hooks = 0;
         }
         else
         {
             frame_out->color.hdr.min_luma = PL_COLOR_HDR_BLACK;
             frame_out->color.hdr.max_luma = headroom > 0.0f
-                                          ? PL_COLOR_SDR_WHITE * headroom
+                                          ? maclc_hdr_peak_for_headroom(headroom)
                                           : 1000.0f;
+            render_params->hooks = sys->white_hooks;
+            render_params->num_hooks = 1;
         }
     }
 
@@ -669,19 +731,19 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
      * 2. Platform display characteristics:
      *    - For HDR content on macOS, the compositor presents an extended-range
      *      linear Display-P3 surface (PL_COLOR_PRIM_DISPLAY_P3,
-     *      PL_COLOR_TRC_LINEAR, 1.0 = SDR white) in half floats; when the
-     *      surface is in SDR mode it takes sRGB-encoded Display P3 instead.
-     *      Draw() follows the surface through MACLC_HDR_VAR_EDR_LINEAR.
+     *      PL_COLOR_TRC_LINEAR, 1.0 = SDR white = MACLC_HDR_REFERENCE_WHITE)
+     *      in half floats; when the surface is in SDR mode it takes
+     *      sRGB-encoded Display P3 instead. Draw() follows the surface
+     *      through MACLC_HDR_VAR_EDR_LINEAR.
      *    - For SDR content, the target matches the input colour space to ensure
      *      8-bit BT.709 playback does not regress and avoids unintended gamut
      *      or transfer curve conversion.
      * 3. Peak luminance and EDR headroom:
      *    - For HDR content, prefer the effective display headroom published
      *      by the vout display module via "edr-headroom-effective". Target
-     *      peak luminance is PL_COLOR_SDR_WHITE (203 cd/m2) * headroom.
+     *      peak luminance is MACLC_HDR_REFERENCE_WHITE (100 cd/m2) * headroom.
      *    - Fall back to explicit user override from "macosx-edr-headroom" (> 0.0f).
-     *    - Fall back last to a fixed 1000.0 cd/m² peak (the sustained capability
-     *      of Apple Silicon Liquid Retina XDR displays).
+     *    - Fall back last to a fixed 1000.0 cd/m² peak.
      */
     struct pl_color_space color_out = {0};
     bool is_hdr = pl_color_space_is_hdr(&sys->frame_in.color);
@@ -747,9 +809,21 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
             effective = sys->user_headroom;
 
         if (effective > 0.0f)
-            color_out.hdr.max_luma = PL_COLOR_SDR_WHITE * effective;
+            color_out.hdr.max_luma = maclc_hdr_peak_for_headroom(effective);
         else
             color_out.hdr.max_luma = 1000.0f;
+
+        snprintf(sys->white_shader, sizeof(sys->white_shader),
+                 "color.rgb *= vec3(%.6f);",
+                 PL_COLOR_SDR_WHITE / MACLC_HDR_REFERENCE_WHITE);
+        sys->white_hook = (struct pl_hook) {
+            .stages = PL_HOOK_PRE_OUTPUT,
+            .input = PL_HOOK_SIG_COLOR,
+            .priv = sys,
+            .hook = ScaleToReferenceWhite,
+            .signature = UINT64_C(0x4d61634c43574854), /* "MacLCWHT" */
+        };
+        sys->white_hooks[0] = &sys->white_hook;
     }
 
     sys->frame_out = (struct pl_frame) {
