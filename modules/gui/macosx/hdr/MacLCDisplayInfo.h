@@ -40,8 +40,23 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, readonly) BOOL supportsHDR;
 @property (nonatomic, readonly) BOOL referenceModeActive;
+
+/** The EDR headroom video is mapped into: the current one once the screen
+ *  shows extended range, the potential one before it does. */
+@property (nonatomic, readonly) CGFloat effectiveHeadroom;
+
+/** Brightest video luminance (cd/m², PQ) shown without clipping right now,
+ *  with MACLC_HDR_REFERENCE_WHITE at SDR white. */
 @property (nonatomic, readonly) CGFloat contentPeakNits;
-@property (nonatomic, readonly) NSUInteger knownPanelPeakNits;
+
+/** The panel's peak luminance in cd/m² (1,600 on an XDR panel), 0 when the
+ *  display has no extended range. macOS reports potential headroom relative
+ *  to a 100 cd/m² white. */
+@property (nonatomic, readonly) NSUInteger panelPeakNits;
+
+/** Luminance of SDR white at the current brightness, in cd/m², 0 when the
+ *  display has no extended range. */
+@property (nonatomic, readonly) CGFloat sdrWhiteNits;
 
 + (instancetype)displayInfoForScreen:(nullable NSScreen *)screen;
 

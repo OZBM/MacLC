@@ -24,6 +24,7 @@
 #import "theme/MacLCDesign.h"
 
 #include "../../video_output/apple/maclc_tonemap.h"
+#include "../../video_output/apple/maclc_hdr_vars.h"
 
 /* Plot range, in cd/m², on both axes (logarithmic). */
 static const double kMinNits = 0.1;
@@ -47,6 +48,7 @@ static const CGFloat kInset = 6.0;
         _pictureMode = MacLCHDRPictureModeAuto;
         _contentPeakNits = 1000.0;
         _displayPeakNits = 1000.0;
+        _sdrWhiteNits = MACLC_HDR_REFERENCE_WHITE;
         [self computeSamplesInto:_to];
         memcpy(_shown, _to, sizeof(_shown));
         self.accessibilityRole = NSAccessibilityImageRole;
@@ -79,9 +81,22 @@ static const CGFloat kInset = 6.0;
         case MacLCHDRPictureModeBright:   return MACLC_TONE_BRIGHT;
         default:
             /* Same rule as the video outputs. */
-            return _contentPeakNits <= _displayPeakNits ? MACLC_TONE_ACCURATE
-                                                        : MACLC_TONE_BALANCED;
+            return maclc_hdr_needs_tone_mapping((float)_contentPeakNits,
+                                                (float)_displayPeakNits)
+                ? MACLC_TONE_BALANCED : MACLC_TONE_ACCURATE;
     }
+}
+
+/* Panel light per cd/m² of mapped video: the video output puts
+ * MACLC_HDR_REFERENCE_WHITE at SDR white. */
+- (double)lightScale
+{
+    return _sdrWhiteNits > 0 ? _sdrWhiteNits / MACLC_HDR_REFERENCE_WHITE : 1.0;
+}
+
+- (double)panelPeakNits
+{
+    return _displayPeakNits * [self lightScale];
 }
 
 static double NitsForSample(NSUInteger i)
@@ -94,42 +109,51 @@ static double NitsForSample(NSUInteger i)
 {
     maclc_tone_params params;
     maclc_tone_params_init(&params, [self resolvedMode], (float)_contentPeakNits,
-                           (float)_displayPeakNits, 203.0f);
+                           (float)_displayPeakNits, MACLC_HDR_REFERENCE_WHITE);
+    const double scale = [self lightScale];
     for (NSUInteger i = 0; i < kSamples; i++) {
         const double nits = NitsForSample(i);
         /* Past the video's own peak there is nothing to map: hold the last
          * value so the curve reads as "this is where the video stops". */
         const double input = MIN(nits, (double)params.content_peak);
-        samples[i] = MAX(maclc_tone_map_nits(&params, (float)input), kMinNits);
+        samples[i] = MAX(maclc_tone_map_nits(&params, (float)input) * scale, kMinNits);
     }
 }
 
 - (void)setPictureMode:(MacLCHDRPictureMode)pictureMode
 {
     [self setPictureMode:pictureMode contentPeakNits:_contentPeakNits
-         displayPeakNits:_displayPeakNits animated:NO];
+         displayPeakNits:_displayPeakNits sdrWhiteNits:_sdrWhiteNits animated:NO];
 }
 
 - (void)setContentPeakNits:(CGFloat)contentPeakNits
 {
     [self setPictureMode:_pictureMode contentPeakNits:contentPeakNits
-         displayPeakNits:_displayPeakNits animated:NO];
+         displayPeakNits:_displayPeakNits sdrWhiteNits:_sdrWhiteNits animated:NO];
 }
 
 - (void)setDisplayPeakNits:(CGFloat)displayPeakNits
 {
     [self setPictureMode:_pictureMode contentPeakNits:_contentPeakNits
-         displayPeakNits:displayPeakNits animated:NO];
+         displayPeakNits:displayPeakNits sdrWhiteNits:_sdrWhiteNits animated:NO];
+}
+
+- (void)setSdrWhiteNits:(CGFloat)sdrWhiteNits
+{
+    [self setPictureMode:_pictureMode contentPeakNits:_contentPeakNits
+         displayPeakNits:_displayPeakNits sdrWhiteNits:sdrWhiteNits animated:NO];
 }
 
 - (void)setPictureMode:(MacLCHDRPictureMode)mode
        contentPeakNits:(CGFloat)contentPeak
        displayPeakNits:(CGFloat)displayPeak
+          sdrWhiteNits:(CGFloat)sdrWhite
               animated:(BOOL)animated
 {
     _pictureMode = mode;
     _contentPeakNits = contentPeak > 0 ? contentPeak : 1000.0;
-    _displayPeakNits = displayPeak > 0 ? displayPeak : 100.0;
+    _displayPeakNits = displayPeak > 0 ? displayPeak : MACLC_HDR_REFERENCE_WHITE;
+    _sdrWhiteNits = sdrWhite > 0 ? sdrWhite : 0.0;
 
     memcpy(_from, _shown, sizeof(_from));
     [self computeSamplesInto:_to];
@@ -179,7 +203,7 @@ static double NitsForSample(NSUInteger i)
     self.accessibilityLabel = [NSString stringWithFormat:
         _NS("Tone curve: video up to %@ nits shown on a display that reaches %@ nits"),
         [formatter stringFromNumber:@(_contentPeakNits)],
-        [formatter stringFromNumber:@(_displayPeakNits)]];
+        [formatter stringFromNumber:@([self panelPeakNits])]];
 }
 
 #pragma mark - Drawing
@@ -231,7 +255,8 @@ static double NitsForSample(NSUInteger i)
     [diagonal stroke];
 
     /* Display peak */
-    const CGFloat peakY = [self yForNits:_displayPeakNits inRect:r];
+    const double panelPeak = [self panelPeakNits];
+    const CGFloat peakY = [self yForNits:panelPeak inRect:r];
     NSBezierPath *peak = [NSBezierPath bezierPath];
     [peak moveToPoint:NSMakePoint(NSMinX(r), peakY)];
     [peak lineToPoint:NSMakePoint(NSMaxX(r), peakY)];
@@ -266,7 +291,7 @@ static double NitsForSample(NSUInteger i)
         NSForegroundColorAttributeName: MacLCDesign.secondaryLabel,
     };
     NSString *displayLabel = [NSString stringWithFormat:_NS("Display · %@ nits"),
-                              [formatter stringFromNumber:@(_displayPeakNits)]];
+                              [formatter stringFromNumber:@(panelPeak)]];
     const NSSize displaySize = [displayLabel sizeWithAttributes:attributes];
     CGFloat labelY = peakY + 2.0;
     if (labelY + displaySize.height > NSMaxY(r))

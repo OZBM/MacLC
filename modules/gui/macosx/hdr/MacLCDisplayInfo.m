@@ -26,6 +26,8 @@
 #import <IOKit/ps/IOPowerSources.h>
 #include <math.h>
 
+#include "../../video_output/apple/maclc_hdr_vars.h"
+
 @implementation MacLCDisplayInfo
 
 + (instancetype)displayInfoForScreen:(nullable NSScreen *)screen
@@ -106,20 +108,32 @@
     return self.referenceHeadroom > 0.0;
 }
 
-- (CGFloat)contentPeakNits
+/* Same rule as the video outputs: the headroom the screen gives now, or the
+ * potential one while nothing on it asks for extended range yet. */
+- (CGFloat)effectiveHeadroom
 {
-    CGFloat targetHeadroom = self.supportsHDR ? MIN(self.potentialHeadroom, (CGFloat)4.0) : (CGFloat)1.0;
-    CGFloat effectiveHeadroom = MAX(self.currentHeadroom, targetHeadroom);
-    return effectiveHeadroom * (CGFloat)203.0;
+    if (self.currentHeadroom > 1.0)
+        return self.currentHeadroom;
+    return self.supportsHDR ? self.potentialHeadroom : 1.0;
 }
 
-- (NSUInteger)knownPanelPeakNits
+- (CGFloat)contentPeakNits
 {
-    if (self.localizedName.length > 0 &&
-        [self.localizedName rangeOfString:@"XDR" options:NSCaseInsensitiveSearch].location != NSNotFound) {
-        return 1600;
-    }
-    return 0;
+    return maclc_hdr_peak_for_headroom((float)self.effectiveHeadroom);
+}
+
+- (NSUInteger)panelPeakNits
+{
+    if (!self.supportsHDR)
+        return 0;
+    return (NSUInteger)lround(self.potentialHeadroom * MACLC_HDR_REFERENCE_WHITE);
+}
+
+- (CGFloat)sdrWhiteNits
+{
+    if (!self.supportsHDR)
+        return 0.0;
+    return (CGFloat)self.panelPeakNits / self.effectiveHeadroom;
 }
 
 - (BOOL)isEqual:(id)object

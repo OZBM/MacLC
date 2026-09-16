@@ -150,8 +150,10 @@ static void test_stream_and_display_info(void)
 
     assert(disp1.supportsHDR);
     assert(!disp1.referenceModeActive);
-    assert(disp1.knownPanelPeakNits == 1600);
-    assert(disp1.contentPeakNits == 8.0 * 203.0);
+    assert(disp1.effectiveHeadroom == 8.0);
+    assert(disp1.panelPeakNits == 1600);
+    assert(disp1.contentPeakNits == 8.0 * 100.0);
+    assert(disp1.sdrWhiteNits == 200.0);
 
     MacLCDisplayInfo *disp2 = [[MacLCDisplayInfo alloc]
         initWithLocalizedName:@"Liquid Retina XDR"
@@ -163,6 +165,34 @@ static void test_stream_and_display_info(void)
 
     assert([disp1 isEqual:disp2]);
     assert(disp1.hash == disp2.hash);
+
+    // Display with currentHeadroom <= 1.0 falls back to potentialHeadroom when HDR is supported
+    MacLCDisplayInfo *dispIdle = [[MacLCDisplayInfo alloc]
+        initWithLocalizedName:@"Liquid Retina XDR"
+            potentialHeadroom:16.0
+              currentHeadroom:1.0
+            referenceHeadroom:0.0
+                    onBattery:NO
+                 lowPowerMode:NO];
+    assert(dispIdle.supportsHDR);
+    assert(dispIdle.effectiveHeadroom == 16.0);
+    assert(dispIdle.contentPeakNits == 1600.0);
+    assert(dispIdle.panelPeakNits == 1600);
+    assert(dispIdle.sdrWhiteNits == 100.0);
+
+    // Standard display without HDR support has panelPeakNits = 0 and sdrWhiteNits = 0
+    MacLCDisplayInfo *dispSDR = [[MacLCDisplayInfo alloc]
+        initWithLocalizedName:@"Standard Display"
+            potentialHeadroom:1.0
+              currentHeadroom:1.0
+            referenceHeadroom:0.0
+                    onBattery:NO
+                 lowPowerMode:NO];
+    assert(!dispSDR.supportsHDR);
+    assert(dispSDR.effectiveHeadroom == 1.0);
+    assert(dispSDR.contentPeakNits == 100.0);
+    assert(dispSDR.panelPeakNits == 0);
+    assert(dispSDR.sdrWhiteNits == 0.0);
 }
 
 static void test_dv81_on_xdr(void)
@@ -186,10 +216,14 @@ static void test_dv81_on_xdr(void)
     MacLCDisplayInfo *display = [[MacLCDisplayInfo alloc]
         initWithLocalizedName:@"Liquid Retina XDR"
             potentialHeadroom:16.0
-              currentHeadroom:8.0
+              currentHeadroom:12.0
             referenceHeadroom:0.0
                     onBattery:NO
                  lowPowerMode:NO];
+
+    assert(display.panelPeakNits == 1600);
+    assert(display.contentPeakNits == 1200.0);
+    assert(fabs(display.sdrWhiteNits - (1600.0 / 12.0)) < 0.001);
 
     NSSet<NSNumber *> *processable = [NSSet setWithObjects:
         @(MacLCHDRPresentationDolbyVision),
@@ -201,7 +235,7 @@ static void test_dv81_on_xdr(void)
                                                                    display:display
                                                                processable:processable];
 
-    /* The 1,000-nit master fits under this display's 1,624 cd/m² of headroom:
+    /* The 1,000-nit master fits under this display's 1,200 cd/m² of headroom (12 x 100 cd/m²):
      * Dolby Vision would render the same picture, so the native HDR10 path
      * (lighter on power) is recommended, and the reason says so. */
     assert(rec.presentation == MacLCHDRPresentationHDR10);
@@ -209,8 +243,10 @@ static void test_dv81_on_xdr(void)
     assert([rec.headline isEqualToString:@"Playing in HDR10"]);
     assert([rec.reason containsString:@"Dolby Vision and HDR10 look the same"]);
     assert(rec.warning == nil);
+    assert(rec.brightnessAdvice == nil);
+    assert(!rec.brightnessAdviceSuggestsBright);
 
-    /* Less headroom (4 x 203 = 812 cd/m²): the master must be tone-mapped,
+    /* Less headroom (4 x 100 = 400 cd/m²): the master must be tone-mapped,
      * which is where Dolby Vision's per-scene metadata pays off. */
     MacLCDisplayInfo *dimmerDisplay = [[MacLCDisplayInfo alloc]
         initWithLocalizedName:@"Liquid Retina XDR"
@@ -219,12 +255,18 @@ static void test_dv81_on_xdr(void)
             referenceHeadroom:0.0
                     onBattery:NO
                  lowPowerMode:NO];
+    assert(dimmerDisplay.panelPeakNits == 1600);
+    assert(dimmerDisplay.contentPeakNits == 400.0);
+    assert(dimmerDisplay.sdrWhiteNits == 400.0);
+
     MacLCHDRRecommendation *dimmerRec = [MacLCHDRAdvisor recommendationForStream:stream
                                                                          display:dimmerDisplay
                                                                      processable:processable];
     assert(dimmerRec.presentation == MacLCHDRPresentationDolbyVision);
     assert(dimmerRec.pictureMode == MacLCHDRPictureModeBalanced);
     assert([dimmerRec.headline isEqualToString:@"Playing in Dolby Vision"]);
+    assert(dimmerRec.brightnessAdvice != nil);
+    assert(dimmerRec.brightnessAdviceSuggestsBright);
 
     NSString *why = nil;
     assert([rec isPresentationSelectable:MacLCHDRPresentationDolbyVision reason:&why]);
@@ -261,6 +303,9 @@ static void test_dv5_not_processable(void)
             referenceHeadroom:0.0
                     onBattery:NO
                  lowPowerMode:NO];
+
+    assert(display.panelPeakNits == 0);
+    assert(display.sdrWhiteNits == 0.0);
 
     // Pipeline cannot process Dolby Vision
     NSSet<NSNumber *> *processable = [NSSet setWithObjects:
@@ -313,6 +358,9 @@ static void test_hdr10_4000nit_on_sdr(void)
                     onBattery:NO
                  lowPowerMode:NO];
 
+    assert(display.panelPeakNits == 0);
+    assert(display.sdrWhiteNits == 0.0);
+
     NSSet<NSNumber *> *processable = [NSSet setWithObjects:
         @(MacLCHDRPresentationHDR10),
         @(MacLCHDRPresentationSDR),
@@ -354,6 +402,9 @@ static void test_hlg(void)
                     onBattery:NO
                  lowPowerMode:NO];
 
+    assert(display.panelPeakNits == 1600);
+    assert(display.sdrWhiteNits == 200.0);
+
     NSSet<NSNumber *> *processable = [NSSet setWithObjects:
         @(MacLCHDRPresentationHLG),
         @(MacLCHDRPresentationSDR),
@@ -390,10 +441,14 @@ static void test_hdr10plus(void)
     MacLCDisplayInfo *display = [[MacLCDisplayInfo alloc]
         initWithLocalizedName:@"Pro Display XDR"
             potentialHeadroom:16.0
-              currentHeadroom:8.0
+              currentHeadroom:12.0
             referenceHeadroom:0.0
                     onBattery:NO
                  lowPowerMode:NO];
+
+    assert(display.panelPeakNits == 1600);
+    assert(display.contentPeakNits == 1200.0);
+    assert(fabs(display.sdrWhiteNits - (1600.0 / 12.0)) < 0.001);
 
     NSSet<NSNumber *> *processable = [NSSet setWithObjects:
         @(MacLCHDRPresentationHDR10Plus),
@@ -405,9 +460,11 @@ static void test_hdr10plus(void)
                                                                    display:display
                                                                processable:processable];
 
-    /* 1,000-nit master, 1,624 cd/m² of headroom: HDR10+ adds nothing here. */
+    /* 1,000-nit master, 1,200 cd/m² of headroom (12 x 100 cd/m²): HDR10+ adds nothing here. */
     assert(rec.presentation == MacLCHDRPresentationHDR10);
     assert([rec.reason containsString:@"HDR10+ and HDR10 look the same"]);
+    assert(rec.brightnessAdvice == nil);
+    assert(!rec.brightnessAdviceSuggestsBright);
 
     /* A 4,000-nit master has to be tone-mapped: HDR10+ is recommended. */
     MacLCHDRStreamInfo *brightStream = [[MacLCHDRStreamInfo alloc]
@@ -460,6 +517,11 @@ static void test_battery_advice(void)
                     onBattery:YES
                  lowPowerMode:NO];
 
+    assert(display.panelPeakNits == 1600);
+    assert(display.effectiveHeadroom == 2.0);
+    assert(display.contentPeakNits == 200.0);
+    assert(display.sdrWhiteNits == 800.0);
+
     NSSet<NSNumber *> *processable = [NSSet setWithObjects:
         @(MacLCHDRPresentationHDR10),
         @(MacLCHDRPresentationSDR),
@@ -471,6 +533,7 @@ static void test_battery_advice(void)
 
     assert(rec.brightnessAdvice != nil);
     assert([rec.brightnessAdvice isEqualToString:@"HDR brightness is limited on battery. Connect power for full brightness."]);
+    assert(!rec.brightnessAdviceSuggestsBright);
 }
 
 static void test_sdr_stream_on_edr(void)
@@ -501,6 +564,9 @@ static void test_sdr_stream_on_edr(void)
                     onBattery:NO
                  lowPowerMode:NO];
 
+    assert(display.panelPeakNits == 1600);
+    assert(display.sdrWhiteNits == 200.0);
+
     NSSet<NSNumber *> *processable = [NSSet setWithObjects:
         @(MacLCHDRPresentationSDR),
         nil];
@@ -513,6 +579,7 @@ static void test_sdr_stream_on_edr(void)
     assert(rec.pictureMode == MacLCHDRPictureModeAuto);
     assert(rec.brightnessAdvice != nil);
     assert([rec.brightnessAdvice isEqualToString:@"This display can play standard video in HDR for extra sparkle in highlights."]);
+    assert(!rec.brightnessAdviceSuggestsBright);
 }
 
 static void test_additional_rules(void)
@@ -550,8 +617,11 @@ static void test_additional_rules(void)
     MacLCHDRRecommendation *recLPM = [MacLCHDRAdvisor recommendationForStream:stream
                                                                       display:displayLPM
                                                                   processable:processable];
+    assert(displayLPM.panelPeakNits == 1600);
+    assert(displayLPM.sdrWhiteNits == 100.0);
     assert(recLPM.brightnessAdvice != nil);
     assert([recLPM.brightnessAdvice isEqualToString:@"Low Power Mode limits HDR brightness."]);
+    assert(!recLPM.brightnessAdviceSuggestsBright);
 
     // Reference mode warning
     MacLCDisplayInfo *displayRef = [[MacLCDisplayInfo alloc]
@@ -561,6 +631,9 @@ static void test_additional_rules(void)
             referenceHeadroom:2.5
                     onBattery:NO
                  lowPowerMode:NO];
+
+    assert(displayRef.panelPeakNits == 1600);
+    assert(displayRef.sdrWhiteNits == 100.0);
 
     MacLCHDRRecommendation *recRef = [MacLCHDRAdvisor recommendationForStream:stream
                                                                       display:displayRef
@@ -593,13 +666,18 @@ static void test_additional_rules(void)
                     onBattery:NO
                  lowPowerMode:NO];
 
+    assert(displayLimited.panelPeakNits == 200);
+    assert(displayLimited.contentPeakNits == 200.0);
+    assert(displayLimited.sdrWhiteNits == 100.0);
+
     MacLCHDRRecommendation *recBright = [MacLCHDRAdvisor recommendationForStream:streamHighLuma
                                                                          display:displayLimited
                                                                      processable:processable];
     assert(recBright.brightnessAdvice != nil);
     assert([recBright.brightnessAdvice isEqualToString:@"A brighter picture is available — it clips some highlight detail and uses more power."]);
+    assert(recBright.brightnessAdviceSuggestsBright);
 
-    // DV reason with knownPanelPeakNits formatting
+    // DV reason with panelPeakNits formatting
     MacLCHDRStreamInfo *streamDVHighLuma = [[MacLCHDRStreamInfo alloc]
         initWithTransfer:TRANSFER_FUNC_SMPTE_ST2084
                primaries:COLOR_PRIMARIES_BT2020
@@ -624,6 +702,10 @@ static void test_additional_rules(void)
                     onBattery:NO
                  lowPowerMode:NO];
 
+    assert(displayXDRLowCurrent.panelPeakNits == 1600);
+    assert(displayXDRLowCurrent.contentPeakNits == 400.0);
+    assert(displayXDRLowCurrent.sdrWhiteNits == 400.0);
+
     NSSet<NSNumber *> *dvProcessable = [NSSet setWithObjects:
         @(MacLCHDRPresentationDolbyVision),
         @(MacLCHDRPresentationHDR10),
@@ -642,6 +724,8 @@ static void test_additional_rules(void)
     NSString *expectedPeak = [NSString stringWithFormat:@"%@-nit",
                               [formatter stringFromNumber:@1600]];
     assert([recDVReason.reason containsString:expectedPeak]);
+    assert(recDVReason.brightnessAdvice != nil);
+    assert(recDVReason.brightnessAdviceSuggestsBright);
 }
 
 int main(int argc, const char * argv[])

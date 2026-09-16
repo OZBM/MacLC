@@ -26,14 +26,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  * Shows what a picture mode does to the video, the way a colourist would
- * look at it: content luminance on the horizontal axis, what the display
- * shows on the vertical one (both logarithmic, in cd/m²).
+ * look at it: content luminance on the horizontal axis, the light the panel
+ * emits on the vertical one (both logarithmic, in cd/m²).
  *
  * - the shaded band is the range the video actually uses (up to its peak);
- * - the dashed line is the display's peak;
+ * - the dashed line is the panel's peak;
  * - the dotted diagonal is "shown exactly as mastered";
  * - the solid curve is the selected mode, evaluated with the same
- *   maclc_tonemap.h code the video output runs, so the plot is the truth.
+ *   maclc_tonemap.h code the video output runs and scaled by the current
+ *   SDR white (MACLC_HDR_REFERENCE_WHITE is shown there), so the plot is
+ *   the truth.
  *
  * Changing the mode or the peaks morphs the curve (emphasized motion, or an
  * instant change under Reduce Motion).
@@ -41,13 +43,19 @@ NS_ASSUME_NONNULL_BEGIN
 @interface MacLCToneCurveView : NSView
 
 @property (nonatomic) MacLCHDRPictureMode pictureMode;
+/** The video's peak, in cd/m². */
 @property (nonatomic) CGFloat contentPeakNits;
+/** The brightest video luminance the display shows now (MacLCDisplayInfo). */
 @property (nonatomic) CGFloat displayPeakNits;
+/** SDR white at the current brightness, in cd/m²; 0 plots video luminance
+ *  instead of panel light. */
+@property (nonatomic) CGFloat sdrWhiteNits;
 
-/** Updates all three at once with a single morph. */
+/** Updates everything at once with a single morph. */
 - (void)setPictureMode:(MacLCHDRPictureMode)mode
        contentPeakNits:(CGFloat)contentPeak
        displayPeakNits:(CGFloat)displayPeak
+          sdrWhiteNits:(CGFloat)sdrWhite
               animated:(BOOL)animated;
 
 @end

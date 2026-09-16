@@ -38,6 +38,7 @@
 
 @property (nonatomic, readonly, copy) NSArray<NSNumber *> *availablePresentations;
 @property (nonatomic, readonly, copy) NSSet<NSNumber *> *processablePresentations;
+@property (nonatomic, readwrite) BOOL brightnessAdviceSuggestsBright;
 
 @end
 
@@ -104,6 +105,7 @@
     MacLCHDRPictureMode pickedPictureMode = MacLCHDRPictureModeAuto;
     NSString *warning = nil;
     NSString *brightnessAdvice = nil;
+    BOOL suggestsBright = NO;
     NSString *reason = @"";
     /* YES when the master is brighter than what the display can show right
      * now, i.e. some tone mapping has to happen (5 % tolerance so a 1,000-nit
@@ -165,7 +167,7 @@
     }
 
     // Rule d: picture mode:
-    // Accurate when display.contentPeakNits >= stream.contentPeakNits, else Balanced; HLG/SDR -> Auto (not applicable).
+    // Accurate when the master fits under display.contentPeakNits, else Balanced; HLG/SDR -> Auto (not applicable).
     if (pickedPresentation == MacLCHDRPresentationHLG || pickedPresentation == MacLCHDRPresentationSDR) {
         pickedPictureMode = MacLCHDRPictureModeAuto;
     } else {
@@ -203,10 +205,10 @@
         } else if (pickedPictureMode == MacLCHDRPictureModeAccurate) {
             reason = _NS("Your display is brighter than the master, so you see exactly what the colourist saw.");
         } else if (pickedPresentation == MacLCHDRPresentationDolbyVision) {
-            if (display.knownPanelPeakNits > 0) {
+            if (display.panelPeakNits > 0) {
                 NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
                 formatter.numberStyle = NSNumberFormatterDecimalStyle;
-                NSString *formatted = [formatter stringFromNumber:@(display.knownPanelPeakNits)];
+                NSString *formatted = [formatter stringFromNumber:@(display.panelPeakNits)];
                 NSString *peakStr = [NSString stringWithFormat:@"%@-nit", formatted];
                 reason = [NSString stringWithFormat:_NS("Best for this display — adjusts every scene to its %@ peak."), peakStr];
             } else {
@@ -230,8 +232,9 @@
         brightnessAdvice = _NS("Low Power Mode limits HDR brightness.");
     } else if (stream.transfer == TRANSFER_FUNC_SMPTE_ST2084 &&
                pickedPictureMode != MacLCHDRPictureModeBright &&
-               (stream.contentPeakNits > display.contentPeakNits)) {
+               contentNeedsToneMapping) {
         brightnessAdvice = _NS("A brighter picture is available — it clips some highlight detail and uses more power.");
+        suggestsBright = YES;
     } else if (!stream.isHDR && display.supportsHDR) {
         brightnessAdvice = _NS("This display can play standard video in HDR for extra sparkle in highlights.");
     }
@@ -241,14 +244,17 @@
         warning = _NS("Your display uses a reference mode; brightness is fixed by that preset.");
     }
 
-    return [[MacLCHDRRecommendation alloc] initWithPresentation:pickedPresentation
-                                                    pictureMode:pickedPictureMode
-                                                       headline:headline
-                                                         reason:reason
-                                               brightnessAdvice:brightnessAdvice
-                                                        warning:warning
-                                          availablePresentations:stream.availablePresentations
-                                        processablePresentations:processablePresentations];
+    MacLCHDRRecommendation *recommendation =
+        [[MacLCHDRRecommendation alloc] initWithPresentation:pickedPresentation
+                                                 pictureMode:pickedPictureMode
+                                                    headline:headline
+                                                      reason:reason
+                                            brightnessAdvice:brightnessAdvice
+                                                     warning:warning
+                                       availablePresentations:stream.availablePresentations
+                                     processablePresentations:processablePresentations];
+    recommendation.brightnessAdviceSuggestsBright = suggestsBright;
+    return recommendation;
 }
 
 @end

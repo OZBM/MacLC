@@ -26,6 +26,8 @@
 #import "hdr/MacLCTradeoffMeterView.h"
 #import "theme/MacLCDesign.h"
 
+#include "../../video_output/apple/maclc_hdr_vars.h"
+
 static const CGFloat kPanelWidth = 380.0;
 static const CGFloat kPanelPadding = 16.0;
 
@@ -513,7 +515,9 @@ static __weak NSView *gAnchor;
                  && active != MacLCHDRPresentationSDR
                  && active != MacLCHDRPresentationHLG;
     MacLCHDRPictureMode mode = controller.activePictureMode;
-    const BOOL needsToneMapping = stream.contentPeakNits > display.contentPeakNits;
+    const BOOL needsToneMapping =
+        maclc_hdr_needs_tone_mapping((float)stream.contentPeakNits,
+                                     (float)display.contentPeakNits);
     if (mode == MacLCHDRPictureModeAuto)
         mode = needsToneMapping ? MacLCHDRPictureModeBalanced : MacLCHDRPictureModeAccurate;
     _pictureControl.enabled = pq;
@@ -524,6 +528,7 @@ static __weak NSView *gAnchor;
         [_curveView setPictureMode:mode
                    contentPeakNits:stream.contentPeakNits
                    displayPeakNits:display.contentPeakNits
+                      sdrWhiteNits:display.sdrWhiteNits
                           animated:animated];
         [_meterView showPictureMode:mode needsToneMapping:needsToneMapping animated:animated];
         _pictureSummary.stringValue = MacLCHDRPictureModeSummary(mode);
@@ -542,14 +547,15 @@ static __weak NSView *gAnchor;
     _displayName.stringValue = display.localizedName.length ? display.localizedName : _NS("Display");
     if (!display.supportsHDR)
         _displayDetail.stringValue = _NS("Standard range. MacLC converts HDR video for this display.");
-    else if (display.knownPanelPeakNits > 0)
-        _displayDetail.stringValue = [NSString stringWithFormat:_NS("HDR · up to %@ nits"),
-                                      [formatter stringFromNumber:@(display.knownPanelPeakNits)]];
     else
-        _displayDetail.stringValue = [NSString stringWithFormat:_NS("HDR · about %@ nits available right now"),
-                                      [formatter stringFromNumber:@(display.contentPeakNits)]];
-    _adviceLabel.stringValue = recommendation.brightnessAdvice ?: @"";
-    _adviceRow.hidden = recommendation.brightnessAdvice == nil;
+        _displayDetail.stringValue = [NSString stringWithFormat:_NS("HDR · up to %@ nits · white at %@ nits"),
+                                      [formatter stringFromNumber:@(display.panelPeakNits)],
+                                      [formatter stringFromNumber:@(display.sdrWhiteNits)]];
+    NSString *advice = recommendation.brightnessAdvice;
+    if (recommendation.brightnessAdviceSuggestsBright && pq && mode == MacLCHDRPictureModeBright)
+        advice = nil;
+    _adviceLabel.stringValue = advice ?: @"";
+    _adviceRow.hidden = advice == nil;
 
     /* Footer */
     [_cardPolicyPopup selectItemAtIndex:(NSInteger)controller.cardPolicy];

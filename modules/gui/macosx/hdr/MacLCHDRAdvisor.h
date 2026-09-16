@@ -38,6 +38,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly, copy) NSString *headline;
 @property (nonatomic, readonly, copy) NSString *reason;
 @property (nonatomic, readonly, copy, nullable) NSString *brightnessAdvice;
+/** YES when brightnessAdvice points at the Bright picture mode, so a surface
+ *  showing Bright already can leave it out. */
+@property (nonatomic, readonly) BOOL brightnessAdviceSuggestsBright;
 @property (nonatomic, readonly, copy, nullable) NSString *warning;
 
 - (BOOL)isPresentationSelectable:(MacLCHDRPresentation)p reason:(NSString * _Nullable * _Nullable)why;
