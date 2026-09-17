@@ -382,6 +382,22 @@ static VLCMain *sharedInstance = nil;
 
     [_libraryWindowController.window makeKeyAndOrderFront:nil];
 
+    /* Developer hook for headless UI checks: MACLC_DEBUG_OPEN_BROWSE=home opens
+     * the Browse section at launch, MACLC_DEBUG_OPEN_BROWSE=file:///dir/ opens
+     * that folder in it. Unset, it does nothing. */
+    const char * const debugOpenBrowse = getenv("MACLC_DEBUG_OPEN_BROWSE");
+    if (debugOpenBrowse != NULL) {
+        NSString * const target = [NSString stringWithUTF8String:debugOpenBrowse];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;
+            if ([target hasPrefix:@"file://"]) {
+                [window browseFolderByMrl:target];
+            } else {
+                [window goToBrowseSection:window];
+            }
+        });
+    }
+
     if (!_p_intf)
         return;
 
