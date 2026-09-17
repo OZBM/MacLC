@@ -38,6 +38,7 @@
 /* Requests (string options + live vout variables) */
 #define MACLC_HDR_VAR_PRESENTATION "maclc-hdr-presentation"
 #define MACLC_HDR_VAR_PICTURE      "maclc-hdr-picture"
+#define MACLC_HDR_VAR_HLG          "maclc-hdr-hlg"
 
 /* Hint written by the GUI on the vout's parent before it restarts the video
  * track: the stream carries Dolby Vision even if its container did not say so
@@ -73,6 +74,11 @@ maclc_hdr_peak_for_headroom(float headroom)
 {
     return MACLC_HDR_REFERENCE_WHITE * (headroom > 1.0f ? headroom : 1.0f);
 }
+
+/* The nominal peak luminance, in cd/m2, of the BT.2100 reference display,
+ * whose OOTF puts HLG reference white (75 % signal) at 203 cd/m2, where PQ
+ * masters put theirs (ITU-R BT.2408). */
+#define MACLC_HDR_HLG_PEAK         1000.0f
 
 /* maclc-hdr-caps bits */
 #define MACLC_HDR_CAP_DOVI_SEEN        0x1 /* a Dolby Vision RPU reached this vout */
@@ -145,6 +151,42 @@ maclc_hdr_presentation_name(enum maclc_hdr_presentation p)
         case MACLC_HDR_PRESENTATION_SDR:         return "sdr";
         default:                                 return "auto";
     }
+}
+
+/* How HLG is rendered before it is shown like PQ, with
+ * MACLC_HDR_REFERENCE_WHITE at SDR white. */
+enum maclc_hdr_hlg
+{
+    /* For the MACLC_HDR_HLG_PEAK reference display: HLG white is as bright as
+     * a PQ master's, and highlights the display cannot reach are rolled off
+     * like PQ's. */
+    MACLC_HDR_HLG_REFERENCE = 0,
+    /* For a display as bright as the one showing it (100 cd/m2 times its
+     * headroom): no roll-off, and a calmer picture, close to the system's. */
+    MACLC_HDR_HLG_DISPLAY,
+};
+
+static inline enum maclc_hdr_hlg
+maclc_hdr_hlg_parse(const char *s)
+{
+    if (s != NULL && !strcmp(s, "display")) return MACLC_HDR_HLG_DISPLAY;
+    return MACLC_HDR_HLG_REFERENCE;
+}
+
+static inline const char *
+maclc_hdr_hlg_name(enum maclc_hdr_hlg m)
+{
+    return m == MACLC_HDR_HLG_DISPLAY ? "display" : "reference";
+}
+
+/* The nominal peak luminance, in cd/m2, HLG is rendered for in that mode on a
+ * display that shows video up to display_peak without clipping. */
+static inline float
+maclc_hdr_hlg_peak(enum maclc_hdr_hlg m, float display_peak)
+{
+    if (m == MACLC_HDR_HLG_DISPLAY && display_peak > 0.0f)
+        return display_peak;
+    return MACLC_HDR_HLG_PEAK;
 }
 
 static inline enum maclc_hdr_picture

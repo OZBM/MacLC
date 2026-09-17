@@ -31,6 +31,8 @@
 /* kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange, spelled as a literal for
  * the same reason codec/vt_utils.c does: it postdates our minimum SDK. */
 #define VLC_CVPX_FORMAT_P010 ((OSType)'x420')
+/* kCVPixelFormatType_64RGBAHalf */
+#define VLC_CVPX_FORMAT_RGBA_HALF ((OSType)'RGhA')
 
 /* CoreVideo's 10-bit bi-planar formats are P010-style: the ten bits sit at the
  * top of a 16-bit word. Reading such a plane as a normalised 16-bit texture
@@ -46,8 +48,8 @@ enum vlc_hdr_expander_matrix
 
 enum vlc_hdr_expander_transfer
 {
-    VLC_HDR_TRANSFER_GAMMA = 0,
-    VLC_HDR_TRANSFER_SRGB = 1,
+    VLC_HDR_TRANSFER_POWER = 0,      /* pow(v, gamma) */
+    VLC_HDR_TRANSFER_BT709_OETF = 1, /* inverse of the BT.709 OETF */
 };
 
 /* Must stay byte-for-byte identical to the Metal struct of the same name. */
@@ -56,7 +58,6 @@ typedef struct
     float gamut[12];       /* three float4 rows, only .xyz is read */
     float boost;
     float knee;
-    float sdrWhiteNits;
     float inputScale;
     float gamma;
     /* De-quantisation of the source: (sample - offset) * scale. The four-character
@@ -67,12 +68,11 @@ typedef struct
     float chromaScale;
     uint32_t matrix;
     uint32_t transferMode;
-    uint32_t chromaW;
-    uint32_t chromaH;
-    uint32_t padding[3];
+    uint32_t width;
+    uint32_t height;
 } VLCHDRExpandUniforms;
 
-_Static_assert(sizeof(VLCHDRExpandUniforms) == 112,
+_Static_assert(sizeof(VLCHDRExpandUniforms) == 96,
                "the uniform block must keep the layout the Metal struct has");
 
 /* Linear RGB -> linear BT.2020 RGB, derived from the CIE chromaticities of each
@@ -121,7 +121,6 @@ static NSString * const kVLCHDRExpanderShaderSource =
     @"    float4 gamut[3];\n"
     @"    float  boost;\n"
     @"    float  knee;\n"
-    @"    float  sdrWhiteNits;\n"
     @"    float  inputScale;\n"
     @"    float  gamma;\n"
     @"    float  lumaOffset;\n"
@@ -130,15 +129,9 @@ static NSString * const kVLCHDRExpanderShaderSource =
     @"    float  chromaScale;\n"
     @"    uint   matrix;\n"
     @"    uint   transferMode;\n"
-    @"    uint   chromaW;\n"
-    @"    uint   chromaH;\n"
-    @"    uint   padding[3];\n"
+    @"    uint   width;\n"
+    @"    uint   height;\n"
     @"};\n"
-    @"\n"
-    @"static inline uint2 clamp_read(uint2 c, uint w, uint h)\n"
-    @"{\n"
-    @"    return uint2(min(c.x, w - 1u), min(c.y, h - 1u));\n"
-    @"}\n"
     @"\n"
     @"static inline float3 ycbcr_to_rgb(float3 ycc, constant VLCHDRExpandUniforms &u)\n"
     @"{\n"
@@ -157,16 +150,16 @@ static NSString * const kVLCHDRExpanderShaderSource =
     @"    return float3(r, g, b);\n"
     @"}\n"
     @"\n"
-    @"// Electro-optical transfer function of the source, normalised so that 1.0 is\n"
-    @"// SDR diffuse white. The sign is carried through so that slightly negative,\n"
+    @"// Linear light of the source as the compositor shows it, normalised so that\n"
+    @"// 1.0 is SDR white. The sign is carried through so that slightly negative,\n"
     @"// out-of-gamut values survive the gamut matrix that follows.\n"
     @"static inline float eotf_channel(float v, constant VLCHDRExpandUniforms &u)\n"
     @"{\n"
     @"    float a = fabs(v);\n"
     @"    float s = (v < 0.0f) ? -1.0f : 1.0f;\n"
     @"    if (u.transferMode == 1u)\n"
-    @"        return s * ((a <= 0.04045f) ? (a / 12.92f)\n"
-    @"                                    : pow((a + 0.055f) / 1.055f, 2.4f));\n"
+    @"        return s * ((a < 0.081f) ? (a / 4.5f)\n"
+    @"                                 : pow((a + 0.099f) / 1.099f, 1.0f / 0.45f));\n"
     @"    return s * pow(a, u.gamma);\n"
     @"}\n"
     @"\n"
@@ -175,7 +168,7 @@ static NSString * const kVLCHDRExpanderShaderSource =
     @"// Everything at or below the knee comes back untouched, so shadows and\n"
     @"// mid-tones look exactly as they do in SDR. Above it a quadratic takes over,\n"
     @"// chosen so that its value and its slope match the identity at the knee and so\n"
-    @"// that SDR white lands on `boost`. The curve is applied to the largest\n"
+    @"// that full-scale white lands on `boost`. The curve is applied to the largest\n"
     @"// component and the triplet is scaled by the result, which leaves hue and\n"
     @"// saturation alone.\n"
     @"static inline float3 expand_highlights(float3 rgb, float boost, float knee)\n"
@@ -190,28 +183,17 @@ static NSString * const kVLCHDRExpanderShaderSource =
     @"        float t = (m - knee) / span;\n"
     @"        e = m + (boost - 1.0f) * t * t;\n"
     @"    } else {\n"
-    @"        // Carry on with the slope the curve has at SDR white so that\n"
+    @"        // Carry on with the slope the curve has at full-scale white so that\n"
     @"        // super-white excursions stay monotonic instead of flattening.\n"
     @"        e = boost + (m - 1.0f) * (1.0f + 2.0f * (boost - 1.0f) / span);\n"
     @"    }\n"
     @"    return rgb * (e / m);\n"
     @"}\n"
     @"\n"
-    @"static inline float pq_encode(float nits)\n"
-    @"{\n"
-    @"    const float m1 = 0.1593017578125f;\n"
-    @"    const float m2 = 78.84375f;\n"
-    @"    const float c1 = 0.8359375f;\n"
-    @"    const float c2 = 18.8515625f;\n"
-    @"    const float c3 = 18.6875f;\n"
-    @"\n"
-    @"    float y  = clamp(nits * (1.0f / 10000.0f), 0.0f, 1.0f);\n"
-    @"    float ym = pow(y, m1);\n"
-    @"    return pow((c1 + c2 * ym) / (1.0f + c3 * ym), m2);\n"
-    @"}\n"
-    @"\n"
-    @"static inline float3 sdr_to_pq2020(float3 nonLinear,\n"
-    @"                                   constant VLCHDRExpandUniforms &u)\n"
+    @"// Linear BT.2020 light with SDR white at 1.0, which is how the compositor\n"
+    @"// shows an extended-range linear picture.\n"
+    @"static inline float3 sdr_to_linear2020(float3 nonLinear,\n"
+    @"                                       constant VLCHDRExpandUniforms &u)\n"
     @"{\n"
     @"    float3 lin = float3(eotf_channel(nonLinear.r, u),\n"
     @"                        eotf_channel(nonLinear.g, u),\n"
@@ -222,92 +204,43 @@ static NSString * const kVLCHDRExpanderShaderSource =
     @"    float3 wide = float3(dot(u.gamut[0].xyz, lin),\n"
     @"                         dot(u.gamut[1].xyz, lin),\n"
     @"                         dot(u.gamut[2].xyz, lin));\n"
-    @"    wide = max(wide, 0.0f);\n"
-    @"\n"
-    @"    return float3(pq_encode(wide.r * u.sdrWhiteNits),\n"
-    @"                  pq_encode(wide.g * u.sdrWhiteNits),\n"
-    @"                  pq_encode(wide.b * u.sdrWhiteNits));\n"
-    @"}\n"
-    @"\n"
-    @"// 10-bit limited-range codes. CoreVideo's x420 keeps them in the top ten bits\n"
-    @"// of a 16-bit word, so the code is rounded first and then scaled by 64/65535,\n"
-    @"// which lands exactly on that word and leaves the bottom six bits clear.\n"
-    @"static inline float encode_luma10(float3 pq)\n"
-    @"{\n"
-    @"    float y = 0.2627f * pq.r + 0.6780f * pq.g + 0.0593f * pq.b;\n"
-    @"    return round(clamp(y * 876.0f + 64.0f, 0.0f, 1023.0f)) * (64.0f / 65535.0f);\n"
-    @"}\n"
-    @"\n"
-    @"static inline float2 encode_chroma10(float3 pq)\n"
-    @"{\n"
-    @"    float y  = 0.2627f * pq.r + 0.6780f * pq.g + 0.0593f * pq.b;\n"
-    @"    float cb = (pq.b - y) / 1.8814f;\n"
-    @"    float cr = (pq.r - y) / 1.4746f;\n"
-    @"    return round(float2(clamp(cb * 896.0f + 512.0f, 0.0f, 1023.0f),\n"
-    @"                        clamp(cr * 896.0f + 512.0f, 0.0f, 1023.0f)))\n"
-    @"           * (64.0f / 65535.0f);\n"
+    @"    return max(wide, 0.0f);\n"
     @"}\n"
     @"\n"
     @"kernel void vlc_hdr_expand_biplanar(\n"
-    @"    texture2d<float, access::read>  inLuma    [[texture(0)]],\n"
-    @"    texture2d<float, access::read>  inChroma  [[texture(1)]],\n"
-    @"    texture2d<float, access::write> outLuma   [[texture(2)]],\n"
-    @"    texture2d<float, access::write> outChroma [[texture(3)]],\n"
-    @"    constant VLCHDRExpandUniforms&  u         [[buffer(0)]],\n"
+    @"    texture2d<float, access::read>   inLuma   [[texture(0)]],\n"
+    @"    texture2d<float, access::sample> inChroma [[texture(1)]],\n"
+    @"    texture2d<float, access::write>  outRGBA  [[texture(2)]],\n"
+    @"    constant VLCHDRExpandUniforms&   u        [[buffer(0)]],\n"
     @"    uint2 gid [[thread_position_in_grid]])\n"
     @"{\n"
-    @"    if (gid.x >= u.chromaW || gid.y >= u.chromaH)\n"
+    @"    if (gid.x >= u.width || gid.y >= u.height)\n"
     @"        return;\n"
     @"\n"
-    @"    float2 cc = inChroma.read(clamp_read(gid, inChroma.get_width(),\n"
-    @"                                         inChroma.get_height())).rg;\n"
-    @"    cc *= u.inputScale;\n"
+    @"    constexpr sampler bilinear(coord::normalized, address::clamp_to_edge,\n"
+    @"                               filter::linear);\n"
+    @"    float y = inLuma.read(gid).r * u.inputScale;\n"
+    @"    // 4:2:0 chroma, co-sited with the left luma sample and centred between\n"
+    @"    // the two rows (the H.264, HEVC and BT.709 default).\n"
+    @"    float2 pos = float2((float(gid.x) * 0.5f + 0.5f) / float(inChroma.get_width()),\n"
+    @"                        (float(gid.y) * 0.5f + 0.25f) / float(inChroma.get_height()));\n"
+    @"    float2 cc = inChroma.sample(bilinear, pos).rg * u.inputScale;\n"
     @"\n"
-    @"    float3 sum = float3(0.0f);\n"
-    @"    for (uint i = 0u; i < 4u; ++i) {\n"
-    @"        uint2 lc = gid * 2u + uint2(i & 1u, i >> 1u);\n"
-    @"        float y = inLuma.read(clamp_read(lc, inLuma.get_width(),\n"
-    @"                                         inLuma.get_height())).r;\n"
-    @"        y *= u.inputScale;\n"
-    @"\n"
-    @"        float3 pq = sdr_to_pq2020(ycbcr_to_rgb(float3(y, cc.x, cc.y), u), u);\n"
-    @"        sum += pq;\n"
-    @"\n"
-    @"        if (lc.x < outLuma.get_width() && lc.y < outLuma.get_height())\n"
-    @"            outLuma.write(float4(encode_luma10(pq), 0.0f, 0.0f, 1.0f), lc);\n"
-    @"    }\n"
-    @"\n"
-    @"    float2 c = encode_chroma10(sum * 0.25f);\n"
-    @"    if (gid.x < outChroma.get_width() && gid.y < outChroma.get_height())\n"
-    @"        outChroma.write(float4(c.x, c.y, 0.0f, 1.0f), gid);\n"
+    @"    float3 rgb = sdr_to_linear2020(ycbcr_to_rgb(float3(y, cc.x, cc.y), u), u);\n"
+    @"    outRGBA.write(float4(rgb, 1.0f), gid);\n"
     @"}\n"
     @"\n"
     @"kernel void vlc_hdr_expand_rgba(\n"
-    @"    texture2d<float, access::read>  inRGBA    [[texture(0)]],\n"
-    @"    texture2d<float, access::write> outLuma   [[texture(1)]],\n"
-    @"    texture2d<float, access::write> outChroma [[texture(2)]],\n"
-    @"    constant VLCHDRExpandUniforms&  u         [[buffer(0)]],\n"
+    @"    texture2d<float, access::read>  inRGBA  [[texture(0)]],\n"
+    @"    texture2d<float, access::write> outRGBA [[texture(1)]],\n"
+    @"    constant VLCHDRExpandUniforms&  u       [[buffer(0)]],\n"
     @"    uint2 gid [[thread_position_in_grid]])\n"
     @"{\n"
-    @"    if (gid.x >= u.chromaW || gid.y >= u.chromaH)\n"
+    @"    if (gid.x >= u.width || gid.y >= u.height)\n"
     @"        return;\n"
     @"\n"
-    @"    float3 sum = float3(0.0f);\n"
-    @"    for (uint i = 0u; i < 4u; ++i) {\n"
-    @"        uint2 lc = gid * 2u + uint2(i & 1u, i >> 1u);\n"
-    @"        float3 rgb = inRGBA.read(clamp_read(lc, inRGBA.get_width(),\n"
-    @"                                            inRGBA.get_height())).rgb;\n"
-    @"\n"
-    @"        float3 pq = sdr_to_pq2020(rgb, u);\n"
-    @"        sum += pq;\n"
-    @"\n"
-    @"        if (lc.x < outLuma.get_width() && lc.y < outLuma.get_height())\n"
-    @"            outLuma.write(float4(encode_luma10(pq), 0.0f, 0.0f, 1.0f), lc);\n"
-    @"    }\n"
-    @"\n"
-    @"    float2 c = encode_chroma10(sum * 0.25f);\n"
-    @"    if (gid.x < outChroma.get_width() && gid.y < outChroma.get_height())\n"
-    @"        outChroma.write(float4(c.x, c.y, 0.0f, 1.0f), gid);\n"
+    @"    float3 rgb = sdr_to_linear2020(inRGBA.read(gid).rgb, u);\n"
+    @"    outRGBA.write(float4(rgb, 1.0f), gid);\n"
     @"}\n";
 
 @interface VLCHDRExpander ()
@@ -500,7 +433,7 @@ static NSString * const kVLCHDRExpanderShaderSource =
 
     NSDictionary *attributes = @{
         (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey:
-            @(VLC_CVPX_FORMAT_P010),
+            @(VLC_CVPX_FORMAT_RGBA_HALF),
         (__bridge NSString *)kCVPixelBufferWidthKey: @(width),
         (__bridge NSString *)kCVPixelBufferHeightKey: @(height),
         (__bridge NSString *)kCVPixelBufferIOSurfacePropertiesKey: @{},
@@ -518,7 +451,7 @@ static NSString * const kVLCHDRExpanderShaderSource =
                                 (__bridge CFDictionaryRef)attributes,
                                 &_pool);
     if (err != kCVReturnSuccess) {
-        msg_Err(_obj, "SDR to HDR: could not create a %zux%zu 10-bit pool (%d)",
+        msg_Err(_obj, "SDR to HDR: could not create a %zux%zu half-float pool (%d)",
                 width, height, (int)err);
         _pool = NULL;
         return NO;
@@ -542,27 +475,34 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
     default:                 uniforms->matrix = VLC_HDR_MATRIX_BT709;  break;
     }
 
+    /* The curve the compositor itself applies to an SDR picture of that kind
+     * carrying the tags cvpx_attach_mapped_color_properties() gives this
+     * transfer (measured on macOS 26 through AVSampleBufferDisplayLayer; it
+     * differs between Y'CbCr and RGB pictures): linearising the same way is
+     * what keeps everything below the knee exactly as plain SDR playback
+     * shows it. */
+    uniforms->transferMode = VLC_HDR_TRANSFER_POWER;
     switch (fmt->transfer) {
     case TRANSFER_FUNC_SRGB:
-        uniforms->transferMode = VLC_HDR_TRANSFER_SRGB;
-        uniforms->gamma = 2.2f;
+        /* kCVImageBufferTransferFunction_UseGamma with a 2.2 gamma level:
+         * a 2.0 power law for Y'CbCr; RGB (not measured, no decoder hands
+         * it over) is assumed to take the level as it is. */
+        uniforms->gamma = isRGB ? 2.2f : 2.0f;
         break;
     case TRANSFER_FUNC_BT470_M:
-        uniforms->transferMode = VLC_HDR_TRANSFER_GAMMA;
-        uniforms->gamma = 2.2f;
-        break;
     case TRANSFER_FUNC_BT470_BG:
-        uniforms->transferMode = VLC_HDR_TRANSFER_GAMMA;
-        uniforms->gamma = 2.8f;
+        /* Code points CoreVideo has no name for */
+        uniforms->gamma = isRGB ? 1.961f : 1.8f;
         break;
     case TRANSFER_FUNC_LINEAR:
-        uniforms->transferMode = VLC_HDR_TRANSFER_GAMMA;
         uniforms->gamma = 1.0f;
         break;
     default:
-        /* BT.1886, the display transfer function BT.709 video is graded on. */
-        uniforms->transferMode = VLC_HDR_TRANSFER_GAMMA;
-        uniforms->gamma = 2.4f;
+        /* BT.709 and untagged video (tagged BT.709 on the way out): Apple's
+         * 1.961 video gamma for Y'CbCr, the exact inverse OETF for RGB */
+        if (isRGB)
+            uniforms->transferMode = VLC_HDR_TRANSFER_BT709_OETF;
+        uniforms->gamma = 1.961f;
         break;
     }
 
@@ -576,9 +516,12 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
     }
 
     for (int row = 0; row < 3; ++row) {
-        uniforms->gamut[row * 4 + 0] = gamut[row * 3 + 0];
-        uniforms->gamut[row * 4 + 1] = gamut[row * 3 + 1];
-        uniforms->gamut[row * 4 + 2] = gamut[row * 3 + 2];
+        /* Every row sums to one (same white point); dividing out the rounding
+         * of the table keeps greys exactly grey, SDR white included. */
+        const float sum = gamut[row * 3] + gamut[row * 3 + 1] + gamut[row * 3 + 2];
+        uniforms->gamut[row * 4 + 0] = gamut[row * 3 + 0] / sum;
+        uniforms->gamut[row * 4 + 1] = gamut[row * 3 + 1] / sum;
+        uniforms->gamut[row * 4 + 2] = gamut[row * 3 + 2] / sum;
         uniforms->gamut[row * 4 + 3] = 0.0f;
     }
 
@@ -634,8 +577,7 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
     id<MTLTexture> inLuma = nil;
     id<MTLTexture> inChroma = nil;
     id<MTLTexture> inRGBA = nil;
-    id<MTLTexture> outLuma = nil;
-    id<MTLTexture> outChroma = nil;
+    id<MTLTexture> outRGBA = nil;
     id<MTLCommandBuffer> commandBuffer = nil;
     id<MTLComputeCommandEncoder> encoder = nil;
     id<MTLComputePipelineState> pipeline =
@@ -669,22 +611,17 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
             goto failure;
     }
 
-    outLuma = [self textureFromBuffer:output
+    outRGBA = [self textureFromBuffer:output
                                 plane:0
-                          pixelFormat:MTLPixelFormatR16Unorm
+                          pixelFormat:MTLPixelFormatRGBA16Float
                              writable:YES];
-    outChroma = [self textureFromBuffer:output
-                                  plane:1
-                            pixelFormat:MTLPixelFormatRG16Unorm
-                               writable:YES];
-    if (outLuma == nil || outChroma == nil)
+    if (outRGBA == nil)
         goto failure;
 
     VLCHDRExpandUniforms uniforms;
     memset(&uniforms, 0, sizeof(uniforms));
     uniforms.boost = boost;
     uniforms.knee = self.knee;
-    uniforms.sdrWhiteNits = VLC_HDR_EXPANDER_SDR_WHITE_NITS;
     uniforms.inputScale = is10Bit ? VLC_HDR_10BIT_READ_SCALE : 1.0f;
 
     /* Black, white and the neutral chroma point, in the normalised scale the
@@ -719,10 +656,8 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
 
     FillSourceColorimetry(&uniforms, fmt, isRGB);
 
-    const uint32_t chromaW = (uint32_t)((width + 1) / 2);
-    const uint32_t chromaH = (uint32_t)((height + 1) / 2);
-    uniforms.chromaW = chromaW;
-    uniforms.chromaH = chromaH;
+    uniforms.width = (uint32_t)MIN(width, outRGBA.width);
+    uniforms.height = (uint32_t)MIN(height, outRGBA.height);
 
     commandBuffer = [_queue commandBuffer];
     encoder = [commandBuffer computeCommandEncoder];
@@ -732,13 +667,11 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
     [encoder setComputePipelineState:pipeline];
     if (isRGB) {
         [encoder setTexture:inRGBA atIndex:0];
-        [encoder setTexture:outLuma atIndex:1];
-        [encoder setTexture:outChroma atIndex:2];
+        [encoder setTexture:outRGBA atIndex:1];
     } else {
         [encoder setTexture:inLuma atIndex:0];
         [encoder setTexture:inChroma atIndex:1];
-        [encoder setTexture:outLuma atIndex:2];
-        [encoder setTexture:outChroma atIndex:3];
+        [encoder setTexture:outRGBA atIndex:2];
     }
     [encoder setBytes:&uniforms length:sizeof(uniforms) atIndex:0];
 
@@ -749,16 +682,15 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
         groupHeight /= 2;
 
     [encoder dispatchThreadgroups:
-                 MTLSizeMake((chromaW + groupWidth - 1) / groupWidth,
-                             (chromaH + groupHeight - 1) / groupHeight, 1)
+                 MTLSizeMake((uniforms.width + groupWidth - 1) / groupWidth,
+                             (uniforms.height + groupHeight - 1) / groupHeight, 1)
             threadsPerThreadgroup:MTLSizeMake(groupWidth, groupHeight, 1)];
     [encoder endEncoding];
 
 #if TARGET_OS_OSX
     if (_storageMode == MTLStorageModeManaged) {
         id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
-        [blit synchronizeResource:outLuma];
-        [blit synchronizeResource:outChroma];
+        [blit synchronizeResource:outRGBA];
         [blit endEncoding];
     }
 #endif
@@ -773,7 +705,16 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
         goto failure;
     }
 
-    _lastPeakNits = VLC_HDR_EXPANDER_SDR_WHITE_NITS * boost;
+    /* Linear light, SDR white at 1.0, BT.2020 primaries: the compositor shows
+     * it as it is and converts the primaries to the display. */
+    CVBufferSetAttachment(output, kCVImageBufferColorPrimariesKey,
+                          kCVImageBufferColorPrimaries_ITU_R_2020,
+                          kCVAttachmentMode_ShouldPropagate);
+    CVBufferSetAttachment(output, kCVImageBufferTransferFunctionKey,
+                          kCVImageBufferTransferFunction_Linear,
+                          kCVAttachmentMode_ShouldPropagate);
+
+    _lastExpansion = boost;
     return output;
 
 failure:

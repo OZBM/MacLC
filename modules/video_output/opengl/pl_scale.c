@@ -40,6 +40,7 @@
 #include <libplacebo/gpu.h>
 #include <libplacebo/opengl.h>
 #include <libplacebo/renderer.h>
+#include <libplacebo/shaders/colorspace.h>
 #include <libplacebo/shaders/custom.h>
 
 #include "video_output/opengl/gl_api.h"
@@ -117,6 +118,14 @@ struct sys
     vlc_object_t *hdr_vars;          /* object holding the request variables */
     _Atomic int presentation;
     _Atomic int picture;
+    _Atomic int hlg;
+    bool hlg_live;                   /* hdr_vars holds MACLC_HDR_VAR_HLG */
+    /* HLG rendered for another display than this one: libplacebo renders it
+     * for hlg_fit_src and the output hook fits it to hlg_fit_dst (cd/m2) */
+    bool hlg_fit;
+    float hlg_fit_src;
+    float hlg_fit_dst;
+    pl_shader_obj hlg_fit_state;
     int applied_picture;
     int applied_presentation;
     bool applied_fits;
@@ -184,6 +193,20 @@ ScaleToReferenceWhite(void *priv, const struct pl_hook_params *params)
 
     if (params->color.transfer != PL_COLOR_TRC_LINEAR)
         return (struct pl_hook_res) { .output = PL_HOOK_SIG_NONE };
+
+    if (sys->hlg_fit)
+    {
+        /* HLG rendered for another display (see Draw()): fit it to this one
+         * with the tone mapping a PQ master of that peak gets. */
+        struct pl_color_space src = params->color;
+        struct pl_color_space dst = params->color;
+        src.hdr.max_luma = sys->hlg_fit_src;
+        dst.hdr.max_luma = sys->hlg_fit_dst;
+        pl_shader_color_map_ex(params->sh, &sys->color_map,
+                               pl_color_map_args(.src = src, .dst = dst,
+                                                 .prelinearized = true,
+                                                 .state = &sys->hlg_fit_state));
+    }
 
     /* libplacebo accepts a colour hook at this stage only from a shader
      * sized like the picture, and its direct sampling leaves the size open:
@@ -390,6 +413,7 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         vlc_placebo_HdrMetadata(meta->hdr10plus, &frame_in->color.hdr);
 
     const bool sdr_target = presentation == MACLC_HDR_PRESENTATION_SDR;
+    bool linear = false;
     if (sys->is_hdr_target)
     {
         float headroom = atomic_load_explicit(&sys->headroom, memory_order_relaxed);
@@ -403,7 +427,7 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
          * libplacebo's linear output (203 cd/m2 at 1.0) onto it. A surface in
          * SDR mode gets the video tone mapped to reference white, sRGB
          * encoded. */
-        const bool linear = !sdr_target && sys->filter_float_out
+        linear = !sdr_target && sys->filter_float_out
             && atomic_load_explicit(&sys->edr_linear, memory_order_relaxed);
         if (!sys->user_target_trc)
             frame_out->color.transfer = linear ? PL_COLOR_TRC_LINEAR
@@ -426,8 +450,32 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
         }
     }
 
-    UpdateToneMapping(sys, presentation, frame_in->color.hdr.max_luma,
-                      frame_out->color.hdr.max_luma);
+    /* HLG is rendered for the display the user picked, as the native output
+     * does (maclc_hdr_hlg_peak()). libplacebo always renders HLG for the peak
+     * of its target (pl_color_space_infer_map), so for another display that
+     * display becomes the target, and ScaleToReferenceWhite() fits the result
+     * to this one. Tone mapping to SDR keeps libplacebo's choice. */
+    float tone_src = frame_in->color.hdr.max_luma;
+    float tone_dst = frame_out->color.hdr.max_luma;
+    sys->hlg_fit = false;
+    if (linear && !use_rpu && frame_in->color.transfer == PL_COLOR_TRC_HLG)
+    {
+        const int hlg = atomic_load_explicit(&sys->hlg, memory_order_relaxed);
+        const float display_peak = frame_out->color.hdr.max_luma;
+        const float hlg_peak =
+            maclc_hdr_hlg_peak((enum maclc_hdr_hlg) hlg, display_peak);
+        if (hlg_peak != display_peak)
+        {
+            frame_out->color.hdr.max_luma = hlg_peak;
+            sys->hlg_fit = true;
+            sys->hlg_fit_src = hlg_peak;
+            sys->hlg_fit_dst = display_peak;
+        }
+        tone_src = hlg_peak;
+        tone_dst = display_peak;
+    }
+
+    UpdateToneMapping(sys, presentation, tone_src, tone_dst);
 
     /* Report what reached us and what we render, for the interface. */
     int64_t caps = sys->seen_caps;
@@ -562,6 +610,18 @@ PictureCallback(vlc_object_t *obj, const char *var,
     return VLC_SUCCESS;
 }
 
+static int
+HLGCallback(vlc_object_t *obj, const char *var,
+            vlc_value_t oldval, vlc_value_t newval, void *data)
+{
+    (void) var; (void) oldval;
+    struct sys *sys = data;
+    const int hlg = maclc_hdr_hlg_parse(newval.psz_string);
+    atomic_store_explicit(&sys->hlg, hlg, memory_order_relaxed);
+    msg_Dbg(obj, "HLG rendering requested: %s", maclc_hdr_hlg_name(hlg));
+    return VLC_SUCCESS;
+}
+
 /* The display module creates the request and state variables on the video
  * output object; find it by walking up from the filter. */
 static vlc_object_t *
@@ -594,8 +654,12 @@ Close(struct vlc_gl_filter *filter)
                         PresentationCallback, sys);
         var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PICTURE,
                         PictureCallback, sys);
+        if (sys->hlg_live)
+            var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_HLG,
+                            HLGCallback, sys);
     }
 
+    pl_shader_obj_destroy(&sys->hlg_fit_state);
     pl_renderer_destroy(&sys->pl_renderer);
     pl_opengl_destroy(&sys->pl_opengl);
     pl_log_destroy(&sys->pl_log);
@@ -703,6 +767,9 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
     request = var_InheritString(filter, MACLC_HDR_VAR_PICTURE);
     atomic_init(&sys->picture, maclc_hdr_picture_parse(request));
     free(request);
+    request = var_InheritString(filter, MACLC_HDR_VAR_HLG);
+    atomic_init(&sys->hlg, maclc_hdr_hlg_parse(request));
+    free(request);
     sys->applied_picture = -1;
     sys->applied_presentation = -1;
     sys->published_caps = -1;
@@ -713,6 +780,10 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
                         PresentationCallback, sys);
         var_AddCallback(sys->hdr_vars, MACLC_HDR_VAR_PICTURE,
                         PictureCallback, sys);
+        sys->hlg_live = var_Type(sys->hdr_vars, MACLC_HDR_VAR_HLG) != 0;
+        if (sys->hlg_live)
+            var_AddCallback(sys->hdr_vars, MACLC_HDR_VAR_HLG,
+                            HLGCallback, sys);
     }
 
     /* Initialize frame_in.planes */
@@ -877,6 +948,9 @@ error:
                         PresentationCallback, sys);
         var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_PICTURE,
                         PictureCallback, sys);
+        if (sys->hlg_live)
+            var_DelCallback(sys->hdr_vars, MACLC_HDR_VAR_HLG,
+                            HLGCallback, sys);
     }
     pl_renderer_destroy(&sys->pl_renderer);
     pl_opengl_destroy(&sys->pl_opengl);

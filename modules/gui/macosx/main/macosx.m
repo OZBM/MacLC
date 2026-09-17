@@ -225,6 +225,20 @@ static const char *const hdr_picture_list_text[] = {
     N_("Automatic"), N_("Accurate"), N_("Balanced"), N_("Bright"),
 };
 
+#define HDR_HLG_TEXT N_("HLG brightness")
+#define HDR_HLG_LONGTEXT N_( \
+    "How HLG video is rendered. Like HDR10 renders it for a 1,000-nit " \
+    "reference display, so its whites are as bright as those of HDR10 video " \
+    "and highlights your display cannot reach are rolled off. Fitted to the " \
+    "display renders it for your display's current brightness: calmer, and " \
+    "close to how macOS itself shows HLG.")
+static const char *const hdr_hlg_list[] = {
+    "reference", "display",
+};
+static const char *const hdr_hlg_list_text[] = {
+    N_("Like HDR10"), N_("Fitted to the display"),
+};
+
 #define HDR_CARD_TEXT N_("Show HDR options when a video opens")
 #define HDR_CARD_LONGTEXT N_( \
     "Show a short card with the HDR format, MacLC's recommendation and the " \
@@ -250,6 +264,9 @@ static const char *const hdr_card_list_text[] = {
         add_string("maclc-hdr-picture", "auto",
                    HDR_PICTURE_TEXT, HDR_PICTURE_LONGTEXT)
             change_string_list(hdr_picture_list, hdr_picture_list_text)
+        add_string("maclc-hdr-hlg", "reference",
+                   HDR_HLG_TEXT, HDR_HLG_LONGTEXT)
+            change_string_list(hdr_hlg_list, hdr_hlg_list_text)
         add_integer("maclc-hdr-card", 1, HDR_CARD_TEXT, HDR_CARD_LONGTEXT)
             change_integer_list(hdr_card_list, hdr_card_list_text)
         add_bool("maclc-hdr-dovi-hint", false,

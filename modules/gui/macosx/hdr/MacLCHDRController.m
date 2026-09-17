@@ -188,6 +188,14 @@ static const NSTimeInterval kPollInterval = 1.0;
     return m;
 }
 
+- (BOOL)hlgFittedToDisplay
+{
+    char *value = var_InheritString(getIntf(), MACLC_HDR_VAR_HLG);
+    const BOOL fitted = maclc_hdr_hlg_parse(value) == MACLC_HDR_HLG_DISPLAY;
+    free(value);
+    return fitted;
+}
+
 #pragma mark - Environment
 
 - (VLCPlayerController *)playerController

@@ -539,6 +539,7 @@ static void Close(vout_display_t *vd)
     if (sys != NULL && sys->hdr_vars != NULL) {
         var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_PRESENTATION);
         var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_PICTURE);
+        var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_HLG);
         var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_CAPS);
         var_Destroy(sys->hdr_vars, MACLC_HDR_VAR_ACTIVE);
         sys->hdr_vars = NULL;
@@ -782,6 +783,8 @@ static int Open (vout_display_t *vd,
             var_Create(hv, MACLC_HDR_VAR_PRESENTATION,
                        VLC_VAR_STRING | VLC_VAR_DOINHERIT);
             var_Create(hv, MACLC_HDR_VAR_PICTURE,
+                       VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+            var_Create(hv, MACLC_HDR_VAR_HLG,
                        VLC_VAR_STRING | VLC_VAR_DOINHERIT);
             var_Create(hv, MACLC_HDR_VAR_CAPS, VLC_VAR_INTEGER);
             var_SetInteger(hv, MACLC_HDR_VAR_CAPS,

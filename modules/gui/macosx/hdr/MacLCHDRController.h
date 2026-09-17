@@ -83,6 +83,10 @@ extern NSString * const MacLCHDRCardShouldAppearNotification;
 /** Card policy, read from and written to the "maclc-hdr-card" option. */
 @property (nonatomic) MacLCHDRCardPolicy cardPolicy;
 
+/** YES when HLG is rendered for the display's current brightness, NO when it
+ *  is rendered like HDR10 (maclc-hdr-hlg, set in the HDR settings). */
+@property (readonly) BOOL hlgFittedToDisplay;
+
 /**
  * Render the current video with @p presentation. Writes the live
  * "maclc-hdr-presentation" variable on the video output(s) and, when the

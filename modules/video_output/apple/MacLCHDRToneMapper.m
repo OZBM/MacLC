@@ -1,5 +1,5 @@
 /*****************************************************************************
- * MacLCHDRToneMapper.m: GPU picture-mode tone mapping of PQ video
+ * MacLCHDRToneMapper.m: GPU picture-mode tone mapping of PQ and HLG video
  *****************************************************************************
  * Copyright (C) 2026 Hazen Studio
  *
@@ -23,6 +23,7 @@
 #endif
 
 #import "MacLCHDRToneMapper.h"
+#include "maclc_hdr_vars.h"
 
 #import <Metal/Metal.h>
 #import <IOSurface/IOSurface.h>
@@ -52,15 +53,25 @@ typedef struct
     uint32_t identity;
     uint32_t width;
     uint32_t height;
+    uint32_t transfer;   /* MACLC_TONE_SOURCE_PQ or MACLC_TONE_SOURCE_HLG */
+    float hlgPeak;
+    float hlgGamma;
+    uint32_t padding;
 } MacLCToneMapUniforms;
 
-_Static_assert(sizeof(MacLCToneMapUniforms) == 48,
+_Static_assert(sizeof(MacLCToneMapUniforms) == 64,
                "the uniform block must keep the layout the Metal struct has");
 
+enum
+{
+    MACLC_TONE_SOURCE_PQ = 0,
+    MACLC_TONE_SOURCE_HLG = 1,
+};
+
 /*
- * The kernel. maclc_tone_map_pq() below is a line-by-line port of the function
- * of the same name in maclc_tonemap.h, which is the tested reference: keep the
- * two in step when either changes.
+ * The kernel. maclc_tone_map_pq() and the HLG functions below are
+ * line-by-line ports of the functions of the same names in maclc_tonemap.h,
+ * which is the tested reference: keep them in step when either changes.
  */
 static NSString * const kMacLCToneMapperShaderSource =
     @"#include <metal_stdlib>\n"
@@ -79,6 +90,10 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"    uint  identity;\n"
     @"    uint  width;\n"
     @"    uint  height;\n"
+    @"    uint  transfer;\n"
+    @"    float hlgPeak;\n"
+    @"    float hlgGamma;\n"
+    @"    uint  padding;\n"
     @"};\n"
     @"\n"
     @"constant float PQ_M1 = 2610.0f / 16384.0f;\n"
@@ -104,6 +119,28 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"    if (nits >= 10000.0f) return 1.0f;\n"
     @"    float ym1 = pow(nits / 10000.0f, PQ_M1);\n"
     @"    return clamp(pow((PQ_C1 + PQ_C2 * ym1) / (1.0f + PQ_C3 * ym1), PQ_M2), 0.0f, 1.0f);\n"
+    @"}\n"
+    @"\n"
+    @"constant float HLG_A = 0.17883277f;\n"
+    @"constant float HLG_B = 0.28466892f;\n"
+    @"constant float HLG_C = 0.55991073f;\n"
+    @"\n"
+    @"static inline float hlg_to_scene(float e)\n"
+    @"{\n"
+    @"    if (e <= 0.0f) return 0.0f;\n"
+    @"    e = min(e, 1.0f);\n"
+    @"    if (e <= 0.5f) return e * e / 3.0f;\n"
+    @"    return (exp((e - HLG_C) / HLG_A) + HLG_B) / 12.0f;\n"
+    @"}\n"
+    @"\n"
+    @"/* BT.2100 HLG OOTF for a display of nominal peak hlgPeak and zero\n"
+    @" * black level, in cd/m2. */\n"
+    @"static inline float3 hlg_to_nits(float3 v, constant MacLCToneMapUniforms &u)\n"
+    @"{\n"
+    @"    float3 s = float3(hlg_to_scene(v.r), hlg_to_scene(v.g), hlg_to_scene(v.b));\n"
+    @"    float ys = dot(s, float3(0.2627f, 0.6780f, 0.0593f));\n"
+    @"    if (ys <= 0.0f) return float3(0.0f);\n"
+    @"    return s * (u.hlgPeak * pow(ys, u.hlgGamma - 1.0f));\n"
     @"}\n"
     @"\n"
     @"static inline float bt2390_hermite(float E1, float ks, float maxLum)\n"
@@ -180,12 +217,11 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"    return clamp(float3(r, g, b), 0.0f, 1.0f);\n"
     @"}\n"
     @"\n"
-    @"/* Curve on the largest component, linear triplet scaled by the result:\n"
-    @" * brightness changes, hue and saturation do not. Returns cd/m2. */\n"
-    @"static inline float3 tone_map_nits(float3 pq, constant MacLCToneMapUniforms &u)\n"
+    @"/* Curve on the largest component (m, in PQ), linear triplet scaled by the\n"
+    @" * result: brightness changes, hue and saturation do not. Takes and returns\n"
+    @" * cd/m2. */\n"
+    @"static inline float3 tone_map_nits(float3 nits, float m, constant MacLCToneMapUniforms &u)\n"
     @"{\n"
-    @"    float3 nits = float3(pq_to_nits(pq.r), pq_to_nits(pq.g), pq_to_nits(pq.b));\n"
-    @"    float m = max(max(pq.r, pq.g), pq.b);\n"
     @"    float inNits = max(max(nits.r, nits.g), nits.b);\n"
     @"    if (m <= 0.0f || inNits <= 0.0f) return float3(0.0f);\n"
     @"    return nits * (pq_to_nits(maclc_tone_map_pq(u, m)) / inNits);\n"
@@ -210,8 +246,17 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"                        (float(gid.y) * 0.5f + 0.25f) / float(inChroma.get_height()));\n"
     @"    float2 c = inChroma.sample(bilinear, pos).rg * u.inputScale;\n"
     @"\n"
-    @"    float3 nits = tone_map_nits(decode_ycc(y, c), u);\n"
-    @"    outRGBA.write(float4(nits * u.outputScale, 1.0f), gid);\n"
+    @"    float3 v = decode_ycc(y, c);\n"
+    @"    float3 nits;\n"
+    @"    float m;\n"
+    @"    if (u.transfer == 1u) {\n"
+    @"        nits = hlg_to_nits(v, u);\n"
+    @"        m = nits_to_pq(max(max(nits.r, nits.g), nits.b));\n"
+    @"    } else {\n"
+    @"        nits = float3(pq_to_nits(v.r), pq_to_nits(v.g), pq_to_nits(v.b));\n"
+    @"        m = max(max(v.r, v.g), v.b);\n"
+    @"    }\n"
+    @"    outRGBA.write(float4(tone_map_nits(nits, m, u) * u.outputScale, 1.0f), gid);\n"
     @"}\n";
 
 @interface MacLCHDRToneMapper ()
@@ -394,10 +439,14 @@ static NSString * const kMacLCToneMapperShaderSource =
 }
 
 - (nullable CVPixelBufferRef)toneMapPixelBuffer:(CVPixelBufferRef)pixelBuffer
+                                       transfer:(video_transfer_func_t)transfer
+                                        hlgPeak:(float)hlgPeak
                                          params:(const maclc_tone_params *)params
                                  referenceWhite:(float)referenceWhite
 {
     if (pixelBuffer == NULL || params == NULL || referenceWhite <= 0.0f)
+        return NULL;
+    if (transfer != TRANSFER_FUNC_SMPTE_ST2084 && transfer != TRANSFER_FUNC_HLG)
         return NULL;
     if (![self canToneMapPixelFormat:CVPixelBufferGetPixelFormatType(pixelBuffer)])
         return NULL;
@@ -445,6 +494,10 @@ static NSString * const kMacLCToneMapperShaderSource =
     uniforms.identity = params->identity ? 1u : 0u;
     uniforms.width = (uint32_t)MIN(width, outRGBA.width);
     uniforms.height = (uint32_t)MIN(height, outRGBA.height);
+    uniforms.transfer = (transfer == TRANSFER_FUNC_HLG) ? MACLC_TONE_SOURCE_HLG
+                                                        : MACLC_TONE_SOURCE_PQ;
+    uniforms.hlgPeak = (hlgPeak > 0.0f) ? hlgPeak : MACLC_HDR_HLG_PEAK;
+    uniforms.hlgGamma = maclc_hlg_system_gamma(uniforms.hlgPeak);
 
     commandBuffer = [_queue commandBuffer];
     encoder = [commandBuffer computeCommandEncoder];

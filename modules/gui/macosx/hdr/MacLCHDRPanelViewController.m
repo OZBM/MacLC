@@ -533,7 +533,9 @@ static __weak NSView *gAnchor;
         [_meterView showPictureMode:mode needsToneMapping:needsToneMapping animated:animated];
         _pictureSummary.stringValue = MacLCHDRPictureModeSummary(mode);
     } else if (active == MacLCHDRPresentationHLG) {
-        _pictureSummary.stringValue = _NS("HLG adapts to your display on its own, so there is nothing to tune.");
+        _pictureSummary.stringValue = controller.hlgFittedToDisplay
+            ? _NS("HLG is rendered for your display's current brightness. Settings › HDR can make it as bright as HDR10.")
+            : _NS("HLG is shown as bright as HDR10 and fitted to your display automatically. Settings › HDR can calm it.");
     } else if (active == MacLCHDRPresentationSDR) {
         _pictureSummary.stringValue = _NS("Picture modes apply to HDR presentations. Standard range is shown as is.");
     } else {

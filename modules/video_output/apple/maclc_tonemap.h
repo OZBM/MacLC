@@ -92,6 +92,63 @@ static inline float maclc_nits_to_pq(float nits)
     return p;
 }
 
+/*
+ * ITU-R BT.2100 HLG (ARIB STD-B67) constants
+ *
+ * a = 0.17883277
+ * b = 1 - 4a            = 0.28466892
+ * c = 0.5 - a * ln(4a)  = 0.55991073
+ */
+#define MACLC_HLG_A 0.17883277f
+#define MACLC_HLG_B 0.28466892f
+#define MACLC_HLG_C 0.55991073f
+
+/**
+ * BT.2100 HLG inverse OETF: maps a normalised HLG signal e in [0, 1] to
+ * normalised scene light in [0, 1].
+ */
+static inline float maclc_hlg_to_scene(float e)
+{
+    if (e <= 0.0f)
+        return 0.0f;
+    if (e > 1.0f)
+        e = 1.0f;
+    if (e <= 0.5f)
+        return e * e / 3.0f;
+    return (expf((e - MACLC_HLG_C) / MACLC_HLG_A) + MACLC_HLG_B) / 12.0f;
+}
+
+/**
+ * System gamma of the BT.2100 HLG OOTF for a display of nominal peak
+ * luminance peak_nits (cd/m²): 1.2 for the 1,000 cd/m² reference display.
+ * BT.2100 defines 1.2 + 0.42 * log10(peak / 1000) for 400..2000 cd/m²; like
+ * libplacebo (measured through MacLC's OpenGL output), the formula is used at
+ * any peak and never goes below 1.0, so both outputs render HLG alike.
+ */
+static inline float maclc_hlg_system_gamma(float peak_nits)
+{
+    if (peak_nits <= 0.0f)
+        return 1.0f;
+    float gamma = 1.2f + 0.42f * log10f(peak_nits / 1000.0f);
+    return gamma > 1.0f ? gamma : 1.0f;
+}
+
+/**
+ * BT.2100 HLG reference OOTF with a zero black level: turns normalised scene
+ * light (BT.2020 R, G, B in [0, 1]) into display light in cd/m² for a display
+ * of nominal peak luminance peak_nits, in place.
+ */
+static inline void maclc_hlg_scene_to_nits(float rgb[3], float peak_nits)
+{
+    float ys = 0.2627f * rgb[0] + 0.6780f * rgb[1] + 0.0593f * rgb[2];
+    float k = 0.0f;
+    if (ys > 0.0f)
+        k = peak_nits * powf(ys, maclc_hlg_system_gamma(peak_nits) - 1.0f);
+    rgb[0] *= k;
+    rgb[1] *= k;
+    rgb[2] *= k;
+}
+
 /**
  * Picture tone mapping modes:
  * - MACLC_TONE_ACCURATE: faithful to the master, late knee at 90 % of display peak

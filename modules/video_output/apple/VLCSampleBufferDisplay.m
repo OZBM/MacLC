@@ -555,9 +555,10 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) VLCHDRExpander *hdrExpander;
     @property (nonatomic) BOOL hdrExpanderFailed;
     @property (nonatomic) BOOL hasLoggedExpansion;
-    /* MacLC HDR presentation and picture mode (maclc_hdr_vars.h) */
+    /* MacLC HDR presentation, picture mode and HLG rendering (maclc_hdr_vars.h) */
     @property (atomic) int maclcPresentation;
     @property (atomic) int maclcPicture;
+    @property (atomic) int maclcHLG;
     @property (nonatomic) MacLCHDRToneMapper *toneMapper;
     @property (nonatomic) BOOL toneMapperFailed;
     @property (atomic) BOOL hasLoggedToneMap;
@@ -1346,7 +1347,7 @@ shouldInheritContentsScale:(CGFloat)newScale
 }
 
 /* Same lazy construction as the expander: the kernel is only compiled once a
- * PQ picture actually needs a picture mode that is not the identity. */
+ * PQ or HLG picture actually needs it. */
 - (MacLCHDRToneMapper *)toneMapper
 {
     if (_toneMapper == nil && !_toneMapperFailed) {
@@ -1407,6 +1408,18 @@ static int MacLCPictureCallback(vlc_object_t *obj, char const *name,
     sys.hasLoggedToneMap = NO;
     msg_Dbg(sys.vd, "HDR picture mode requested: %s",
             maclc_hdr_picture_name(sys.maclcPicture));
+    return VLC_SUCCESS;
+}
+
+static int MacLCHLGCallback(vlc_object_t *obj, char const *name,
+                            vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.maclcHLG = maclc_hdr_hlg_parse(cur.psz_string);
+    sys.hasLoggedToneMap = NO;
+    msg_Dbg(sys.vd, "HLG rendering requested: %s",
+            maclc_hdr_hlg_name(sys.maclcHLG));
     return VLC_SUCCESS;
 }
 
@@ -1501,11 +1514,14 @@ static void Close(vout_display_t *vd)
                         MacLCPresentationCallback, (__bridge void*)sys);
         var_DelCallback(vout_obj, MACLC_HDR_VAR_PICTURE,
                         MacLCPictureCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_HDR_VAR_HLG,
+                        MacLCHLGCallback, (__bridge void*)sys);
         var_Destroy(vout_obj, "macosx-sdr-to-hdr");
         var_Destroy(vout_obj, "macosx-sdr-to-hdr-boost");
         var_Destroy(vout_obj, "macosx-hdr-mode");
         var_Destroy(vout_obj, MACLC_HDR_VAR_PRESENTATION);
         var_Destroy(vout_obj, MACLC_HDR_VAR_PICTURE);
+        var_Destroy(vout_obj, MACLC_HDR_VAR_HLG);
         var_Destroy(vout_obj, MACLC_HDR_VAR_CAPS);
         var_Destroy(vout_obj, MACLC_HDR_VAR_ACTIVE);
     }
@@ -1620,11 +1636,12 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         caps |= MACLC_HDR_CAP_HDR10PLUS_SEEN;
     sys.seenCaps = caps;
 
-    /* Dynamic range expansion. An SDR picture is re-encoded as PQ / BT.2020 so
-     * that the compositor lights up the display's extended range for it; the
-     * expansion itself leaves everything below the knee alone, so mid-tones
-     * look the same as they did in SDR. Only worth doing when the layer is
-     * asking for HDR in the first place. */
+    /* Dynamic range expansion. An SDR picture is turned into extended-range
+     * linear light with SDR white at 1.0, which the compositor shows as it is:
+     * SDR white stays exactly where plain SDR playback puts it, and the
+     * expansion itself leaves everything below the knee alone, so only the
+     * highlights change. Only worth doing when the layer is asking for HDR in
+     * the first place. */
     if (sys.sdrToHdr && !source_is_hdr && (hdr_mode == 0 || hdr_mode == 1)) {
         VLCHDRExpander *expander = sys.hdrExpander;
         if (expander != nil) {
@@ -1638,26 +1655,21 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
                 CVPixelBufferRelease(pixelBuffer);
                 pixelBuffer = expanded;
 
-                render_fmt.transfer = TRANSFER_FUNC_SMPTE_ST2084;
+                render_fmt.transfer = TRANSFER_FUNC_LINEAR;
                 render_fmt.primaries = COLOR_PRIMARIES_BT2020;
                 render_fmt.space = COLOR_SPACE_BT2020;
-                render_fmt.color_range = COLOR_RANGE_LIMITED;
-
-                /* Describe the volume that was actually generated, so the
-                 * compositor has no reason to tone-map the expansion back
-                 * down. Luminances are in 0.0001 cd/m^2, per ST 2086. */
-                const float peak_nits = expander.lastPeakNits;
+                render_fmt.color_range = COLOR_RANGE_FULL;
+                /* Mastering metadata would only matter to a PQ picture's tone
+                 * curve; a linear one has none. */
                 memset(&render_fmt.mastering, 0, sizeof(render_fmt.mastering));
-                render_fmt.mastering.max_luminance =
-                    (uint32_t)(peak_nits * 10000.0f);
-                render_fmt.mastering.min_luminance = 1;
-                render_fmt.lighting.MaxCLL = (uint16_t)peak_nits;
-                render_fmt.lighting.MaxFALL = (uint16_t)(peak_nits / 4.0f);
+                memset(&render_fmt.lighting, 0, sizeof(render_fmt.lighting));
 
                 if (!sys.hasLoggedExpansion) {
-                    msg_Dbg(vd, "SDR to HDR: expanding to %.0f cd/m^2 "
-                                "(boost %.2f, display headroom %.2f)",
-                            peak_nits, sys.sdrToHdrBoost, sys.currentHeadroom);
+                    msg_Dbg(vd, "SDR to HDR: white expanded to %.2fx SDR white "
+                                "(boost %.2f, display headroom %.2f), "
+                                "linear light from the GPU",
+                            expander.lastExpansion, sys.sdrToHdrBoost,
+                            sys.currentHeadroom);
                     sys.hasLoggedExpansion = YES;
                 }
             }
@@ -1665,24 +1677,35 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
     }
 
     /* MacLC picture modes. The compositor runs its own video tone curve on
-     * every PQ picture it is given - one that dims mid-tones to keep room for
-     * highlights - but shows extended-range linear pictures untouched. A PQ
-     * picture is therefore mapped with MacLC's curve (maclc_tonemap.h) into
-     * what the display can show right now, and handed over as linear light
-     * with MACLC_HDR_REFERENCE_WHITE at the display's SDR white: the anchor
-     * macOS itself gives PQ, and the one the OpenGL output uses too. */
-    if (source_is_pq && (hdr_mode == 0 || hdr_mode == 1) &&
+     * every PQ or HLG picture it is given - one that dims mid-tones to keep
+     * room for highlights - but shows extended-range linear pictures
+     * untouched. Such a picture is therefore mapped with MacLC's curve
+     * (maclc_tonemap.h) into what the display can show right now, and handed
+     * over as linear light with MACLC_HDR_REFERENCE_WHITE at the display's SDR
+     * white: the anchor macOS itself gives PQ, and the one the OpenGL output
+     * uses too. HLG is first rendered for the display the user picked
+     * (maclc_hdr_hlg_peak()): the reference display, which puts its white
+     * where PQ masters put theirs, or this display, which needs no roll-off. */
+    if ((source_is_pq || source_is_hlg) && (hdr_mode == 0 || hdr_mode == 1) &&
         sys.currentHeadroom > 1.0) {
+        const float display_peak =
+            maclc_hdr_peak_for_headroom((float)sys.currentHeadroom);
+        const enum maclc_hdr_hlg hlg_mode = (enum maclc_hdr_hlg)sys.maclcHLG;
+        const float hlg_peak = maclc_hdr_hlg_peak(hlg_mode, display_peak);
         float content_peak = 0.0f;
-        if (render_fmt.lighting.MaxCLL > 0)
+        if (source_is_hlg)
+            content_peak = hlg_peak;
+        else if (render_fmt.lighting.MaxCLL > 0)
             content_peak = (float)render_fmt.lighting.MaxCLL;
         else if (render_fmt.mastering.max_luminance > 0)
             content_peak = render_fmt.mastering.max_luminance / 10000.0f;
-        const float display_peak =
-            maclc_hdr_peak_for_headroom((float)sys.currentHeadroom);
 
+        /* Picture modes are for PQ; HLG always gets the automatic choice. */
+        const enum maclc_hdr_picture picture =
+            source_is_hlg ? MACLC_HDR_PICTURE_AUTO
+                          : (enum maclc_hdr_picture)sys.maclcPicture;
         maclc_tone_mode mode;
-        switch (sys.maclcPicture) {
+        switch (picture) {
             case MACLC_HDR_PICTURE_ACCURATE: mode = MACLC_TONE_ACCURATE; break;
             case MACLC_HDR_PICTURE_BALANCED: mode = MACLC_TONE_BALANCED; break;
             case MACLC_HDR_PICTURE_BRIGHT:   mode = MACLC_TONE_BRIGHT;   break;
@@ -1702,6 +1725,8 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         MacLCHDRToneMapper *mapper = sys.toneMapper;
         CVPixelBufferRef mapped = (mapper != nil)
             ? [mapper toneMapPixelBuffer:pixelBuffer
+                                transfer:render_fmt.transfer
+                                 hlgPeak:hlg_peak
                                   params:&params
                           referenceWhite:MACLC_HDR_REFERENCE_WHITE]
             : NULL;
@@ -1715,17 +1740,21 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
             memset(&render_fmt.lighting, 0, sizeof(render_fmt.lighting));
         }
         if (!sys.hasLoggedToneMap) {
-            msg_Dbg(vd, "HDR picture mode %s (%s): content %.0f cd/m^2 shown "
-                        "up to %.0f cd/m^2 with %.0f cd/m^2 at SDR white "
+            msg_Dbg(vd, "HDR picture mode %s (%s) for %s: content %.0f cd/m^2 "
+                        "shown up to %.0f cd/m^2 with %.0f cd/m^2 at SDR white "
                         "(headroom %.2f, gain %.2f), %s",
-                    maclc_hdr_picture_name(sys.maclcPicture),
+                    maclc_hdr_picture_name(picture),
                     mode == MACLC_TONE_ACCURATE ? "accurate"
                         : mode == MACLC_TONE_BALANCED ? "balanced" : "bright",
+                    !source_is_hlg ? "PQ"
+                        : hlg_mode == MACLC_HDR_HLG_DISPLAY
+                            ? "HLG rendered for the display"
+                            : "HLG rendered for the reference display",
                     params.content_peak, params.display_peak,
                     MACLC_HDR_REFERENCE_WHITE, sys.currentHeadroom,
                     params.gain,
                     mapped != NULL ? "linear light from the GPU"
-                                   : "PQ as decoded (tone mapper unavailable)");
+                                   : "as decoded (tone mapper unavailable)");
             sys.hasLoggedToneMap = YES;
         }
     }
@@ -2256,9 +2285,13 @@ static int Open (vout_display_t *vd,
         char *picture = var_InheritString(vd, MACLC_HDR_VAR_PICTURE);
         sys.maclcPicture = maclc_hdr_picture_parse(picture);
         free(picture);
-        msg_Dbg(vd, "HDR presentation %s, picture mode %s",
+        char *hlg = var_InheritString(vd, MACLC_HDR_VAR_HLG);
+        sys.maclcHLG = maclc_hdr_hlg_parse(hlg);
+        free(hlg);
+        msg_Dbg(vd, "HDR presentation %s, picture mode %s, HLG for the %s",
                 maclc_hdr_presentation_name(sys.maclcPresentation),
-                maclc_hdr_picture_name(sys.maclcPicture));
+                maclc_hdr_picture_name(sys.maclcPicture),
+                maclc_hdr_hlg_name(sys.maclcHLG));
 
         sys.seenCaps = 0;
         sys.publishedCaps = -1; /* forces the first publication */
@@ -2272,6 +2305,10 @@ static int Open (vout_display_t *vd,
                        VLC_VAR_STRING | VLC_VAR_DOINHERIT);
             var_AddCallback(vout_obj, MACLC_HDR_VAR_PICTURE,
                             MacLCPictureCallback, (__bridge void*)sys);
+            var_Create(vout_obj, MACLC_HDR_VAR_HLG,
+                       VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, MACLC_HDR_VAR_HLG,
+                            MacLCHLGCallback, (__bridge void*)sys);
             var_Create(vout_obj, MACLC_HDR_VAR_CAPS, VLC_VAR_INTEGER);
             var_Create(vout_obj, MACLC_HDR_VAR_ACTIVE, VLC_VAR_STRING);
         }

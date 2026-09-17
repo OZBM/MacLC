@@ -31,23 +31,19 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /**
- * Luminance, in cd/m^2, that the expander assigns to SDR diffuse white when
- * encoding PQ. This is the reference level of ITU-R Report BT.2408, and it is
- * where macOS puts the display's SDR white: converting BT.2100 PQ to the
- * extended linear space the compositor works in maps 203 cd/m^2 to exactly 1.0,
- * and 100 cd/m^2 to 0.49. Anchoring here is what keeps everything below the
- * expansion knee pixel-identical to SDR playback, so that turning the feature
- * on lifts highlights without darkening the rest of the picture.
- */
-#define VLC_HDR_EXPANDER_SDR_WHITE_NITS 203.0f
-
-/**
- * Turns an SDR picture into a PQ / BT.2020 one by expanding its highlights into
- * the display's extended dynamic range, on the GPU.
+ * Turns an SDR picture into an extended-range one by expanding its highlights
+ * into the display's EDR headroom, on the GPU.
  *
- * The transform is: Y'CbCr (or BGRA) -> R'G'B' -> linear (BT.1886 or sRGB) ->
- * highlight expansion -> BT.2020 primaries -> PQ -> 10-bit Y'CbCr. Only values
- * above the knee are altered; shadows and mid-tones round-trip exactly.
+ * The transform is: Y'CbCr (or BGRA) -> R'G'B' -> linear light -> highlight
+ * expansion -> BT.2020 primaries. The result is linear light in half floats
+ * with SDR white at 1.0. The compositor shows such a picture untouched, with
+ * 1.0 at the display's SDR white, which is where it shows the white of the SDR
+ * picture itself; a PQ picture would instead go through the system's video
+ * tone curve, which moves SDR white depending on the mastering metadata. The
+ * source is linearised with the curve the compositor uses for it (for BT.709:
+ * a 1.961 power law for Y'CbCr, the inverse OETF for RGB), and only values
+ * above the knee are altered, so shadows and mid-tones look exactly as they
+ * do without the expansion.
  *
  * Every method is safe to call from the video output thread, but a single
  * instance must not be used from two threads at once.
@@ -73,8 +69,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) float boost;
 
 /**
- * Signal level, relative to SDR white, at which the expansion starts. Below it
- * the picture is untouched. Clamped to [0.0, 0.99].
+ * Linear light level, relative to SDR white, at which the expansion starts.
+ * Below it the picture is untouched. Clamped to [0.0, 0.99].
  */
 @property (nonatomic) float knee;
 
@@ -92,7 +88,8 @@ NS_ASSUME_NONNULL_BEGIN
  * \param headroom the display's current EDR headroom; the effective expansion
  *        is min(headroom, boost), so a picture is never brighter than the
  *        screen can show.
- * \return a new PQ / BT.2020 10-bit pixel buffer the caller owns, or NULL if
+ * \return a new 64RGBAHalf pixel buffer the caller owns, holding linear
+ *         BT.2020 light with SDR white at 1.0 and tagged as such, or NULL if
  *         the picture could not be expanded, in which case the source must be
  *         displayed as-is.
  */
@@ -102,10 +99,10 @@ NS_ASSUME_NONNULL_BEGIN
     CF_RETURNS_RETAINED;
 
 /**
- * Peak luminance, in cd/m^2, that the last expandPixelBuffer: call encoded for.
- * Meant for the mastering-display metadata attached to the result.
+ * Where full-scale SDR white went in the last expandPixelBuffer: call, as a
+ * multiple of SDR white: the lower of boost and the display's headroom.
  */
-@property (nonatomic, readonly) float lastPeakNits;
+@property (nonatomic, readonly) float lastExpansion;
 
 @end
 

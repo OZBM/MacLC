@@ -28,6 +28,7 @@
 #import "extensions/NSString+Helpers.h"
 #import "hdr/MacLCHDRTypes.h"
 #import "hdr/MacLCHDRController.h"
+#import "hdr/MacLCDisplayInfo.h"
 
 #import "main/VLCMain.h"
 #import "playqueue/VLCPlayQueueController.h"
@@ -48,14 +49,12 @@
 #include <vlc_es.h>
 #include <vlc_vout.h>
 
+#include "../../video_output/apple/maclc_hdr_vars.h"
+
 NSString * const MacLCHDRExpansionChangedNotification =
     @"MacLCHDRExpansionChangedNotification";
 
 #define SDR_NOMINAL_WHITE_NITS 100.0f
-
-/* ITU-R Report BT.2408 reference white, the luminance the expansion encodes
- * SDR diffuse white at. Keep in step with VLC_HDR_EXPANDER_SDR_WHITE_NITS. */
-#define HDR_REFERENCE_WHITE_NITS 203.0f
 
 #pragma mark - Helper Row View
 
@@ -240,9 +239,10 @@ NSString * const MacLCHDRExpansionChangedNotification =
     NSArray<NSButton *> *_hdrModeRadioButtons;
     NSInteger _currentHdrMode;
 
-    // Per-file defaults (maclc-hdr-presentation, -picture, -card)
+    // Per-file defaults (maclc-hdr-presentation, -picture, -hlg, -card)
     NSPopUpButton *_defaultFormatPopup;
     NSPopUpButton *_defaultPicturePopup;
+    NSPopUpButton *_hlgPopup;
     NSPopUpButton *_cardPolicyPopup;
 
     // SDR to HDR (macosx-sdr-to-hdr, macosx-sdr-to-hdr-boost)
@@ -377,6 +377,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
         @"macosx-hdr-mode", @"macosx-edr-headroom", @"force-darwin-legacy-display",
         @"format", @"hdr10+", @"hdr10", @"accurate", @"balanced", @"bright",
         @"format card", @"maclc-hdr-presentation", @"maclc-hdr-picture", @"maclc-hdr-card",
+        @"hlg brightness", @"maclc-hdr-hlg",
         @"gl-tone-mapping-function", @"gl-tone-mapping-param", @"gl-gamut-mapping",
         @"gl-inverse-tone-mapping", @"gl-upscaler", @"gl-downscaler",
         @"dither-algo", @"vout", @"videotoolbox-hw-decoder-only",
@@ -422,6 +423,9 @@ NSString * const MacLCHDRExpansionChangedNotification =
     [_defaultPicturePopup selectItemWithTag:
         MacLCHDRPictureModeFromString(psz_picture ? @(psz_picture) : nil)];
     free(psz_picture);
+    char *psz_hlg = MacLCConfigGetPsz(MACLC_HDR_VAR_HLG);
+    [_hlgPopup selectItemWithTag:maclc_hdr_hlg_parse(psz_hlg)];
+    free(psz_hlg);
     [_cardPolicyPopup selectItemWithTag:[MacLCHDRController sharedController].cardPolicy];
 
     /* SDR to HDR */
@@ -482,6 +486,9 @@ NSString * const MacLCHDRExpansionChangedNotification =
         MacLCHDRPresentationToString((MacLCHDRPresentation)_defaultFormatPopup.selectedTag).UTF8String);
     MacLCConfigPutPsz("maclc-hdr-picture",
         MacLCHDRPictureModeToString((MacLCHDRPictureMode)_defaultPicturePopup.selectedTag).UTF8String);
+    const char *hlg = maclc_hdr_hlg_name((enum maclc_hdr_hlg)_hlgPopup.selectedTag);
+    MacLCConfigPutPsz(MACLC_HDR_VAR_HLG, hlg);
+    [self pushHLGToRunningVideoOutput:hlg];
     [MacLCHDRController sharedController].cardPolicy =
         (MacLCHDRCardPolicy)_cardPolicyPopup.selectedTag;
 
@@ -524,6 +531,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
 {
     [_defaultFormatPopup selectItemWithTag:MacLCHDRPresentationAuto];
     [_defaultPicturePopup selectItemWithTag:MacLCHDRPictureModeAuto];
+    [_hlgPopup selectItemWithTag:MACLC_HDR_HLG_REFERENCE];
     [_cardPolicyPopup selectItemWithTag:MacLCHDRCardPolicyWhenThereIsAChoice];
 
     _currentHdrMode = 0;
@@ -617,6 +625,11 @@ NSString * const MacLCHDRExpansionChangedNotification =
         @[@(MacLCHDRPictureModeBright), _NS("Bright")],
     ]];
 
+    _hlgPopup = [self popupWithItems:@[
+        @[@(MACLC_HDR_HLG_REFERENCE), _NS("Like HDR10 (Recommended)")],
+        @[@(MACLC_HDR_HLG_DISPLAY), _NS("Fitted to the Display")],
+    ]];
+
     _cardPolicyPopup = [self popupWithItems:@[
         @[@(MacLCHDRCardPolicyAlways), _NS("Always")],
         @[@(MacLCHDRCardPolicyWhenThereIsAChoice), _NS("When There’s a Choice")],
@@ -631,6 +644,10 @@ NSString * const MacLCHDRExpansionChangedNotification =
         [[MacLCSettingsRowView alloc] initWithTitle:_NS("Picture")
                                         explanation:_NS("Accurate keeps the master's intent, Balanced keeps highlight detail on displays dimmer than the master, Bright lifts the image at the cost of highlights and battery.")
                                             control:_defaultPicturePopup
+                                            isRisky:NO],
+        [[MacLCSettingsRowView alloc] initWithTitle:_NS("HLG Brightness")
+                                        explanation:_NS("Like HDR10 shows HLG as bright as HDR10 video and rolls off highlights your display cannot reach. Fitted to the Display renders it for your display's current brightness: calmer, and close to how macOS shows HLG.")
+                                            control:_hlgPopup
                                             isRisky:NO],
         [[MacLCSettingsRowView alloc] initWithTitle:_NS("Format Card")
                                         explanation:_NS("The card appears for a few seconds when playback starts and says what is playing and why.")
@@ -1459,12 +1476,16 @@ NSString * const MacLCHDRExpansionChangedNotification =
                       "would be nothing to expand into and the picture is left "
                       "alone.");
     } else {
+        /* The expansion leaves SDR white where standard video has it and takes
+         * full-scale white to `applied` times that; both in the panel's light
+         * at the current brightness, as the HDR panel describes the display. */
+        const CGFloat whiteNits =
+            [MacLCDisplayInfo displayInfoForScreen:screen].sdrWhiteNits;
         caption = [NSString stringWithFormat:
             _NS("Highlights reach about %.0f cd/m2, against the %.0f cd/m2 of "
                 "SDR white. This display currently allows %.1fx, and the lower "
                 "of the two is what is used."),
-            applied * HDR_REFERENCE_WHITE_NITS, HDR_REFERENCE_WHITE_NITS,
-            screenHeadroom];
+            applied * whiteNits, whiteNits, screenHeadroom];
     }
 
     /* The expansion is part of the default Apple video engine. The OpenGL
@@ -1478,6 +1499,21 @@ NSString * const MacLCHDRExpansionChangedNotification =
     }
 
     _sdrToHdrBoostCaption.stringValue = caption;
+}
+
+/* HLG brightness applies to whatever is playing too; outputs that do not
+ * render HLG themselves have no such variable, and the set does nothing. */
+- (void)pushHLGToRunningVideoOutput:(const char *)hlg
+{
+    VLCPlayerController *playerController =
+        VLCMain.sharedInstance.playQueueController.playerController;
+    vout_thread_t *vout = [playerController mainVideoOutputThread];
+    if (vout == NULL)
+        return;
+
+    if (var_Type(vout, MACLC_HDR_VAR_HLG) != 0)
+        var_SetString(vout, MACLC_HDR_VAR_HLG, hlg);
+    vout_Release(vout);
 }
 
 /* Applies the toggle to whatever is playing, so it can be judged against the

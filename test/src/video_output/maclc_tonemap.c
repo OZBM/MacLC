@@ -282,6 +282,87 @@ int main(void)
         }
     }
 
+    /*
+     * 11. HLG through the BT.2100 reference OOTF (1,000 cd/m2, gamma 1.2):
+     * 75 % is the BT.2408 reference white, 203 cd/m2 like a PQ master's, and
+     * 100 % the nominal peak. With MacLC's anchor that white lands where PQ
+     * puts 203 cd/m2, before any roll-off.
+     */
+    {
+        CHECK(fabsf(maclc_hlg_system_gamma(MACLC_HDR_HLG_PEAK) - 1.2f) < 1e-6f);
+        CHECK(fabsf(maclc_hlg_system_gamma(2000.0f) - (1.2f + 0.42f * log10f(2.0f))) < 1e-5f);
+        /* libplacebo's floor: a 509-nit display gets 1.077, a 267-nit one 1.0 */
+        CHECK(fabsf(maclc_hlg_system_gamma(509.4f) - 1.0770f) < 1e-3f);
+        CHECK(maclc_hlg_system_gamma(266.7f) == 1.0f);
+        CHECK(maclc_hlg_system_gamma(0.0f) == 1.0f);
+
+        /* The modes: the reference display, or the display itself. */
+        CHECK(maclc_hdr_hlg_parse(NULL) == MACLC_HDR_HLG_REFERENCE);
+        CHECK(maclc_hdr_hlg_parse("reference") == MACLC_HDR_HLG_REFERENCE);
+        CHECK(maclc_hdr_hlg_parse("display") == MACLC_HDR_HLG_DISPLAY);
+        CHECK(!strcmp(maclc_hdr_hlg_name(MACLC_HDR_HLG_DISPLAY), "display"));
+        CHECK(maclc_hdr_hlg_peak(MACLC_HDR_HLG_REFERENCE, 266.7f) == MACLC_HDR_HLG_PEAK);
+        CHECK(maclc_hdr_hlg_peak(MACLC_HDR_HLG_DISPLAY, 266.7f) == 266.7f);
+        CHECK(maclc_hdr_hlg_peak(MACLC_HDR_HLG_DISPLAY, 0.0f) == MACLC_HDR_HLG_PEAK);
+
+        static const struct { float signal, nits, tolerance; } k_hlg[] = {
+            { 0.00f,    0.0f, 0.001f },
+            { 0.50f,   50.7f, 0.1f   },   /* 1000 * (1/12)^1.2 */
+            { 0.75f,  203.0f, 0.5f   },
+            { 1.00f, 1000.0f, 0.5f   },
+        };
+        for (size_t i = 0; i < sizeof(k_hlg) / sizeof(k_hlg[0]); i++) {
+            const float s = maclc_hlg_to_scene(k_hlg[i].signal);
+            float rgb[3] = { s, s, s };
+            maclc_hlg_scene_to_nits(rgb, MACLC_HDR_HLG_PEAK);
+            CHECK(fabsf(rgb[0] - k_hlg[i].nits) <= k_hlg[i].tolerance);
+            CHECK(rgb[0] == rgb[1] && rgb[1] == rgb[2]);
+        }
+
+        /* The two segments of the inverse OETF meet at 50 %. */
+        CHECK(fabsf(maclc_hlg_to_scene(0.5f) - 1.0f / 12.0f) < 1e-6f);
+        CHECK(fabsf(maclc_hlg_to_scene(0.5001f) - maclc_hlg_to_scene(0.5f)) < 1e-4f);
+        CHECK(maclc_hlg_to_scene(1.5f) == maclc_hlg_to_scene(1.0f));
+
+        float prev = -1.0f;
+        for (float e = 0.0f; e <= 1.0f; e += 0.001f) {
+            const float s = maclc_hlg_to_scene(e);
+            float rgb[3] = { s, s, s };
+            maclc_hlg_scene_to_nits(rgb, MACLC_HDR_HLG_PEAK);
+            CHECK(rgb[1] >= prev);
+            prev = rgb[1];
+        }
+
+        /* A saturated red keeps its hue: the OOTF scales all three
+         * components by the same factor. */
+        float red[3] = { maclc_hlg_to_scene(0.75f), maclc_hlg_to_scene(0.25f), 0.0f };
+        const float ratio = red[1] / red[0];
+        maclc_hlg_scene_to_nits(red, MACLC_HDR_HLG_PEAK);
+        CHECK(red[0] > 0.0f && fabsf(red[1] / red[0] - ratio) < 1e-5f);
+        CHECK(red[2] == 0.0f);
+
+        /* On the XDR panel at full brightness (headroom 1600/600), HLG
+         * reference white goes through the same Balanced curve as a
+         * 1,000-nit PQ master: above SDR white, below the display peak. */
+        const float display_peak = maclc_hdr_peak_for_headroom(1600.0f / 600.0f);
+        CHECK(maclc_hdr_needs_tone_mapping(MACLC_HDR_HLG_PEAK, display_peak));
+        maclc_tone_params bal;
+        maclc_tone_params_init(&bal, MACLC_TONE_BALANCED, MACLC_HDR_HLG_PEAK,
+                               display_peak, MACLC_HDR_REFERENCE_WHITE);
+        const float white = maclc_tone_map_nits(&bal, 203.0f) / MACLC_HDR_REFERENCE_WHITE;
+        CHECK(white > 1.5f && white < 2.03f);
+
+        /* Rendered for that display instead (gamma 1.0), 75 % comes out at
+         * 0.71 times SDR white and nothing needs rolling off: the values
+         * MacLC's OpenGL output shows. */
+        const float peak = maclc_hdr_hlg_peak(MACLC_HDR_HLG_DISPLAY, display_peak);
+        CHECK(!maclc_hdr_needs_tone_mapping(peak, display_peak));
+        const float s = maclc_hlg_to_scene(0.75f);
+        float grey[3] = { s, s, s };
+        maclc_hlg_scene_to_nits(grey, peak);
+        CHECK(fabsf(grey[1] / MACLC_HDR_REFERENCE_WHITE - 0.7066f) < 0.001f);
+    }
+
     printf("maclc_tonemap: all tests passed\n");
     return 0;
 }
