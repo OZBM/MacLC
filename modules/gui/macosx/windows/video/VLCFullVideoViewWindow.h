@@ -26,6 +26,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface VLCFullVideoViewWindow : VLCVideoWindowCommon
 
+@property (nonatomic) NSSize nativeVideoSize;          // pixels, SAR/rotation/zoom applied by the core
+@property (readonly) BOOL videoFitSessionActive;
+
+- (void)beginVideoFitSession;
+- (void)endVideoFitSessionRestoringFrame:(BOOL)restoreFrame;
+- (void)fitWindowToVideoAnimated:(BOOL)animated;
+- (void)updateVideoAspectConstraint;
+
 - (void)stopTitlebarAutohideTimer;
 - (void)startTitlebarAutohideTimer;
 - (void)showTitleBar;

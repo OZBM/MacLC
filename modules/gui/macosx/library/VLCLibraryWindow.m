@@ -712,10 +712,19 @@ static int ShowController(vlc_object_t * __unused p_this,
     if ([self.librarySegmentViewController isKindOfClass:VLCLibraryAbstractMediaLibrarySegmentViewController.class]) {
         [(VLCLibraryAbstractMediaLibrarySegmentViewController *)self.librarySegmentViewController disconnect];
     }
+
+    [self layoutIfNeeded];
+    if (self.videoFitSessionActive) {
+        [self fitWindowToVideoAnimated:YES];
+    } else {
+        [self beginVideoFitSession];
+    }
 }
 
 - (void)disableVideoPlaybackAppearance
 {
+    [self endVideoFitSessionRestoringFrame:YES];
+
     self.appearance = nil;
 
     [self makeFirstResponder:self.splitViewController.multifunctionSidebarViewController.view];

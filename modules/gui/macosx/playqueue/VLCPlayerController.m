@@ -87,6 +87,7 @@ NSString * const VLCPlayerCoreMessageSourceKey = @"VLCPlayerCoreMessageSource";
 NSString * const VLCPlayerCoreMessageTextKey = @"VLCPlayerCoreMessageText";
 NSString * const VLCPlayerLyricsAvailableChanged = @"VLCPlayerLyricsAvailableChanged";
 NSString * const VLCPlayerShowLyricsChanged = @"VLCPlayerShowLyricsChanged";
+NSString * const VLCPlayerAspectRatioLockChanged = @"VLCPlayerAspectRatioLockChanged";
 
 NSString * const VLCPlayerShowLyricsKey = @"VLCPlayerShowLyricsKey";
 
@@ -2197,6 +2198,8 @@ static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
 - (void)setAspectRatioIsLocked:(BOOL)b_value
 {
     config_PutInt("macosx-lock-aspect-ratio", b_value);
+    [_defaultNotificationCenter postNotificationName:VLCPlayerAspectRatioLockChanged
+                                              object:self];
 }
 
 - (BOOL)aspectRatioIsLocked

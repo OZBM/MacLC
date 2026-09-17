@@ -26,8 +26,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface VLCAspectRatioRetainingVideoWindow : VLCFullVideoViewWindow
 
-@property (nonatomic, readwrite, assign) NSSize nativeVideoSize;
-
 @end
 
 NS_ASSUME_NONNULL_END

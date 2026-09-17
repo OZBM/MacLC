@@ -45,6 +45,7 @@
 #import "views/VLCPlaybackEndViewController.h"
 
 #import "windows/video/VLCAspectRatioRetainingVideoWindow.h"
+#import "windows/video/VLCFullVideoViewWindow.h"
 #import "windows/video/VLCMainVideoViewController.h"
 #import "windows/video/VLCVoutView.h"
 
@@ -369,6 +370,7 @@ static int WindowFloatOnTop(vlc_object_t *obj,
     newVideoWindow.delegate = newVideoWindow;
     newVideoWindow.level = NSNormalWindowLevel;
     [newVideoWindow center];
+    [newVideoWindow beginVideoFitSession];
     return newVideoWindow;
 }
 
@@ -400,6 +402,9 @@ static int WindowFloatOnTop(vlc_object_t *obj,
 - (void)setupWindowOriginForVideoWindow:(VLCVideoWindowCommon *)videoWindow
                              atPosition:(NSRect)videoViewPosition
 {
+    if (videoViewPosition.origin.x <= 0. && videoViewPosition.origin.y <= 0.)
+        return;
+
     NSRect window_rect = [videoWindow frame];
     if (videoViewPosition.origin.x > 0.)
         window_rect.origin.x = videoViewPosition.origin.x;
@@ -429,14 +434,18 @@ static int WindowFloatOnTop(vlc_object_t *obj,
     BOOL multipleVoutWindows = _voutWindows.count > 0;
     NSSize videoViewSize = NSMakeSize(videoViewPosition.size.width, videoViewPosition.size.height);
 
-    // set (only!) window origin if specified
+    // set (only!) window origin if specified, before the window is fitted
+    // to the video around its centre
     if (!isEmbedded) {
-        if ([videoWindow isKindOfClass:[VLCAspectRatioRetainingVideoWindow class]]) {
-            [(VLCAspectRatioRetainingVideoWindow*)videoWindow setNativeVideoSize:videoViewSize];
-        }
-
         [self setupWindowOriginForVideoWindow:videoWindow
                                    atPosition:videoViewPosition];
+    }
+
+    // the library window only records the size here: it fits itself when it
+    // enters video mode, right after
+    if (videoViewSize.width > 0. && videoViewSize.height > 0.
+        && [videoWindow isKindOfClass:[VLCFullVideoViewWindow class]]) {
+        [(VLCFullVideoViewWindow *)videoWindow setNativeVideoSize:videoViewSize];
     }
 
     // cascade windows if we have more than one vout
@@ -610,6 +619,12 @@ static int WindowFloatOnTop(vlc_object_t *obj,
         }
     } completionHandler:nil];
 
+    // the window no longer shows this video: forget its size, so that
+    // re-entering video mode never fits the window to a stale one
+    if ([videoWindow isKindOfClass:[VLCFullVideoViewWindow class]]) {
+        ((VLCFullVideoViewWindow *)videoWindow).nativeVideoSize = NSZeroSize;
+    }
+
     [_voutWindows removeObjectForKey:key];
     if (_voutWindows.count == 0) {
         _playerController.activeVideoPlayback = NO;
@@ -631,11 +646,11 @@ static int WindowFloatOnTop(vlc_object_t *obj,
     if (!o_window) {
         msg_Err(getIntf(), "Cannot set size for nonexisting window");
         return;
-    } else if (![o_window isKindOfClass:[VLCAspectRatioRetainingVideoWindow class]]) {
+    } else if (![o_window isKindOfClass:[VLCFullVideoViewWindow class]]) {
         return;
     }
 
-    [(VLCAspectRatioRetainingVideoWindow*)o_window setNativeVideoSize:size];
+    [(VLCFullVideoViewWindow *)o_window setNativeVideoSize:size];
 }
 
 - (void)setWindowLevel:(NSInteger)i_level forWindow:(vlc_window_t *)p_wnd

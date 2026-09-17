@@ -268,6 +268,12 @@ extern NSString * const VLCPlayerLyricsAvailableChanged;
  */
 extern NSString * const VLCPlayerShowLyricsChanged;
 
+/**
+ * Listen to VLCPlayerAspectRatioLockChanged to be notified if the aspect ratio lock state changes
+ * @note the affected player object will be the object of the notification
+ */
+extern NSString * const VLCPlayerAspectRatioLockChanged;
+
 extern const CGFloat VLCVolumeMaximum;
 extern const CGFloat VLCVolumeDefault;
 
