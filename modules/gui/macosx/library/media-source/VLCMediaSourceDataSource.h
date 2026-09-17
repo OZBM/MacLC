@@ -22,6 +22,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+#import "MacLCBrowseItemCollectionViewItem.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
 @class VLCInputItem;
@@ -39,7 +41,8 @@ extern NSString * const VLCMediaSourceDataSourceLoadingEnded;
                                                 NSCollectionViewDelegate,
                                                 NSCollectionViewDelegateFlowLayout,
                                                 NSTableViewDelegate,
-                                                NSTableViewDataSource>
+                                                NSTableViewDataSource,
+                                                MacLCBrowseItemCollectionViewItemDelegate>
 
 @property (readwrite, retain) VLCMediaSource *displayedMediaSource;
 @property (readwrite, retain, nonatomic) VLCInputNode *nodeToDisplay;
@@ -54,6 +57,7 @@ extern NSString * const VLCMediaSourceDataSourceLoadingEnded;
 - (void)setupViews;
 - (VLCInputItem *)mediaSourceInputItemAtRow:(NSInteger)tableViewRow;
 - (NSArray<VLCInputItem *> *)mediaSourceInputItemsAtIndexPaths:(NSSet<NSIndexPath *> *const)indexPaths;
+- (void)openItemAtIndexPath:(NSIndexPath *)indexPath;
 
 @end
 

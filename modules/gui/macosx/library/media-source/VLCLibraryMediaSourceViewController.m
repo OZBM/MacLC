@@ -43,22 +43,35 @@
 
 #import "main/VLCMain.h"
 
+#import "MacLCBrowseHeaderView.h"
+#import "MacLCBrowseEmptyView.h"
+
 #import "views/VLCLoadingOverlayView.h"
 #import "views/VLCMediaItemCollectionViewItem.h"
 #import "views/VLCUIUnits.h"
 
-@interface VLCLibraryMediaSourceViewController ()
+@interface VLCLibraryMediaSourceViewController () <MacLCBrowseHeaderViewDelegate>
 {
     VLCLoadingOverlayView *_loadingOverlayView;
+    MacLCBrowseHeaderView *_browseHeaderView;
+    NSLayoutConstraint *_browseHeaderHeightConstraint;
+    MacLCBrowseEmptyView *_browseEmptyView;
+    id _keyEventMonitor;
 }
-
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-@property (readonly) NSGlassEffectView *pathControlGlassEffectView API_AVAILABLE(macos(26.0));
-#endif
 
 @end
 
 @implementation VLCLibraryMediaSourceViewController
+
+- (MacLCBrowseHeaderView *)browseHeaderView
+{
+    return _browseHeaderView;
+}
+
+- (MacLCBrowseEmptyView *)browseEmptyView
+{
+    return _browseEmptyView;
+}
 
 // The shared mediaSourceView is the source of truth for the active overlay.
 - (nullable VLCLoadingOverlayView *)currentLoadingOverlayInMediaSourceView
@@ -105,13 +118,14 @@
 
 - (void)dealloc
 {
-    [NSNotificationCenter.defaultCenter removeObserver:self];
-    [self.browsePlaceholderLabel removeFromSuperview];
-    if (@available(macOS 26.0, *)) {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-        [self.pathControlGlassEffectView removeFromSuperview];
-#endif
+    if (_keyEventMonitor != nil) {
+        [NSEvent removeMonitor:_keyEventMonitor];
+        _keyEventMonitor = nil;
     }
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+    [_browseEmptyView removeFromSuperview];
+    [_browseHeaderView removeFromSuperview];
+    [self.browsePlaceholderLabel removeFromSuperview];
 }
 
 - (void)setupPropertiesFromLibraryWindow:(VLCLibraryWindow *)libraryWindow
@@ -132,6 +146,7 @@
 - (void)setupBaseDataSource
 {
     _baseDataSource = [[VLCMediaSourceBaseDataSource alloc] init];
+    _baseDataSource.browseHeaderView = _browseHeaderView;
     _baseDataSource.collectionView = _collectionView;
     _baseDataSource.collectionViewScrollView = _collectionViewScrollView;
     _baseDataSource.homeButton = _homeButton;
@@ -146,6 +161,7 @@
     self.navigationStack.baseDataSource = self.baseDataSource;
 
     self.baseDataSource.navigationStack = self.navigationStack;
+    [self.baseDataSource updateHeaderPathBreadcrumbs];
 }
 
 - (void)setupCollectionView
@@ -155,94 +171,137 @@
     VLCLibraryCollectionViewFlowLayout * const mediaSourceCollectionViewLayout = VLCLibraryCollectionViewFlowLayout.standardLayout;
     self.collectionView.collectionViewLayout = mediaSourceCollectionViewLayout;
     mediaSourceCollectionViewLayout.itemSize = VLCUIUnits.defaultVideoItemCollectionViewItemSize;
+
+    __weak typeof(self) weakSelf = self;
+    _keyEventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^NSEvent *(NSEvent *event) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) {
+            return event;
+        }
+
+        NSWindow * const window = strongSelf.collectionView.window;
+        if (window == nil || !window.isKeyWindow) {
+            return event;
+        }
+
+        NSResponder * const firstResponder = window.firstResponder;
+        const BOOL isCollectionViewFocused = (firstResponder == strongSelf.collectionView) ||
+            ([firstResponder isKindOfClass:NSView.class] && [(NSView *)firstResponder isDescendantOf:strongSelf.collectionView]);
+        NSTableView * const tableView = strongSelf.mediaSourceTableView;
+        const BOOL isTableViewFocused = tableView != nil && firstResponder == tableView;
+        if (!isCollectionViewFocused && !isTableViewFocused) {
+            return event;
+        }
+
+        const BOOL isReturn = event.keyCode == 36 || event.keyCode == 76 ||
+            (event.characters.length > 0 &&
+             ([event.characters characterAtIndex:0] == '\r' || [event.characters characterAtIndex:0] == '\n'));
+        if (!isReturn) {
+            return event;
+        }
+        if (isCollectionViewFocused && [strongSelf openSelectedCollectionItem]) {
+            return nil;
+        }
+        /* The table's double action belongs to the data source on screen. */
+        if (isTableViewFocused && tableView.selectedRow >= 0 && tableView.doubleAction != NULL &&
+            [NSApp sendAction:tableView.doubleAction to:tableView.target from:tableView]) {
+            return nil;
+        }
+        return event;
+    }];
+}
+
+- (BOOL)openSelectedCollectionItem
+{
+    NSSet<NSIndexPath *> * const selection = self.collectionView.selectionIndexPaths;
+    if (selection.count == 0) {
+        return NO;
+    }
+    NSIndexPath * const selectedIndexPath = selection.anyObject;
+
+    if (self.baseDataSource.childDataSource != nil) {
+        [self.baseDataSource.childDataSource openItemAtIndexPath:selectedIndexPath];
+        return YES;
+    } else {
+        [self.baseDataSource openHomeItemAtIndexPath:selectedIndexPath];
+        return YES;
+    }
 }
 
 - (void)setupMediaSourceLibraryViews
 {
-    _mediaSourceTableView.rowHeight = VLCUIUnits.mediumTableViewRowHeight;
-
-    const NSEdgeInsets defaultInsets = VLCUIUnits.libraryViewScrollViewContentInsets;
-    const NSEdgeInsets scrollerInsets = VLCUIUnits.libraryViewScrollViewScrollerInsets;
+    _mediaSourceTableView.rowHeight = 32.0;
 
     _collectionViewScrollView.automaticallyAdjustsContentInsets = NO;
-    _collectionViewScrollView.contentInsets = defaultInsets;
-    _collectionViewScrollView.scrollerInsets = scrollerInsets;
+    _collectionViewScrollView.scrollerInsets = VLCUIUnits.libraryViewScrollViewScrollerInsets;
 
     _tableViewScrollView.automaticallyAdjustsContentInsets = NO;
-    _tableViewScrollView.contentInsets = NSEdgeInsetsMake(0, 0, defaultInsets.bottom, 0);
-    _tableViewScrollView.scrollerInsets = NSEdgeInsetsMake(0, 0, -defaultInsets.bottom, 0);
+    _tableViewScrollView.scrollerInsets = NSEdgeInsetsMake(0, 0, -VLCUIUnits.libraryViewScrollViewContentInsets.bottom, 0);
+
+    [self applyBrowseHeaderLayoutForMode:_browseHeaderView.mode];
+}
+
+/* The content starts below the header, whose height depends on its mode. */
+- (void)applyBrowseHeaderLayoutForMode:(MacLCBrowseHeaderMode)mode
+{
+    const CGFloat headerHeight = [MacLCBrowseHeaderView preferredHeightForMode:mode];
+    _browseHeaderHeightConstraint.constant = headerHeight;
+
+    const CGFloat topInset = VLCUIUnits.libraryWindowContentSafeTopInset + 8.0 + headerHeight +
+        (mode == MacLCBrowseHeaderModeHome ? 6.0 : 2.0);
+    const CGFloat bottomInset = VLCUIUnits.libraryViewScrollViewContentInsets.bottom;
+    _collectionViewScrollView.contentInsets = NSEdgeInsetsMake(topInset, 0, bottomInset, 0);
+    _tableViewScrollView.contentInsets = NSEdgeInsetsMake(topInset, 0, bottomInset, 0);
 }
 
 - (void)setupPlaceholderLabel
 {
-    _browsePlaceholderLabel = [NSTextField defaultLabelWithString:_NS("No files")];
-    self.browsePlaceholderLabel.font = NSFont.VLClibrarySectionHeaderFont;
-    self.browsePlaceholderLabel.textColor = NSColor.secondaryLabelColor;
-    self.browsePlaceholderLabel.alignment = NSTextAlignmentCenter;
-    self.browsePlaceholderLabel.drawsBackground = NO;
-    [self.mediaSourceView addSubview:self.browsePlaceholderLabel];
-    [self.mediaSourceView addConstraints:@[
-        [self.browsePlaceholderLabel.centerXAnchor constraintEqualToAnchor:self.mediaSourceView.centerXAnchor],
-        [self.browsePlaceholderLabel.centerYAnchor constraintEqualToAnchor:self.mediaSourceView.centerYAnchor],
+    _browsePlaceholderLabel = [NSTextField defaultLabelWithString:@""];
+    self.browsePlaceholderLabel.hidden = YES;
+
+    _browseEmptyView = [[MacLCBrowseEmptyView alloc] initWithFrame:NSMakeRect(0, 0, 360.0, 160.0)];
+    _browseEmptyView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.mediaSourceView addSubview:_browseEmptyView];
+    [NSLayoutConstraint activateConstraints:@[
+        [_browseEmptyView.centerXAnchor constraintEqualToAnchor:self.mediaSourceView.centerXAnchor],
+        [_browseEmptyView.centerYAnchor constraintEqualToAnchor:self.mediaSourceView.centerYAnchor constant:20.0],
+        [_browseEmptyView.widthAnchor constraintEqualToConstant:360.0],
+        [_browseEmptyView.heightAnchor constraintEqualToConstant:160.0],
     ]];
     [self updatePlaceholderLabel:nil];
 }
 
 - (void)setupPathControlView
 {
-    if (@available(macOS 26.0, *)) {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-        NSButton * const homeButton = self.homeButton;
-        VLCInputNodePathControl * const pathControl = self.pathControl;
-        pathControl.translatesAutoresizingMaskIntoConstraints = NO;
-        
-        _pathControlGlassEffectView = [[NSGlassEffectView alloc] initWithFrame:self.pathControlVisualEffectView.frame];
-        self.pathControlGlassEffectView.translatesAutoresizingMaskIntoConstraints = NO;
-        [self.pathControlVisualEffectView removeFromSuperview];
-        [self.mediaSourceView addSubview:self.pathControlGlassEffectView];
+    self.pathControlVisualEffectView.hidden = YES;
+    self.homeButton.hidden = YES;
+    self.pathControl.hidden = YES;
 
-        NSLayoutYAxisAnchor *topAnchor = self.mediaSourceView.topAnchor;
-        const CGFloat topConstant = VLCUIUnits.libraryWindowContentSafeTopInset;
+    _browseHeaderView = [[MacLCBrowseHeaderView alloc] initWithFrame:NSMakeRect(0, 0, self.mediaSourceView.bounds.size.width, 44.0)];
+    _browseHeaderView.translatesAutoresizingMaskIntoConstraints = NO;
+    _browseHeaderView.delegate = self;
+    [self.mediaSourceView addSubview:_browseHeaderView];
 
-        _pathControlViewTopConstraintToSuperview =
-            [self.pathControlGlassEffectView.topAnchor constraintEqualToAnchor:topAnchor constant:topConstant];
-        [NSLayoutConstraint activateConstraints:@[
-            [self.pathControlGlassEffectView.leadingAnchor constraintEqualToAnchor:self.mediaSourceView.leadingAnchor constant:VLCUIUnits.smallSpacing],
-            [self.pathControlGlassEffectView.trailingAnchor constraintEqualToAnchor:self.mediaSourceView.trailingAnchor constant:-VLCUIUnits.smallSpacing],
-        ]];
-        NSView * const pathControlContainer = [[NSView alloc] init];
-        pathControlContainer.translatesAutoresizingMaskIntoConstraints = NO;
-        homeButton.translatesAutoresizingMaskIntoConstraints = NO;
-        [pathControlContainer addSubview:homeButton];
-        [pathControlContainer addSubview:pathControl];
-        [NSLayoutConstraint activateConstraints:@[
-            [homeButton.leadingAnchor constraintEqualToAnchor:pathControlContainer.leadingAnchor constant:VLCUIUnits.smallSpacing],
-            [homeButton.centerYAnchor constraintEqualToAnchor:pathControlContainer.centerYAnchor],
-            [homeButton.topAnchor constraintGreaterThanOrEqualToAnchor:pathControlContainer.topAnchor constant:VLCUIUnits.smallSpacing],
-            [homeButton.bottomAnchor constraintLessThanOrEqualToAnchor:pathControlContainer.bottomAnchor constant:-VLCUIUnits.smallSpacing],
-            [pathControl.leadingAnchor constraintEqualToAnchor:homeButton.trailingAnchor constant:VLCUIUnits.smallSpacing],
-            [pathControl.trailingAnchor constraintEqualToAnchor:pathControlContainer.trailingAnchor constant:-VLCUIUnits.smallSpacing],
-            [pathControl.centerYAnchor constraintEqualToAnchor:pathControlContainer.centerYAnchor],
-            [pathControl.topAnchor constraintGreaterThanOrEqualToAnchor:pathControlContainer.topAnchor constant:VLCUIUnits.smallSpacing],
-            [pathControl.bottomAnchor constraintLessThanOrEqualToAnchor:pathControlContainer.bottomAnchor constant:-VLCUIUnits.smallSpacing],
-        ]];
-        self.pathControlGlassEffectView.contentView = pathControlContainer;
-#endif
-    } else {
-        NSLayoutYAxisAnchor *topAnchor = self.mediaSourceView.topAnchor;
-        const CGFloat topConstant = VLCUIUnits.libraryWindowContentSafeTopInset;
-
-        _pathControlViewTopConstraintToSuperview =
-            [self.pathControlVisualEffectView.topAnchor constraintEqualToAnchor:topAnchor constant:topConstant];
-    }
-    _pathControlViewTopConstraintToSuperview.active = YES;
+    _browseHeaderHeightConstraint =
+        [_browseHeaderView.heightAnchor constraintEqualToConstant:[MacLCBrowseHeaderView preferredHeightForMode:_browseHeaderView.mode]];
+    [NSLayoutConstraint activateConstraints:@[
+        _browseHeaderHeightConstraint,
+        [_browseHeaderView.topAnchor constraintEqualToAnchor:self.mediaSourceView.topAnchor
+                                                    constant:VLCUIUnits.libraryWindowContentSafeTopInset + 8.0],
+        [_browseHeaderView.leadingAnchor constraintEqualToAnchor:self.mediaSourceView.leadingAnchor
+                                                        constant:20.0],
+        [_browseHeaderView.trailingAnchor constraintLessThanOrEqualToAnchor:self.mediaSourceView.trailingAnchor
+                                                                   constant:-20.0],
+    ]];
 }
 
 - (void)updatePlaceholderLabel:(NSNotification *)notification
 {
     _loadingOverlayView = [self currentLoadingOverlayInMediaSourceView];
-    const BOOL overlayPresent = _loadingOverlayView != nil;
-    self.browsePlaceholderLabel.hidden = self.baseDataSource.hasDisplayedItems || overlayPresent;
+    const BOOL isBrowsingFolder = (self.baseDataSource.childDataSource != nil);
+    const BOOL hasItems = self.baseDataSource.hasDisplayedItems;
+    _browseEmptyView.hidden = !isBrowsingFolder || hasItems || (_loadingOverlayView != nil);
+    self.browsePlaceholderLabel.hidden = YES;
 }
 
 - (void)prepareLoadingOverlay
@@ -263,21 +322,25 @@
 
 - (void)mediaSourceLoadingStarted:(NSNotification *)notification
 {
-    _loadingOverlayView = [self currentLoadingOverlayInMediaSourceView];
+    [_browseHeaderView startLoading];
 
-    [self prepareLoadingOverlay];
-    _loadingOverlayView.alphaValue = 1.0;
+    if (!self.baseDataSource.hasDisplayedItems) {
+        [self prepareLoadingOverlay];
+        _loadingOverlayView.alphaValue = 1.0;
+    }
     [self updatePlaceholderLabel:nil];
 }
 
 - (void)mediaSourceLoadingEnded:(NSNotification *)notification
 {
+    [_browseHeaderView stopLoading];
+
     _loadingOverlayView = [self currentLoadingOverlayInMediaSourceView];
-
-    if (_loadingOverlayView == nil)
+    if (_loadingOverlayView == nil) {
+        [self updatePlaceholderLabel:nil];
         return;
+    }
 
-    _loadingOverlayView.alphaValue = 1.0;
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext * __unused context) {
         _loadingOverlayView.animator.alphaValue = 0.0;
     } completionHandler:^{
@@ -289,11 +352,24 @@
 
 - (NSView *)pathControlContainerView
 {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
-    if (@available(macOS 26.0, *))
-        return self.pathControlGlassEffectView;
-#endif
     return self.pathControlVisualEffectView;
+}
+
+#pragma mark - MacLCBrowseHeaderViewDelegate
+
+- (void)browseHeaderDidClickHome:(MacLCBrowseHeaderView *)headerView
+{
+    [self.baseDataSource returnHome];
+}
+
+- (void)browseHeader:(MacLCBrowseHeaderView *)headerView didClickSegmentAtIndex:(NSInteger)index
+{
+    [self.baseDataSource navigateToBreadcrumbIndex:index];
+}
+
+- (void)browseHeader:(MacLCBrowseHeaderView *)headerView didChangeMode:(MacLCBrowseHeaderMode)mode
+{
+    [self applyBrowseHeaderLayoutForMode:mode];
 }
 
 - (void)presentBrowseView
@@ -318,6 +394,7 @@
 
     _baseDataSource.mediaSourceMode = isStreams ? VLCMediaSourceModeInternet : VLCMediaSourceModeLAN;
     [_baseDataSource reloadViews];
+    [_baseDataSource updateHeaderPathBreadcrumbs];
 }
 
 - (void)browseFolderByMrl:(NSString *)mrl

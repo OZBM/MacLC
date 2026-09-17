@@ -166,6 +166,17 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (class, readonly) NSColor *scrubberFill;
 
+/**
+ * Translucent media overlay background colour for duration badges and on-video controls.
+ */
+@property (class, readonly) NSColor *mediaOverlayBackground;
+
+/**
+ * Solid black media canvas and letterbox background colour.
+ * Use for video display views, artwork letterboxes, and media render surfaces.
+ */
+@property (class, readonly) NSColor *mediaBackground;
+
 
 #pragma mark - Typography
 

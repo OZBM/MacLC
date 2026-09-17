@@ -215,6 +215,16 @@
     return [NSColor colorNamed:@"MacLCScrubberFill" bundle:[self designBundle]] ?: [NSColor controlAccentColor];
 }
 
++ (NSColor *)mediaOverlayBackground
+{
+    return [NSColor colorWithCalibratedWhite:0.0 alpha:0.72];
+}
+
++ (NSColor *)mediaBackground
+{
+    return [NSColor blackColor];
+}
+
 
 #pragma mark - Typography
 

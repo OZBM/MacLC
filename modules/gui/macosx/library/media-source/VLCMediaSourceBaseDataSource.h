@@ -35,8 +35,14 @@ typedef NS_ENUM(NSInteger, VLCMediaSourceMode) {
 @class VLCInputItem;
 @class VLCLibraryMediaSourceViewNavigationStack;
 @class VLCMediaSourceDataSource;
+@class MacLCBrowseHeaderView;
 
 extern NSString * const VLCMediaSourceBaseDataSourceNodeChanged;
+
+/// Whether a path lives on a local file system. Never blocks: it reads the
+/// kernel's cached mount table, so it is safe to call on the main thread
+/// before touching files that may sit on a network volume.
+BOOL MacLCBrowsePathIsOnLocalVolume(NSString *path);
 
 @interface VLCMediaSourceBaseDataSource : NSObject <NSCollectionViewDataSource,
                                                     NSCollectionViewDelegate,
@@ -51,6 +57,7 @@ extern NSString * const VLCMediaSourceBaseDataSourceNodeChanged;
 @property (readwrite, weak) NSButton *homeButton;
 @property (readwrite, weak) VLCInputNodePathControl *pathControl;
 @property (readwrite, weak) NSView *pathControlContainerView;
+@property (readwrite, weak, nullable) MacLCBrowseHeaderView *browseHeaderView;
 @property (readwrite, nonatomic) VLCMediaSourceMode mediaSourceMode;
 @property (readwrite, nonatomic) VLCMediaSourceDataSource *childDataSource;
 @property (readonly, nonatomic) BOOL hasDisplayedItems;
@@ -61,10 +68,14 @@ extern NSString * const VLCMediaSourceBaseDataSourceNodeChanged;
 
 - (void)setupViews;
 - (void)reloadViews;
+- (void)returnHome;
 - (void)homeButtonAction:(id)sender;
 - (void)pathControlAction:(id)sender;
+- (void)navigateToBreadcrumbIndex:(NSInteger)index;
+- (void)updateHeaderPathBreadcrumbs;
 
 - (void)browseFolderByMrl:(NSString *)mrl;
+- (void)openHomeItemAtIndexPath:(NSIndexPath *)indexPath;
 - (nullable id<NSPasteboardWriting>)pasteboardWriterForInputItem:(nullable VLCInputItem *)inputItem;
 
 @end

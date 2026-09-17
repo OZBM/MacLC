@@ -31,6 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 @class VLCLibraryMediaSourceViewNavigationStack;
 @class VLCLibraryWindow;
 @class VLCMediaSourceBaseDataSource;
+@class MacLCBrowseHeaderView;
+@class MacLCBrowseEmptyView;
 
 @interface VLCLibraryMediaSourceViewController : VLCLibraryAbstractSegmentViewController
 
@@ -46,6 +48,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, weak) NSSegmentedControl *gridVsListSegmentedControl;
 @property (readonly) NSTextField *browsePlaceholderLabel; // Use library window's placeholder views?
 @property (readonly, weak) NSLayoutConstraint *pathControlViewTopConstraintToSuperview;
+
+@property (readonly, strong, nullable) MacLCBrowseHeaderView *browseHeaderView;
+@property (readonly, strong, nullable) MacLCBrowseEmptyView *browseEmptyView;
 
 @property (readonly) VLCMediaSourceBaseDataSource *baseDataSource;
 @property (readonly) VLCLibraryMediaSourceViewNavigationStack *navigationStack;

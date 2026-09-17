@@ -93,6 +93,7 @@ libmacosx_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(gui_RPATH) \
 	-Wl,-framework,QuickLookThumbnailing \
 	-Wl,-framework,Metal \
 	-Wl,-framework,MetalKit \
+	-Wl,-framework,UniformTypeIdentifiers \
 	-Wl,-weak_framework,MediaPlayer
 
 if HAVE_SPARKLE
@@ -326,6 +327,18 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/library/favorites-library/VLCLibraryFavoritesTableViewDelegate.m \
 	gui/macosx/library/favorites-library/VLCLibraryFavoritesViewController.h \
 	gui/macosx/library/favorites-library/VLCLibraryFavoritesViewController.m \
+	gui/macosx/library/media-source/MacLCBrowseEmptyView.h \
+	gui/macosx/library/media-source/MacLCBrowseEmptyView.m \
+	gui/macosx/library/media-source/MacLCBrowseHeaderView.h \
+	gui/macosx/library/media-source/MacLCBrowseHeaderView.m \
+	gui/macosx/library/media-source/MacLCBrowseItemCollectionViewItem.h \
+	gui/macosx/library/media-source/MacLCBrowseItemCollectionViewItem.m \
+	gui/macosx/library/media-source/MacLCBrowseLocationCardItem.h \
+	gui/macosx/library/media-source/MacLCBrowseLocationCardItem.m \
+	gui/macosx/library/media-source/MacLCBrowseSectionHeaderView.h \
+	gui/macosx/library/media-source/MacLCBrowseSectionHeaderView.m \
+	gui/macosx/library/media-source/MacLCBrowseTableCellView.h \
+	gui/macosx/library/media-source/MacLCBrowseTableCellView.m \
 	gui/macosx/library/media-source/VLCLibraryMediaSourceViewController.h \
 	gui/macosx/library/media-source/VLCLibraryMediaSourceViewController.m \
 	gui/macosx/library/media-source/VLCMediaSource.h \

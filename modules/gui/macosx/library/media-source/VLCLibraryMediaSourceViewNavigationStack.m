@@ -220,6 +220,7 @@
     [self.baseDataSource setChildDataSource:state.currentMediaSource];
     [self.baseDataSource.childDataSource setNodeToDisplay:state.currentNodeDisplayed];
     [self.libraryWindow.mediaSourcePathControl setPathWithInputNodePathControlItems:state.pathControlItems];
+    [self.baseDataSource updateHeaderPathBreadcrumbs];
 
     [self updateDelegateNavigationButtons];
 }

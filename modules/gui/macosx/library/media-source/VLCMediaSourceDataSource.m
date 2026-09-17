@@ -35,8 +35,10 @@
 #import "library/VLCInputNodePathControl.h"
 #import "library/VLCInputNodePathControlItem.h"
 #import "library/VLCLibraryImageCache.h"
-#import "library/VLCLibraryTableCellView.h"
-#import "library/VLCLibraryWindow.h"
+#import "MacLCBrowseItemCollectionViewItem.h"
+#import "MacLCBrowseTableCellView.h"
+#import "theme/MacLCDesign.h"
+#import "library/VLCLibraryMenuController.h"
 
 #import "library/media-source/VLCMediaSourceCollectionViewItem.h"
 
@@ -48,6 +50,8 @@
 #import "views/VLCImageView.h"
 #import "views/VLCUIUnits.h"
 
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+
 NSString * const VLCMediaSourceDataSourceNodeChanged = @"VLCMediaSourceDataSourceNodeChanged";
 NSString * const VLCMediaSourceDataSourceLoadingStarted = @"VLCMediaSourceDataSourceLoadingStarted";
 NSString * const VLCMediaSourceDataSourceLoadingEnded = @"VLCMediaSourceDataSourceLoadingEnded";
@@ -55,6 +59,7 @@ NSString * const VLCMediaSourceDataSourceLoadingEnded = @"VLCMediaSourceDataSour
 @interface VLCMediaSourceDataSource()
 {
     VLCInputItem *_childRootInput;
+    VLCLibraryMenuController *_menuController;
 }
 
 @property (readwrite) dispatch_source_t observedPathDispatchSource;
@@ -74,6 +79,16 @@ static NSValue * _Nullable inputItemIdentifier(VLCInputItem * _Nullable const in
         : [NSValue valueWithPointer:inputItem.vlcInputItem];
 }
 
+static NSString *MacLCBrowseItemCountString(NSInteger count)
+{
+    if (count <= 0) {
+        return _NS("Empty");
+    } else if (count == 1) {
+        return _NS("1 item");
+    }
+    return [NSString stringWithFormat:_NS("%ld items"), (long)count];
+}
+
 @implementation VLCMediaSourceDataSource
 
 - (instancetype)initWithParentBaseDataSource:(VLCMediaSourceBaseDataSource *)parentBaseDataSource
@@ -87,7 +102,7 @@ static NSValue * _Nullable inputItemIdentifier(VLCInputItem * _Nullable const in
         self.childCountsByInputItemIdentifier = NSMutableDictionary.dictionary;
         dispatch_queue_attr_t const childCountQueueAttributes =
             dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_UTILITY, 0);
-        self.childCountQueue = dispatch_queue_create("org.videolan.vlc.media-source-child-count",
+        self.childCountQueue = dispatch_queue_create("org.maclc.media-source-child-count",
                                                      childCountQueueAttributes);
         NSNotificationCenter * const notificationCenter = NSNotificationCenter.defaultCenter;
         [notificationCenter addObserver:self
@@ -250,6 +265,14 @@ static NSValue * _Nullable inputItemIdentifier(VLCInputItem * _Nullable const in
 
 - (void)setupViews
 {
+    [self.collectionView registerClass:MacLCBrowseItemCollectionViewItem.class
+                 forItemWithIdentifier:MacLCBrowseItemCollectionViewItemIdentifier];
+
+    self.tableView.rowHeight = MacLCDesign.rowMinimumHeight;
+    /* A click only selects; opening is the double click (and Return, handled
+     * by the view controller). Sharing one selector between action and
+     * doubleAction could open twice. */
+    [self.tableView setAction:nil];
     [self.tableView setDoubleAction:@selector(tableViewAction:)];
     [self.tableView setTarget:self];
     [self.tableView registerForDraggedTypes:@[NSFilenamesPboardType]];
@@ -301,49 +324,155 @@ static NSValue * _Nullable inputItemIdentifier(VLCInputItem * _Nullable const in
 - (NSCollectionViewItem *)collectionView:(NSCollectionView *)collectionView
      itemForRepresentedObjectAtIndexPath:(NSIndexPath *)indexPath
 {
-    VLCMediaSourceCollectionViewItem * const viewItem =
-        [collectionView makeItemWithIdentifier:VLCMediaSourceCollectionViewItemIdentifier
+    MacLCBrowseItemCollectionViewItem * const viewItem =
+        [collectionView makeItemWithIdentifier:MacLCBrowseItemCollectionViewItemIdentifier
                                        forIndexPath:indexPath];
 
-    VLCInputNode *rootNode = _nodeToDisplay;
-    NSArray *nodeChildren = rootNode.children;
-    if (nodeChildren == nil) {
+    VLCInputNode * const rootNode = _nodeToDisplay;
+    NSArray * const nodeChildren = rootNode.children;
+    if (nodeChildren == nil || indexPath.item >= (NSInteger)nodeChildren.count) {
         NSLog(@"No children for node %@, cannot provide correctly setup viewItem", rootNode);
         return viewItem;
     }
-    VLCInputNode *childNode = nodeChildren[indexPath.item];
-    VLCInputItem *childRootInput = childNode.inputItem;
 
-    viewItem.representedItem = childRootInput;
+    VLCInputNode * const childNode = nodeChildren[indexPath.item];
+    VLCInputItem * const childRootInput = childNode.inputItem;
 
+    viewItem.browseDelegate = self;
+    viewItem.representedInputNode = childNode;
+    viewItem.representedInputItem = childRootInput;
+
+    if (childRootInput.inputType == ITEM_TYPE_DIRECTORY ||
+        childRootInput.inputType == ITEM_TYPE_NODE ||
+        childRootInput.inputType == ITEM_TYPE_PLAYLIST) {
+        const int childCount = childNode.numberOfChildren;
+        if (childCount > 0) {
+            viewItem.secondaryInfoString = MacLCBrowseItemCountString(childCount);
+        } else {
+            viewItem.secondaryInfoString = _NS("Folder");
+        }
+    } else {
+        NSString * const ext = childRootInput.MRL.pathExtension.uppercaseString;
+        if (ext.length > 0) {
+            viewItem.secondaryInfoString = ext;
+        } else {
+            viewItem.secondaryInfoString = _NS("Media file");
+        }
+    }
+
+    [viewItem updateRepresentation];
     return viewItem;
 }
 
 - (void)collectionView:(NSCollectionView *)collectionView didSelectItemsAtIndexPaths:(NSSet<NSIndexPath *> *)indexPaths
 {
-    if (indexPaths.count != 1) {
-        return;
-    }
-
-    NSIndexPath * const indexPath = indexPaths.anyObject;
-    if (!indexPath) {
-        return;
-    }
-    VLCInputNode * const childNode = [self inputNodeForIndexPath:indexPath];
-    if (childNode) {
-        [self performActionForNode:childNode allowPlayback:YES];
-    }
+    // Single-click selects only (consistent with Finder and MacLC design language).
+    // Navigation and playback occur on double-click or play hover button.
 }
 
 - (NSSize)collectionView:(NSCollectionView *)collectionView
                   layout:(NSCollectionViewLayout *)collectionViewLayout
   sizeForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    VLCLibraryCollectionViewFlowLayout *collectionViewFlowLayout = (VLCLibraryCollectionViewFlowLayout*)collectionViewLayout;
-    NSAssert(collectionViewLayout, @"This should be a flow layout and thus a valid pointer");
-    return [VLCUIUnits adjustedCollectionViewItemSizeForCollectionView:collectionView
-                                                            withLayout:collectionViewFlowLayout
-                                                  withItemsAspectRatio:VLCLibraryCollectionViewItemAspectRatioDefaultItem];
+    const CGFloat availableWidth = MAX(180.0, collectionView.bounds.size.width - 40.0);
+    const NSInteger columns = MAX(1, (NSInteger)floor((availableWidth + 16.0) / (180.0 + 16.0)));
+    const CGFloat itemWidth = floor((availableWidth - (columns - 1) * 16.0) / columns);
+    const CGFloat itemHeight = floor(itemWidth * 9.0 / 16.0) + ceil([MacLCBrowseItemView heightBelowArtwork]);
+    return NSMakeSize(itemWidth, itemHeight);
+}
+
+- (NSEdgeInsets)collectionView:(NSCollectionView *)collectionView
+                        layout:(NSCollectionViewLayout *)collectionViewLayout
+        insetForSectionAtIndex:(NSInteger)section
+{
+    return NSEdgeInsetsMake(0.0, 20.0, 20.0, 20.0);
+}
+
+- (CGFloat)collectionView:(NSCollectionView *)collectionView
+                   layout:(NSCollectionViewLayout *)collectionViewLayout
+minimumLineSpacingForSectionAtIndex:(NSInteger)section
+{
+    return 16.0;
+}
+
+- (CGFloat)collectionView:(NSCollectionView *)collectionView
+                   layout:(NSCollectionViewLayout *)collectionViewLayout
+minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
+{
+    return 16.0;
+}
+
+#pragma mark - MacLCBrowseItemCollectionViewItemDelegate
+
+- (void)browseItemDidDoubleClick:(MacLCBrowseItemCollectionViewItem *)item
+{
+    VLCInputNode * const childNode = item.representedInputNode;
+    if (childNode != nil) {
+        [self performActionForNode:childNode allowPlayback:YES];
+    }
+}
+
+- (void)browseItemPlayInstantly:(MacLCBrowseItemCollectionViewItem *)item
+{
+    VLCInputItem * const inputItem = item.representedInputItem;
+    if (inputItem == nil) {
+        return;
+    }
+
+    if (inputItem.inputType == ITEM_TYPE_DIRECTORY ||
+        inputItem.inputType == ITEM_TYPE_NODE ||
+        inputItem.inputType == ITEM_TYPE_PLAYLIST) {
+        if (item.representedInputNode != nil) {
+            [self performActionForNode:item.representedInputNode allowPlayback:YES];
+        }
+    } else {
+        [VLCMain.sharedInstance.playQueueController addInputItem:inputItem.vlcInputItem
+                                                      atPosition:-1
+                                                   startPlayback:YES];
+    }
+}
+
+- (void)browseItemOpenContextMenu:(NSEvent *)event forItem:(MacLCBrowseItemCollectionViewItem *)item
+{
+    if (item.representedInputItem == nil) {
+        return;
+    }
+
+    if (_menuController == nil) {
+        _menuController = [[VLCLibraryMenuController alloc] init];
+    }
+
+    NSCollectionView * const collectionView = self.collectionView;
+    NSSet<NSIndexPath *> * const indexPaths = collectionView.selectionIndexPaths;
+    NSArray<VLCInputItem *> * const selectedInputItems =
+        [self mediaSourceInputItemsAtIndexPaths:indexPaths];
+
+    const NSInteger representedItemIndex = [selectedInputItems indexOfObjectPassingTest:^BOOL(
+        VLCInputItem * const inputItem, const NSUInteger __unused idx, BOOL * const __unused stop
+    ) {
+        return [inputItem.MRL isEqualToString:item.representedInputItem.MRL];
+    }];
+
+    NSArray<VLCInputItem *> *items = nil;
+    if (representedItemIndex == NSNotFound) {
+        items = @[item.representedInputItem];
+    } else {
+        items = selectedInputItems;
+    }
+
+    _menuController.representedInputItems = items;
+    [_menuController popupMenuWithEvent:event forView:item.view];
+}
+
+- (void)openItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (indexPath == nil) {
+        return;
+    }
+    VLCInputNode * const node = [self mediaSourceInputNodeAtRow:indexPath.item];
+    if (node != nil) {
+        [self performActionForNode:node allowPlayback:YES];
+    }
 }
 
 #pragma mark - table view data source and delegation
@@ -362,155 +491,210 @@ static NSValue * _Nullable inputItemIdentifier(VLCInputItem * _Nullable const in
                   row:(NSInteger)row
 {
     VLCInputNode * const inputNode = [self mediaSourceInputNodeAtRow:row];
-
-    if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableNameColumn"]) {
-        VLCLibraryTableCellView * const cellView =
-            [tableView makeViewWithIdentifier:VLCLibraryTableCellViewIdentifier owner:self];
-        cellView.representedInputItem = inputNode.inputItem;
-        cellView.primaryTitleTextField.hidden = YES;
-        cellView.secondaryTitleTextField.hidden = YES;
-        return cellView;
-    }
-
-     // Only present count view for folders
-    if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableCountColumn"] &&
-        inputNode.inputItem.inputType != ITEM_TYPE_DIRECTORY) {
+    if (inputNode == nil) {
         return nil;
     }
 
-    static NSString * const basicCellViewIdentifier = @"BasicTableCellViewIdentifier";
-    NSTableCellView *cellView =
-        [tableView makeViewWithIdentifier:basicCellViewIdentifier owner:self];
-    if (cellView == nil) {
-        cellView =
-            [NSTableCellView tableCellViewWithIdentifier:basicCellViewIdentifier showingString:@""];
-    }
-    NSAssert(cellView, @"Cell view should not be nil");
+    VLCInputItem * const inputItem = inputNode.inputItem;
 
-    if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableCountColumn"]) {
-        NSValue * const identifier = inputItemIdentifier(inputNode.inputItem);
-        const int numberOfChildren = inputNode.numberOfChildren;
-        NSNumber * const cachedChildCount = self.childCountsByInputItemIdentifier[identifier];
-        if ([self.unavailableInputItemIdentifiers containsObject:identifier]) {
-            cellView.textField.stringValue = NSTR("Unavailable");
-        } else if (numberOfChildren > 0 || [self.preparedInputItemIdentifiers containsObject:identifier]) {
-            cellView.textField.stringValue =
-                [NSString stringWithFormat:@"%i items", numberOfChildren];
-        } else if (cachedChildCount != nil) {
-            cellView.textField.stringValue =
-                [NSString stringWithFormat:@"%li items", cachedChildCount.integerValue];
+    if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableNameColumn"]) {
+        MacLCBrowseTableCellView *cellView =
+            [tableView makeViewWithIdentifier:MacLCBrowseTableCellViewIdentifier owner:self];
+        if (cellView == nil) {
+            cellView = [[MacLCBrowseTableCellView alloc] initWithFrame:NSMakeRect(0, 0, tableColumn.width, 32.0)];
+        }
+
+        NSImage *icon = nil;
+        if (inputItem.inputType == ITEM_TYPE_DIRECTORY ||
+            inputItem.inputType == ITEM_TYPE_NODE ||
+            inputItem.inputType == ITEM_TYPE_PLAYLIST) {
+            icon = [MacLCDesign symbolNamed:@"folder.fill"
+                                  pointSize:15.0
+                                     weight:NSFontWeightMedium
+                         accessibilityLabel:_NS("Folder")];
         } else {
-            cellView.textField.stringValue = NSTR("Loading…");
-            if (![self.preparingInputItemIdentifiers containsObject:identifier]) {
-                [self.preparingInputItemIdentifiers addObject:identifier];
-                VLCMediaSource * const mediaSource = self.displayedMediaSource;
-                dispatch_async(self.childCountQueue, ^{
-                    NSError *error = nil;
-                    NSNumber * const childCount = [mediaSource childCountForInputNode:inputNode
-                                                                                error:&error];
-                    if (childCount == nil && error == nil) {
-                        [mediaSource preparseInputNodeWithinTree:inputNode];
-                        return;
-                    }
-
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [self.preparingInputItemIdentifiers removeObject:identifier];
-                        if (error != nil) {
-                            [self.unavailableInputItemIdentifiers addObject:identifier];
-                        } else if (childCount != nil) {
-                            [self.unavailableInputItemIdentifiers removeObject:identifier];
-                            self.childCountsByInputItemIdentifier[identifier] = childCount;
-                        }
-                        [self reloadCountForInputItemIdentifier:identifier];
-                    });
-                });
+            NSString * const ext = inputItem.MRL.pathExtension.lowercaseString;
+            static NSSet *audioExts = nil;
+            if (!audioExts) {
+                audioExts = [NSSet setWithObjects:@"mp3", @"flac", @"m4a", @"aac", @"wav", @"alac", @"aiff", @"ogg", @"opus", nil];
+            }
+            if ([audioExts containsObject:ext]) {
+                icon = [MacLCDesign symbolNamed:@"music.note"
+                                      pointSize:15.0
+                                         weight:NSFontWeightMedium
+                             accessibilityLabel:_NS("Audio file")];
+            } else {
+                icon = [MacLCDesign symbolNamed:@"film"
+                                      pointSize:15.0
+                                         weight:NSFontWeightMedium
+                             accessibilityLabel:_NS("Video file")];
             }
         }
-    } else if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableKindColumn"]) {
-        NSString *typeName = NSTR("Unknown");
-        switch (inputNode.inputItem.inputType) {
+        [cellView setIconImage:icon title:inputItem.name ?: @""];
+        return cellView;
+    }
+
+    if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableCountColumn"]) {
+        MacLCBrowseTableTextCellView *cellView =
+            [tableView makeViewWithIdentifier:MacLCBrowseTableTextCellViewIdentifier owner:self];
+        if (cellView == nil) {
+            cellView = [[MacLCBrowseTableTextCellView alloc] initWithFrame:NSMakeRect(0, 0, tableColumn.width, 32.0)];
+        }
+
+        if (inputItem.inputType == ITEM_TYPE_DIRECTORY ||
+            inputItem.inputType == ITEM_TYPE_NODE ||
+            inputItem.inputType == ITEM_TYPE_PLAYLIST) {
+            NSValue * const identifier = inputItemIdentifier(inputItem);
+            const int numberOfChildren = inputNode.numberOfChildren;
+            NSNumber * const cachedChildCount = self.childCountsByInputItemIdentifier[identifier];
+            if ([self.unavailableInputItemIdentifiers containsObject:identifier]) {
+                [cellView setStringValue:_NS("Unavailable") alignment:NSTextAlignmentRight];
+            } else if (numberOfChildren > 0 || [self.preparedInputItemIdentifiers containsObject:identifier]) {
+                [cellView setStringValue:MacLCBrowseItemCountString(numberOfChildren)
+                               alignment:NSTextAlignmentRight];
+            } else if (cachedChildCount != nil) {
+                [cellView setStringValue:MacLCBrowseItemCountString(cachedChildCount.integerValue)
+                               alignment:NSTextAlignmentRight];
+            } else {
+                [cellView setStringValue:_NS("Loading…") alignment:NSTextAlignmentRight];
+                if (![self.preparingInputItemIdentifiers containsObject:identifier]) {
+                    [self.preparingInputItemIdentifiers addObject:identifier];
+                    VLCMediaSource * const mediaSource = self.displayedMediaSource;
+                    dispatch_async(self.childCountQueue, ^{
+                        NSError *error = nil;
+                        NSNumber * const childCount = [mediaSource childCountForInputNode:inputNode error:&error];
+                        if (childCount == nil && error == nil) {
+                            [mediaSource preparseInputNodeWithinTree:inputNode];
+                            return;
+                        }
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [self.preparingInputItemIdentifiers removeObject:identifier];
+                            if (error != nil) {
+                                [self.unavailableInputItemIdentifiers addObject:identifier];
+                            } else if (childCount != nil) {
+                                [self.unavailableInputItemIdentifiers removeObject:identifier];
+                                self.childCountsByInputItemIdentifier[identifier] = childCount;
+                            }
+                            [self reloadCountForInputItemIdentifier:identifier];
+                        });
+                    });
+                }
+            }
+        } else {
+            NSURL * const fileURL = [NSURL URLWithString:inputItem.MRL];
+            /* Reading a size on a network volume could stall the interface. */
+            if (fileURL.isFileURL && MacLCBrowsePathIsOnLocalVolume(fileURL.path)) {
+                NSError *sizeError = nil;
+                NSNumber *fileSizeNumber = nil;
+                [fileURL getResourceValue:&fileSizeNumber forKey:NSURLFileSizeKey error:&sizeError];
+                if (fileSizeNumber != nil) {
+                    NSString * const sizeStr = [NSByteCountFormatter stringFromByteCount:fileSizeNumber.longLongValue
+                                                                              countStyle:NSByteCountFormatterCountStyleFile];
+                    [cellView setStringValue:sizeStr alignment:NSTextAlignmentRight];
+                } else {
+                    [cellView setStringValue:@"--" alignment:NSTextAlignmentRight];
+                }
+            } else {
+                [cellView setStringValue:@"--" alignment:NSTextAlignmentRight];
+            }
+        }
+        return cellView;
+    }
+
+    if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableKindColumn"]) {
+        MacLCBrowseTableTextCellView *cellView =
+            [tableView makeViewWithIdentifier:MacLCBrowseTableTextCellViewIdentifier owner:self];
+        if (cellView == nil) {
+            cellView = [[MacLCBrowseTableTextCellView alloc] initWithFrame:NSMakeRect(0, 0, tableColumn.width, 32.0)];
+        }
+
+        NSString *typeName = _NS("Unknown");
+        switch (inputItem.inputType) {
             case ITEM_TYPE_UNKNOWN:
-                typeName = NSTR("Unknown");
+                typeName = _NS("Unknown");
                 break;
             case ITEM_TYPE_FILE:
             {
-                NSString * const filePath = inputNode.inputItem.MRL;
+                NSString * const filePath = inputItem.MRL;
                 NSString * const extension = filePath.pathExtension.lowercaseString;
                 if (extension.length > 0) {
-                    typeName = [NSString stringWithFormat:@"%@ File", extension.capitalizedString];
-
-                    const CFStringRef extCF = (__bridge CFStringRef)extension;
-                    const CFStringRef uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, extCF, NULL);
-                    if (uti) {
-                        CFStringRef descriptionCF = UTTypeCopyDescription(uti);
-                        if (descriptionCF) {
-                            typeName = CFBridgingRelease(descriptionCF);
-                        }
-                        CFRelease(uti);
+                    UTType * const type = [UTType typeWithFilenameExtension:extension];
+                    if (type.localizedDescription.length > 0) {
+                        typeName = type.localizedDescription;
+                    } else {
+                        typeName = [NSString stringWithFormat:_NS("%@ file"), extension.uppercaseString];
                     }
                 } else {
-                    typeName = NSTR("File");
+                    typeName = _NS("File");
                 }
                 break;
             }
             case ITEM_TYPE_DIRECTORY:
-                typeName = NSTR("Directory");
+                typeName = _NS("Folder");
                 break;
             case ITEM_TYPE_DISC:
-                typeName = NSTR("Disc");
+                typeName = _NS("Disc");
                 break;
             case ITEM_TYPE_CARD:
-                typeName = NSTR("Card");
+                typeName = _NS("Card");
                 break;
             case ITEM_TYPE_STREAM:
-                typeName = NSTR("Stream");
+                typeName = _NS("Stream");
                 break;
             case ITEM_TYPE_PLAYLIST:
-                typeName = NSTR("Playlist");
+                typeName = _NS("Playlist");
                 break;
             case ITEM_TYPE_NODE:
-                typeName = NSTR("Node");
+                typeName = _NS("Node");
                 break;
             case ITEM_TYPE_NUMBER:
-                typeName = NSTR("Undefined");
+                typeName = _NS("Undefined");
                 break;
         }
-        cellView.textField.stringValue = typeName;
-    } else if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableTagsColumn"]) {
-        static NSString * const basicCellViewIdentifier = @"BasicTableCellViewIdentifier";
-        NSTableCellView *cellView = [tableView makeViewWithIdentifier:basicCellViewIdentifier
-                                                                owner:self];
-        if (cellView == nil) {
-            cellView = [NSTableCellView tableCellViewWithIdentifier:basicCellViewIdentifier
-                                                      showingString:@""];
-        }
-
-        NSArray<NSString *> * const tags = inputNode.inputItem.finderTags;
-        if (tags.count > 0) {
-            cellView.textField.stringValue = [tags componentsJoinedByString:@", "];
-        } else {
-            cellView.textField.stringValue = @"";
-        }
+        [cellView setStringValue:typeName alignment:NSTextAlignmentLeft];
         return cellView;
     }
-    return cellView;
+
+    if ([tableColumn.identifier isEqualToString:@"VLCMediaSourceTableTagsColumn"]) {
+        MacLCBrowseTableTextCellView *cellView =
+            [tableView makeViewWithIdentifier:MacLCBrowseTableTextCellViewIdentifier owner:self];
+        if (cellView == nil) {
+            cellView = [[MacLCBrowseTableTextCellView alloc] initWithFrame:NSMakeRect(0, 0, tableColumn.width, 32.0)];
+        }
+        NSArray<NSString *> * const tags = inputItem.finderTags;
+        [cellView setStringValue:(tags.count > 0 ? [tags componentsJoinedByString:@", "] : @"")
+                       alignment:NSTextAlignmentLeft];
+        return cellView;
+    }
+
+    return nil;
+}
+
+- (nullable NSTableRowView *)tableView:(NSTableView *)tableView rowViewForRow:(NSInteger)row
+{
+    static NSString * const rowIdentifier = @"MacLCBrowseTableRowViewIdentifier";
+    MacLCBrowseTableRowView *rowView = [tableView makeViewWithIdentifier:rowIdentifier owner:self];
+    if (rowView == nil) {
+        rowView = [[MacLCBrowseTableRowView alloc] initWithFrame:NSZeroRect];
+        rowView.identifier = rowIdentifier;
+    }
+    return rowView;
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification
 {
-    NSInteger selectedIndex = self.tableView.selectedRow;
-    if (selectedIndex < 0) {
-        return;
-    }
-
-    VLCInputNode *childNode = [self mediaSourceInputNodeAtRow:selectedIndex];
-    if (childNode) {
-        [self performActionForNode:childNode allowPlayback:NO];
-    }
+    // Single click selects only; opening is triggered via doubleAction (tableViewAction:)
 }
 
 - (void)tableViewAction:(id)sender
 {
+    NSEvent * const currentEvent = NSApp.currentEvent;
+    if (currentEvent.type == NSEventTypeLeftMouseDown || currentEvent.type == NSEventTypeLeftMouseUp) {
+        if (currentEvent.clickCount < 2) {
+            return;
+        }
+    }
+
     NSInteger selectedIndex = self.tableView.selectedRow;
     if (selectedIndex < 0) {
         return;
@@ -602,6 +786,7 @@ static NSValue * _Nullable inputItemIdentifier(VLCInputItem * _Nullable const in
         self.nodeToDisplay = node;
 
         [self.navigationStack appendCurrentLibraryState];
+        [self.parentBaseDataSource updateHeaderPathBreadcrumbs];
     } else if (childRootInput.inputType == ITEM_TYPE_FILE && allowPlayback) {
         [VLCMain.sharedInstance.playQueueController addInputItem:childRootInput.vlcInputItem atPosition:-1 startPlayback:YES];
     }
