@@ -149,6 +149,18 @@ libci_filters_plugin_la_LDFLAGS += -Wl,-framework,OpenGLES
 video_filter_PLUGINS += libci_filters_plugin.la
 endif
 
+# MacLC real-time frame interpolation (Apple Silicon)
+libmaclc_frc_plugin_la_SOURCES = video_filter/maclc_frc.m codec/vt_utils.c codec/vt_utils.h
+libmaclc_frc_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-arc -fobjc-exceptions
+libmaclc_frc_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(video_filter_RPATH) \
+	-Wl,-framework,Foundation -Wl,-framework,CoreGraphics \
+	-Wl,-framework,CoreVideo -Wl,-framework,CoreMedia \
+	-Wl,-framework,VideoToolbox -Wl,-framework,Metal
+
+if HAVE_OSX
+video_filter_PLUGINS += libmaclc_frc_plugin.la
+endif
+
 libopengl_filter_plugin_la_SOURCES = video_filter/opengl.c
 libopengl_filter_plugin_la_LIBADD = $(GL_PLUGIN_LIBADD)
 libopengl_filter_plugin_la_CFLAGS = $(AM_CFLAGS) $(GL_PLUGIN_CFLAGS) $(OPENGL_COMMONCFLAGS)

@@ -859,6 +859,7 @@ static void ChangeFilters(vout_thread_sys_t *vout)
     static const char *const static_filters[] = {
         "amf_frc",
         "fps",
+        "maclc_frc",
         "postproc",
     };
     vout_thread_sys_t *sys = vout;

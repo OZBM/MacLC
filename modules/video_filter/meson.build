@@ -338,6 +338,23 @@ vlc_modules += {
     'dependencies' : [m_lib]
 }
 
+# MacLC real-time frame interpolation (Apple Silicon)
+vlc_modules += {
+    'name' : 'maclc_frc',
+    'sources' : files('maclc_frc.m', '../codec/vt_utils.c'),
+    'dependencies' : [
+        frameworks['Foundation'],
+        frameworks['CoreGraphics'],
+        frameworks['CoreVideo'],
+        frameworks['CoreMedia'],
+        frameworks['VideoToolbox'],
+        frameworks['Metal'],
+    ],
+    'objc_args' : ['-fobjc-arc'],
+    'include_directories' : [include_directories('../codec')],
+    'enabled' : have_osx,
+}
+
 # macOS/iOS accelerated video filters (CoreImage)
 vlc_modules += {
     'name' : 'ci_filters',

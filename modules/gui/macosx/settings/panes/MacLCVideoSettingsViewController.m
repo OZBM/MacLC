@@ -58,12 +58,54 @@
 @property (nonatomic, strong) MacLCSettingsRow *cropRatioRow;
 @property (nonatomic, strong) MacLCSettingsRow *lockAspectRow;
 
+@property (nonatomic, strong) MacLCSettingsRow *interpolationRow;
+@property (nonatomic, strong) MacLCSettingsRow *interpolationTargetRow;
+@property (nonatomic, strong) MacLCSettingsRow *interpolationOverrunRow;
+
 @property (nonatomic, strong) MacLCSettingsRow *snapFolderRow;
 @property (nonatomic, strong) MacLCSettingsRow *snapPrefixRow;
 @property (nonatomic, strong) MacLCSettingsRow *snapFormatRow;
 @property (nonatomic, strong) MacLCSettingsRow *snapSequentialRow;
 
 @end
+
+/* The interpolator is a video filter, so turning it on and off means editing
+ * the "video-filter" chain rather than flipping a boolean of its own. */
+static NSString *const kInterpolationFilter = @"maclc_frc";
+
+static NSMutableArray<NSString *> *MacLCVideoFilterList(void)
+{
+    char *chain = MacLCConfigGetPsz("video-filter");
+    NSString *value = chain ? toNSStr(chain) : @"";
+    free(chain);
+
+    NSMutableArray<NSString *> *names = [NSMutableArray array];
+    for (NSString *part in [value componentsSeparatedByString:@":"]) {
+        NSString *trimmed = [part stringByTrimmingCharactersInSet:
+                             [NSCharacterSet whitespaceCharacterSet]];
+        if (trimmed.length > 0)
+            [names addObject:trimmed];
+    }
+    return names;
+}
+
+static BOOL MacLCVideoFilterEnabled(NSString *name)
+{
+    return [MacLCVideoFilterList() containsObject:name];
+}
+
+static void MacLCVideoFilterSetEnabled(NSString *name, BOOL enabled)
+{
+    NSMutableArray<NSString *> *names = MacLCVideoFilterList();
+    const BOOL present = [names containsObject:name];
+    if (present == enabled)
+        return;
+    if (enabled)
+        [names addObject:name];
+    else
+        [names removeObject:name];
+    MacLCConfigPutPsz("video-filter", [[names componentsJoinedByString:@":"] UTF8String]);
+}
 
 @implementation MacLCVideoSettingsViewController
 
@@ -311,6 +353,56 @@
     _lockAspectRow.defaultHint = _NS("Default: On");
     [aspectCard.contentStackView addArrangedSubview:_lockAspectRow];
 
+    // Card 4: Frame Interpolation
+    MacLCCardView *interpolationCard =
+        [MacLCCardView cardViewWithTitle:_NS("Frame Interpolation")];
+    interpolationCard.translatesAutoresizingMaskIntoConstraints = NO;
+    [rootStack addArrangedSubview:interpolationCard];
+    [interpolationCard.trailingAnchor constraintEqualToAnchor:rootStack.trailingAnchor].active = YES;
+
+    _interpolationRow = [MacLCSettingsRow popUpRowWithTitle:_NS("Motion Interpolation")
+                                                explanation:_NS("Synthesise intermediate frames so motion matches the refresh rate of the display. Automatic picks the best method that still runs in real time.")
+                                                      items:@[_NS("Off"), _NS("Automatic"),
+                                                              _NS("Quality (optical flow)"),
+                                                              _NS("Balanced (optical flow)"),
+                                                              _NS("Low latency (up to 720p)"),
+                                                              _NS("Motion compensation"),
+                                                              _NS("Blend")]
+                                                       tags:@[@-1, @0, @1, @2, @3, @4, @5]
+                                              selectedIndex:0
+                                                     action:^(NSInteger selectedIndex, NSInteger tag) {
+        weakSelf.hasUnsavedChanges = YES;
+        weakSelf.interpolationTargetRow.enabled = tag >= 0;
+        weakSelf.interpolationOverrunRow.enabled = tag >= 0;
+    }];
+    _interpolationRow.defaultHint = _NS("Default: Off");
+    [interpolationCard.contentStackView addArrangedSubview:_interpolationRow];
+
+    _interpolationTargetRow = [MacLCSettingsRow popUpRowWithTitle:_NS("Target Frame Rate")
+                                                      explanation:_NS("Frame rate to aim for. Matching the display picks the largest whole multiple of the source the screen can show.")
+                                                            items:@[_NS("Match the Display"), _NS("60 fps"),
+                                                                    _NS("120 fps"), _NS("Twice the Source")]
+                                                             tags:@[@0, @1, @2, @3]
+                                                    selectedIndex:0
+                                                           action:^(NSInteger selectedIndex, NSInteger tag) {
+        weakSelf.hasUnsavedChanges = YES;
+    }];
+    _interpolationTargetRow.defaultHint = _NS("Default: Match the Display");
+    [interpolationCard.contentStackView addArrangedSubview:_interpolationTargetRow];
+
+    _interpolationOverrunRow = [MacLCSettingsRow popUpRowWithTitle:_NS("When Too Slow")
+                                                       explanation:_NS("What to do when a pass no longer fits in the time one source frame lasts.")
+                                                             items:@[_NS("Fall Back to a Cheaper Method"),
+                                                                     _NS("Stop Interpolating"),
+                                                                     _NS("Keep Going")]
+                                                              tags:@[@0, @1, @2]
+                                                     selectedIndex:0
+                                                            action:^(NSInteger selectedIndex, NSInteger tag) {
+        weakSelf.hasUnsavedChanges = YES;
+    }];
+    _interpolationOverrunRow.defaultHint = _NS("Default: Fall Back to a Cheaper Method");
+    [interpolationCard.contentStackView addArrangedSubview:_interpolationOverrunRow];
+
     // Card 4: Video Snapshots
     MacLCCardView *snapCard = [MacLCCardView cardViewWithTitle:_NS("Video Snapshots")];
     snapCard.translatesAutoresizingMaskIntoConstraints = NO;
@@ -420,6 +512,16 @@
     NSUInteger mIdx = [modes indexOfObject:modeStr];
     [_deinterlaceModeRow.popUpButton selectItemAtIndex:(mIdx != NSNotFound) ? (NSInteger)mIdx : 0];
 
+    const BOOL interpolating = MacLCVideoFilterEnabled(kInterpolationFilter);
+    [_interpolationRow.popUpButton selectItemWithTag:
+        interpolating ? MacLCConfigGetInt("maclc-frc-engine", 0) : -1];
+    [_interpolationTargetRow.popUpButton selectItemWithTag:
+        MacLCConfigGetInt("maclc-frc-target", 0)];
+    [_interpolationOverrunRow.popUpButton selectItemWithTag:
+        MacLCConfigGetInt("maclc-frc-overrun", 0)];
+    _interpolationTargetRow.enabled = interpolating;
+    _interpolationOverrunRow.enabled = interpolating;
+
     char *aspect = MacLCConfigGetPsz("aspect-ratio");
     NSString *aspectStr = aspect ? toNSStr(aspect) : @"";
     free(aspect);
@@ -471,6 +573,13 @@
         MacLCConfigPutPsz("deinterlace-mode", [modes[mIdx] UTF8String]);
     }
 
+    const NSInteger engine = _interpolationRow.popUpButton.selectedTag;
+    MacLCVideoFilterSetEnabled(kInterpolationFilter, engine >= 0);
+    if (engine >= 0)
+        MacLCConfigPutInt("maclc-frc-engine", engine);
+    MacLCConfigPutInt("maclc-frc-target", _interpolationTargetRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("maclc-frc-overrun", _interpolationOverrunRow.popUpButton.selectedTag);
+
     NSString *aspectTitle = _aspectRatioRow.popUpButton.titleOfSelectedItem;
     if ([aspectTitle isEqualToString:_NS("Default")]) {
         MacLCConfigPutPsz("aspect-ratio", "");
@@ -512,6 +621,10 @@
     if ((item = config_FindConfig("aspect-ratio"))) MacLCConfigPutPsz("aspect-ratio", item->orig.psz ? item->orig.psz : "");
     if ((item = config_FindConfig("crop"))) MacLCConfigPutPsz("crop", item->orig.psz ? item->orig.psz : "");
     if ((item = config_FindConfig("macosx-lock-aspect-ratio"))) MacLCConfigPutInt("macosx-lock-aspect-ratio", item->orig.i);
+    MacLCVideoFilterSetEnabled(kInterpolationFilter, NO);
+    if ((item = config_FindConfig("maclc-frc-engine"))) MacLCConfigPutInt("maclc-frc-engine", item->orig.i);
+    if ((item = config_FindConfig("maclc-frc-target"))) MacLCConfigPutInt("maclc-frc-target", item->orig.i);
+    if ((item = config_FindConfig("maclc-frc-overrun"))) MacLCConfigPutInt("maclc-frc-overrun", item->orig.i);
     if ((item = config_FindConfig("snapshot-path"))) MacLCConfigPutPsz("snapshot-path", item->orig.psz ? item->orig.psz : "");
     if ((item = config_FindConfig("snapshot-prefix"))) MacLCConfigPutPsz("snapshot-prefix", item->orig.psz ? item->orig.psz : "maclcsnap-");
     if ((item = config_FindConfig("snapshot-format"))) MacLCConfigPutPsz("snapshot-format", item->orig.psz ? item->orig.psz : "png");
