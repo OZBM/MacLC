@@ -71,4 +71,12 @@
                                  NSInvalidArgumentException);
 }
 
+/* NSFormatter lets a caller validate a string without asking for the object
+ * or the error: both out parameters may be NULL. */
+- (void)testGetObjectValueWithoutOutParameters
+{
+    VLCPositionFormatter * const formatter = [[VLCPositionFormatter alloc] init];
+    XCTAssertTrue([formatter getObjectValue:NULL forString:@"42" errorDescription:NULL]);
+}
+
 @end

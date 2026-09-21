@@ -47,4 +47,11 @@
     XCTAssertNil(object);
 }
 
+- (void)testGetObjectValueWithoutOutParameters
+{
+    VLCHexNumberFormatter * const formatter = [[VLCHexNumberFormatter alloc] init];
+    XCTAssertTrue([formatter getObjectValue:NULL forString:@"0012AB" errorDescription:NULL]);
+    XCTAssertFalse([formatter getObjectValue:NULL forString:@"zz" errorDescription:NULL]);
+}
+
 @end

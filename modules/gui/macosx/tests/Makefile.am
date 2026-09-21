@@ -17,9 +17,14 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/tests/VLCLogMessageTest.m \
 	gui/macosx/tests/VLCPositionFormatterTest.m \
 	gui/macosx/tests/VLCTimeFormatterTest.m \
+	gui/macosx/tests/MacLCComposedMediaTitleTest.m \
+	gui/macosx/tests/MacLCVideoFitGeometryTest.m \
+	gui/macosx/tests/MacLCVolumePathTest.m \
 	gui/macosx/extensions/VLCHexNumberFormatter.m \
 	gui/macosx/extensions/VLCPositionFormatter.m \
 	gui/macosx/extensions/NSString+Helpers.m \
+	gui/macosx/extensions/MacLCVolumePath.m \
+	gui/macosx/windows/video/MacLCVideoFitGeometry.m \
 	gui/macosx/library/VLCInputItem.m \
 	gui/macosx/library/VLCInputNode.m \
 	gui/macosx/windows/logging/VLCLogMessage.m \

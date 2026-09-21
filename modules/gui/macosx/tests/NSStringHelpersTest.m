@@ -210,8 +210,13 @@
     XCTAssertEqualObjects(toNSStr("VLC"), @"VLC");
     XCTAssertEqualObjects(toNSStr("caf\xc3\xa9"), @"café");
 
+    /* Bytes that are not valid UTF-8 are read as ISO Latin 1 rather than
+     * dropped, and the conversion never returns nil: callers test the length,
+     * not the pointer. */
     const char invalidUTF8[] = { (char)0xff, '\0' };
-    XCTAssertNil(toNSStr(invalidUTF8));
+    XCTAssertEqualObjects(toNSStr(invalidUTF8), @"\u00ff");
+    XCTAssertNotNil(toNSStr(NULL));
+    XCTAssertEqual(toNSStr(NULL).length, 0u);
 }
 
 - (void)testCocoaKeyToVLC
@@ -347,6 +352,21 @@
     XCTAssertEqualObjects(getBSDNodeFromMountPath(missingPath), @"");
 
     [fileManager removeItemAtPath:path error:nil];
+}
+
+/* Only a real device node can be turned into a raw device path. */
+- (void)testBSDNodeFromMountPath
+{
+    XCTAssertEqualObjects(getBSDNodeFromMountPath(@""), @"");
+
+    /* The boot volume mounts from a device, so it has a raw node. */
+    NSString * const rootNode = getBSDNodeFromMountPath(@"/");
+    XCTAssertTrue([rootNode hasPrefix:@"/dev/r"], @"got %@", rootNode);
+    XCTAssertGreaterThan(rootNode.length, [@"/dev/r" length]);
+
+    /* devfs does not mount from a device: its name must not be dressed up as
+     * one, and neither must a network share's "//user@host/share". */
+    XCTAssertEqualObjects(getBSDNodeFromMountPath(@"/dev"), @"");
 }
 
 - (void)testBrandSubstitution

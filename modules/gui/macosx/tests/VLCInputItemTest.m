@@ -349,6 +349,33 @@
     VLCInputItemTestResetAppKitState();
 }
 
+/* -path is not percent encoded: a space in it used to make the URL nil and
+ * both operations return without doing anything. */
+- (void)testLocalFileOperationsWorkOnPathsWithSpaces
+{
+    VLCInputItemTestResetAppKitState();
+    VLCInputItem * const inputItem =
+        [VLCInputItem inputItemFromURL:[NSURL fileURLWithPath:@"/tmp/VLC Input Item Test.mkv"]];
+
+    XCTAssertNotNil(inputItem);
+    XCTAssertEqualObjects(inputItem.path, @"/tmp/VLC Input Item Test.mkv");
+
+    [inputItem revealInFinder];
+    XCTAssertTrue(VLCInputItemTestDidReveal());
+    /* Finder and the trash need a real file URL: a path put through
+     * -URLWithString: comes back schemeless (or nil on older systems) and both
+     * operations quietly do nothing. */
+    NSArray<NSURL *> * const revealed = VLCInputItemTestRevealedURLs();
+    XCTAssertEqual(revealed.count, 1u);
+    XCTAssertTrue(revealed.firstObject.isFileURL);
+    XCTAssertEqualObjects(revealed.firstObject.path, @"/tmp/VLC Input Item Test.mkv");
+
+    [inputItem moveToTrash];
+    XCTAssertTrue(VLCInputItemTestDidReload());
+
+    VLCInputItemTestResetAppKitState();
+}
+
 - (void)testMissingURIShortCircuitsLocalOperations
 {
     input_item_t * const coreItem = input_item_New(NULL, "No URI");
@@ -482,6 +509,40 @@
 {
     input_item_t * const nilInputItem = NULL;
     XCTAssertNil([[VLCInputItem alloc] initWithInputItem:nilInputItem]);
+}
+
+/* Metadata an item does not carry is an empty string, never nil: a caller
+ * that tests the pointer instead of the length always takes the "there is
+ * metadata" branch. This is what put a dangling separator in window titles. */
+- (void)testAbsentMetadataIsEmptyRatherThanNil
+{
+    input_item_t * const coreItem = [self newFileInputItem];
+    VLCInputItem * const inputItem = [[VLCInputItem alloc] initWithInputItem:coreItem];
+    input_item_Release(coreItem);
+
+    NSArray<NSString *> * const absent = @[
+        inputItem.nowPlaying, inputItem.artist, inputItem.album, inputItem.genre,
+        inputItem.copyright, inputItem.publisher, inputItem.language, inputItem.date,
+        inputItem.contentDescription, inputItem.encodedBy, inputItem.director,
+        inputItem.season, inputItem.episode, inputItem.showName, inputItem.actors,
+        inputItem.discNumber, inputItem.totalNumberOfDiscs, inputItem.trackNumber,
+        inputItem.trackID, inputItem.trackTotal,
+    ];
+    for (NSString * const value in absent) {
+        XCTAssertNotNil(value);
+        XCTAssertEqual(value.length, 0u);
+    }
+}
+
+- (void)testSetMetadataIsReadBackAsWritten
+{
+    input_item_t * const coreItem = [self newFileInputItem];
+    input_item_SetNowPlaying(coreItem, "Artist - Song");
+    VLCInputItem * const inputItem = [[VLCInputItem alloc] initWithInputItem:coreItem];
+    input_item_Release(coreItem);
+
+    XCTAssertEqualObjects(inputItem.nowPlaying, @"Artist - Song");
+    XCTAssertGreaterThan(inputItem.nowPlaying.length, 0u);
 }
 
 @end

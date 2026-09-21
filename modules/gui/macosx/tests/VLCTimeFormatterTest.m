@@ -85,4 +85,12 @@
     XCTAssertNotNil(error);
 }
 
+- (void)testGetObjectValueWithoutOutParameters
+{
+    VLCTimeFormatter * const formatter = [[VLCTimeFormatter alloc] init];
+    XCTAssertTrue([formatter getObjectValue:NULL forString:@"1:30" errorDescription:NULL]);
+    /* The invalid case is the one that writes through the error pointer. */
+    XCTAssertFalse([formatter getObjectValue:NULL forString:@"1:2:3:4" errorDescription:NULL]);
+}
+
 @end

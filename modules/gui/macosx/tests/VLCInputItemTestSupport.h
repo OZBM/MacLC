@@ -16,3 +16,4 @@ void VLCInputItemTestSetWorkspaceImage(NSImage * _Nullable image);
 void VLCInputItemTestResetAppKitState(void);
 BOOL VLCInputItemTestDidReveal(void);
 BOOL VLCInputItemTestDidReload(void);
+NSArray<NSURL *> * _Nullable VLCInputItemTestRevealedURLs(void);
