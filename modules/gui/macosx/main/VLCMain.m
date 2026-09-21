@@ -229,6 +229,37 @@ int OpenIntf (vlc_object_t *p_this)
     return retcode;
 }
 
+/* -[NSApplication stop:] only takes effect once the event loop dequeues
+ * something, and a session nobody is typing into may never produce another
+ * event; a single nudge can also be swallowed by whatever else is pumping
+ * events while the interface tears itself down. Both leave -run blocked
+ * forever while CloseIntf waits for it below. Keep offering one until -run
+ * has actually returned. */
+enum { kMacLCStopAttempts = 500 };  /* ten seconds, far more than it takes */
+
+static void MacLCStopApplication(int attempts)
+{
+    if (NSApp == nil || !NSApp.running || attempts <= 0)
+        return;
+
+    [NSApp stop:nil];
+    [NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined
+                                        location:NSZeroPoint
+                                   modifierFlags:0
+                                       timestamp:0.0
+                                    windowNumber:0
+                                         context:nil
+                                         subtype:0
+                                          data1:0
+                                          data2:0]
+             atStart:YES];
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 20 * NSEC_PER_MSEC),
+                   dispatch_get_main_queue(), ^{
+        MacLCStopApplication(attempts - 1);
+    });
+}
+
 void CloseIntf (vlc_object_t *p_this)
 {
     void (^release_intf)() = ^{
@@ -248,17 +279,7 @@ void CloseIntf (vlc_object_t *p_this)
          * queued on the main thread. */
         p_interface_thread = NULL;
         vlc_preparser_Delete(p_network_preparser);
-        [NSApp stop:nil];
-        NSEvent* event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
-            location:NSMakePoint(0,0)
-            modifierFlags:0
-            timestamp:0.0
-            windowNumber:0
-            context:nil
-            subtype:0
-            data1:0
-            data2:0];
-        [NSApp postEvent:event atStart:YES];
+        MacLCStopApplication(kMacLCStopAttempts);
     };
     if (CFRunLoopGetCurrent() == CFRunLoopGetMain())
         release_intf();
