@@ -102,6 +102,9 @@
 #import "windows/video/VLCVideoOutputProvider.h"
 #import "windows/video/VLCVoutView.h"
 
+#import "webvideo/MacLCWebVideoPanelController.h"
+#import "webvideo/MacLCWebVideoResolver.h"
+
 const NSUInteger VLCLibrarySearchMaxMatchingTitles = 5;
 const CGFloat VLCLibraryWindowMinimalWidth = 604.;
 const CGFloat VLCLibraryWindowMinimalHeight = 307.;
@@ -902,6 +905,23 @@ static int ShowController(vlc_object_t * __unused p_this,
     [super windowDidEnterFullScreen:notification];
     if (!self.splitViewController.mainVideoModeEnabled) {
         [self showControlsBar];
+    }
+}
+
+- (void)paste:(id)sender
+{
+    NSPasteboard * const pasteboard = NSPasteboard.generalPasteboard;
+    NSString *address = [pasteboard stringForType:NSPasteboardTypeString];
+    if (address.length == 0) {
+        address = [pasteboard stringForType:NSPasteboardTypeURL];
+    }
+
+    /* Nothing else in the responder chain claimed the paste, so a web address
+     * is the only thing the library window can do with it. */
+    if (address.length > 0 && [MacLCWebVideoResolver looksLikeWebVideoAddress:address]) {
+        [MacLCWebVideoPanelController.sharedController showPanelWithAddress:address];
+    } else {
+        NSBeep();
     }
 }
 

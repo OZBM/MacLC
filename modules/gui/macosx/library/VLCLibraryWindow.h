@@ -152,6 +152,7 @@ extern NSString * const VLCLibraryWindowEmbeddedVideoPlaybackActiveKey;
 - (IBAction)backwardsNavigationAction:(id)sender;
 - (IBAction)forwardsNavigationAction:(id)sender;
 - (IBAction)gridVsListSegmentedControlAction:(id)sender;
+- (void)paste:(nullable id)sender;
 
 @end
 

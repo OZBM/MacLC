@@ -61,6 +61,7 @@
 
 #import "views/VLCFileDragRecognisingView.h"
 #import "views/VLCImageView.h"
+#import "webvideo/MacLCWebVideoPanelController.h"
 #import "views/VLCUIUnits.h"
 
 #include <sys/mount.h>
@@ -98,6 +99,7 @@ NSString * const VLCMediaSourceTableTagsColumnIdentifier = @"VLCMediaSourceTable
 @property (nonatomic, strong, nullable) VLCInputNode *inputNode;
 @property (nonatomic, strong, nullable) VLCMediaSource *mediaSource;
 @property (nonatomic, copy, nullable) NSString *mrl;
+@property (nonatomic) BOOL opensWebVideoPanel;
 @end
 
 @implementation MacLCBrowseHomeItem
@@ -385,6 +387,13 @@ static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputIt
         MacLCBrowseHomeSection * const locationsSection = [[MacLCBrowseHomeSection alloc] init];
         locationsSection.title = _NS("Locations");
 
+        MacLCBrowseHomeItem * const webVideoItem = [[MacLCBrowseHomeItem alloc] init];
+        webVideoItem.title = _NS("Open a Link");
+        webVideoItem.subtitle = _NS("Play a video from the web");
+        webVideoItem.symbolName = @"link.badge.plus";
+        webVideoItem.opensWebVideoPanel = YES;
+        [locationsSection.items addObject:webVideoItem];
+
         VLCMediaSource *myFoldersSource = nil;
         VLCMediaSource *devicesSource = nil;
 
@@ -635,6 +644,10 @@ static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputIt
     }
 
     MacLCBrowseHomeItem * const item = _homeSections[indexPath.section].items[indexPath.item];
+    if (item.opensWebVideoPanel) {
+        [MacLCWebVideoPanelController.sharedController showPanel];
+        return;
+    }
     if (item.inputNode != nil && item.mediaSource != nil) {
         [self configureChildDataSourceWithNode:item.inputNode andMediaSource:item.mediaSource];
     } else if (item.mrl != nil) {
@@ -779,6 +792,10 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
     }
 
     MacLCBrowseHomeItem * const item = _homeItems[selectedRow];
+    if (item.opensWebVideoPanel) {
+        [MacLCWebVideoPanelController.sharedController showPanel];
+        return;
+    }
     if (item.inputNode != nil && item.mediaSource != nil) {
         [self configureChildDataSourceWithNode:item.inputNode andMediaSource:item.mediaSource];
     } else if (item.mrl != nil) {

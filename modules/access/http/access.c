@@ -190,6 +190,14 @@ static int Open(vlc_object_t *obj)
     if (sys->resource == NULL)
         goto error;
 
+    if (!live)
+    {
+        int64_t chunk = var_InheritInteger(obj, "http-chunk-size");
+
+        vlc_http_file_set_chunk_size(sys->resource,
+                                     (chunk > 0) ? (uintmax_t)chunk : 0);
+    }
+
     ret = vlc_credential_get(&crd, obj, NULL, NULL, NULL, NULL);
     if (ret == 0)
         vlc_http_res_set_login(sys->resource,
@@ -294,6 +302,8 @@ vlc_module_begin()
     add_bool("http-continuous", false, N_("Continuous stream"),
              N_("Keep reading a resource that keeps being updated."))
         change_volatile()
+    add_integer("http-chunk-size", 0, N_("HTTP range size"),
+                N_("Request this many bytes at a time instead of the whole rest of the file. Some servers refuse open-ended ranges. Zero keeps the whole-rest request."))
     add_bool("http-forward-cookies", true, N_("Cookies forwarding"),
              N_("Forward cookies across HTTP redirections."))
     add_string("http-referrer", NULL, N_("Referrer"),

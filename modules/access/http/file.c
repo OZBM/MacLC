@@ -43,6 +43,7 @@ struct vlc_http_file
 {
     struct vlc_http_resource resource;
     uintmax_t offset;
+    uintmax_t chunk_size;
 };
 
 static int vlc_http_file_req(const struct vlc_http_resource *res,
@@ -69,8 +70,21 @@ static int vlc_http_file_req(const struct vlc_http_resource *res,
         }
     }
 
-    if (vlc_http_msg_add_header(req, "Range", "bytes=%" PRIuMAX "-", *offset)
-     && *offset != 0)
+    int ret;
+    if (file->chunk_size > 0)
+    {
+        uintmax_t end = *offset + file->chunk_size - 1;
+        if (end < *offset) /* overflow */
+            end = UINTMAX_MAX;
+        ret = vlc_http_msg_add_header(req, "Range", "bytes=%" PRIuMAX "-%" PRIuMAX,
+                                      *offset, end);
+    }
+    else
+    {
+        ret = vlc_http_msg_add_header(req, "Range", "bytes=%" PRIuMAX "-", *offset);
+    }
+
+    if (ret && *offset != 0)
         return -1;
     return 0;
 }
@@ -126,7 +140,14 @@ struct vlc_http_resource *vlc_http_file_create(struct vlc_http_mgr *mgr,
     }
 
     file->offset = 0;
+    file->chunk_size = 0;
     return &file->resource;
+}
+
+void vlc_http_file_set_chunk_size(struct vlc_http_resource *res, uintmax_t size)
+{
+    struct vlc_http_file *file = (struct vlc_http_file *)res;
+    file->chunk_size = size;
 }
 
 static uintmax_t vlc_http_msg_get_file_size(const struct vlc_http_msg *resp)

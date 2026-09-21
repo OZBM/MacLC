@@ -50,6 +50,7 @@
 
 #import "library/VLCLibraryController.h"
 #import "library/VLCLibraryWindow.h"
+#import "webvideo/MacLCWebVideoPanelController.h"
 #import "library/VLCLibraryWindowController.h"
 
 #import "main/CompatibilityFixes.h"
@@ -416,6 +417,24 @@ static VLCMain *sharedInstance = nil;
             } else {
                 [window goToBrowseSection:window];
             }
+        });
+    }
+
+    /* Developer hook for headless UI checks: MACLC_DEBUG_OPEN_WEB_VIDEO opens
+     * the web video panel at launch, pre-filled with the address it holds
+     * (an empty value opens it empty, a "play:" prefix plays it as soon as it
+     * resolves). Unset, it does nothing. */
+    const char * const debugOpenWebVideo = getenv("MACLC_DEBUG_OPEN_WEB_VIDEO");
+    if (debugOpenWebVideo != NULL) {
+        NSString *address = [NSString stringWithUTF8String:debugOpenWebVideo];
+        const BOOL playWhenResolved = [address hasPrefix:@"play:"];
+        if (playWhenResolved) {
+            address = [address substringFromIndex:5];
+        }
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [MacLCWebVideoPanelController.sharedController
+                showPanelWithAddress:address.length > 0 ? address : nil
+                    playWhenResolved:playWhenResolved];
         });
     }
 

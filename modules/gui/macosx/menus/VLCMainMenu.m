@@ -61,6 +61,7 @@
 #import "windows/VLCHelpWindowController.h"
 #import "windows/controlsbar/VLCMainWindowControlsBar.h"
 #import "windows/extensions/VLCExtensionsManager.h"
+#import "webvideo/MacLCWebVideoPanelController.h"
 #import "windows/convertandsave/VLCConvertAndSaveWindowController.h"
 #import "windows/logging/VLCLogWindowController.h"
 #import "windows/addons/VLCAddonsWindowController.h"
@@ -160,6 +161,14 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 
     [self initStrings];
     [self setupKeyboardShortcuts];
+
+    NSInteger netIndex = [_fileMenu indexOfItem:_open_net];
+    if (netIndex != -1) {
+        NSMenuItem *webVideoItem = [[NSMenuItem alloc] initWithTitle:_NS("Open Web Video…") action:@selector(intfOpenWebVideo:) keyEquivalent:@"u"];
+        webVideoItem.keyEquivalentModifierMask = NSEventModifierFlagCommand;
+        webVideoItem.target = self;
+        [_fileMenu insertItem:webVideoItem atIndex:netIndex + 1];
+    }
 
     /* configure playback / controls menu */
     self.fileMenu.delegate = self;
@@ -1495,6 +1504,12 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 {
     [[VLCMain.sharedInstance open] openNet];
 }
+
+- (IBAction)intfOpenWebVideo:(id)sender
+{
+    [MacLCWebVideoPanelController.sharedController showPanel];
+}
+
 
 - (IBAction)intfOpenCapture:(id)sender
 {

@@ -47,6 +47,14 @@ struct vlc_http_resource *vlc_http_file_create(struct vlc_http_mgr *mgr,
                                                const char *ref);
 
 /**
+ * Sets the optional range chunk size.
+ *
+ * @param file the HTTP file resource
+ * @param size the maximum number of bytes to request at a time, or 0
+ */
+void vlc_http_file_set_chunk_size(struct vlc_http_resource *file, uintmax_t size);
+
+/**
  * Gets file size.
  *
  * Determines the file size in bytes.

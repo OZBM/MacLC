@@ -541,6 +541,12 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/theme/MacLCOSDView.m \
 	gui/macosx/theme/MacLCSymbolButton.h \
 	gui/macosx/theme/MacLCSymbolButton.m \
+	gui/macosx/webvideo/MacLCWebVideoHistory.h \
+	gui/macosx/webvideo/MacLCWebVideoHistory.m \
+	gui/macosx/webvideo/MacLCWebVideoPanelController.h \
+	gui/macosx/webvideo/MacLCWebVideoPanelController.m \
+	gui/macosx/webvideo/MacLCWebVideoResolver.h \
+	gui/macosx/webvideo/MacLCWebVideoResolver.m \
 	gui/macosx/views/iCarousel/iCarousel.h \
 	gui/macosx/views/iCarousel/iCarousel.m \
 	gui/macosx/views/VLCBasicView.h \

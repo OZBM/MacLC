@@ -125,6 +125,11 @@ struct ytdl_playlist {
     stream_t *source;
 };
 
+static bool is_real_codec(const char *codec)
+{
+    return codec != NULL && strcmp(codec, "none") != 0;
+}
+
 static int CompareFormats(const struct json_object *f_a,
                           const struct json_object *f_b, double pref_height)
 {
@@ -132,6 +137,12 @@ static int CompareFormats(const struct json_object *f_a,
     double abr_a = json_get_num(f_a, "abr");
     double h_b = json_get_num(f_b, "height");
     double abr_b = json_get_num(f_b, "abr");
+
+    bool mux_a = is_real_codec(json_get_str(f_a, "vcodec")) && is_real_codec(json_get_str(f_a, "acodec"));
+    bool mux_b = is_real_codec(json_get_str(f_b, "vcodec")) && is_real_codec(json_get_str(f_b, "acodec"));
+
+    if (mux_a != mux_b)
+        return mux_a ? +1 : -1;
 
     /* Prefer non-mute formats */
     if (!isnan(abr_a) != !isnan(abr_b))
@@ -188,6 +199,18 @@ static const struct json_object *PickFormat(stream_t *s,
              continue;
 
          const struct json_object *fmt = &v->object;
+
+         const char *proto = json_get_str(fmt, "protocol");
+         if (proto == NULL || strncmp(proto, "http", 4) != 0)
+             continue;
+
+         const char *ext = json_get_str(fmt, "ext");
+         if (ext != NULL && strcmp(ext, "mhtml") == 0)
+             continue;
+
+         if (!is_real_codec(json_get_str(fmt, "vcodec")) &&
+             !is_real_codec(json_get_str(fmt, "acodec")))
+             continue;
 
          if (best_fmt == NULL) {
              best_fmt = fmt;
@@ -351,6 +374,9 @@ static int ControlNested(stream_t *s, int query, va_list args)
 static stream_t *vlc_demux_NewURL(vlc_object_t *obj, const char *url,
                                   es_out_t *out)
 {
+    var_Create(obj, "http-chunk-size", VLC_VAR_INTEGER);
+    var_SetInteger(obj, "http-chunk-size", 1048576);
+
     stream_t *stream = vlc_stream_NewURL(obj, url);
 
     if (stream != NULL) {
