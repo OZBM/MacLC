@@ -197,7 +197,11 @@ static const struct vlc_logger_operations log_ops = { MsgCallback, NULL };
     [saveFolderPanel setCanSelectHiddenExtension: NO];
     [saveFolderPanel setCanCreateDirectories: YES];
     [saveFolderPanel setAllowedFileTypes: [NSArray arrayWithObject:@"txt"]];
-    [saveFolderPanel setNameFieldStringValue:[NSString stringWithFormat: _NS("MacLC Debug Log (%s).txt"), VERSION_MESSAGE]];
+    /* The version goes in outside the localised string: a translation that
+     * gained a format specifier would otherwise read arguments that are not
+     * there. */
+    [saveFolderPanel setNameFieldStringValue:
+        [NSString stringWithFormat:@"%@ (%s).txt", _NS("MacLC Debug Log"), VERSION_MESSAGE]];
     [saveFolderPanel beginSheetModalForWindow: self.window completionHandler:^(NSInteger returnCode) {
         if (returnCode != NSModalResponseOK) {
             return;

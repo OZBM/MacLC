@@ -84,8 +84,7 @@
 
 - (void)updateTransparencyFallback
 {
-    const BOOL reduceTransparency = NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceTransparency;
-    if (reduceTransparency) {
+    if (MacLCDesign.reduceTransparency) {
         self.state = NSVisualEffectStateInactive;
         self.wantsLayer = YES;
         NSColor *fallback = self.opaqueFallbackColor ?: MacLCDesign.windowBackground;
@@ -650,7 +649,11 @@
 
 + (BOOL)reduceTransparency
 {
-    return NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceTransparency;
+    /* Increase Contrast asks for defined, opaque surfaces too, so a blurred
+     * one is wrong in either setting. */
+    NSWorkspace * const workspace = NSWorkspace.sharedWorkspace;
+    return workspace.accessibilityDisplayShouldReduceTransparency ||
+           workspace.accessibilityDisplayShouldIncreaseContrast;
 }
 
 + (NSTimeInterval)animationDuration

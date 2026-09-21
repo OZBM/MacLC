@@ -440,6 +440,17 @@ NSString *toNSStr(const char *str) {
     return nsStr ?: @"";
 }
 
+NSString *MacLCComposedMediaTitle(NSString *title, NSString *nowPlaying)
+{
+    if (title.length == 0) {
+        return @"";
+    }
+    if (nowPlaying.length == 0) {
+        return title;
+    }
+    return [NSString stringWithFormat:@"%@ \u2014 %@", title, nowPlaying];
+}
+
 bool fixIntfSettings(void)
 {
     NSMutableString * o_workString;
@@ -567,14 +578,31 @@ NSString * getVolumeTypeFromMountPath(NSString *mountPath)
 
 NSString * getBSDNodeFromMountPath(NSString *mountPath)
 {
+    /* -fileSystemRepresentation raises on an empty string. */
+    if (mountPath.length == 0) {
+        return @"";
+    }
+
     struct statfs stf;
     int ret = statfs([mountPath fileSystemRepresentation], &stf);
     if (ret != 0) {
         return @"";
     }
-    /* the provided BSD mount path doesn't include the r prefix we need */
+
     NSString *bsdMount = [NSString stringWithUTF8String:stf.f_mntfromname];
+    /* Only a real device has a raw node: a network share mounts from
+     * "//user@host/share" and a synthetic file system from a plain name, and
+     * turning either into "/dev/r<last component>" would name a device that
+     * does not exist. */
+    if (![bsdMount hasPrefix:@"/dev/"]) {
+        return @"";
+    }
+
+    /* the provided BSD mount path doesn't include the r prefix we need */
     NSString *bsdName = [bsdMount lastPathComponent];
+    if (bsdName.length == 0) {
+        return @"";
+    }
     NSString *fixedBsdName = [NSString stringWithFormat:@"/dev/r%@", bsdName];
 
     return fixedBsdName;

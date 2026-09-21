@@ -139,8 +139,12 @@ NSString * const VLCPlaybackEndViewReturnToLibraryNotificationName = @"VLCPlayba
     }
 
     NSURL * const itemUrl = [NSURL URLWithString:item.MRL];
-    NSParameterAssert(itemUrl != nil);
     NSString * const parentFolderPath = itemUrl.URLByDeletingLastPathComponent.path;
+    /* A malformed MRL gives no URL, and the file manager raises on a nil
+     * path: an item we cannot locate simply has no siblings. */
+    if (parentFolderPath == nil) {
+        return nil;
+    }
     NSFileManager * const fm = NSFileManager.defaultManager;
     NSError *error = nil;
     NSArray<NSString *> * const itemSiblingItemPaths =

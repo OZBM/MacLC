@@ -33,14 +33,10 @@
 
 #import "views/VLCUIUnits.h"
 
+#import "windows/video/MacLCVideoFitGeometry.h"
+
 #import <vlc_configuration.h>
 #import <vlc_variables.h>
-
-typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
-    VLCVideoFitModeNative,
-    VLCVideoFitModeArranged,
-    VLCVideoFitModeKeepWidth
-};
 
 @interface VLCFullVideoViewWindow ()
 {
@@ -52,10 +48,13 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
     NSRect _savedFrame;
     NSSize _savedMinSize;
     NSSize _savedContentMinSize;
-    VLCVideoFitMode _fitMode;
+    MacLCVideoFitMode _fitMode;
     NSRect _arrangedBounds;
     NSRect _lastExternalFrame;
-    BOOL _applyingVideoFrame;
+    /* Counted, not a flag: two fits can animate at once (a new item starts
+     * inside the previous animation) and the first completion handler must
+     * not declare the second one finished. */
+    NSInteger _applyingVideoFrameCount;
     BOOL _userLiveResize;
     BOOL _hasPendingRestoreFrame;
     NSRect _pendingRestoreFrame;
@@ -245,8 +244,17 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
 
     /* A previous session may still be animating back to the frame it saved
      * (the next item started right after the last one ended): keep that
-     * frame, not the intermediate one. */
-    _savedFrame = _restoringFrame ? _restoreTargetFrame : self.frame;
+     * frame, not the intermediate one. A restore waiting for a fullscreen
+     * exit holds it too, and self.frame is the fullscreen one there. */
+    if (_hasPendingRestoreFrame && !NSIsEmptyRect(_pendingRestoreFrame)) {
+        _savedFrame = _pendingRestoreFrame;
+        _hasPendingRestoreFrame = NO;
+        _pendingRestoreFrame = NSZeroRect;
+    } else if (_restoringFrame) {
+        _savedFrame = _restoreTargetFrame;
+    } else {
+        _savedFrame = self.frame;
+    }
     _savedMinSize = self.minSize;
     _savedContentMinSize = self.contentMinSize;
 
@@ -272,11 +280,11 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
 
     if ((self.isZoomed || touchesTopAndBottom || touchesLeftAndRight || isQuarter)
         && !NSIsEmptyRect(arrangedBounds)) {
-        _fitMode = VLCVideoFitModeArranged;
+        _fitMode = MacLCVideoFitModeArranged;
         _arrangedBounds = arrangedBounds;
         _lastExternalFrame = _savedFrame;
     } else {
-        _fitMode = VLCVideoFitModeNative;
+        _fitMode = MacLCVideoFitModeNative;
         _arrangedBounds = NSZeroRect;
     }
 
@@ -311,11 +319,11 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
             _hasPendingRestoreFrame = YES;
             _pendingRestoreFrame = _savedFrame;
         } else if (!self.isVisible || NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion) {
-            _applyingVideoFrame = YES;
+            _applyingVideoFrameCount++;
             [self setFrame:_savedFrame display:YES];
-            _applyingVideoFrame = NO;
+            _applyingVideoFrameCount--;
         } else {
-            _applyingVideoFrame = YES;
+            _applyingVideoFrameCount++;
             _restoringFrame = YES;
             _restoreTargetFrame = _savedFrame;
             const NSRect savedFrame = _savedFrame;
@@ -326,7 +334,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
             } completionHandler:^{
                 VLCFullVideoViewWindow *strongSelf = weakSelf;
                 if (strongSelf) {
-                    strongSelf->_applyingVideoFrame = NO;
+                    strongSelf->_applyingVideoFrameCount--;
                     strongSelf->_restoringFrame = NO;
                 }
             }];
@@ -339,7 +347,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
     /* nativeVideoSize is kept: the library window can leave video mode while
      * the video keeps playing and come back to it (artwork button). The video
      * output provider clears it when the video output goes away. */
-    _fitMode = VLCVideoFitModeNative;
+    _fitMode = MacLCVideoFitModeNative;
     _arrangedBounds = NSZeroRect;
 }
 
@@ -392,106 +400,27 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
     NSScreen *screen = self.screen ?: NSScreen.mainScreen;
     NSRect visibleFrame = screen.visibleFrame;
     CGFloat scaleFactor = screen.backingScaleFactor > 0.0 ? screen.backingScaleFactor : 1.0;
-    CGFloat aspect = self.nativeVideoSize.width / self.nativeVideoSize.height;
 
-    CGFloat contentWidth = 0.0;
-    CGFloat contentHeight = 0.0;
-
-    switch (_fitMode) {
-        case VLCVideoFitModeArranged: {
-            CGFloat maxAvailableWidth = MAX(0.0, _arrangedBounds.size.width - chromeSize.width);
-            CGFloat maxAvailableHeight = MAX(0.0, _arrangedBounds.size.height - chromeSize.height);
-            if (maxAvailableWidth <= 0.0 || maxAvailableHeight <= 0.0) {
-                contentWidth = self.nativeVideoSize.width / scaleFactor;
-                contentHeight = contentWidth / aspect;
-            } else if (maxAvailableWidth / aspect <= maxAvailableHeight) {
-                contentWidth = maxAvailableWidth;
-                contentHeight = contentWidth / aspect;
-            } else {
-                contentHeight = maxAvailableHeight;
-                contentWidth = contentHeight * aspect;
-            }
-            break;
-        }
-        case VLCVideoFitModeKeepWidth: {
-            CGFloat currentContentWidth = MAX(0.0, self.frame.size.width - chromeSize.width);
-            if (currentContentWidth <= 0.0) {
-                contentWidth = self.nativeVideoSize.width / scaleFactor;
-            } else {
-                contentWidth = currentContentWidth;
-            }
-            contentHeight = contentWidth / aspect;
-            break;
-        }
-        case VLCVideoFitModeNative:
-        default: {
-            contentWidth = self.nativeVideoSize.width / scaleFactor;
-            contentHeight = self.nativeVideoSize.height / scaleFactor;
-            break;
-        }
+    const MacLCVideoFitInput fitInput = {
+        .nativeVideoSize = self.nativeVideoSize,
+        .chromeSize = chromeSize,
+        .currentFrame = self.frame,
+        .arrangedBounds = _arrangedBounds,
+        .visibleFrame = visibleFrame,
+        .scaleFactor = scaleFactor,
+        .mode = _fitMode,
+    };
+    if (!MacLCVideoFitInputIsUsable(fitInput)) {
+        return;
     }
-
-    CGFloat maxContentW = MAX(0.0, visibleFrame.size.width - chromeSize.width);
-    CGFloat maxContentH = MAX(0.0, visibleFrame.size.height - chromeSize.height);
-
-    if (contentWidth > maxContentW || contentHeight > maxContentH) {
-        CGFloat scaleW = maxContentW > 0.0 ? (maxContentW / contentWidth) : 1.0;
-        CGFloat scaleH = maxContentH > 0.0 ? (maxContentH / contentHeight) : 1.0;
-        CGFloat downScale = MIN(scaleW, scaleH);
-        contentWidth = contentWidth * downScale;
-        contentHeight = contentWidth / aspect;
-    }
-
-    const CGFloat minContentW = 320.0;
-    const CGFloat minContentH = 180.0;
-    if (contentWidth < minContentW || contentHeight < minContentH) {
-        CGFloat scaleW = contentWidth > 0.0 ? (minContentW / contentWidth) : 1.0;
-        CGFloat scaleH = contentHeight > 0.0 ? (minContentH / contentHeight) : 1.0;
-        CGFloat upScale = MAX(scaleW, scaleH);
-        CGFloat maxAllowedScaleW = contentWidth > 0.0 ? (maxContentW / contentWidth) : upScale;
-        CGFloat maxAllowedScaleH = contentHeight > 0.0 ? (maxContentH / contentHeight) : upScale;
-        CGFloat maxAllowedScale = MIN(maxAllowedScaleW, maxAllowedScaleH);
-        CGFloat effectiveScale = MIN(upScale, maxAllowedScale);
-        if (effectiveScale > 1.0) {
-            contentWidth = contentWidth * effectiveScale;
-            contentHeight = contentWidth / aspect;
-        }
-    }
-
-    NSSize targetWindowSize = NSMakeSize(contentWidth + chromeSize.width,
-                                         contentHeight + chromeSize.height);
-
-    NSPoint centrePoint;
-    if (_fitMode == VLCVideoFitModeArranged) {
-        centrePoint = NSMakePoint(NSMidX(_arrangedBounds), NSMidY(_arrangedBounds));
-    } else {
-        centrePoint = NSMakePoint(NSMidX(self.frame), NSMidY(self.frame));
-    }
-
-    NSRect targetFrame = NSMakeRect(centrePoint.x - targetWindowSize.width / 2.0,
-                                    centrePoint.y - targetWindowSize.height / 2.0,
-                                    targetWindowSize.width,
-                                    targetWindowSize.height);
-
-    if (NSMinX(targetFrame) < NSMinX(visibleFrame)) {
-        targetFrame.origin.x = NSMinX(visibleFrame);
-    }
-    if (NSMaxX(targetFrame) > NSMaxX(visibleFrame)) {
-        targetFrame.origin.x = NSMaxX(visibleFrame) - targetFrame.size.width;
-    }
-    if (NSMinY(targetFrame) < NSMinY(visibleFrame)) {
-        targetFrame.origin.y = NSMinY(visibleFrame);
-    }
-    if (NSMaxY(targetFrame) > NSMaxY(visibleFrame)) {
-        targetFrame.origin.y = NSMaxY(visibleFrame) - targetFrame.size.height;
-    }
+    NSRect targetFrame = MacLCVideoFitTargetFrame(fitInput);
 
     targetFrame = [screen backingAlignedRect:targetFrame options:NSAlignAllEdgesNearest];
 
     const char *modeString = "native";
-    if (_fitMode == VLCVideoFitModeArranged) {
+    if (_fitMode == MacLCVideoFitModeArranged) {
         modeString = "arranged";
-    } else if (_fitMode == VLCVideoFitModeKeepWidth) {
+    } else if (_fitMode == MacLCVideoFitModeKeepWidth) {
         modeString = "keep-width";
     }
 
@@ -512,7 +441,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
     BOOL shouldAnimate = animated && self.isVisible &&
         !NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
     if (shouldAnimate) {
-        _applyingVideoFrame = YES;
+        _applyingVideoFrameCount++;
         __weak typeof(self) weakSelf = self;
         [NSAnimationContext runAnimationRespectingPreferencesWithDuration:0.25
                                                                   changes:^(NSAnimationContext * _Nonnull context) {
@@ -520,13 +449,13 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
         } completionHandler:^{
             VLCFullVideoViewWindow *strongSelf = weakSelf;
             if (strongSelf) {
-                strongSelf->_applyingVideoFrame = NO;
+                strongSelf->_applyingVideoFrameCount--;
             }
         }];
     } else {
-        _applyingVideoFrame = YES;
+        _applyingVideoFrameCount++;
         [self setFrame:targetFrame display:YES];
-        _applyingVideoFrame = NO;
+        _applyingVideoFrameCount--;
     }
 }
 
@@ -547,7 +476,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
         NSRect frameToRestore = _pendingRestoreFrame;
         _pendingRestoreFrame = NSZeroRect;
         if (!NSEqualRects(frameToRestore, NSZeroRect)) {
-            _applyingVideoFrame = YES;
+            _applyingVideoFrameCount++;
             __weak typeof(self) weakSelf = self;
             [NSAnimationContext runAnimationRespectingPreferencesWithDuration:0.25
                                                                       changes:^(NSAnimationContext * _Nonnull context) {
@@ -555,7 +484,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
             } completionHandler:^{
                 VLCFullVideoViewWindow *strongSelf = weakSelf;
                 if (strongSelf) {
-                    strongSelf->_applyingVideoFrame = NO;
+                    strongSelf->_applyingVideoFrameCount--;
                 }
             }];
         }
@@ -607,6 +536,21 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
         resultSize.width = proposedFrameSize.width;
     }
 
+    /* Whatever we return, the window server clamps each axis to minSize on its
+     * own, which would break the ratio we just computed: grow both axes
+     * together instead. */
+    const NSSize minimum = self.minSize;
+    if (minimum.width > 0. && minimum.height > 0.) {
+        const CGFloat scaleToMinW = resultSize.width > 0. ? minimum.width / resultSize.width : 1.;
+        const CGFloat scaleToMinH = resultSize.height > 0. ? minimum.height / resultSize.height : 1.;
+        const CGFloat upScale = MAX(scaleToMinW, scaleToMinH);
+        if (upScale > 1.) {
+            const CGFloat videoW = MAX(1.0, resultSize.width * upScale - chromeSize.width);
+            resultSize.width = round(videoW + chromeSize.width);
+            resultSize.height = round(videoW / aspect + chromeSize.height);
+        }
+    }
+
     return resultSize;
 }
 
@@ -614,7 +558,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
 {
     /* Animated frame changes, ours included, also count as live resizes:
      * only a resize we did not start is the user's. */
-    _userLiveResize = !_applyingVideoFrame;
+    _userLiveResize = _applyingVideoFrameCount == 0;
 
     /* The play queue sidebar may have been shown or hidden since the
      * constraint was set: the whole-window ratio only fits without it. */
@@ -623,7 +567,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
 
 - (void)windowDidEndLiveResize:(NSNotification *)notification
 {
-    const BOOL userLiveResize = _userLiveResize && !_applyingVideoFrame;
+    const BOOL userLiveResize = _userLiveResize && _applyingVideoFrameCount == 0;
     _userLiveResize = NO;
 
     /* With the aspect ratio unlocked, the size the user chose stays as is. */
@@ -633,7 +577,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
         return;
     }
 
-    _fitMode = VLCVideoFitModeKeepWidth;
+    _fitMode = MacLCVideoFitModeKeepWidth;
     [self fitWindowToVideoAnimated:NO];
 }
 
@@ -642,7 +586,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
     if (!_videoFitSessionActive ||
         self.nativeVideoSize.width <= 0. || self.nativeVideoSize.height <= 0. ||
         self.inLiveResize ||
-        _applyingVideoFrame) {
+        _applyingVideoFrameCount > 0) {
         return;
     }
 
@@ -654,7 +598,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
 
     /* The window manager put back the frame we already fitted from: leave it
      * alone rather than fight it. */
-    if (_fitMode == VLCVideoFitModeArranged && NSEqualRects(self.frame, _lastExternalFrame)) {
+    if (_fitMode == MacLCVideoFitModeArranged && NSEqualRects(self.frame, _lastExternalFrame)) {
         return;
     }
 
@@ -676,7 +620,7 @@ typedef NS_ENUM(NSInteger, VLCVideoFitMode) {
         if (NSIsEmptyRect(bounds)) {
             return;
         }
-        strongSelf->_fitMode = VLCVideoFitModeArranged;
+        strongSelf->_fitMode = MacLCVideoFitModeArranged;
         strongSelf->_arrangedBounds = bounds;
         strongSelf->_lastExternalFrame = frame;
         [strongSelf fitWindowToVideoAnimated:YES];

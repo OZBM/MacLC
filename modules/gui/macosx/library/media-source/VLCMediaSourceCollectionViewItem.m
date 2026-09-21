@@ -29,6 +29,7 @@
 #import "library/VLCLibraryImageCache.h"
 #import "library/VLCLibraryMenuController.h"
 
+#import "extensions/MacLCVolumePath.h"
 #import "library/media-source/VLCMediaSourceDataSource.h"
 
 #import "main/VLCMain.h"
@@ -106,7 +107,13 @@ NSString *VLCMediaSourceCollectionViewItemIdentifier = @"VLCMediaSourceCollectio
         strongSelf.mediaImageView.image = thumbnail;
     }];
 
-    NSArray<NSString *> *tags = inputItem.finderTags;
+    /* Reading tags on a network volume could stall the interface, just like
+     * reading a size. */
+    NSURL * const tagsURL = [NSURL URLWithString:inputItem.MRL];
+    NSArray<NSString *> *tags = nil;
+    if (tagsURL.isFileURL && MacLCPathIsOnLocalVolume(tagsURL.path)) {
+        tags = inputItem.finderTags;
+    }
     if (tags.count > 0) {
         self.secondaryInfoTextField.stringValue = [tags componentsJoinedByString:@", "];
         self.secondaryInfoTextField.hidden = NO;

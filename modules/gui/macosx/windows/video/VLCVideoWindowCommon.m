@@ -123,6 +123,12 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
                            selector:@selector(mediaMetadataChanged:)
                                name:VLCPlayerCurrentMediaItemChanged
                              object:nil];
+    /* Stopping keeps the same item: only the state tells us to go back to the
+     * application name. */
+    [notificationCenter addObserver:self
+                           selector:@selector(mediaMetadataChanged:)
+                               name:VLCPlayerStateChanged
+                             object:nil];
 
     /* we want to be moveable regardless of our style */
     [self setMovableByWindowBackground:YES];
@@ -159,13 +165,12 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
         return;
     }
 
-    NSString * const title = inputItem.title;
-    NSString * const nowPlaying = inputItem.nowPlaying;
-    if (nowPlaying) {
-        [self setTitle:[NSString stringWithFormat:@"%@ — %@", title, nowPlaying]];
-    } else {
-        [self setTitle:title];
-    }
+    /* An item can carry no title at all, and -setTitle: ignores an empty
+     * string rather than clearing the bar: name the application instead of
+     * leaving the previous item's title up. */
+    NSString * const composedTitle =
+        MacLCComposedMediaTitle(inputItem.title, inputItem.nowPlaying);
+    [self setTitle:composedTitle.length > 0 ? composedTitle : _NS("MacLC")];
 
     self.representedURL = [NSURL URLWithString:inputItem.MRL];
     

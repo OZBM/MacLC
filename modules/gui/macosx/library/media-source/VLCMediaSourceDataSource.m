@@ -26,6 +26,8 @@
 #import "VLCMediaSource.h"
 #import "VLCMediaSourceBaseDataSource.h"
 
+#import "extensions/MacLCVolumePath.h"
+
 #import "extensions/NSPasteboardItem+VLCAdditions.h"
 #import "extensions/NSString+Helpers.h"
 #import "extensions/NSTableCellView+VLCAdditions.h"
@@ -560,6 +562,10 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
                 if (![self.preparingInputItemIdentifiers containsObject:identifier]) {
                     [self.preparingInputItemIdentifiers addObject:identifier];
                     VLCMediaSource * const mediaSource = self.displayedMediaSource;
+                    /* Counting the children of an unreachable share takes as
+                     * long as the mount needs to time out: the data source and
+                     * its views must not be kept alive for that. */
+                    __weak typeof(self) weakSelf = self;
                     dispatch_async(self.childCountQueue, ^{
                         NSError *error = nil;
                         NSNumber * const childCount = [mediaSource childCountForInputNode:inputNode error:&error];
@@ -568,14 +574,18 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
                             return;
                         }
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            [self.preparingInputItemIdentifiers removeObject:identifier];
-                            if (error != nil) {
-                                [self.unavailableInputItemIdentifiers addObject:identifier];
-                            } else if (childCount != nil) {
-                                [self.unavailableInputItemIdentifiers removeObject:identifier];
-                                self.childCountsByInputItemIdentifier[identifier] = childCount;
+                            typeof(self) strongSelf = weakSelf;
+                            if (strongSelf == nil) {
+                                return;
                             }
-                            [self reloadCountForInputItemIdentifier:identifier];
+                            [strongSelf.preparingInputItemIdentifiers removeObject:identifier];
+                            if (error != nil) {
+                                [strongSelf.unavailableInputItemIdentifiers addObject:identifier];
+                            } else if (childCount != nil) {
+                                [strongSelf.unavailableInputItemIdentifiers removeObject:identifier];
+                                strongSelf.childCountsByInputItemIdentifier[identifier] = childCount;
+                            }
+                            [strongSelf reloadCountForInputItemIdentifier:identifier];
                         });
                     });
                 }
@@ -583,7 +593,7 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
         } else {
             NSURL * const fileURL = [NSURL URLWithString:inputItem.MRL];
             /* Reading a size on a network volume could stall the interface. */
-            if (fileURL.isFileURL && MacLCBrowsePathIsOnLocalVolume(fileURL.path)) {
+            if (fileURL.isFileURL && MacLCPathIsOnLocalVolume(fileURL.path)) {
                 NSError *sizeError = nil;
                 NSNumber *fileSizeNumber = nil;
                 [fileURL getResourceValue:&fileSizeNumber forKey:NSURLFileSizeKey error:&sizeError];
@@ -661,7 +671,13 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
         if (cellView == nil) {
             cellView = [[MacLCBrowseTableTextCellView alloc] initWithFrame:NSMakeRect(0, 0, tableColumn.width, 32.0)];
         }
-        NSArray<NSString *> * const tags = inputItem.finderTags;
+        /* Reading tags on a network volume could stall the interface, just
+         * like reading a size. */
+        NSURL * const tagsURL = [NSURL URLWithString:inputItem.MRL];
+        NSArray<NSString *> *tags = nil;
+        if (tagsURL.isFileURL && MacLCPathIsOnLocalVolume(tagsURL.path)) {
+            tags = inputItem.finderTags;
+        }
         [cellView setStringValue:(tags.count > 0 ? [tags componentsJoinedByString:@", "] : @"")
                        alignment:NSTextAlignmentLeft];
         return cellView;
@@ -744,7 +760,10 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
     VLCInputNode *rootNode = _nodeToDisplay;
     NSArray *nodeChildren = rootNode.children;
 
-    if (nodeChildren == nil || nodeChildren.count == 0) {
+    /* A reload can shrink the model between the row count the view cached and
+     * the moment it asks for a row, and clicked-row lookups hand out -1 for
+     * an empty area. */
+    if (tableViewRow < 0 || (NSUInteger)tableViewRow >= nodeChildren.count) {
         return nil;
     }
 

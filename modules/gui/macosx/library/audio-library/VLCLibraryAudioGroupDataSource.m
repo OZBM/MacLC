@@ -43,6 +43,7 @@
 @interface VLCLibraryAudioGroupDataSource ()
 {
     id<VLCMediaLibraryAudioGroupProtocol> _representedAudioGroup;
+    BOOL _didRegisterObservations;
 }
 @property (readwrite, atomic, strong) NSArray<VLCMediaLibraryAlbum *> *representedListOfAlbums;
 
@@ -74,7 +75,21 @@
 {
     [self addObserver:self forKeyPath:@"collectionViews" options:NSKeyValueObservingOptionNew context:nil];
     [self addObserver:self forKeyPath:@"tableViews" options:NSKeyValueObservingOptionNew context:nil];
+    _didRegisterObservations = YES;
     [self connect];
+}
+
+- (void)dealloc
+{
+    /* Key-value observation, unlike the notification centre, does not hold a
+     * zeroing weak reference: an observation left registered here is reported
+     * as a bug by the runtime and can trap. Removing one that was never
+     * registered traps too, so this only undoes what -setup did. */
+    if (_didRegisterObservations) {
+        [self removeObserver:self forKeyPath:@"collectionViews"];
+        [self removeObserver:self forKeyPath:@"tableViews"];
+    }
+    [NSNotificationCenter.defaultCenter removeObserver:self];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath

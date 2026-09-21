@@ -31,6 +31,17 @@
 NSString *toNSStr(const char *str);
 
 /**
+ * The title a window shows for a playing item: "title — now playing" when the
+ * item carries a now-playing string, the title alone otherwise.
+ *
+ * Metadata an item does not carry comes back as an empty string and never as
+ * nil (see toNSStr), so an empty now-playing string must not produce a
+ * dangling separator. A nil or empty title gives an empty string back.
+ */
+NSString *MacLCComposedMediaTitle(NSString * _Nullable title,
+                                  NSString * _Nullable nowPlaying);
+
+/**
  * The studio that develops MacLC, and the site every outbound link in the
  * interface points to.
  */

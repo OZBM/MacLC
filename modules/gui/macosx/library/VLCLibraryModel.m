@@ -703,7 +703,7 @@ static void libraryCallback(void *p_data, const vlc_ml_event_t *p_event)
         NSArray<VLCMediaLibraryMediaItem *> * const videos = self.listOfVideoMedia;
         for (VLCMediaLibraryMediaItem * const video in videos) {
             NSString * const title = video.displayString;
-            if (title) {
+            if (title.length > 0) {
                 [titleSet addObject:title];
             }
         }
@@ -711,7 +711,7 @@ static void libraryCallback(void *p_data, const vlc_ml_event_t *p_event)
         NSArray<VLCMediaLibraryMediaItem *> * const audioMedia = self.listOfAudioMedia;
         for (VLCMediaLibraryMediaItem * const audio in audioMedia) {
             NSString * const title = audio.displayString;
-            if (title) {
+            if (title.length > 0) {
                 [titleSet addObject:title];
             }
         }

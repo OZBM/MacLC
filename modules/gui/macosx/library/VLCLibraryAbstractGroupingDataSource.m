@@ -91,17 +91,30 @@
     return [NSPasteboardItem pasteboardItemWithLibraryItem:libraryItem];
 }
 
+/* Subclasses build the backing array from the library model, which the
+ * medialibrary updates on its own thread: two reads can disagree, so each
+ * lookup takes one array and checks the row against that one. A row the model
+ * no longer has is answered with nil rather than an NSRangeException. */
 - (id<VLCMediaLibraryItemProtocol>)libraryItemAtRow:(NSInteger)row
                                        forTableView:(NSTableView *)tableView
 {
+    NSArray<id<VLCMediaLibraryItemProtocol>> * const backingArray = self.backingArray;
     if (tableView == self.masterTableView) {
-        return self.backingArray[row];
+        if (row < 0 || (NSUInteger)row >= backingArray.count) {
+            return nil;
+        }
+        return backingArray[row];
     }
 
     const NSInteger selectedMasterRow = self.masterTableView.selectedRow;
-    if (tableView == self.detailTableView && selectedMasterRow > -1) {
-        const id<VLCMediaLibraryItemProtocol> item = self.backingArray[selectedMasterRow];
-        return item.mediaItems[row];
+    if (tableView == self.detailTableView && selectedMasterRow > -1 &&
+        (NSUInteger)selectedMasterRow < backingArray.count) {
+        const id<VLCMediaLibraryItemProtocol> item = backingArray[selectedMasterRow];
+        NSArray * const mediaItems = item.mediaItems;
+        if (row < 0 || (NSUInteger)row >= mediaItems.count) {
+            return nil;
+        }
+        return mediaItems[row];
     }
 
     return nil;
@@ -149,7 +162,11 @@
 - (NSInteger)collectionView:(NSCollectionView *)collectionView
      numberOfItemsInSection:(NSInteger)section
 {
-    return self.backingArray[section].mediaItems.count;
+    NSArray<id<VLCMediaLibraryItemProtocol>> * const backingArray = self.backingArray;
+    if (section < 0 || (NSUInteger)section >= backingArray.count) {
+        return 0;
+    }
+    return backingArray[section].mediaItems.count;
 }
 
 - (NSCollectionViewItem *)collectionView:(NSCollectionView *)collectionView
@@ -175,7 +192,11 @@ viewForSupplementaryElementOfKind:(NSCollectionViewSupplementaryElementKind)kind
             [collectionView makeSupplementaryViewOfKind:kind
                                          withIdentifier:VLCLibrarySupplementaryElementViewIdentifier
                                            forIndexPath:indexPath];
-        const id<VLCMediaLibraryItemProtocol> item = self.backingArray[indexPath.section];
+        NSArray<id<VLCMediaLibraryItemProtocol>> * const backingArray = self.backingArray;
+        if (indexPath.section < 0 || (NSUInteger)indexPath.section >= backingArray.count) {
+            return sectionHeadingView;
+        }
+        const id<VLCMediaLibraryItemProtocol> item = backingArray[indexPath.section];
         NSString *displayString = item.displayString;
         if (displayString.length == 0) {
             displayString = [NSString stringWithFormat:@"%@ %@", _NS("Unknown"), self.dataSourceTypeDisplayString];
@@ -206,8 +227,16 @@ viewForSupplementaryElementOfKind:(NSCollectionViewSupplementaryElementKind)kind
 - (id<VLCMediaLibraryItemProtocol>)libraryItemAtIndexPath:(NSIndexPath *)indexPath
                                         forCollectionView:(NSCollectionView *)collectionView
 {
-    const id<VLCMediaLibraryItemProtocol> item = self.backingArray[indexPath.section];
-    return item.mediaItems[indexPath.item];
+    NSArray<id<VLCMediaLibraryItemProtocol>> * const backingArray = self.backingArray;
+    if (indexPath.section < 0 || (NSUInteger)indexPath.section >= backingArray.count) {
+        return nil;
+    }
+    const id<VLCMediaLibraryItemProtocol> item = backingArray[indexPath.section];
+    NSArray * const mediaItems = item.mediaItems;
+    if (indexPath.item < 0 || (NSUInteger)indexPath.item >= mediaItems.count) {
+        return nil;
+    }
+    return mediaItems[indexPath.item];
 }
 
 - (NSIndexPath *)indexPathForLibraryItem:(id<VLCMediaLibraryItemProtocol>)libraryItem

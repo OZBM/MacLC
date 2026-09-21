@@ -309,6 +309,9 @@
 
     // Scroll to end of breadcrumb
     dispatch_async(dispatch_get_main_queue(), ^{
+        /* The segments were added just now: measure them once they are laid
+         * out, or the scroll falls short of the last one. */
+        [self->_breadcrumbStackView layoutSubtreeIfNeeded];
         NSPoint const endPoint = NSMakePoint(MAX(0.0, self->_breadcrumbStackView.frame.size.width - self->_breadcrumbScrollView.contentSize.width), 0.0);
         [self->_breadcrumbScrollView.contentView scrollToPoint:endPoint];
     });

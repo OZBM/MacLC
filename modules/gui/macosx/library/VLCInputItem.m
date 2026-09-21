@@ -511,7 +511,14 @@ static const struct input_item_parser_cbs_t parserCallbacks =
         return;
     }
 
-    NSURL * const pathUrl = [NSURL URLWithString:self.path];
+    /* -path is a file system path, not a URL: it is not percent encoded, so
+     * -URLWithString: gives nil as soon as it holds a space and a schemeless,
+     * relative URL otherwise. */
+    NSString * const path = self.path;
+    if (path.length == 0) {
+        return;
+    }
+    NSURL * const pathUrl = [NSURL fileURLWithPath:path];
     if (pathUrl == nil) {
         return;
     }
@@ -530,7 +537,11 @@ static const struct input_item_parser_cbs_t parserCallbacks =
         return;
     }
 
-    NSURL *pathUrl = [NSURL URLWithString:self.path];
+    NSString * const path = self.path;
+    if (path.length == 0) {
+        return;
+    }
+    NSURL * const pathUrl = [NSURL fileURLWithPath:path];
     if (pathUrl == nil) {
         return;
     }

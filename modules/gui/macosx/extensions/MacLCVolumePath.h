@@ -1,9 +1,7 @@
 /*****************************************************************************
- * VLCHexNumberFormatter.m
+ * MacLCVolumePath.h: whether a path lives on a local volume
  *****************************************************************************
- * Copyright (C) 2017 VLC authors and VideoLAN
- *
- * Authors: Marvin Scholz <epirat07 at gmail dot com>
+ * Copyright (C) 2026 Hazen Studio
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,33 +18,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 
-#import "VLCHexNumberFormatter.h"
+#import <Foundation/Foundation.h>
 
-@implementation VLCHexNumberFormatter
+NS_ASSUME_NONNULL_BEGIN
 
-- (NSString *)stringForObjectValue:(id)obj
-{
-    if (![obj isKindOfClass:[NSNumber class]]) {
-        return nil;
-    }
+/**
+ * Whether a file system path sits on a locally attached volume.
+ *
+ * Reading a file's attributes on a network volume that has become unreachable
+ * blocks until the mount times out, which freezes the interface when it
+ * happens while drawing a row. This answer comes from the mount table alone
+ * (getmntinfo with MNT_NOWAIT) and never touches the volume, so it is safe to
+ * ask on the main thread.
+ *
+ * A path that matches no mount point, or an empty one, counts as not local.
+ */
+BOOL MacLCPathIsOnLocalVolume(NSString *_Nullable path);
 
-    NSString *string = [NSString stringWithFormat:@"%06" PRIX32, [obj intValue]];
-    return string;
-}
-
-- (BOOL)getObjectValue:(out id  _Nullable __autoreleasing *)obj
-             forString:(NSString *)string
-      errorDescription:(out NSString *__autoreleasing  _Nullable *)error
-{
-    unsigned result = 0;
-    NSScanner *scanner = [NSScanner scannerWithString:string];
-    BOOL success = [scanner scanHexInt:&result];
-
-    /* A caller that only validates the string passes NULL here. */
-    if (obj != NULL) {
-        *obj = (success) ? [NSNumber numberWithInt:result] : nil;
-    }
-    return success;
-}
-
-@end
+NS_ASSUME_NONNULL_END

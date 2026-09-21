@@ -40,7 +40,10 @@
     NSArray<NSString *> * const components = [string componentsSeparatedByString:@":"];
     const NSUInteger componentCount = components.count;
     if (string.length == 0 || componentCount > 3) {
-        *error = @"Cannot get bookmark time as invalid string format for time was received";
+        /* Both out parameters are optional: a caller may only be validating. */
+        if (error != NULL) {
+            *error = @"Cannot get bookmark time as invalid string format for time was received";
+        }
         return NO;
     }
 
@@ -57,7 +60,9 @@
                 [components objectAtIndex:2].longLongValue) * 1000;
     }
 
-    *obj = [NSNumber numberWithLongLong:time];
+    if (obj != NULL) {
+        *obj = [NSNumber numberWithLongLong:time];
+    }
     return YES;
 }
 

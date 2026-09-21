@@ -246,15 +246,20 @@ typedef NS_ENUM(NSInteger, VLCLibraryDataSourceCacheAction) {
 
 #pragma mark - table view data source
 
+/* The playlist array is read through its queue, so two reads can return two
+ * different arrays: every lookup takes one array and checks the row against
+ * that one. A row the model no longer has is answered with nil rather than an
+ * NSRangeException. */
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
 {
+    NSArray<VLCMediaLibraryPlaylist *> * const playlists = self.playlists;
     if (tableView == self.masterTableView) {
-        return self.playlists.count;
+        return playlists.count;
     }
 
     const NSInteger selectedMasterRow = self.masterTableView.selectedRow;
-    if (selectedMasterRow > -1) {
-        const id<VLCMediaLibraryItemProtocol> item = self.playlists[selectedMasterRow];
+    if (selectedMasterRow > -1 && (NSUInteger)selectedMasterRow < playlists.count) {
+        const id<VLCMediaLibraryItemProtocol> item = playlists[selectedMasterRow];
         return item.mediaItems.count;
     }
 
@@ -264,14 +269,23 @@ typedef NS_ENUM(NSInteger, VLCLibraryDataSourceCacheAction) {
 - (id<VLCMediaLibraryItemProtocol>)libraryItemAtRow:(NSInteger)row
                                        forTableView:(NSTableView *)tableView
 {
+    NSArray<VLCMediaLibraryPlaylist *> * const playlists = self.playlists;
     if (tableView == self.masterTableView) {
-        return self.playlists[row];
+        if (row < 0 || (NSUInteger)row >= playlists.count) {
+            return nil;
+        }
+        return playlists[row];
     }
 
     const NSInteger selectedMasterRow = self.masterTableView.selectedRow;
-    if (tableView == self.detailTableView && selectedMasterRow > -1) {
-        const id<VLCMediaLibraryItemProtocol> item = self.playlists[selectedMasterRow];
-        return item.mediaItems[row];
+    if (tableView == self.detailTableView && selectedMasterRow > -1 &&
+        (NSUInteger)selectedMasterRow < playlists.count) {
+        const id<VLCMediaLibraryItemProtocol> item = playlists[selectedMasterRow];
+        NSArray * const mediaItems = item.mediaItems;
+        if (row < 0 || (NSUInteger)row >= mediaItems.count) {
+            return nil;
+        }
+        return mediaItems[row];
     }
 
     return nil;

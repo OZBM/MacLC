@@ -179,9 +179,17 @@ const CGFloat VLCVolumeDefault = 1.;
 static void cb_player_current_media_changed(vlc_player_t *p_player, input_item_t *p_newMediaItem, void *p_data)
 {
     VLC_UNUSED(p_player);
+    /* The item belongs to the core, which can drop it before the block runs
+     * on the main queue: hold it for the trip. */
+    if (p_newMediaItem != NULL) {
+        input_item_Hold(p_newMediaItem);
+    }
     dispatch_async(dispatch_get_main_queue(), ^{
         VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
         [playerController currentMediaItemChanged:p_newMediaItem];
+        if (p_newMediaItem != NULL) {
+            input_item_Release(p_newMediaItem);
+        }
     });
 }
 
@@ -393,9 +401,17 @@ static void cb_player_track_delay_changed(vlc_player_t *p_player,
                                           void *p_data)
 {
     VLC_UNUSED(p_player);
+    /* The track identifier is only guaranteed for the duration of the
+     * callback, and it travels to the main queue inside a notification. */
+    if (es_id != NULL) {
+        vlc_es_id_Hold(es_id);
+    }
     dispatch_async(dispatch_get_main_queue(), ^{
         VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
         [playerController delayChanged:delay forTrack:es_id];
+        if (es_id != NULL) {
+            vlc_es_id_Release(es_id);
+        }
     });
 }
 
@@ -443,6 +459,7 @@ static void cb_player_item_meta_changed(vlc_player_t * __unused p_player,
     dispatch_async(dispatch_get_main_queue(), ^{
         VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
         [playerController metaDataChangedForInput:p_mediaItem];
+        input_item_Release(p_mediaItem);
     });
 }
 

@@ -53,7 +53,11 @@
 
 - (BOOL)getObjectValue:(id*)obj forString:(NSString*)string errorDescription:(NSString**)error
 {
-    *obj = [string copy];
+    /* A caller that only validates the string passes NULL for both out
+     * parameters. */
+    if (obj != NULL) {
+        *obj = [string copy];
+    }
     return YES;
 }
 

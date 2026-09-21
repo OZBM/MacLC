@@ -175,10 +175,18 @@
     _currentArtworkURL = artworkURL;
     self.image = image;
 
+    __weak typeof(self) weakSelf = self;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
         NSImage * const downloadedImage = [[NSImage alloc] initWithContentsOfURL:artworkURL];
         dispatch_async(dispatch_get_main_queue(), ^{
-            self.image = downloadedImage ?: image;
+            typeof(self) strongSelf = weakSelf;
+            /* A table or collection view reuses this view while the download
+             * runs: a late image must not land on the item that took its
+             * place. */
+            if (strongSelf == nil || ![strongSelf->_currentArtworkURL isEqual:artworkURL]) {
+                return;
+            }
+            strongSelf.image = downloadedImage ?: image;
         });
     });
 }

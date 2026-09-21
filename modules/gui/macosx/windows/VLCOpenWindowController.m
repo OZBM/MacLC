@@ -744,7 +744,12 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
         [self showOpticalMediaView:_discDVDView withIcon:mediaIcon];
     } else if ([diskType isEqualToString: kVLCMediaAudioCD]) {
         [_discAudioCDLabel setStringValue: [fileManager displayNameAtPath: opticalDevicePath]];
-        [_discAudioCDTrackCountLabel setStringValue: [NSString stringWithFormat:_NS("%i tracks"), [[fileManager subpathsOfDirectoryAtPath: opticalDevicePath error:NULL] count] - 1]]; // minus .TOC.plist
+        /* An unreadable disc lists nothing, and an unsigned 0 - 1 would show
+         * as -1 tracks. */
+        const NSInteger subpathCount =
+            (NSInteger)[[fileManager subpathsOfDirectoryAtPath:opticalDevicePath error:NULL] count];
+        [_discAudioCDTrackCountLabel setStringValue:
+            [NSString stringWithFormat:_NS("%i tracks"), (int)MAX(0, subpathCount - 1)]]; // minus .TOC.plist
         [self showOpticalMediaView: _discAudioCDView withIcon: mediaIcon];
         [self setMRL: [NSString stringWithFormat: @"cdda://%@", devicePath]];
     } else if ([diskType isEqualToString: kVLCMediaVCD]) {

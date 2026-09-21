@@ -42,7 +42,6 @@ extern NSString * const VLCMediaSourceBaseDataSourceNodeChanged;
 /// Whether a path lives on a local file system. Never blocks: it reads the
 /// kernel's cached mount table, so it is safe to call on the main thread
 /// before touching files that may sit on a network volume.
-BOOL MacLCBrowsePathIsOnLocalVolume(NSString *path);
 
 @interface VLCMediaSourceBaseDataSource : NSObject <NSCollectionViewDataSource,
                                                     NSCollectionViewDelegate,

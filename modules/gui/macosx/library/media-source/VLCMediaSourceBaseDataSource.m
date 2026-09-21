@@ -22,6 +22,8 @@
 
 #import "VLCMediaSourceBaseDataSource.h"
 
+#import "extensions/MacLCVolumePath.h"
+
 #import "VLCLibraryMediaSourceViewNavigationStack.h"
 #import "VLCMediaSource.h"
 #import "VLCLocalMediaSource.h"
@@ -141,33 +143,6 @@ static BOOL MacLCBrowseMRLIsHomeFolder(NSString *mrl)
 
 /* Whether the path lives on a local file system, from the kernel's cached
  * mount table: MNT_NOWAIT never touches a (possibly unreachable) server. */
-BOOL MacLCBrowsePathIsOnLocalVolume(NSString *path)
-{
-    struct statfs *mounts = NULL;
-    const int count = getmntinfo(&mounts, MNT_NOWAIT);
-    const char * const cPath = path.fileSystemRepresentation;
-    if (count <= 0 || cPath == NULL) {
-        return NO;
-    }
-
-    size_t bestLength = 0;
-    BOOL isLocal = NO;
-    for (int i = 0; i < count; i++) {
-        const char * const mountPoint = mounts[i].f_mntonname;
-        const size_t length = strlen(mountPoint);
-        if (length < bestLength || strncmp(cPath, mountPoint, length) != 0) {
-            continue;
-        }
-        /* Match whole path components only ("/Volumes/A" is not "/Volumes/AB"). */
-        if (length > 1 && cPath[length] != '\0' && cPath[length] != '/') {
-            continue;
-        }
-        bestLength = length;
-        isLocal = (mounts[i].f_flags & MNT_LOCAL) != 0;
-    }
-    return isLocal;
-}
-
 static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputItem *inputItem)
 {
     item.symbolName = @"externaldrive.fill";
@@ -177,7 +152,7 @@ static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputIt
     if (url == nil || !url.isFileURL) {
         return;
     }
-    if (!MacLCBrowsePathIsOnLocalVolume(url.path)) {
+    if (!MacLCPathIsOnLocalVolume(url.path)) {
         item.symbolName = @"server.rack";
         item.subtitle = _NS("Network volume");
         return;

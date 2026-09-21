@@ -480,7 +480,27 @@ static const char *const remoteBrowseDescription = "Remote Browse";
 - (NSError *)generateChildNodesForDirectoryNode:(VLCInputNode *)directoryInputNode
                                         withUrl:(NSURL *)directoryUrl
 {
-    NSParameterAssert(directoryInputNode != NULL && directoryUrl != nil);
+    NSParameterAssert(directoryInputNode != NULL);
+    /* A malformed MRL gives no URL at all, and the file manager raises on a
+     * nil one. The caller already announced the preparsing: say it ended, or
+     * the row stays on "Loading..." forever. */
+    if (directoryUrl == nil) {
+        if (directoryInputNode.inputItem != nil) {
+            NSDictionary * const userInfo = @{
+                VLCMediaSourcePreparseInputItemKey: directoryInputNode.inputItem,
+                VLCMediaSourcePreparseStatusKey: @(VLC_EGENERIC)
+            };
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [NSNotificationCenter.defaultCenter postNotificationName:VLCMediaSourcePreparsingEnded
+                                                                  object:self
+                                                                userInfo:userInfo];
+            });
+        }
+        return [NSError errorWithDomain:NSURLErrorDomain
+                                   code:NSURLErrorBadURL
+                               userInfo:nil];
+    }
+
     [directoryInputNode clearChildrenCache];
     input_item_node_t * const directoryNode = directoryInputNode.vlcInputItemNode;
 

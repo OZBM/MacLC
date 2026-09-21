@@ -43,6 +43,9 @@ extern NSString * const VLCWindowFloatOnTopEnabledNotificationKey;
 - (VLCVideoWindowCommon *)setupVideoWindow;
 
 - (void)removeVoutForDisplay:(NSValue *)o_key;
+- (void)removeVoutForDisplay:(NSValue *)o_key unregisterFloatOnTop:(BOOL)unregisterFloatOnTop;
+/* nil when no video output is registered under that key any more. */
+- (VLCVideoWindowCommon *)videoWindowForKey:(NSValue *)o_key;
 - (void)setNativeVideoSize:(NSSize)size forWindow:(vlc_window_t *)p_wnd;
 - (void)setWindowLevel:(NSInteger)i_level forWindow:(vlc_window_t *)p_wnd;
 - (void)setFullscreen:(int)i_full forWindow:(vlc_window_t *)p_wnd withAnimation:(BOOL)b_animation;

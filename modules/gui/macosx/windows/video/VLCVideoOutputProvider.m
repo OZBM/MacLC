@@ -87,16 +87,32 @@ static int WindowEnable(vlc_window_t *p_wnd, const vlc_window_cfg_t *cfg)
     return VLC_SUCCESS;
 }
 
+static int WindowFloatOnTop(vlc_object_t *obj,
+                            char const *psz_var,
+                            vlc_value_t oldval,
+                            vlc_value_t newval,
+                            void *p_data);
+
 static void WindowDisable(vlc_window_t *p_wnd)
 {
     @autoreleasepool {
         VLCVideoOutputProvider *voutProvider = VLCMain.sharedInstance.voutProvider;
 
+        /* This returns before the block below runs, and the core is then free
+         * to destroy the window and its parent video output. Anything that
+         * touches them has to happen here, on the calling thread, while they
+         * are still alive; the block is left with the key alone. */
+        vout_thread_t * const p_vout = (vout_thread_t *)vlc_object_parent(p_wnd);
+        if (p_vout != NULL) {
+            var_DelCallback(p_vout, "video-on-top", WindowFloatOnTop, p_wnd);
+        }
+
+        NSValue * const key = [NSValue valueWithPointer:p_wnd];
         dispatch_async(dispatch_get_main_queue(), ^{
             if (getIntf() == NULL) {
                 return;
             }
-            [voutProvider removeVoutForDisplay:[NSValue valueWithPointer:p_wnd]];
+            [voutProvider removeVoutForDisplay:key unregisterFloatOnTop:NO];
         });
     }
 }
@@ -206,8 +222,17 @@ static int WindowFloatOnTop(vlc_object_t *obj,
 {
     VLC_UNUSED(obj); VLC_UNUSED(psz_var); VLC_UNUSED(oldval);
     @autoreleasepool {
+        /* p_data is the core's window, used only as a key: the interface
+         * window it belongs to is looked up on the main queue, where the
+         * table that owns it lives, so a window that went away in between is
+         * simply not found. */
+        NSValue * const key = [NSValue valueWithPointer:p_data];
         dispatch_async(dispatch_get_main_queue(), ^{
-            VLCVideoWindowCommon * const videoWindow = (__bridge VLCVideoWindowCommon *)p_data;
+            VLCVideoOutputProvider * const voutProvider = VLCMain.sharedInstance.voutProvider;
+            VLCVideoWindowCommon * const videoWindow = [voutProvider videoWindowForKey:key];
+            if (videoWindow == nil) {
+                return;
+            }
             NSNotificationCenter * const notificationCenter = NSNotificationCenter.defaultCenter;
             NSDictionary<NSString *, NSNumber *> * const userInfo = @{
                 VLCWindowFloatOnTopEnabledNotificationKey: @(newval.b_bool)
@@ -472,7 +497,7 @@ static int WindowFloatOnTop(vlc_object_t *obj,
     videoWindow.alphaValue = config_GetFloat("macosx-opaqueness");
     [_voutWindows setObject:videoWindow forKey:[NSValue valueWithPointer:p_wnd]];
     vout_thread_t * const p_vout = (vout_thread_t *)vlc_object_parent(p_wnd);
-    var_AddCallback(p_vout, "video-on-top", WindowFloatOnTop, (__bridge void *)videoWindow);
+    var_AddCallback(p_vout, "video-on-top", WindowFloatOnTop, p_wnd);
     voutView.voutThread = p_vout;
     voutView.voutWindow = p_wnd;
     videoWindow.hasActiveVideo = YES;
@@ -524,7 +549,17 @@ static int WindowFloatOnTop(vlc_object_t *obj,
     return voutView;
 }
 
+- (VLCVideoWindowCommon *)videoWindowForKey:(NSValue *)key
+{
+    return [_voutWindows objectForKey:key];
+}
+
 - (void)removeVoutForDisplay:(NSValue *)key
+{
+    [self removeVoutForDisplay:key unregisterFloatOnTop:YES];
+}
+
+- (void)removeVoutForDisplay:(NSValue *)key unregisterFloatOnTop:(BOOL)unregisterFloatOnTop
 {
     VLCVideoWindowCommon * const videoWindow = [_voutWindows objectForKey:key];
     if (!videoWindow) {
@@ -532,18 +567,22 @@ static int WindowFloatOnTop(vlc_object_t *obj,
         return;
     }
 
-    vlc_window_t * const p_wnd = (vlc_window_t *)key.pointerValue;
-    if (p_wnd) {
-        vout_thread_t * const p_vout = (vout_thread_t *)vlc_object_parent(p_wnd);
-        if (p_vout) {
-            var_DelCallback(p_vout, "video-on-top", WindowFloatOnTop, (__bridge void *)videoWindow);
+    /* WindowDisable already did this on the core's own thread: the window and
+     * its video output may be gone by now. */
+    if (unregisterFloatOnTop) {
+        vlc_window_t * const p_wnd = (vlc_window_t *)key.pointerValue;
+        if (p_wnd) {
+            vout_thread_t * const p_vout = (vout_thread_t *)vlc_object_parent(p_wnd);
+            if (p_vout) {
+                var_DelCallback(p_vout, "video-on-top", WindowFloatOnTop, p_wnd);
+            } else {
+                msg_Warn(getIntf(),
+                         "Could not get p_vout to unregister WindowFloatOnTop callback for window %p",
+                         p_wnd);
+            }
         } else {
-            msg_Warn(getIntf(),
-                     "Could not get p_vout to unregister WindowFloatOnTop callback for window %p",
-                     p_wnd);
+            msg_Warn(getIntf(), "Could not get p_wnd from key to unregister WindowFloatOnTop callback");
         }
-    } else {
-        msg_Warn(getIntf(), "Could not get p_wnd from key to unregister WindowFloatOnTop callback");
     }
 
     [videoWindow.videoViewController.voutView releaseVoutThread];

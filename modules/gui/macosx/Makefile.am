@@ -121,6 +121,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/extensions/NSImage+VLCAdditions.m \
 	gui/macosx/extensions/NSIndexSet+VLCAdditions.h \
 	gui/macosx/extensions/NSIndexSet+VLCAdditions.m \
+	gui/macosx/extensions/MacLCVolumePath.h \
+	gui/macosx/extensions/MacLCVolumePath.m \
 	gui/macosx/extensions/NSMenu+VLCAdditions.h \
 	gui/macosx/extensions/NSMenu+VLCAdditions.m \
 	gui/macosx/extensions/NSMenuItem+VLCAdditions.h \
@@ -633,6 +635,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/windows/controlsbar/VLCMainVideoViewControlsBar.m \
 	gui/macosx/windows/controlsbar/VLCMainWindowControlsBar.h \
 	gui/macosx/windows/controlsbar/VLCMainWindowControlsBar.m \
+	gui/macosx/windows/video/MacLCVideoFitGeometry.h \
+	gui/macosx/windows/video/MacLCVideoFitGeometry.m \
 	gui/macosx/windows/video/VLCAspectRatioRetainingVideoWindow.h \
 	gui/macosx/windows/video/VLCAspectRatioRetainingVideoWindow.m \
 	gui/macosx/windows/video/VLCFullVideoViewWindow.h \
