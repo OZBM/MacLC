@@ -34,6 +34,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readwrite, weak) IBOutlet NSButton *floatOnTopButton;
 @property (readwrite, weak) IBOutlet NSButton *playbackRateButton;
 @property (readwrite, weak) IBOutlet NSButton *hdrButton;
+@property (readwrite, weak) IBOutlet NSButton *frameRateButton;
 
 - (IBAction)openPlaybackRate:(id)sender;
 - (IBAction)openBookmarks:(id)sender;
@@ -43,6 +44,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (IBAction)toggleFloatOnTop:(id)sender;
 - (IBAction)toggleLyrics:(id)sender;
 - (IBAction)toggleHDR:(id)sender;
+- (IBAction)openFrameInterpolation:(id)sender;
 
 @end
 

@@ -1045,6 +1045,13 @@ extern const CGFloat VLCVolumeDefault;
  */
 @property (readonly) video_transfer_func_t videoTransferFunction;
 
+/**
+ * the frame rate the track is coded at, rounded to the nearest whole frame,
+ * for video tracks. 0 for tracks of any other category, and for video that
+ * declares no frame rate.
+ */
+@property (readonly) unsigned videoFrameRate;
+
 @end
 
 @interface VLCProgramMetaData : NSObject

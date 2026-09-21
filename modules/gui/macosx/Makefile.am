@@ -521,6 +521,12 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/hdr/MacLCToneCurveView.m \
 	gui/macosx/hdr/MacLCTradeoffMeterView.h \
 	gui/macosx/hdr/MacLCTradeoffMeterView.m \
+	gui/macosx/frameinterp/MacLCFrameInterpolation.h \
+	gui/macosx/frameinterp/MacLCFrameInterpolation.m \
+	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.h \
+	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.m \
+	video_filter/maclc_frc_geometry.h \
+	video_filter/maclc_frc_geometry.c \
 	gui/macosx/theme/MacLCCardView.h \
 	gui/macosx/theme/MacLCCardView.m \
 	gui/macosx/theme/MacLCDesign.h \

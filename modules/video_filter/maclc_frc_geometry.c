@@ -11,6 +11,23 @@
 
 #include "maclc_frc_geometry.h"
 
+#include <CoreGraphics/CoreGraphics.h>
+
+unsigned maclc_frc_display_refresh_rate(void)
+{
+    CGDirectDisplayID display = CGMainDisplayID();
+    CGDisplayModeRef mode = CGDisplayCopyDisplayMode(display);
+    if (mode == NULL)
+        return 60;
+
+    const double hz = CGDisplayModeGetRefreshRate(mode);
+    CGDisplayModeRelease(mode);
+    /* Built-in panels report 0 through this call on some machines. */
+    if (hz < 1.)
+        return 120;
+    return (unsigned)(hz + 0.5);
+}
+
 unsigned maclc_frc_factor(unsigned source_fps, unsigned target_fps,
                           unsigned limit)
 {

@@ -32,6 +32,17 @@ unsigned maclc_frc_factor(unsigned source_fps, unsigned target_fps,
                           unsigned limit);
 
 /**
+ * The refresh rate of the screen the video is most likely shown on.
+ *
+ * Both the filter and the interface ask here, so that the frame rate the
+ * badge promises is the one the filter will actually aim for.
+ *
+ * @return whole frames per second; 120 when the panel declines to say, which
+ *         is what the built-in displays of these machines do
+ */
+unsigned maclc_frc_display_refresh_rate(void);
+
+/**
  * Interleaves two chroma planes into one, as 4:2:0 biplanar wants them.
  *
  * @param width  samples per row in each source plane

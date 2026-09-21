@@ -290,26 +290,6 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
     return buffer;
 }
 
-/* The refresh rate of the screen the video is most likely shown on. CoreGraphics
- * is safe to call from the video output thread; AppKit would not be. */
-static unsigned DisplayRefreshRate(void)
-{
-    CGDirectDisplayID display = CGMainDisplayID();
-    CGDisplayModeRef mode = CGDisplayCopyDisplayMode(display);
-    if (mode == NULL)
-        return 60;
-    double hz = CGDisplayModeGetRefreshRate(mode);
-    CGDisplayModeRelease(mode);
-    /* Built-in panels report 0 through this call on some machines. */
-    if (hz < 1.)
-        return 120;
-    return (unsigned)(hz + 0.5);
-}
-
-/* Hardware decoding hands over CoreVideo buffers; a software decoder, which is
- * what interlaced streams and the odd codec fall back to, hands over plain
- * planes. Those are staged through a CoreVideo buffer of the same 4:2:0 8-bit
- * layout, so every engine sees the same thing either way. */
 static bool ChromaIsSupported(vlc_fourcc_t chroma, OSType *cv_fmt, bool *ten_bit,
                               bool *software)
 {
@@ -1460,7 +1440,7 @@ static unsigned FactorFor(filter_t *filter, unsigned source_fps, int target)
         case TARGET_60:     wanted = 60; break;
         case TARGET_120:    wanted = 120; break;
         case TARGET_DOUBLE: return source_fps == 0 || limit < 2 ? 1 : 2;
-        default:            wanted = DisplayRefreshRate(); break;
+        default:            wanted = maclc_frc_display_refresh_rate(); break;
     }
     return maclc_frc_factor(source_fps, wanted, limit);
 }

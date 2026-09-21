@@ -2437,6 +2437,12 @@ static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
         _selected = p_track->selected;
         _videoTransferFunction = (p_track->fmt.i_cat == VIDEO_ES)
             ? p_track->fmt.video.transfer : TRANSFER_FUNC_UNDEF;
+        _videoFrameRate = (p_track->fmt.i_cat == VIDEO_ES
+                        && p_track->fmt.video.i_frame_rate_base != 0)
+            ? (p_track->fmt.video.i_frame_rate
+               + p_track->fmt.video.i_frame_rate_base / 2)
+              / p_track->fmt.video.i_frame_rate_base
+            : 0;
     }
     return self;
 }

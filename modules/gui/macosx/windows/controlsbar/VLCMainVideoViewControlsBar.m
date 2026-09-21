@@ -42,6 +42,8 @@
 #import "settings/panes/MacLCHDRSettingsViewController.h"
 #import "hdr/MacLCHDRController.h"
 #import "hdr/MacLCHDRPanelViewController.h"
+#import "frameinterp/MacLCFrameInterpolation.h"
+#import "frameinterp/MacLCFrameInterpolationPanelViewController.h"
 
 #import <vlc_configuration.h>
 
@@ -94,6 +96,10 @@
     self.hdrButton.title = @"HDR";
     self.hdrButton.accessibilityLabel = _NS("Play SDR video in HDR");
     self.hdrButton.font = MacLCDesign.badgeFont;
+
+    self.frameRateButton.title = @"FPS";
+    self.frameRateButton.accessibilityLabel = _NS("Motion interpolation");
+    self.frameRateButton.font = MacLCDesign.badgeFont;
 
     self.pipButton.toolTip = _NS("Picture in Picture");
     self.pipButton.accessibilityLabel = self.pipButton.toolTip;
@@ -182,6 +188,18 @@
                            selector:@selector(hdrExpansionChanged:)
                                name:MacLCHDRStateDidChangeNotification
                              object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(frameInterpolationChanged:)
+                               name:MacLCFrameInterpolationChangedNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(frameInterpolationChanged:)
+                               name:VLCPlayerTrackSelectionChanged
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(frameInterpolationChanged:)
+                               name:NSApplicationDidChangeScreenParametersNotification
+                             object:nil];
 
     [self update];
 }
@@ -193,6 +211,7 @@
     [self updatePlaybackRateButton];
     [self updateLyricsButton:nil];
     [self updateHdrButton];
+    [self updateFrameRateButton];
 }
 
 - (void)floatOnTopChanged:(NSNotification *)notification
@@ -274,21 +293,29 @@
 /* The HDR control is a format badge. For HDR video it names what is being
  * shown (DOLBY VISION, HDR10+, HDR10, HLG) and opens the HDR panel; for SDR
  * video on a display with extended range it switches SDR-to-HDR expansion. */
-- (void)styleHdrBadgeWithTitle:(NSString *)title filled:(BOOL)filled dimmed:(BOOL)dimmed
+- (void)styleBadge:(NSButton *)button
+         withTitle:(NSString *)title
+            filled:(BOOL)filled
+            dimmed:(BOOL)dimmed
 {
     NSColor * const color = dimmed ? MacLCDesign.tertiaryLabel : MacLCDesign.primaryLabel;
-    self.hdrButton.attributedTitle =
+    button.attributedTitle =
         [[NSAttributedString alloc] initWithString:title
                                         attributes:[MacLCDesign badgeTextAttributesWithColor:color]];
-    self.hdrButton.wantsLayer = YES;
-    self.hdrButton.layer.cornerRadius = 4.0;
-    self.hdrButton.layer.borderWidth = 1.0;
-    [self.hdrButton.effectiveAppearance performAsCurrentDrawingAppearance:^{
-        self.hdrButton.layer.borderColor = color.CGColor;
-        self.hdrButton.layer.backgroundColor =
+    button.wantsLayer = YES;
+    button.layer.cornerRadius = 4.0;
+    button.layer.borderWidth = 1.0;
+    [button.effectiveAppearance performAsCurrentDrawingAppearance:^{
+        button.layer.borderColor = color.CGColor;
+        button.layer.backgroundColor =
             filled ? [MacLCDesign.primaryLabel colorWithAlphaComponent:0.14].CGColor
                    : NSColor.clearColor.CGColor;
     }];
+}
+
+- (void)styleHdrBadgeWithTitle:(NSString *)title filled:(BOOL)filled dimmed:(BOOL)dimmed
+{
+    [self styleBadge:self.hdrButton withTitle:title filled:filled dimmed:dimmed];
 }
 
 - (void)updateHdrButton
@@ -368,6 +395,88 @@
     [self updateHdrButton];
     [NSNotificationCenter.defaultCenter
         postNotificationName:MacLCHDRExpansionChangedNotification object:self];
+}
+
+- (void)frameInterpolationChanged:(NSNotification *)notification
+{
+    [self updateFrameRateButton];
+}
+
+/* The frame rate badge names what the video will be shown at once the frames
+ * in between have been made up: "120" for 24 fps material on a ProMotion
+ * panel. Off, or with nothing to gain, it just reads FPS. */
+- (void)updateFrameRateButton
+{
+    if (self.frameRateButton == nil) {
+        return;
+    }
+
+    if (_playerController.currentMediaIsAudioOnly) {
+        self.frameRateButton.hidden = YES;
+        return;
+    }
+    self.frameRateButton.hidden = NO;
+
+    const BOOL enabled = MacLCFrameInterpolation.isEnabled;
+    const unsigned source = _playerController.selectedVideoTrack.videoFrameRate;
+    const unsigned output =
+        [MacLCFrameInterpolation outputFrameRateForSourceFrameRate:source];
+    const BOOL worthwhile = output > 0;
+
+    self.frameRateButton.enabled = YES;
+    self.frameRateButton.state =
+        (enabled && worthwhile) ? NSControlStateValueOn : NSControlStateValueOff;
+
+    NSString * const title = (enabled && worthwhile)
+        ? [NSString stringWithFormat:@"%u", output] : @"FPS";
+    [self styleBadge:self.frameRateButton
+           withTitle:title
+              filled:(enabled && worthwhile)
+              dimmed:!worthwhile];
+
+    if (source == 0) {
+        self.frameRateButton.toolTip =
+            _NS("Motion interpolation. Click for the switch and its settings.");
+        self.frameRateButton.accessibilityLabel = _NS("Motion interpolation");
+    } else if (!worthwhile) {
+        self.frameRateButton.toolTip =
+            [NSString stringWithFormat:
+                _NS("This video runs at %u fps, which the display already matches, "
+                    "so there is nothing to interpolate. Click for the settings."),
+                source];
+        self.frameRateButton.accessibilityLabel =
+            _NS("Motion interpolation, nothing to interpolate");
+    } else if (enabled) {
+        self.frameRateButton.toolTip =
+            [NSString stringWithFormat:
+                _NS("Playing %u fps as %u fps. Click for the switch and its settings, "
+                    "or hold Option and click to switch it off."), source, output];
+        self.frameRateButton.accessibilityLabel =
+            [NSString stringWithFormat:_NS("Motion interpolation on, playing at %u fps"),
+                                       output];
+    } else {
+        self.frameRateButton.toolTip =
+            [NSString stringWithFormat:
+                _NS("Make up the frames in between and play %u fps as %u fps. Motion "
+                    "gets smoother, and invented frames can smear around fast edges. "
+                    "Click for the settings, or hold Option and click to switch it on."),
+                source, output];
+        self.frameRateButton.accessibilityLabel = _NS("Motion interpolation off");
+    }
+}
+
+/* Click opens the panel, whose switch is the first thing in it. Option-click
+ * is the shortcut for people who only want it on or off. */
+- (IBAction)openFrameInterpolation:(id)sender
+{
+    if ((NSApp.currentEvent.modifierFlags & NSEventModifierFlagOption) != 0) {
+        [MacLCFrameInterpolation setEnabled:!MacLCFrameInterpolation.isEnabled];
+        [self updateFrameRateButton];
+        return;
+    }
+
+    [MacLCFrameInterpolationPanelViewController
+        showRelativeToView:self.frameRateButton preferredEdge:NSRectEdgeMaxY];
 }
 
 - (void)playbackRateChanged:(NSNotification *)notification

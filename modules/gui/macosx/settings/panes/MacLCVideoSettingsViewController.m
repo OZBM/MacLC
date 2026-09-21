@@ -22,6 +22,7 @@
 
 #import "settings/panes/MacLCVideoSettingsViewController.h"
 #import "settings/MacLCConfigSafe.h"
+#import "frameinterp/MacLCFrameInterpolation.h"
 #import "settings/MacLCSettingsRow.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCCardView.h"
@@ -68,44 +69,6 @@
 @property (nonatomic, strong) MacLCSettingsRow *snapSequentialRow;
 
 @end
-
-/* The interpolator is a video filter, so turning it on and off means editing
- * the "video-filter" chain rather than flipping a boolean of its own. */
-static NSString *const kInterpolationFilter = @"maclc_frc";
-
-static NSMutableArray<NSString *> *MacLCVideoFilterList(void)
-{
-    char *chain = MacLCConfigGetPsz("video-filter");
-    NSString *value = chain ? toNSStr(chain) : @"";
-    free(chain);
-
-    NSMutableArray<NSString *> *names = [NSMutableArray array];
-    for (NSString *part in [value componentsSeparatedByString:@":"]) {
-        NSString *trimmed = [part stringByTrimmingCharactersInSet:
-                             [NSCharacterSet whitespaceCharacterSet]];
-        if (trimmed.length > 0)
-            [names addObject:trimmed];
-    }
-    return names;
-}
-
-static BOOL MacLCVideoFilterEnabled(NSString *name)
-{
-    return [MacLCVideoFilterList() containsObject:name];
-}
-
-static void MacLCVideoFilterSetEnabled(NSString *name, BOOL enabled)
-{
-    NSMutableArray<NSString *> *names = MacLCVideoFilterList();
-    const BOOL present = [names containsObject:name];
-    if (present == enabled)
-        return;
-    if (enabled)
-        [names addObject:name];
-    else
-        [names removeObject:name];
-    MacLCConfigPutPsz("video-filter", [[names componentsJoinedByString:@":"] UTF8String]);
-}
 
 @implementation MacLCVideoSettingsViewController
 
@@ -512,7 +475,7 @@ static void MacLCVideoFilterSetEnabled(NSString *name, BOOL enabled)
     NSUInteger mIdx = [modes indexOfObject:modeStr];
     [_deinterlaceModeRow.popUpButton selectItemAtIndex:(mIdx != NSNotFound) ? (NSInteger)mIdx : 0];
 
-    const BOOL interpolating = MacLCVideoFilterEnabled(kInterpolationFilter);
+    const BOOL interpolating = MacLCFrameInterpolation.isEnabled;
     [_interpolationRow.popUpButton selectItemWithTag:
         interpolating ? MacLCConfigGetInt("maclc-frc-engine", 0) : -1];
     [_interpolationTargetRow.popUpButton selectItemWithTag:
@@ -574,11 +537,12 @@ static void MacLCVideoFilterSetEnabled(NSString *name, BOOL enabled)
     }
 
     const NSInteger engine = _interpolationRow.popUpButton.selectedTag;
-    MacLCVideoFilterSetEnabled(kInterpolationFilter, engine >= 0);
     if (engine >= 0)
-        MacLCConfigPutInt("maclc-frc-engine", engine);
-    MacLCConfigPutInt("maclc-frc-target", _interpolationTargetRow.popUpButton.selectedTag);
+        MacLCFrameInterpolation.engine = (MacLCFrameInterpolationEngine)engine;
+    MacLCFrameInterpolation.target =
+        (MacLCFrameInterpolationTarget)_interpolationTargetRow.popUpButton.selectedTag;
     MacLCConfigPutInt("maclc-frc-overrun", _interpolationOverrunRow.popUpButton.selectedTag);
+    [MacLCFrameInterpolation setEnabled:engine >= 0];
 
     NSString *aspectTitle = _aspectRatioRow.popUpButton.titleOfSelectedItem;
     if ([aspectTitle isEqualToString:_NS("Default")]) {
@@ -621,7 +585,7 @@ static void MacLCVideoFilterSetEnabled(NSString *name, BOOL enabled)
     if ((item = config_FindConfig("aspect-ratio"))) MacLCConfigPutPsz("aspect-ratio", item->orig.psz ? item->orig.psz : "");
     if ((item = config_FindConfig("crop"))) MacLCConfigPutPsz("crop", item->orig.psz ? item->orig.psz : "");
     if ((item = config_FindConfig("macosx-lock-aspect-ratio"))) MacLCConfigPutInt("macosx-lock-aspect-ratio", item->orig.i);
-    MacLCVideoFilterSetEnabled(kInterpolationFilter, NO);
+    [MacLCFrameInterpolation setEnabled:NO];
     if ((item = config_FindConfig("maclc-frc-engine"))) MacLCConfigPutInt("maclc-frc-engine", item->orig.i);
     if ((item = config_FindConfig("maclc-frc-target"))) MacLCConfigPutInt("maclc-frc-target", item->orig.i);
     if ((item = config_FindConfig("maclc-frc-overrun"))) MacLCConfigPutInt("maclc-frc-overrun", item->orig.i);

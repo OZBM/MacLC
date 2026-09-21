@@ -37,6 +37,7 @@
                 <outlet property="floatOnTopButton" destination="UlM-pV-GAH" id="Psy-2Z-suK"/>
                 <outlet property="hdrButton" destination="Hdr-Cl-Btn" id="Hdr-Cl-Out"/>
                 <outlet property="forwardButton" destination="Udx-ZV-vdD" id="ILc-3U-3Lg"/>
+                <outlet property="frameRateButton" destination="Fps-Cl-Btn" id="Fps-Cl-Out"/>
                 <outlet property="fullscreenButton" destination="Dka-oG-Ar0" id="nqz-qB-etE"/>
                 <outlet property="jumpBackwardButton" destination="Y6X-Qj-wAU" id="ZDb-ZR-IDF"/>
                 <outlet property="jumpBackwardButtonSpacingConstraint" destination="LnZ-my-zBM" id="jbs-sp-c"/>
@@ -348,6 +349,16 @@
                                                         </buttonCell>
                                                         <connections>
                                                             <action selector="toggleHDR:" target="3" id="Hdr-Cl-Act"/>
+                                                        </connections>
+                                                    </button>
+                                                    <button wantsLayer="YES" horizontalHuggingPriority="500" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Fps-Cl-Btn" customClass="VLCImageButton">
+                                                        <rect key="frame" x="0.0" y="0.0" width="49" height="28"/>
+                                                        <buttonCell key="cell" type="recessed" title="FPS" bezelStyle="recessed" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Fps-Cl-Cel">
+                                                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES" changeBackground="YES" changeGray="YES"/>
+                                                            <font key="font" metaFont="systemBold" size="12"/>
+                                                        </buttonCell>
+                                                        <connections>
+                                                            <action selector="openFrameInterpolation:" target="3" id="Fps-Cl-Act"/>
                                                         </connections>
                                                     </button>
                                                     <button wantsLayer="YES" horizontalHuggingPriority="1000" verticalHuggingPriority="750" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="UlM-pV-GAH" customClass="VLCImageButton">
