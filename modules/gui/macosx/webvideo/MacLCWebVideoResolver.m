@@ -157,7 +157,8 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
     [self.tasksLock lock];
     NSTask *task = self.activeTasks[token];
     [self.tasksLock unlock];
-    if (task) {
+    /* -terminate on a task that is not running raises. */
+    if (task.isRunning) {
         [task terminate];
     }
 }
@@ -238,21 +239,33 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
     NSMutableData *errData = [NSMutableData data];
     NSLock *dataLock = [[NSLock alloc] init];
 
+    /* The extractor's answer is often a megabyte of JSON, and the pipe keeps
+     * delivering it after the process has gone. Each side signals when it has
+     * read its end of file, and nothing is parsed before both have. */
+    dispatch_semaphore_t outDone = dispatch_semaphore_create(0);
+    dispatch_semaphore_t errDone = dispatch_semaphore_create(0);
+
     outPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle *handle) {
-        NSData *d = handle.availableData;
-        if (d.length > 0) {
-            [dataLock lock];
-            [outData appendData:d];
-            [dataLock unlock];
+        NSData * const d = handle.availableData;
+        if (d.length == 0) {
+            handle.readabilityHandler = nil;
+            dispatch_semaphore_signal(outDone);
+            return;
         }
+        [dataLock lock];
+        [outData appendData:d];
+        [dataLock unlock];
     };
     errPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle *handle) {
-        NSData *d = handle.availableData;
-        if (d.length > 0) {
-            [dataLock lock];
-            [errData appendData:d];
-            [dataLock unlock];
+        NSData * const d = handle.availableData;
+        if (d.length == 0) {
+            handle.readabilityHandler = nil;
+            dispatch_semaphore_signal(errDone);
+            return;
         }
+        [dataLock lock];
+        [errData appendData:d];
+        [dataLock unlock];
     };
 
     [self.tasksLock lock];
@@ -264,8 +277,6 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
     
     dispatch_semaphore_t sem = dispatch_semaphore_create(0);
     task.terminationHandler = ^(NSTask *t) {
-        outPipe.fileHandleForReading.readabilityHandler = nil;
-        errPipe.fileHandleForReading.readabilityHandler = nil;
         if (t.terminationReason == NSTaskTerminationReasonUncaughtSignal) {
             cancelled = YES; // assumed from terminate
         }
@@ -274,6 +285,8 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
 
     NSError *launchError = nil;
     if (![task launchAndReturnError:&launchError]) {
+        outPipe.fileHandleForReading.readabilityHandler = nil;
+        errPipe.fileHandleForReading.readabilityHandler = nil;
         [self.tasksLock lock];
         [self.activeTasks removeObjectForKey:token];
         [self.tasksLock unlock];
@@ -284,9 +297,20 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
 
     if (dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, 45 * NSEC_PER_SEC)) != 0) {
         timedOut = YES;
-        [task terminate];
+        if (task.isRunning) {
+            [task terminate];
+        }
         dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
     }
+
+    /* The process is gone; give both pipes a moment to hand over what is left,
+     * then stop reading whatever happens. */
+    const dispatch_time_t drainDeadline =
+        dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC);
+    dispatch_semaphore_wait(outDone, drainDeadline);
+    dispatch_semaphore_wait(errDone, drainDeadline);
+    outPipe.fileHandleForReading.readabilityHandler = nil;
+    errPipe.fileHandleForReading.readabilityHandler = nil;
 
     [self.tasksLock lock];
     [self.activeTasks removeObjectForKey:token];
@@ -345,6 +369,9 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
     if (!addr) return NO;
     if ([addr rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]].location != NSNotFound) return NO;
     if ([addr rangeOfString:@"\0"].location != NSNotFound) return NO;
+    /* '#' opens a stream output chain in an MRL: an address carrying one
+     * could append instructions of its own to the option it lands in. */
+    if ([addr rangeOfString:@"#"].location != NSNotFound) return NO;
     NSURL *u = [NSURL URLWithString:addr];
     if (!u || !u.scheme) return NO;
     NSString *s = u.scheme.lowercaseString;

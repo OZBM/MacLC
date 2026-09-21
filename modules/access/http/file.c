@@ -73,9 +73,12 @@ static int vlc_http_file_req(const struct vlc_http_resource *res,
     int ret;
     if (file->chunk_size > 0)
     {
-        uintmax_t end = *offset + file->chunk_size - 1;
-        if (end < *offset) /* overflow */
+        uintmax_t end;
+
+        if (UINTMAX_MAX - *offset < file->chunk_size - 1) /* overflow */
             end = UINTMAX_MAX;
+        else
+            end = *offset + file->chunk_size - 1;
         ret = vlc_http_msg_add_header(req, "Range", "bytes=%" PRIuMAX "-%" PRIuMAX,
                                       *offset, end);
     }

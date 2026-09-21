@@ -326,6 +326,10 @@ NS_ASSUME_NONNULL_BEGIN
     _errorIcon = nil;
     _errorLabel = nil;
     _errorButton = nil;
+    
+    /* Taking a row out gives the height back, or the stack stretches what is
+     * left over a window that is now too tall. */
+    [self sizeWindowToFitContentAnimated:NO];
 }
 
 - (void)controlTextDidChange:(NSNotification *)obj {
