@@ -47,6 +47,7 @@
 #import <VideoToolbox/VideoToolbox.h>
 
 #include "vt_utils.h"
+#include "maclc_frc_geometry.h"
 
 #define CFG_PREFIX "maclc-frc-"
 
@@ -103,7 +104,9 @@ static const char *const overrun_names[] = {
 
 #define ENGINE_TEXT N_("Interpolation engine")
 #define ENGINE_LONGTEXT N_("Which method synthesises the intermediate frames. " \
-    "Automatic picks the best one that fits in the time budget of the source.")
+    "Automatic picks the best one that fits in the time one source frame " \
+    "lasts. Quality costs about twice what Balanced does and was not measured " \
+    "to look any better.")
 #define TARGET_TEXT N_("Target frame rate")
 #define TARGET_LONGTEXT N_("Frame rate to aim for. Matching the display picks " \
     "the largest whole multiple of the source that the screen can show.")
@@ -158,8 +161,11 @@ kernel void maclc_frc_interp(texture2d<float, access::sample> prev_plane [[textu
         return;\n\
     constexpr sampler smp(coord::normalized, address::clamp_to_edge, filter::linear);\n\
     const float2 uv = (float2(gid) + 0.5) / float2(w, h);\n\
-    const float2 mv = p.motion > 0.5 ? motion.sample(smp, uv).xy * p.mv_norm : float2(0.0);\n\
     const float t = p.phase;\n\
+    /* The field is indexed by blocks of the current frame and points at the\n\
+       previous one. Estimating the other direction as well was measured to\n\
+       change nothing and cost 1.5 ms a frame, so one field it is. */\n\
+    const float2 mv = p.motion > 0.5 ? motion.sample(smp, uv).xy * p.mv_norm : float2(0.0);\n\
     const float2 uv_cur  = uv - (1.0 - t) * mv;\n\
     const float2 uv_prev = uv + t * mv;\n\
     const float4 c = cur_plane.sample(smp, uv_cur);\n\
@@ -193,17 +199,21 @@ struct maclc_frc_params
     filter_t *_filter;
 
     int _engine;            /* engine in use right now */
+    int _engine_starting;   /* the one being set up, for the probe */
     int _requested;         /* what the user asked for */
     int _overrun;
     unsigned _factor;       /* output frames per source frame, >= 2 */
     bool _passthrough;
 
     picture_t *_prev;
+    CVPixelBufferRef _prev_buffer;
     bool _restart;          /* first pair of a new sequence */
 
     unsigned _width, _height;
-    OSType _cv_fmt;         /* CoreVideo format of the pictures we get */
+    OSType _cv_fmt;         /* CoreVideo format the engines work on */
     bool _ten_bit;
+    bool _software;         /* pictures arrive as planes, not CoreVideo buffers */
+    bool _planar;           /* ... and in three planes rather than two */
 
     CVPixelBufferPoolRef _out_pool;
 
@@ -211,8 +221,7 @@ struct maclc_frc_params
     VTFrameProcessor *_processor;
     id<VTFrameProcessorConfiguration> _processor_cfg;
     OSType _processor_fmt;
-    bool _processor_converts;
-    CVPixelBufferPoolRef _work_pool;
+    CVPixelBufferPoolRef _source_pool, _destination_pool;
     CVPixelBufferRef _work_prev;
     NSArray<NSNumber *> *_phases;
     VTPixelTransferSessionRef _xfer_in, _xfer_out;
@@ -229,6 +238,7 @@ struct maclc_frc_params
     VTPixelTransferSessionRef _xfer_luma;
     unsigned _mv_cols, _mv_rows;
     float *_mv_field;                  /* smoothed, 2 floats per block */
+    float *_mv_scratch;
 
     /* real-time budget */
     vlc_tick_t _budget;
@@ -246,18 +256,20 @@ struct maclc_frc_params
  * Small helpers
  *****************************************************************************/
 
-static CVPixelBufferPoolRef PoolCreate(OSType fmt, unsigned w, unsigned h,
-                                       unsigned count)
+/* The frame processors state the attributes their buffers must have —
+ * padding included. A buffer allocated to VLC's own taste can differ, and
+ * handing one over corrupts the heap at sizes whose rows do not line up, so
+ * every buffer a processor touches comes from here. */
+static CVPixelBufferPoolRef PoolFromAttributes(NSDictionary *attributes,
+                                               unsigned count)
 {
+    NSMutableDictionary *buffer_attrs = [attributes mutableCopy];
+    if (buffer_attrs == nil)
+        return NULL;
+    buffer_attrs[(__bridge NSString *)kCVPixelBufferIOSurfacePropertiesKey] = @{};
+
     NSDictionary *pool_attrs = @{
         (__bridge NSString *)kCVPixelBufferPoolMinimumBufferCountKey: @(count),
-    };
-    NSDictionary *buffer_attrs = @{
-        (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(fmt),
-        (__bridge NSString *)kCVPixelBufferWidthKey: @(w),
-        (__bridge NSString *)kCVPixelBufferHeightKey: @(h),
-        (__bridge NSString *)kCVPixelBufferIOSurfacePropertiesKey: @{},
-        (__bridge NSString *)kCVPixelBufferMetalCompatibilityKey: @YES,
     };
     CVPixelBufferPoolRef pool = NULL;
     if (CVPixelBufferPoolCreate(kCFAllocatorDefault,
@@ -294,17 +306,28 @@ static unsigned DisplayRefreshRate(void)
     return (unsigned)(hz + 0.5);
 }
 
-static bool ChromaIsSupported(vlc_fourcc_t chroma, OSType *cv_fmt, bool *ten_bit)
+/* Hardware decoding hands over CoreVideo buffers; a software decoder, which is
+ * what interlaced streams and the odd codec fall back to, hands over plain
+ * planes. Those are staged through a CoreVideo buffer of the same 4:2:0 8-bit
+ * layout, so every engine sees the same thing either way. */
+static bool ChromaIsSupported(vlc_fourcc_t chroma, OSType *cv_fmt, bool *ten_bit,
+                              bool *software)
 {
+    *ten_bit = false;
+    *software = false;
     switch (chroma)
     {
         case VLC_CODEC_CVPX_NV12:
             *cv_fmt = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
-            *ten_bit = false;
             return true;
         case VLC_CODEC_CVPX_P010:
             *cv_fmt = kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange;
             *ten_bit = true;
+            return true;
+        case VLC_CODEC_I420:
+        case VLC_CODEC_NV12:
+            *cv_fmt = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
+            *software = true;
             return true;
         default:
             return false;
@@ -328,10 +351,15 @@ static void EngineRelease(MacLCFrcContext *ctx)
         CVPixelBufferRelease(ctx->_work_prev);
         ctx->_work_prev = NULL;
     }
-    if (ctx->_work_pool != NULL)
+    if (ctx->_source_pool != NULL)
     {
-        CVPixelBufferPoolRelease(ctx->_work_pool);
-        ctx->_work_pool = NULL;
+        CVPixelBufferPoolRelease(ctx->_source_pool);
+        ctx->_source_pool = NULL;
+    }
+    if (ctx->_destination_pool != NULL)
+    {
+        CVPixelBufferPoolRelease(ctx->_destination_pool);
+        ctx->_destination_pool = NULL;
     }
     if (ctx->_xfer_in != NULL)
     {
@@ -369,6 +397,8 @@ static void EngineRelease(MacLCFrcContext *ctx)
     }
     free(ctx->_mv_field);
     ctx->_mv_field = NULL;
+    free(ctx->_mv_scratch);
+    ctx->_mv_scratch = NULL;
     ctx->_mv_texture = nil;
     ctx->_pipeline = nil;
     ctx->_queue = nil;
@@ -381,9 +411,93 @@ static void EngineRelease(MacLCFrcContext *ctx)
     }
 }
 
+static const char *EngineName(int engine)
+{
+    switch (engine)
+    {
+        case ENGINE_QUALITY:    return "quality";
+        case ENGINE_BALANCED:   return "balanced";
+        case ENGINE_LOWLATENCY: return "low latency";
+        case ENGINE_MOTION:     return "motion compensation";
+        case ENGINE_BLEND:      return "blend";
+        default:                return "none";
+    }
+}
+
+/* startSession accepts sizes the processor then refuses to work on — the
+ * low-latency one says nothing until the first frame comes back with
+ * "Processor is not initialized". Push one pair of blank frames through
+ * before claiming the engine works. */
+static bool ProcessorEngineProbe(MacLCFrcContext *ctx)
+{
+    if (@available(macOS 15.4, *))
+    {
+        CVPixelBufferRef a = PoolTake(ctx->_source_pool);
+        CVPixelBufferRef b = PoolTake(ctx->_source_pool);
+        NSMutableArray<VTFrameProcessorFrame *> *destinations =
+            [NSMutableArray arrayWithCapacity:ctx->_factor - 1];
+        bool ok = a != NULL && b != NULL;
+
+        for (unsigned i = 0; i < ctx->_factor - 1 && ok; i++)
+        {
+            CVPixelBufferRef d = PoolTake(ctx->_destination_pool);
+            VTFrameProcessorFrame *frame = d == NULL ? nil
+                : [[VTFrameProcessorFrame alloc] initWithBuffer:d
+                    presentationTimeStamp:CMTimeMake(i + 1, 60)];
+            if (d != NULL)
+                CVPixelBufferRelease(d);
+            if (frame == nil)
+                ok = false;
+            else
+                [destinations addObject:frame];
+        }
+
+        VTFrameProcessorFrame *first = ok
+            ? [[VTFrameProcessorFrame alloc] initWithBuffer:a
+                presentationTimeStamp:CMTimeMake(0, 60)] : nil;
+        VTFrameProcessorFrame *second = ok
+            ? [[VTFrameProcessorFrame alloc] initWithBuffer:b
+                presentationTimeStamp:CMTimeMake(ctx->_factor, 60)] : nil;
+        id<VTFrameProcessorParameters> parameters = nil;
+
+        if (first != nil && second != nil)
+        {
+            if (ctx->_engine_starting == ENGINE_LOWLATENCY)
+            {
+                if (@available(macOS 26.0, *))
+                    parameters = [[VTLowLatencyFrameInterpolationParameters alloc]
+                        initWithSourceFrame:second previousFrame:first
+                        interpolationPhase:ctx->_phases destinationFrames:destinations];
+            }
+            else
+                parameters = [[VTFrameRateConversionParameters alloc]
+                    initWithSourceFrame:first nextFrame:second opticalFlow:nil
+                    interpolationPhase:ctx->_phases
+                    submissionMode:VTFrameRateConversionParametersSubmissionModeRandom
+                    destinationFrames:destinations];
+        }
+
+        NSError *error = nil;
+        ok = parameters != nil
+          && [ctx->_processor processWithParameters:parameters error:&error];
+        if (!ok)
+            msg_Dbg(ctx->_filter, "%s engine refuses %ux%u x%u: %s",
+                    EngineName(ctx->_engine_starting), ctx->_width, ctx->_height,
+                    ctx->_factor, error.localizedDescription.UTF8String ?: "no reason given");
+
+        if (a != NULL)
+            CVPixelBufferRelease(a);
+        if (b != NULL)
+            CVPixelBufferRelease(b);
+        return ok;
+    }
+    return false;
+}
+
 static bool ProcessorEngineStart(MacLCFrcContext *ctx, int engine)
 {
     filter_t *filter = ctx->_filter;
+    ctx->_engine_starting = engine;
 
     if (engine == ENGINE_LOWLATENCY)
     {
@@ -424,7 +538,6 @@ static bool ProcessorEngineStart(MacLCFrcContext *ctx, int engine)
     if (wanted == nil)
         return false;
     ctx->_processor_fmt = (OSType)wanted.unsignedIntValue;
-    ctx->_processor_converts = ctx->_processor_fmt != ctx->_cv_fmt;
 
     if (@available(macOS 15.4, *))
     {
@@ -443,26 +556,27 @@ static bool ProcessorEngineStart(MacLCFrcContext *ctx, int engine)
     else
         return false;
 
-    if (ctx->_processor_converts)
-    {
-        ctx->_work_pool = PoolCreate(ctx->_processor_fmt, ctx->_width,
-                                     ctx->_height, ctx->_factor + 2);
-        if (ctx->_work_pool == NULL)
-            return false;
-        if (VTPixelTransferSessionCreate(kCFAllocatorDefault, &ctx->_xfer_in)
-         || VTPixelTransferSessionCreate(kCFAllocatorDefault, &ctx->_xfer_out))
-            return false;
-        VTSessionSetProperty(ctx->_xfer_in,
-                             kVTPixelTransferPropertyKey_RealTime, kCFBooleanTrue);
-        VTSessionSetProperty(ctx->_xfer_out,
-                             kVTPixelTransferPropertyKey_RealTime, kCFBooleanTrue);
-    }
+    ctx->_source_pool =
+        PoolFromAttributes(ctx->_processor_cfg.sourcePixelBufferAttributes, 3);
+    ctx->_destination_pool =
+        PoolFromAttributes(ctx->_processor_cfg.destinationPixelBufferAttributes,
+                           ctx->_factor + 2);
+    if (ctx->_source_pool == NULL || ctx->_destination_pool == NULL)
+        return false;
+    if (VTPixelTransferSessionCreate(kCFAllocatorDefault, &ctx->_xfer_in)
+     || VTPixelTransferSessionCreate(kCFAllocatorDefault, &ctx->_xfer_out))
+        return false;
+    VTSessionSetProperty(ctx->_xfer_in,
+                         kVTPixelTransferPropertyKey_RealTime, kCFBooleanTrue);
+    VTSessionSetProperty(ctx->_xfer_out,
+                         kVTPixelTransferPropertyKey_RealTime, kCFBooleanTrue);
 
     NSMutableArray *phases = [NSMutableArray arrayWithCapacity:ctx->_factor - 1];
     for (unsigned i = 1; i < ctx->_factor; i++)
         [phases addObject:@((float)i / (float)ctx->_factor)];
     ctx->_phases = phases;
-    return true;
+
+    return ProcessorEngineProbe(ctx);
 }
 
 static bool MetalEngineStart(MacLCFrcContext *ctx, int engine)
@@ -527,9 +641,10 @@ static bool MetalEngineStart(MacLCFrcContext *ctx, int engine)
 
     ctx->_mv_cols = (ctx->_width + 15) / 16;
     ctx->_mv_rows = (ctx->_height + 15) / 16;
-    ctx->_mv_field = calloc((size_t)ctx->_mv_cols * ctx->_mv_rows * 2,
-                            sizeof(*ctx->_mv_field));
-    if (ctx->_mv_field == NULL)
+    const size_t field_size = (size_t)ctx->_mv_cols * ctx->_mv_rows * 2;
+    ctx->_mv_field = calloc(field_size, sizeof(*ctx->_mv_field));
+    ctx->_mv_scratch = calloc(field_size, sizeof(*ctx->_mv_scratch));
+    if (ctx->_mv_field == NULL || ctx->_mv_scratch == NULL)
         return false;
 
     MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
@@ -542,31 +657,21 @@ static bool MetalEngineStart(MacLCFrcContext *ctx, int engine)
     if (ctx->_mv_texture == nil)
         return false;
 
-    if (ctx->_ten_bit)
-    {
-        /* The motion estimator only takes 8-bit 4:2:0. */
-        ctx->_luma_pool = PoolCreate(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
-                                     ctx->_width, ctx->_height, 3);
-        if (ctx->_luma_pool == NULL
-         || VTPixelTransferSessionCreate(kCFAllocatorDefault, &ctx->_xfer_luma))
-            return false;
-        VTSessionSetProperty(ctx->_xfer_luma,
-                             kVTPixelTransferPropertyKey_RealTime, kCFBooleanTrue);
-    }
+    /* The estimator takes 8-bit 4:2:0 and states the padding it wants; feed it
+     * buffers of its own rather than the decoder's, whatever the bit depth. */
+    CFDictionaryRef estimator_attrs = NULL;
+    if (VTMotionEstimationSessionCopySourcePixelBufferAttributes(
+            ctx->_estimator, &estimator_attrs) != noErr || estimator_attrs == NULL)
+        return false;
+    ctx->_luma_pool =
+        PoolFromAttributes((__bridge NSDictionary *)estimator_attrs, 3);
+    CFRelease(estimator_attrs);
+    if (ctx->_luma_pool == NULL
+     || VTPixelTransferSessionCreate(kCFAllocatorDefault, &ctx->_xfer_luma))
+        return false;
+    VTSessionSetProperty(ctx->_xfer_luma,
+                         kVTPixelTransferPropertyKey_RealTime, kCFBooleanTrue);
     return true;
-}
-
-static const char *EngineName(int engine)
-{
-    switch (engine)
-    {
-        case ENGINE_QUALITY:    return "quality";
-        case ENGINE_BALANCED:   return "balanced";
-        case ENGINE_LOWLATENCY: return "low latency";
-        case ENGINE_MOTION:     return "motion compensation";
-        case ENGINE_BLEND:      return "blend";
-        default:                return "none";
-    }
 }
 
 static bool EngineStart(MacLCFrcContext *ctx, int engine)
@@ -639,9 +744,7 @@ static bool EngineDegrade(MacLCFrcContext *ctx)
 static CVPixelBufferRef ProcessorConvertIn(MacLCFrcContext *ctx,
                                            CVPixelBufferRef source)
 {
-    if (!ctx->_processor_converts)
-        return CVPixelBufferRetain(source);
-    CVPixelBufferRef converted = PoolTake(ctx->_work_pool);
+    CVPixelBufferRef converted = PoolTake(ctx->_source_pool);
     if (converted == NULL)
         return NULL;
     if (VTPixelTransferSessionTransferImage(ctx->_xfer_in, source, converted) != noErr)
@@ -658,6 +761,8 @@ static bool ProcessorRun(MacLCFrcContext *ctx, CVPixelBufferRef current,
                          CVPixelBufferRef *out)
 {
     const unsigned count = ctx->_factor - 1;
+    if (ctx->_work_prev == NULL)
+        return false;
     CVPixelBufferRef work_cur = ProcessorConvertIn(ctx, current);
     if (work_cur == NULL)
         return false;
@@ -669,8 +774,7 @@ static bool ProcessorRun(MacLCFrcContext *ctx, CVPixelBufferRef current,
 
     for (unsigned i = 0; i < count && ok; i++)
     {
-        staging[i] = ctx->_processor_converts ? PoolTake(ctx->_work_pool)
-                                              : PoolTake(ctx->_out_pool);
+        staging[i] = PoolTake(ctx->_destination_pool);
         if (staging[i] == NULL)
         {
             ok = false;
@@ -735,7 +839,7 @@ static bool ProcessorRun(MacLCFrcContext *ctx, CVPixelBufferRef current,
             ok = false;
     }
 
-    if (ok && ctx->_processor_converts)
+    if (ok)
     {
         for (unsigned i = 0; i < count; i++)
         {
@@ -747,14 +851,6 @@ static bool ProcessorRun(MacLCFrcContext *ctx, CVPixelBufferRef current,
                 ok = false;
                 break;
             }
-        }
-    }
-    else if (ok)
-    {
-        for (unsigned i = 0; i < count; i++)
-        {
-            out[i] = staging[i];
-            staging[i] = NULL;
         }
     }
 
@@ -787,8 +883,12 @@ static bool ProcessorRun(MacLCFrcContext *ctx, CVPixelBufferRef current,
  * Metal engines
  *****************************************************************************/
 
+/* CVMetalTextureGetTexture hands back a texture the CVMetalTexture owns, so the
+ * wrapper has to outlive the work that reads it; callers collect the wrappers
+ * and drop them once the command buffer is done. */
 static id<MTLTexture> TextureForPlane(MacLCFrcContext *ctx, CVPixelBufferRef buffer,
-                                      size_t plane, bool writable)
+                                      size_t plane, bool writable,
+                                      NSMutableArray *holders)
 {
     const size_t width = CVPixelBufferGetWidthOfPlane(buffer, plane);
     const size_t height = CVPixelBufferGetHeightOfPlane(buffer, plane);
@@ -807,9 +907,9 @@ static id<MTLTexture> TextureForPlane(MacLCFrcContext *ctx, CVPixelBufferRef buf
             ctx->_tex_cache, buffer, (__bridge CFDictionaryRef)attrs, format,
             width, height, plane, &holder) != kCVReturnSuccess)
         return nil;
-    id<MTLTexture> texture = CVMetalTextureGetTexture(holder);
-    CFRelease(holder);
-    return texture;
+    id owned = CFBridgingRelease(holder);
+    [holders addObject:owned];
+    return CVMetalTextureGetTexture((__bridge CVMetalTextureRef)owned);
 }
 
 /* Reads the block vectors, drops the wild ones and smooths what is left. A
@@ -849,9 +949,7 @@ static void MotionFieldUpdate(MacLCFrcContext *ctx, CVPixelBufferRef vectors)
      * warped. A 3x3 median throws away the odd wrong block without dragging
      * the vectors of a moving object towards the still background around it,
      * which is what averaging would do. */
-    float *smoothed = malloc((size_t)cols * rows * 2 * sizeof(*smoothed));
-    if (smoothed == NULL)
-        return;
+    float *smoothed = ctx->_mv_scratch;
     for (unsigned y = 0; y < rows; y++)
         for (unsigned x = 0; x < cols; x++)
             for (unsigned c = 0; c < 2; c++)
@@ -880,7 +978,6 @@ static void MotionFieldUpdate(MacLCFrcContext *ctx, CVPixelBufferRef vectors)
                 smoothed[(y * cols + x) * 2 + c] = window[n / 2];
             }
     memcpy(ctx->_mv_field, smoothed, (size_t)cols * rows * 2 * sizeof(*smoothed));
-    free(smoothed);
 
     [ctx->_mv_texture replaceRegion:MTLRegionMake2D(0, 0, cols, rows)
                         mipmapLevel:0 withBytes:ctx->_mv_field
@@ -892,20 +989,14 @@ static bool MotionEstimate(MacLCFrcContext *ctx, CVPixelBufferRef current)
     if (ctx->_engine != ENGINE_MOTION)
         return true;
 
-    CVPixelBufferRef sample = current;
-    CVPixelBufferRef converted = NULL;
-    if (ctx->_ten_bit)
+    CVPixelBufferRef sample = PoolTake(ctx->_luma_pool);
+    if (sample == NULL
+     || VTPixelTransferSessionTransferImage(ctx->_xfer_luma, current,
+                                            sample) != noErr)
     {
-        converted = PoolTake(ctx->_luma_pool);
-        if (converted == NULL
-         || VTPixelTransferSessionTransferImage(ctx->_xfer_luma, current,
-                                                converted) != noErr)
-        {
-            if (converted != NULL)
-                CVPixelBufferRelease(converted);
-            return false;
-        }
-        sample = converted;
+        if (sample != NULL)
+            CVPixelBufferRelease(sample);
+        return false;
     }
 
     bool ok = false;
@@ -935,7 +1026,7 @@ static bool MotionEstimate(MacLCFrcContext *ctx, CVPixelBufferRef current)
 
     if (ctx->_estimate_prev != NULL)
         CVPixelBufferRelease(ctx->_estimate_prev);
-    ctx->_estimate_prev = converted != NULL ? converted : CVPixelBufferRetain(current);
+    ctx->_estimate_prev = sample;
     return ok;
 }
 
@@ -947,11 +1038,12 @@ static bool MetalRun(MacLCFrcContext *ctx, CVPixelBufferRef previous,
     if (commands == nil)
         return false;
 
+    NSMutableArray *holders = [NSMutableArray arrayWithCapacity:(count + 1) * 2];
     id<MTLTexture> prev_planes[2], cur_planes[2];
     for (size_t plane = 0; plane < 2; plane++)
     {
-        prev_planes[plane] = TextureForPlane(ctx, previous, plane, false);
-        cur_planes[plane] = TextureForPlane(ctx, current, plane, false);
+        prev_planes[plane] = TextureForPlane(ctx, previous, plane, false, holders);
+        cur_planes[plane] = TextureForPlane(ctx, current, plane, false, holders);
         if (prev_planes[plane] == nil || cur_planes[plane] == nil)
             return false;
     }
@@ -974,10 +1066,14 @@ static bool MetalRun(MacLCFrcContext *ctx, CVPixelBufferRef previous,
         };
         for (size_t plane = 0; plane < 2 && ok; plane++)
         {
-            id<MTLTexture> destination = TextureForPlane(ctx, out[i], plane, true);
+            id<MTLTexture> destination =
+                TextureForPlane(ctx, out[i], plane, true, holders);
             id<MTLComputeCommandEncoder> encoder = [commands computeCommandEncoder];
             if (destination == nil || encoder == nil)
             {
+                /* An encoder left open trips Metal when the next one is
+                 * created or when the buffer goes away. */
+                [encoder endEncoding];
                 ok = false;
                 break;
             }
@@ -1017,16 +1113,124 @@ static bool MetalRun(MacLCFrcContext *ctx, CVPixelBufferRef previous,
  * Filter
  *****************************************************************************/
 
+/* Copies a software picture into a 4:2:0 8-bit CoreVideo buffer, interleaving
+ * the two chroma planes on the way when the source keeps them apart. */
+static void PlanesToBuffer(MacLCFrcContext *ctx, const picture_t *picture,
+                           CVPixelBufferRef buffer)
+{
+    CVPixelBufferLockBaseAddress(buffer, 0);
+    uint8_t *luma = CVPixelBufferGetBaseAddressOfPlane(buffer, 0);
+    const size_t luma_pitch = CVPixelBufferGetBytesPerRowOfPlane(buffer, 0);
+    const size_t height = CVPixelBufferGetHeightOfPlane(buffer, 0);
+    const size_t width = CVPixelBufferGetWidthOfPlane(buffer, 0);
+
+    for (size_t y = 0; y < height; y++)
+        memcpy(luma + y * luma_pitch,
+               picture->p[0].p_pixels + y * picture->p[0].i_pitch, width);
+
+    uint8_t *chroma = CVPixelBufferGetBaseAddressOfPlane(buffer, 1);
+    const size_t chroma_pitch = CVPixelBufferGetBytesPerRowOfPlane(buffer, 1);
+    const size_t chroma_height = CVPixelBufferGetHeightOfPlane(buffer, 1);
+    const size_t chroma_width = CVPixelBufferGetWidthOfPlane(buffer, 1);
+
+    for (size_t y = 0; y < chroma_height; y++)
+    {
+        uint8_t *out = chroma + y * chroma_pitch;
+        if (ctx->_planar)
+            maclc_frc_interleave_chroma(
+                out, 0,
+                picture->p[1].p_pixels + y * picture->p[1].i_pitch, 0,
+                picture->p[2].p_pixels + y * picture->p[2].i_pitch, 0,
+                chroma_width, 1);
+        else
+            memcpy(out, picture->p[1].p_pixels + y * picture->p[1].i_pitch,
+                   chroma_width * 2);
+    }
+    CVPixelBufferUnlockBaseAddress(buffer, 0);
+}
+
+static void BufferToPlanes(MacLCFrcContext *ctx, CVPixelBufferRef buffer,
+                           picture_t *picture)
+{
+    CVPixelBufferLockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
+    const uint8_t *luma = CVPixelBufferGetBaseAddressOfPlane(buffer, 0);
+    const size_t luma_pitch = CVPixelBufferGetBytesPerRowOfPlane(buffer, 0);
+    const size_t height = CVPixelBufferGetHeightOfPlane(buffer, 0);
+    const size_t width = CVPixelBufferGetWidthOfPlane(buffer, 0);
+
+    for (size_t y = 0; y < height; y++)
+        memcpy(picture->p[0].p_pixels + y * picture->p[0].i_pitch,
+               luma + y * luma_pitch, width);
+
+    const uint8_t *chroma = CVPixelBufferGetBaseAddressOfPlane(buffer, 1);
+    const size_t chroma_pitch = CVPixelBufferGetBytesPerRowOfPlane(buffer, 1);
+    const size_t chroma_height = CVPixelBufferGetHeightOfPlane(buffer, 1);
+    const size_t chroma_width = CVPixelBufferGetWidthOfPlane(buffer, 1);
+
+    for (size_t y = 0; y < chroma_height; y++)
+    {
+        const uint8_t *in = chroma + y * chroma_pitch;
+        if (ctx->_planar)
+            maclc_frc_deinterleave_chroma(
+                in, 0,
+                picture->p[1].p_pixels + y * picture->p[1].i_pitch, 0,
+                picture->p[2].p_pixels + y * picture->p[2].i_pitch, 0,
+                chroma_width, 1);
+        else
+            memcpy(picture->p[1].p_pixels + y * picture->p[1].i_pitch,
+                   in, chroma_width * 2);
+    }
+    CVPixelBufferUnlockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
+}
+
+/* The picture's pixels as a CoreVideo buffer, owned by the caller. */
+static CVPixelBufferRef BufferForPicture(MacLCFrcContext *ctx, picture_t *picture)
+{
+    if (!ctx->_software)
+        return CVPixelBufferRetain(cvpxpic_get_ref(picture));
+
+    CVPixelBufferRef buffer = PoolTake(ctx->_out_pool);
+    if (buffer == NULL)
+        return NULL;
+    PlanesToBuffer(ctx, picture, buffer);
+    return buffer;
+}
+
+/* Wraps a finished buffer in a picture, consuming the caller's reference to it
+ * in every case, success or not. */
 static picture_t *PictureFromBuffer(filter_t *filter, CVPixelBufferRef buffer,
                                     picture_t *model, vlc_tick_t date)
 {
-    picture_t *picture = picture_NewFromFormat(&filter->fmt_out.video);
-    if (picture == NULL)
-        return NULL;
-    if (cvpxpic_attach(picture, buffer, filter->vctx_out, NULL) != VLC_SUCCESS)
+    MacLCFrcContext *ctx = (__bridge MacLCFrcContext *)filter->p_sys;
+    picture_t *picture;
+
+    if (ctx->_software)
     {
-        picture_Release(picture);
-        return NULL;
+        picture = filter_NewPicture(filter);
+        if (picture == NULL)
+        {
+            CVPixelBufferRelease(buffer);
+            return NULL;
+        }
+        BufferToPlanes(ctx, buffer, picture);
+        CVPixelBufferRelease(buffer);
+    }
+    else
+    {
+        picture = picture_NewFromFormat(&filter->fmt_out.video);
+        if (picture == NULL)
+        {
+            CVPixelBufferRelease(buffer);
+            return NULL;
+        }
+        /* cvpxpic_attach takes its own reference; ours has to go either way. */
+        const int attached = cvpxpic_attach(picture, buffer, filter->vctx_out, NULL);
+        CVPixelBufferRelease(buffer);
+        if (attached != VLC_SUCCESS)
+        {
+            /* cvpxpic_attach released the picture itself on failure. */
+            return NULL;
+        }
     }
     picture_CopyProperties(picture, model);
     picture->date = date;
@@ -1040,6 +1244,11 @@ static void DropHistory(MacLCFrcContext *ctx)
     {
         picture_Release(ctx->_prev);
         ctx->_prev = NULL;
+    }
+    if (ctx->_prev_buffer != NULL)
+    {
+        CVPixelBufferRelease(ctx->_prev_buffer);
+        ctx->_prev_buffer = NULL;
     }
     if (ctx->_work_prev != NULL)
     {
@@ -1121,44 +1330,35 @@ static picture_t *Filter(filter_t *filter, picture_t *source)
             return source;
         }
 
-        CVPixelBufferRef current = cvpxpic_get_ref(source);
+        CVPixelBufferRef current = BufferForPicture(ctx, source);
         if (current == NULL)
         {
             DropHistory(ctx);
             return source;
         }
 
-        if (ctx->_prev == NULL)
+        const bool processor_engine = ctx->_engine == ENGINE_LOWLATENCY
+            || ctx->_engine == ENGINE_QUALITY || ctx->_engine == ENGINE_BALANCED;
+
+        if (ctx->_prev == NULL
+         || source->date <= ctx->_prev->date
+         || source->date - ctx->_prev->date > ctx->_budget * 4)
         {
-            /* The first frame of a sequence has nothing to pair with; keep it
-             * as a reference and let it through unchanged. */
-            if (ctx->_engine == ENGINE_LOWLATENCY
-             || ctx->_engine == ENGINE_QUALITY || ctx->_engine == ENGINE_BALANCED)
-            {
+            /* The first frame of a sequence has nothing to pair with, and a
+             * jump, a still frame or a rewind gives nothing worth pairing:
+             * keep it as a reference and let it through unchanged. */
+            DropHistory(ctx);
+            if (processor_engine)
                 ctx->_work_prev = ProcessorConvertIn(ctx, current);
-                if (ctx->_work_prev == NULL)
-                    return source;
-            }
             else
                 MotionEstimate(ctx, current);
             ctx->_prev = picture_Hold(source);
+            ctx->_prev_buffer = current;
             return source;
         }
 
         const vlc_tick_t prev_date = ctx->_prev->date;
         const vlc_tick_t date = source->date;
-        /* A jump, a still frame or a rewind: nothing to interpolate. */
-        if (date <= prev_date || date - prev_date > ctx->_budget * 4)
-        {
-            DropHistory(ctx);
-            ctx->_prev = picture_Hold(source);
-            if (ctx->_engine == ENGINE_LOWLATENCY
-             || ctx->_engine == ENGINE_QUALITY || ctx->_engine == ENGINE_BALANCED)
-                ctx->_work_prev = ProcessorConvertIn(ctx, current);
-            else
-                MotionEstimate(ctx, current);
-            return source;
-        }
 
         const unsigned count = ctx->_factor - 1;
         CVPixelBufferRef produced[8] = { NULL };
@@ -1175,12 +1375,12 @@ static picture_t *Filter(filter_t *filter, picture_t *source)
             case ENGINE_MOTION:
             {
                 const bool estimated = MotionEstimate(ctx, current);
-                ok = MetalRun(ctx, cvpxpic_get_ref(ctx->_prev), current,
+                ok = MetalRun(ctx, ctx->_prev_buffer, current,
                               estimated, produced);
                 break;
             }
             case ENGINE_BLEND:
-                ok = MetalRun(ctx, cvpxpic_get_ref(ctx->_prev), current,
+                ok = MetalRun(ctx, ctx->_prev_buffer, current,
                               false, produced);
                 break;
             default:
@@ -1189,19 +1389,34 @@ static picture_t *Filter(filter_t *filter, picture_t *source)
         }
 
         const vlc_tick_t finished = vlc_tick_now();
-        ctx->_restart = false;
         ctx->_report_passes++;
         if (ok)
             ctx->_report_frames += count;
         BudgetAccount(ctx, finished - started);
         BudgetReport(ctx, finished);
 
-        if (!ok)
+        if (ctx->_passthrough)
         {
-            picture_Release(ctx->_prev);
+            /* The budget guard gave up during this pass; it already dropped
+             * the history, so there is nothing left to keep. */
+            CVPixelBufferRelease(current);
+            if (!ok)
+                return source;
+        }
+        else if (!ok)
+        {
+            /* Start the sequence again rather than pair this frame with a
+             * reference the engine never took in. */
+            DropHistory(ctx);
+            if (processor_engine)
+                ctx->_work_prev = ProcessorConvertIn(ctx, current);
+            else
+                MotionEstimate(ctx, current);
             ctx->_prev = picture_Hold(source);
+            ctx->_prev_buffer = current;
             return source;
         }
+        ctx->_restart = false;
 
         /* The previous frame has already been shown; hand back the frames that
          * come between it and this one, then this one. */
@@ -1210,19 +1425,22 @@ static picture_t *Filter(filter_t *filter, picture_t *source)
         {
             const vlc_tick_t when = prev_date
                 + (date - prev_date) * (int64_t)(i + 1) / (int64_t)ctx->_factor;
+            /* Takes the buffer's reference whether it succeeds or not. */
             picture_t *picture = PictureFromBuffer(filter, produced[i], source, when);
             if (picture == NULL)
-            {
-                CVPixelBufferRelease(produced[i]);
                 continue;
-            }
             *tail = picture;
             tail = &picture->p_next;
         }
         *tail = source;
 
-        picture_Release(ctx->_prev);
-        ctx->_prev = picture_Hold(source);
+        if (!ctx->_passthrough)
+        {
+            picture_Release(ctx->_prev);
+            ctx->_prev = picture_Hold(source);
+            CVPixelBufferRelease(ctx->_prev_buffer);
+            ctx->_prev_buffer = current;
+        }
         return first != NULL ? first : source;
     }
 }
@@ -1235,38 +1453,46 @@ static const struct vlc_filter_operations filter_ops = {
 
 static unsigned FactorFor(filter_t *filter, unsigned source_fps, int target)
 {
+    const unsigned limit = var_InheritInteger(filter, CFG_PREFIX "max-factor");
     unsigned wanted;
     switch (target)
     {
         case TARGET_60:     wanted = 60; break;
         case TARGET_120:    wanted = 120; break;
-        case TARGET_DOUBLE: return 2;
+        case TARGET_DOUBLE: return source_fps == 0 || limit < 2 ? 1 : 2;
         default:            wanted = DisplayRefreshRate(); break;
     }
-    if (source_fps == 0)
-        return 2;
-    const unsigned factor = wanted / source_fps;
-    const unsigned limit =
-        var_InheritInteger(filter, CFG_PREFIX "max-factor");
-    if (factor < 2)
-        return 1;
-    return factor > limit ? limit : factor;
+    return maclc_frc_factor(source_fps, wanted, limit);
 }
 
 static int Open(filter_t *filter)
 {
     if (!video_format_IsSimilar(&filter->fmt_in.video, &filter->fmt_out.video)
      || filter->fmt_in.video.i_chroma != filter->fmt_out.video.i_chroma)
+    {
+        msg_Dbg(filter, "not interpolating: the filter may not change the format");
+        video_format_LogDifferences(vlc_object_logger(filter), "in", &filter->fmt_in.video,
+                                    "out", &filter->fmt_out.video);
         return VLC_EGENERIC;
+    }
 
     OSType cv_fmt;
-    bool ten_bit;
-    if (!ChromaIsSupported(filter->fmt_in.video.i_chroma, &cv_fmt, &ten_bit))
+    bool ten_bit, software;
+    if (!ChromaIsSupported(filter->fmt_in.video.i_chroma, &cv_fmt, &ten_bit,
+                           &software))
+    {
+        msg_Dbg(filter, "not interpolating: %4.4s is not a 4:2:0 chroma this "
+                "filter knows", (const char *)&filter->fmt_in.video.i_chroma);
         return VLC_EGENERIC;
+    }
 
-    if (filter->vctx_in == NULL
-     || vlc_video_context_GetType(filter->vctx_in) != VLC_VIDEO_CONTEXT_CVPX)
+    if (!software
+     && (filter->vctx_in == NULL
+      || vlc_video_context_GetType(filter->vctx_in) != VLC_VIDEO_CONTEXT_CVPX))
+    {
+        msg_Dbg(filter, "not interpolating: the pictures are not CoreVideo buffers");
         return VLC_EGENERIC;
+    }
 
     const video_format_t *fmt = &filter->fmt_in.video;
     if (fmt->i_frame_rate == 0 || fmt->i_frame_rate_base == 0)
@@ -1299,11 +1525,21 @@ static int Open(filter_t *filter)
         ctx->_height = fmt->i_visible_height;
         ctx->_cv_fmt = cv_fmt;
         ctx->_ten_bit = ten_bit;
+        ctx->_software = software;
+        ctx->_planar = filter->fmt_in.video.i_chroma == VLC_CODEC_I420;
         ctx->_budget = vlc_tick_from_samples(fmt->i_frame_rate_base,
                                              fmt->i_frame_rate);
 
-        ctx->_out_pool = cvpxpool_create(&filter->fmt_out.video,
-                                         (factor + 1) * 3);
+        /* In software mode this pool stages the planes on their way in and out;
+         * with hardware decoding it holds the pictures we hand back. */
+        ctx->_out_pool = software
+            ? PoolFromAttributes(@{
+                  (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(cv_fmt),
+                  (__bridge NSString *)kCVPixelBufferWidthKey: @(ctx->_width),
+                  (__bridge NSString *)kCVPixelBufferHeightKey: @(ctx->_height),
+                  (__bridge NSString *)kCVPixelBufferMetalCompatibilityKey: @YES,
+              }, (factor + 1) * 3)
+            : cvpxpool_create(&filter->fmt_out.video, (factor + 1) * 3);
         if (ctx->_out_pool == NULL)
             return VLC_ENOMEM;
 
@@ -1351,7 +1587,8 @@ static int Open(filter_t *filter)
         }
 
         filter->fmt_out.video.i_frame_rate = fmt->i_frame_rate * factor;
-        filter->vctx_out = vlc_video_context_Hold(filter->vctx_in);
+        filter->vctx_out = software ? NULL
+                                    : vlc_video_context_Hold(filter->vctx_in);
         filter->ops = &filter_ops;
         filter->p_sys = (void *)CFBridgingRetain(ctx);
 

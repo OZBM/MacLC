@@ -361,7 +361,7 @@ static void MacLCVideoFilterSetEnabled(NSString *name, BOOL enabled)
     [interpolationCard.trailingAnchor constraintEqualToAnchor:rootStack.trailingAnchor].active = YES;
 
     _interpolationRow = [MacLCSettingsRow popUpRowWithTitle:_NS("Motion Interpolation")
-                                                explanation:_NS("Synthesise intermediate frames so motion matches the refresh rate of the display. Automatic picks the best method that still runs in real time.")
+                                                explanation:_NS("Synthesise intermediate frames so motion matches the refresh rate of the display. Automatic picks the best method that still runs in real time; Quality costs about twice what Balanced does without looking better.")
                                                       items:@[_NS("Off"), _NS("Automatic"),
                                                               _NS("Quality (optical flow)"),
                                                               _NS("Balanced (optical flow)"),
