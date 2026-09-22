@@ -31,6 +31,7 @@
 #import "settings/MacLCConfigSafe.h"
 
 #include "../../../video_filter/maclc_frc_geometry.h"
+#include <math.h>
 
 NSString * const MacLCFrameInterpolationChangedNotification =
     @"MacLCFrameInterpolationChangedNotification";
@@ -151,6 +152,170 @@ static NSMutableArray<NSString *> *FilterList(void)
         postNotificationName:MacLCFrameInterpolationChangedNotification object:self];
 }
 
++ (BOOL)isRIFEEnabled
+{
+    return MacLCConfigGetInt("maclc-frc-rife", 0) != 0;
+}
+
++ (void)setRIFEEnabled:(BOOL)RIFEEnabled
+{
+    if (RIFEEnabled == self.isRIFEEnabled) {
+        return;
+    }
+    MacLCConfigPutInt("maclc-frc-rife", RIFEEnabled ? 1 : 0);
+    config_SaveConfigFile(getIntf());
+    [self restartIfRunning];
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:MacLCFrameInterpolationChangedNotification object:self];
+}
+
++ (nullable NSString *)RIFEModelPath
+{
+    char * const val = MacLCConfigGetPsz("maclc-frc-rife-model");
+    if (val == NULL) {
+        return nil;
+    }
+    NSString * const path = toNSStr(val);
+    free(val);
+    return path.length > 0 ? path : nil;
+}
+
++ (void)setRIFEModelPath:(nullable NSString *)RIFEModelPath
+{
+    NSString * const current = self.RIFEModelPath;
+    if ([current isEqualToString:RIFEModelPath] || (current == nil && (RIFEModelPath == nil || RIFEModelPath.length == 0))) {
+        return;
+    }
+    MacLCConfigPutPsz("maclc-frc-rife-model", RIFEModelPath.UTF8String ?: "");
+    config_SaveConfigFile(getIntf());
+    [self restartIfRunning];
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:MacLCFrameInterpolationChangedNotification object:self];
+}
+
++ (float)RIFEScale
+{
+    return MacLCConfigGetFloat("maclc-frc-rife-scale", 1.0f);
+}
+
++ (void)setRIFEScale:(float)RIFEScale
+{
+    if (fabsf(RIFEScale - self.RIFEScale) < 0.001f) {
+        return;
+    }
+    MacLCConfigPutFloat("maclc-frc-rife-scale", RIFEScale);
+    config_SaveConfigFile(getIntf());
+    [self restartIfRunning];
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:MacLCFrameInterpolationChangedNotification object:self];
+}
+
++ (nullable NSString *)SVPPath
+{
+    char * const val = MacLCConfigGetPsz("maclc-frc-svp-path");
+    if (val == NULL) {
+        return nil;
+    }
+    NSString * const path = toNSStr(val);
+    free(val);
+    return path.length > 0 ? path : nil;
+}
+
++ (void)setSVPPath:(nullable NSString *)SVPPath
+{
+    NSString * const current = self.SVPPath;
+    if ([current isEqualToString:SVPPath] || (current == nil && (SVPPath == nil || SVPPath.length == 0))) {
+        return;
+    }
+    MacLCConfigPutPsz("maclc-frc-svp-path", SVPPath.UTF8String ?: "");
+    config_SaveConfigFile(getIntf());
+    [self restartIfRunning];
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:MacLCFrameInterpolationChangedNotification object:self];
+}
+
++ (nullable NSString *)unavailabilityReasonForEngine:(MacLCFrameInterpolationEngine)engine
+{
+    if (engine != MacLCFrameInterpolationEngineSVP && engine != MacLCFrameInterpolationEngineRIFE) {
+        return nil;
+    }
+
+    NSFileManager * const fm = NSFileManager.defaultManager;
+
+    if (engine == MacLCFrameInterpolationEngineSVP) {
+        const BOOL vsInstalled = [fm fileExistsAtPath:@"/opt/homebrew/lib/libvapoursynth-script.dylib"]
+                              || [fm fileExistsAtPath:@"/usr/local/lib/libvapoursynth-script.dylib"];
+        if (!vsInstalled) {
+            return _NS("VapourSynth is not installed; it was looked for in /opt/homebrew/lib/ and /usr/local/lib/.");
+        }
+
+        NSString * const svpConfig = self.SVPPath;
+        NSString *svpBundlePath;
+        if (svpConfig.length > 0) {
+            if ([svpConfig.pathExtension isEqualToString:@"app"]) {
+                svpBundlePath = svpConfig;
+            } else {
+                NSString * const candidate = [svpConfig stringByAppendingPathComponent:@"SVP 4 Mac.app"];
+                svpBundlePath = [fm fileExistsAtPath:candidate] ? candidate : svpConfig;
+            }
+        } else {
+            svpBundlePath = @"/Applications/SVP 4 Mac.app";
+        }
+
+        if (![fm fileExistsAtPath:svpBundlePath]) {
+            if (svpConfig.length > 0) {
+                return [NSString stringWithFormat:
+                    _NS("SVP 4 Mac is not installed; it was looked for at %@."), svpConfig];
+            } else {
+                return _NS("SVP 4 Mac is not installed; it was looked for at /Applications/SVP 4 Mac.app.");
+            }
+        }
+        return nil;
+    }
+
+    if (engine == MacLCFrameInterpolationEngineRIFE) {
+        NSString * const customModel = self.RIFEModelPath;
+        if (customModel.length > 0 && [fm fileExistsAtPath:customModel]) {
+            return nil;
+        }
+
+        NSString * const bundleModels = [NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"models"];
+        BOOL isDir = NO;
+        if ([fm fileExistsAtPath:bundleModels isDirectory:&isDir]) {
+            if (isDir) {
+                NSArray * const items = [fm contentsOfDirectoryAtPath:bundleModels error:nil];
+                if (items.count > 0) {
+                    return nil;
+                }
+            } else {
+                return nil;
+            }
+        }
+
+        NSString * const appSupportModels =
+            [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/MacLC/models"];
+        if ([fm fileExistsAtPath:appSupportModels isDirectory:&isDir]) {
+            if (isDir) {
+                NSArray * const items = [fm contentsOfDirectoryAtPath:appSupportModels error:nil];
+                if (items.count > 0) {
+                    return nil;
+                }
+            } else {
+                return nil;
+            }
+        }
+
+        if (customModel.length > 0) {
+            return [NSString stringWithFormat:
+                _NS("No Core ML RIFE model was found; it was looked for at %@, in MacLC.app/Contents/Resources/models/, and in ~/Library/Application Support/MacLC/models/."), customModel];
+        } else {
+            return _NS("No Core ML RIFE model was found; it was looked for in MacLC.app/Contents/Resources/models/ and ~/Library/Application Support/MacLC/models/.");
+        }
+    }
+
+    return nil;
+}
+
 #pragma mark - words and arithmetic
 
 + (NSString *)nameForEngine:(MacLCFrameInterpolationEngine)engine
@@ -161,6 +326,8 @@ static NSMutableArray<NSString *> *FilterList(void)
         case MacLCFrameInterpolationEngineLowLatency: return _NS("Low Latency");
         case MacLCFrameInterpolationEngineMotion:     return _NS("Motion Compensation");
         case MacLCFrameInterpolationEngineBlend:      return _NS("Blend");
+        case MacLCFrameInterpolationEngineSVP:        return _NS("SmoothVideo Project");
+        case MacLCFrameInterpolationEngineRIFE:       return _NS("RIFE neural network");
         case MacLCFrameInterpolationEngineAutomatic:
         default:                                      return _NS("Automatic");
     }
@@ -184,6 +351,12 @@ static NSMutableArray<NSString *> *FilterList(void)
         case MacLCFrameInterpolationEngineBlend:
             return _NS("A plain cross-fade. Costs almost nothing, and looks "
                        "like it on anything that moves quickly.");
+        case MacLCFrameInterpolationEngineSVP:
+            return _NS("Uses the copy of SVP 4 Mac installed on this Mac, "
+                       "with its motion vectors or neural network. Requires VapourSynth.");
+        case MacLCFrameInterpolationEngineRIFE:
+            return _NS("Neural network interpolation on Core ML. Doubles 1080p in "
+                       "real time on this Mac, but cannot keep up with 4K.");
         case MacLCFrameInterpolationEngineAutomatic:
         default:
             return _NS("Picks the best method that still runs in real time "

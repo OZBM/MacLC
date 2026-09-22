@@ -33,6 +33,8 @@ typedef NS_ENUM(NSInteger, MacLCFrameInterpolationEngine) {
     MacLCFrameInterpolationEngineLowLatency,
     MacLCFrameInterpolationEngineMotion,
     MacLCFrameInterpolationEngineBlend,
+    MacLCFrameInterpolationEngineSVP = 6,
+    MacLCFrameInterpolationEngineRIFE = 7,
 };
 
 /** What frame rate to aim for. Matches maclc-frc-target. */
@@ -59,6 +61,15 @@ typedef NS_ENUM(NSInteger, MacLCFrameInterpolationTarget) {
 
 @property (class, readwrite) MacLCFrameInterpolationEngine engine;
 @property (class, readwrite) MacLCFrameInterpolationTarget target;
+
+@property (class, readwrite, getter=isRIFEEnabled) BOOL RIFEEnabled;   /* maclc-frc-rife */
+@property (class, readwrite, copy, nullable) NSString *RIFEModelPath;  /* maclc-frc-rife-model */
+@property (class, readwrite) float RIFEScale;                          /* maclc-frc-rife-scale */
+@property (class, readwrite, copy, nullable) NSString *SVPPath;        /* maclc-frc-svp-path */
+
+/** Nil when the engine can run here; otherwise one sentence naming what is
+ *  missing and where it was looked for. */
++ (nullable NSString *)unavailabilityReasonForEngine:(MacLCFrameInterpolationEngine)engine;
 
 + (void)setEnabled:(BOOL)enabled;
 

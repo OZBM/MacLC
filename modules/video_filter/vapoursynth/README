@@ -1,0 +1,14 @@
+The VapourSynth 4 API headers, copied unchanged from VapourSynth R73
+(/opt/homebrew/include/vapoursynth on the machine this was built on).
+
+They describe an interface, not an implementation: MacLC never links against
+VapourSynth. maclc_frc_vs.m opens libvapoursynth-script.dylib with dlopen at
+run time and gives up quietly when it is not installed, so a Mac without
+VapourSynth is unaffected. These headers are here only so the plugin can be
+built on a machine that does not have VapourSynth either.
+
+They carry their own copyright and are published under the GNU Lesser General
+Public License, version 2.1 or later -- the licence this plugin uses as well.
+Their notices are part of the files and must stay there.
+
+Upstream: https://github.com/vapoursynth/vapoursynth

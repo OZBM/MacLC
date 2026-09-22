@@ -154,6 +154,10 @@ libmaclc_frc_plugin_la_SOURCES = video_filter/maclc_frc.m \
 	video_filter/maclc_frc_geometry.c video_filter/maclc_frc_geometry.h \
 	video_filter/maclc_frc_backend.h \
 	video_filter/maclc_frc_vs.m video_filter/maclc_frc_rife.m \
+	video_filter/vapoursynth/VapourSynth4.h \
+	video_filter/vapoursynth/VSScript4.h \
+	video_filter/vapoursynth/VSHelper4.h \
+	video_filter/vapoursynth/VSConstants4.h \
 	codec/vt_utils.c codec/vt_utils.h
 libmaclc_frc_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-arc -fobjc-exceptions
 libmaclc_frc_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(video_filter_RPATH) \

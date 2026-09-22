@@ -33,6 +33,7 @@
 #pragma clang diagnostic pop
 
 #import <vlc_configuration.h>
+#include <math.h>
 
 @interface MacLCVideoSettingsViewController ()
 {
@@ -62,6 +63,10 @@
 @property (nonatomic, strong) MacLCSettingsRow *interpolationRow;
 @property (nonatomic, strong) MacLCSettingsRow *interpolationTargetRow;
 @property (nonatomic, strong) MacLCSettingsRow *interpolationOverrunRow;
+@property (nonatomic, strong) MacLCSettingsRow *interpolationRifeRow;
+@property (nonatomic, strong) MacLCSettingsRow *interpolationRifeScaleRow;
+@property (nonatomic, strong) MacLCSettingsRow *interpolationRifeModelRow;
+@property (nonatomic, strong) MacLCSettingsRow *interpolationSvpPathRow;
 
 @property (nonatomic, strong) MacLCSettingsRow *snapFolderRow;
 @property (nonatomic, strong) MacLCSettingsRow *snapPrefixRow;
@@ -330,13 +335,14 @@
                                                               _NS("Balanced (optical flow)"),
                                                               _NS("Low latency (up to 720p)"),
                                                               _NS("Motion compensation"),
-                                                              _NS("Blend")]
-                                                       tags:@[@-1, @0, @1, @2, @3, @4, @5]
+                                                              _NS("Blend"),
+                                                              _NS("SmoothVideo Project"),
+                                                              _NS("RIFE neural network")]
+                                                       tags:@[@-1, @0, @1, @2, @3, @4, @5, @6, @7]
                                               selectedIndex:0
                                                      action:^(NSInteger selectedIndex, NSInteger tag) {
         weakSelf.hasUnsavedChanges = YES;
-        weakSelf.interpolationTargetRow.enabled = tag >= 0;
-        weakSelf.interpolationOverrunRow.enabled = tag >= 0;
+        [weakSelf updateInterpolationRowEnablement];
     }];
     _interpolationRow.defaultHint = _NS("Default: Off");
     [interpolationCard.contentStackView addArrangedSubview:_interpolationRow];
@@ -365,6 +371,73 @@
     }];
     _interpolationOverrunRow.defaultHint = _NS("Default: Fall Back to a Cheaper Method");
     [interpolationCard.contentStackView addArrangedSubview:_interpolationOverrunRow];
+
+    _interpolationRifeRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Use the RIFE Neural Network")
+                                                       explanation:_NS("Replaces the motion vectors of the SmoothVideo Project engine with the neural network. The RIFE engine always uses the network whatever this says.")
+                                                             state:NO
+                                                            action:^(BOOL checked) {
+        weakSelf.hasUnsavedChanges = YES;
+        [weakSelf updateInterpolationRowEnablement];
+    }];
+    _interpolationRifeRow.defaultHint = _NS("Default: Off");
+    [interpolationCard.contentStackView addArrangedSubview:_interpolationRifeRow];
+
+    _interpolationRifeScaleRow = [MacLCSettingsRow popUpRowWithTitle:_NS("RIFE Detail Level")
+                                                         explanation:_NS("The fraction of the picture motion is computed at. Half costs about a third as much, which is what lets 4K keep up.")
+                                                               items:@[_NS("Full picture"),
+                                                                       _NS("Three quarters"),
+                                                                       _NS("Half")]
+                                                                tags:@[@100, @75, @50]
+                                                       selectedIndex:0
+                                                              action:^(NSInteger selectedIndex, NSInteger tag) {
+        weakSelf.hasUnsavedChanges = YES;
+    }];
+    _interpolationRifeScaleRow.defaultHint = _NS("Default: Full picture");
+    [interpolationCard.contentStackView addArrangedSubview:_interpolationRifeScaleRow];
+
+    _interpolationRifeModelRow = [MacLCSettingsRow pathPickerRowWithTitle:_NS("RIFE Model")
+                                                              explanation:_NS("The folder or Core ML package holding the network. Left empty, MacLC looks in its own Resources folder and then in Application Support.")
+                                                                     path:@""
+                                                              chooseTitle:_NS("Choose…")
+                                                             chooseAction:^(MacLCSettingsRow *row) {
+        NSOpenPanel *panel = [NSOpenPanel openPanel];
+        panel.canChooseDirectories = YES;
+        panel.canChooseFiles = YES;
+        panel.allowsMultipleSelection = NO;
+        panel.prompt = _NS("Select");
+        [panel beginSheetModalForWindow:weakSelf.view.window completionHandler:^(NSModalResponse result) {
+            if (result == NSModalResponseOK && panel.URL.path) {
+                row.textField.stringValue = panel.URL.path;
+                weakSelf.hasUnsavedChanges = YES;
+            }
+        }];
+    }];
+    _interpolationRifeModelRow.textChangedHandler = ^(NSString *text) {
+        weakSelf.hasUnsavedChanges = YES;
+    };
+    [interpolationCard.contentStackView addArrangedSubview:_interpolationRifeModelRow];
+
+    _interpolationSvpPathRow = [MacLCSettingsRow pathPickerRowWithTitle:_NS("SmoothVideo Project Folder")
+                                                            explanation:_NS("Where SVP 4 Mac is installed. Left empty, the Applications folder is used. MacLC uses the copy the user installed and does not carry it.")
+                                                                   path:@""
+                                                            chooseTitle:_NS("Choose…")
+                                                           chooseAction:^(MacLCSettingsRow *row) {
+        NSOpenPanel *panel = [NSOpenPanel openPanel];
+        panel.canChooseDirectories = YES;
+        panel.canChooseFiles = NO;
+        panel.allowsMultipleSelection = NO;
+        panel.prompt = _NS("Select");
+        [panel beginSheetModalForWindow:weakSelf.view.window completionHandler:^(NSModalResponse result) {
+            if (result == NSModalResponseOK && panel.URL.path) {
+                row.textField.stringValue = panel.URL.path;
+                weakSelf.hasUnsavedChanges = YES;
+            }
+        }];
+    }];
+    _interpolationSvpPathRow.textChangedHandler = ^(NSString *text) {
+        weakSelf.hasUnsavedChanges = YES;
+    };
+    [interpolationCard.contentStackView addArrangedSubview:_interpolationSvpPathRow];
 
     // Card 4: Video Snapshots
     MacLCCardView *snapCard = [MacLCCardView cardViewWithTitle:_NS("Video Snapshots")];
@@ -449,6 +522,38 @@
     }];
 }
 
+- (void)updateInterpolationRowEnablement
+{
+    const NSInteger engine = _interpolationRow.popUpButton.selectedTag;
+    const BOOL active = (engine >= 0);
+    _interpolationTargetRow.enabled = active;
+    _interpolationOverrunRow.enabled = active;
+
+    const BOOL isSVP = (engine == 6);
+    const BOOL isRIFE = (engine == 7);
+    const BOOL rifeChecked = (_interpolationRifeRow.checkboxButton.state == NSControlStateValueOn);
+
+    _interpolationRifeRow.enabled = isSVP;
+    _interpolationRifeScaleRow.enabled = isRIFE || (isSVP && rifeChecked);
+    _interpolationRifeModelRow.enabled = isRIFE || (isSVP && rifeChecked);
+    _interpolationSvpPathRow.enabled = isSVP;
+
+    if (active) {
+        NSString * const reason =
+            [MacLCFrameInterpolation unavailabilityReasonForEngine:(MacLCFrameInterpolationEngine)engine];
+        if (reason != nil) {
+            _interpolationRow.warning = YES;
+            _interpolationRow.defaultHint = reason;
+        } else {
+            _interpolationRow.warning = NO;
+            _interpolationRow.defaultHint = nil;
+        }
+    } else {
+        _interpolationRow.warning = NO;
+        _interpolationRow.defaultHint = _NS("Default: Off");
+    }
+}
+
 #pragma mark - Settings Operations
 
 - (void)loadSettings
@@ -482,8 +587,26 @@
         MacLCConfigGetInt("maclc-frc-target", 0)];
     [_interpolationOverrunRow.popUpButton selectItemWithTag:
         MacLCConfigGetInt("maclc-frc-overrun", 0)];
-    _interpolationTargetRow.enabled = interpolating;
-    _interpolationOverrunRow.enabled = interpolating;
+
+    _interpolationRifeRow.checkboxButton.state =
+        MacLCConfigGetInt("maclc-frc-rife", 0) ? NSControlStateValueOn : NSControlStateValueOff;
+
+    const float rifeScale = MacLCConfigGetFloat("maclc-frc-rife-scale", 1.0f);
+    NSInteger scaleTag = (NSInteger)roundf(rifeScale * 100.0f);
+    if (scaleTag != 50 && scaleTag != 75 && scaleTag != 100) {
+        scaleTag = 100;
+    }
+    [_interpolationRifeScaleRow.popUpButton selectItemWithTag:scaleTag];
+
+    char * const rifeModel = MacLCConfigGetPsz("maclc-frc-rife-model");
+    _interpolationRifeModelRow.textField.stringValue = rifeModel ? toNSStr(rifeModel) : @"";
+    free(rifeModel);
+
+    char * const svpPath = MacLCConfigGetPsz("maclc-frc-svp-path");
+    _interpolationSvpPathRow.textField.stringValue = svpPath ? toNSStr(svpPath) : @"";
+    free(svpPath);
+
+    [self updateInterpolationRowEnablement];
 
     char *aspect = MacLCConfigGetPsz("aspect-ratio");
     NSString *aspectStr = aspect ? toNSStr(aspect) : @"";
@@ -542,6 +665,14 @@
     MacLCFrameInterpolation.target =
         (MacLCFrameInterpolationTarget)_interpolationTargetRow.popUpButton.selectedTag;
     MacLCConfigPutInt("maclc-frc-overrun", _interpolationOverrunRow.popUpButton.selectedTag);
+    MacLCConfigPutInt("maclc-frc-rife",
+                      _interpolationRifeRow.checkboxButton.state == NSControlStateValueOn);
+    MacLCConfigPutFloat("maclc-frc-rife-scale",
+                        (float)_interpolationRifeScaleRow.popUpButton.selectedTag / 100.0f);
+    MacLCConfigPutPsz("maclc-frc-rife-model",
+                      [_interpolationRifeModelRow.textField.stringValue UTF8String]);
+    MacLCConfigPutPsz("maclc-frc-svp-path",
+                      [_interpolationSvpPathRow.textField.stringValue UTF8String]);
     [MacLCFrameInterpolation setEnabled:engine >= 0];
 
     NSString *aspectTitle = _aspectRatioRow.popUpButton.titleOfSelectedItem;
@@ -589,6 +720,10 @@
     if ((item = config_FindConfig("maclc-frc-engine"))) MacLCConfigPutInt("maclc-frc-engine", item->orig.i);
     if ((item = config_FindConfig("maclc-frc-target"))) MacLCConfigPutInt("maclc-frc-target", item->orig.i);
     if ((item = config_FindConfig("maclc-frc-overrun"))) MacLCConfigPutInt("maclc-frc-overrun", item->orig.i);
+    if ((item = config_FindConfig("maclc-frc-rife"))) MacLCConfigPutInt("maclc-frc-rife", item->orig.i);
+    if ((item = config_FindConfig("maclc-frc-rife-scale"))) MacLCConfigPutFloat("maclc-frc-rife-scale", item->orig.f);
+    if ((item = config_FindConfig("maclc-frc-rife-model"))) MacLCConfigPutPsz("maclc-frc-rife-model", item->orig.psz ? item->orig.psz : "");
+    if ((item = config_FindConfig("maclc-frc-svp-path"))) MacLCConfigPutPsz("maclc-frc-svp-path", item->orig.psz ? item->orig.psz : "");
     if ((item = config_FindConfig("snapshot-path"))) MacLCConfigPutPsz("snapshot-path", item->orig.psz ? item->orig.psz : "");
     if ((item = config_FindConfig("snapshot-prefix"))) MacLCConfigPutPsz("snapshot-prefix", item->orig.psz ? item->orig.psz : "maclcsnap-");
     if ((item = config_FindConfig("snapshot-format"))) MacLCConfigPutPsz("snapshot-format", item->orig.psz ? item->orig.psz : "png");

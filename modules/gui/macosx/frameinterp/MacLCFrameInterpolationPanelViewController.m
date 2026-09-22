@@ -39,8 +39,12 @@ static const CGFloat kPanelPadding = 16.0;
     NSTextField *_switchLabel;
     NSPopUpButton *_enginePopup;
     NSTextField *_engineSummary;
+    NSStackView *_svpRifeRow;
+    NSTextField *_svpRifeLabel;
+    NSSwitch *_svpRifeSwitch;
     NSPopUpButton *_targetPopup;
     NSTextField *_resultLabel;
+    NSStackView *_mainStack;
 }
 
 static NSPopover *gPopover;
@@ -100,8 +104,9 @@ static __weak NSView *gAnchor;
                    forOrientation:NSLayoutConstraintOrientationHorizontal];
 
     _enginePopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    _enginePopup.autoenablesItems = NO;
     for (MacLCFrameInterpolationEngine engine = MacLCFrameInterpolationEngineAutomatic;
-         engine <= MacLCFrameInterpolationEngineBlend; engine++) {
+         engine <= MacLCFrameInterpolationEngineRIFE; engine++) {
         [_enginePopup addItemWithTitle:[MacLCFrameInterpolation nameForEngine:engine]];
         _enginePopup.lastItem.tag = engine;
         _enginePopup.lastItem.toolTip = [MacLCFrameInterpolation summaryForEngine:engine];
@@ -113,6 +118,24 @@ static __weak NSView *gAnchor;
     _engineSummary = [NSTextField wrappingLabelWithString:@""];
     _engineSummary.font = MacLCDesign.footnote;
     _engineSummary.textColor = MacLCDesign.secondaryLabel;
+
+    _svpRifeLabel = [NSTextField labelWithString:_NS("RIFE neural network")];
+    _svpRifeLabel.font = MacLCDesign.body;
+    _svpRifeSwitch = [NSSwitch new];
+    _svpRifeSwitch.target = self;
+    _svpRifeSwitch.action = @selector(svpRifeChanged:);
+    _svpRifeSwitch.accessibilityLabel = _NS("RIFE neural network");
+    _svpRifeSwitch.translatesAutoresizingMaskIntoConstraints = NO;
+    NSView * const rifeSpacer = [[NSView alloc] initWithFrame:NSZeroRect];
+    rifeSpacer.translatesAutoresizingMaskIntoConstraints = NO;
+    _svpRifeRow =
+        [NSStackView stackViewWithViews:@[_svpRifeLabel, rifeSpacer, _svpRifeSwitch]];
+    _svpRifeRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    _svpRifeRow.alignment = NSLayoutAttributeCenterY;
+    _svpRifeRow.spacing = MacLCDesign.spacingS;
+    [_svpRifeRow setHuggingPriority:NSLayoutPriorityDefaultLow
+                     forOrientation:NSLayoutConstraintOrientationHorizontal];
+    _svpRifeRow.translatesAutoresizingMaskIntoConstraints = NO;
 
     _targetPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     for (MacLCFrameInterpolationTarget target = MacLCFrameInterpolationTargetDisplay;
@@ -132,9 +155,11 @@ static __weak NSView *gAnchor;
         _titleLabel, _detailLabel,
         switchRow,
         [self sectionHeader:_NS("Method")], _enginePopup, _engineSummary,
+        _svpRifeRow,
         [self sectionHeader:_NS("Frame Rate")], _targetPopup,
         [self separator], _resultLabel,
     ]];
+    _mainStack = stack;
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
     stack.spacing = MacLCDesign.spacingS;
@@ -154,6 +179,7 @@ static __weak NSView *gAnchor;
         [stack.bottomAnchor constraintEqualToAnchor:root.bottomAnchor constant:-kPanelPadding],
         [switchRow.widthAnchor constraintEqualToConstant:inner],
         [_enginePopup.widthAnchor constraintEqualToConstant:inner],
+        [_svpRifeRow.widthAnchor constraintEqualToConstant:inner],
         [_targetPopup.widthAnchor constraintEqualToConstant:inner],
     ]];
     _detailLabel.preferredMaxLayoutWidth = inner;
@@ -208,15 +234,42 @@ static __weak NSView *gAnchor;
 {
     const BOOL enabled = MacLCFrameInterpolation.isEnabled;
     _switchControl.state = enabled ? NSControlStateValueOn : NSControlStateValueOff;
+
+    for (NSMenuItem *item in _enginePopup.itemArray) {
+        NSString * const reason =
+            [MacLCFrameInterpolation unavailabilityReasonForEngine:(MacLCFrameInterpolationEngine)item.tag];
+        [item setEnabled:(reason == nil)];
+        item.toolTip = reason ?: [MacLCFrameInterpolation summaryForEngine:(MacLCFrameInterpolationEngine)item.tag];
+    }
+
     [_enginePopup selectItemWithTag:MacLCFrameInterpolation.engine];
     [_targetPopup selectItemWithTag:MacLCFrameInterpolation.target];
     _enginePopup.enabled = enabled;
     _targetPopup.enabled = enabled;
 
-    _engineSummary.stringValue =
-        [MacLCFrameInterpolation summaryForEngine:MacLCFrameInterpolation.engine];
-    _engineSummary.textColor =
-        enabled ? MacLCDesign.secondaryLabel : MacLCDesign.tertiaryLabel;
+    NSString * const unavailability =
+        [MacLCFrameInterpolation unavailabilityReasonForEngine:MacLCFrameInterpolation.engine];
+    if (unavailability != nil) {
+        _engineSummary.stringValue = unavailability;
+        _engineSummary.textColor = MacLCDesign.warning;
+    } else {
+        _engineSummary.stringValue =
+            [MacLCFrameInterpolation summaryForEngine:MacLCFrameInterpolation.engine];
+        _engineSummary.textColor =
+            enabled ? MacLCDesign.secondaryLabel : MacLCDesign.tertiaryLabel;
+    }
+
+    const BOOL isSVP = (MacLCFrameInterpolation.engine == MacLCFrameInterpolationEngineSVP);
+    _svpRifeRow.hidden = !isSVP;
+    _svpRifeSwitch.state = MacLCFrameInterpolation.isRIFEEnabled ? NSControlStateValueOn : NSControlStateValueOff;
+    _svpRifeSwitch.enabled = enabled;
+    if (isSVP) {
+        [_mainStack setCustomSpacing:MacLCDesign.spacingS afterView:_engineSummary];
+        [_mainStack setCustomSpacing:MacLCDesign.spacingM afterView:_svpRifeRow];
+    } else {
+        [_mainStack setCustomSpacing:MacLCDesign.spacingM afterView:_engineSummary];
+        [_mainStack setCustomSpacing:0.0 afterView:_svpRifeRow];
+    }
 
     VLCPlayerController * const player =
         VLCMain.sharedInstance.playQueueController.playerController;
@@ -239,6 +292,8 @@ static __weak NSView *gAnchor;
         _resultLabel.stringValue =
             [NSString stringWithFormat:_NS("Would play %u fps as %u fps."), source, output];
     }
+
+    self.preferredContentSize = self.view.fittingSize;
 }
 
 #pragma mark - actions
@@ -247,6 +302,12 @@ static __weak NSView *gAnchor;
 {
     [MacLCFrameInterpolation
         setEnabled:_switchControl.state == NSControlStateValueOn];
+    [self update];
+}
+
+- (void)svpRifeChanged:(id)sender
+{
+    MacLCFrameInterpolation.RIFEEnabled = (_svpRifeSwitch.state == NSControlStateValueOn);
     [self update];
 }
 
