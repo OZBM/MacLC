@@ -1107,7 +1107,9 @@ static void MotionFieldUpdate(MacLCFrcContext *ctx, CVPixelBufferRef vectors)
     CVPixelBufferLockBaseAddress(vectors, kCVPixelBufferLock_ReadOnly);
     const uint8_t *base = CVPixelBufferGetBaseAddress(vectors);
     const size_t stride = CVPixelBufferGetBytesPerRow(vectors);
-    const float limit = (float)ctx->_width / 4.f;
+    /* The vectors are in pixels of the picture the search ran on, which
+     * can be a half or a quarter of the video (mv_norm divides by it too). */
+    const float limit = (float)ctx->_est_width / 4.f;
 
     for (unsigned y = 0; y < rows; y++)
     {
