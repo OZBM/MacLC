@@ -9,12 +9,6 @@ sd_LTLIBRARIES += $(sd_PLUGINS)
 sd_RPATH += -rpath '$(sddir)'
 endif
 
-libpodcast_plugin_la_SOURCES = services_discovery/podcast.c
-sd_PLUGINS += libpodcast_plugin.la
-
-libradio_plugin_la_SOURCES = services_discovery/radio.c
-sd_PLUGINS += libradio_plugin.la
-
 libsap_plugin_la_SOURCES = services_discovery/sap.c access/rtp/sdp.c
 libsap_plugin_la_CPPFLAGS = $(AM_CPPFLAGS)
 libsap_plugin_la_LIBADD = $(SOCKET_LIBS) $(LIBZ)

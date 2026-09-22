@@ -1231,7 +1231,6 @@ modules/services_discovery/bonjour.m
 modules/services_discovery/microdns.c
 modules/services_discovery/mtp.c
 modules/services_discovery/os2drive.c
-modules/services_discovery/podcast.c
 modules/services_discovery/pulse.c
 modules/services_discovery/sap.c
 modules/services_discovery/udev.c

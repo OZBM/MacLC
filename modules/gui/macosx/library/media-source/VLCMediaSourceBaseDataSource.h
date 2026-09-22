@@ -26,9 +26,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/* Streams (Internet discovery: podcasts, radio directories) was removed;
+ * Browse is the only mode left. */
 typedef NS_ENUM(NSInteger, VLCMediaSourceMode) {
     VLCMediaSourceModeLAN,
-    VLCMediaSourceModeInternet,
 };
 
 @class VLCInputNodePathControl;

@@ -225,8 +225,6 @@ static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputIt
     switch (_mediaSourceMode) {
         case VLCMediaSourceModeLAN:
             return libraryWindowPrefs.browseLibraryViewMode;
-        case VLCMediaSourceModeInternet:
-            return libraryWindowPrefs.streamLibraryViewMode;
         default:
             return VLCLibraryGridViewModeSegment;
     }
@@ -281,7 +279,7 @@ static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputIt
 {
     NSTableColumn * const tagsColumn =
         [self.tableView tableColumnWithIdentifier:VLCMediaSourceTableTagsColumnIdentifier];
-    tagsColumn.hidden = self.mediaSourceMode == VLCMediaSourceModeInternet;
+    tagsColumn.hidden = NO;
 
     /* The column shows file sizes and folder item counts. */
     NSTableColumn * const sizeColumn =
@@ -310,12 +308,7 @@ static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputIt
 {
     [self.pathControl clearInputNodePathControlItems];
 
-    NSArray *mediaSources;
-    if (self.mediaSourceMode == VLCMediaSourceModeLAN) {
-        mediaSources = VLCMediaSourceProvider.listOfLocalMediaSources;
-    } else {
-        mediaSources = [VLCMediaSourceProvider listOfMediaSourcesForCategory:SD_CAT_INTERNET];
-    }
+    NSArray * const mediaSources = VLCMediaSourceProvider.listOfLocalMediaSources;
     NSAssert(mediaSources != nil, @"Media sources array should not be nil");
 
     for (VLCMediaSource * const mediaSource in mediaSources) {
@@ -328,7 +321,7 @@ static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputIt
     }
 
     [self setMediaSources:mediaSources];
-    _lanDeviceSnapshot = self.mediaSourceMode == VLCMediaSourceModeLAN ? [self buildMediaSourceSnapshot] : @[];
+    _lanDeviceSnapshot = [self buildMediaSourceSnapshot];
     [self rebuildHomeSections];
     [self updateHeaderPathBreadcrumbs];
     [self reloadData];
@@ -564,26 +557,6 @@ static void MacLCBrowseConfigureVolumeItem(MacLCBrowseHomeItem *item, VLCInputIt
         if (networkSection.items.count > 0) {
             [sections addObject:networkSection];
         }
-
-    } else {
-        // Internet / Streams
-        MacLCBrowseHomeSection * const streamsSection = [[MacLCBrowseHomeSection alloc] init];
-        streamsSection.title = _NS("Streams");
-
-        for (VLCMediaSource * const source in _mediaSources) {
-            MacLCBrowseHomeItem * const item = [[MacLCBrowseHomeItem alloc] init];
-            item.title = source.mediaSourceDescription;
-            item.subtitle = _NS("Stream");
-            item.symbolName = @"antenna.radiowaves.left.and.right";
-            item.inputNode = source.rootNode;
-            item.mediaSource = source;
-
-            [streamsSection.items addObject:item];
-        }
-
-        if (streamsSection.items.count > 0) {
-            [sections addObject:streamsSection];
-        }
     }
 
     /* The list view shows the same items, in the same order. */
@@ -806,9 +779,10 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
 
 - (id<NSPasteboardWriting>)tableView:(NSTableView *)tableView pasteboardWriterForRow:(NSInteger)row
 {
-    VLCInputItem * const inputItem = _mediaSourceMode == VLCMediaSourceModeLAN
-        ? _lanDeviceSnapshot[row].inputNode.inputItem
-        : _mediaSources[row].rootNode.inputItem;
+    if (row < 0 || (NSUInteger)row >= _lanDeviceSnapshot.count) {
+        return nil;
+    }
+    VLCInputItem * const inputItem = _lanDeviceSnapshot[row].inputNode.inputItem;
     return [self pasteboardWriterForInputItem:inputItem];
 }
 
@@ -1057,11 +1031,8 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
 
     if (self.childDataSource == nil) {
         self.browseHeaderView.mode = MacLCBrowseHeaderModeHome;
-        NSString * const title = (self.mediaSourceMode == VLCMediaSourceModeLAN) ? _NS("Browse") : _NS("Streams");
-        NSString * const subtitle = (self.mediaSourceMode == VLCMediaSourceModeLAN)
-            ? _NS("Folders, drives and network shares")
-            : _NS("Internet radio, podcasts and streaming services");
-        [self.browseHeaderView setHomeTitle:title subtitle:subtitle];
+        [self.browseHeaderView setHomeTitle:_NS("Browse")
+                                   subtitle:_NS("Folders, drives and network shares")];
         [self.browseHeaderView setPathSegments:@[]];
     } else {
         self.browseHeaderView.mode = MacLCBrowseHeaderModePath;

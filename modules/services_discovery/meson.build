@@ -1,16 +1,3 @@
-# Podcast
-vlc_modules += {
-    'name' : 'podcast',
-    'sources' : files('podcast.c'),
-    'dependencies' : [threads_dep]
-}
-
-# Radio
-vlc_modules += {
-    'name' : 'radio',
-    'sources' : files('radio.c'),
-}
-
 # SAP
 vlc_modules += {
     'name' : 'sap',

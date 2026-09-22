@@ -59,7 +59,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithLibraryWindow:(VLCLibraryWindow *)libraryWindow;
 
 - (void)presentBrowseView;
-- (void)presentStreamsView;
 - (void)browseFolderByMrl:(NSString *)mrl;
 
 @end

@@ -374,25 +374,11 @@
 
 - (void)presentBrowseView
 {
-    [self presentMediaSourceView:VLCLibraryBrowseSegmentType];
-}
-
-- (void)presentStreamsView
-{
-    [self presentMediaSourceView:VLCLibraryStreamsSegmentType];
-}
-
-- (void)presentMediaSourceView:(VLCLibrarySegmentType)viewSegment
-{
     [self.libraryWindow displayLibraryView:self.mediaSourceView];
-    const BOOL isStreams = viewSegment != VLCLibraryBrowseSegmentType;
     _loadingOverlayView = [self currentLoadingOverlayInMediaSourceView];
+    [self mediaSourceLoadingEnded:nil];
 
-    if (!isStreams) {
-        [self mediaSourceLoadingEnded:nil];
-    }
-
-    _baseDataSource.mediaSourceMode = isStreams ? VLCMediaSourceModeInternet : VLCMediaSourceModeLAN;
+    _baseDataSource.mediaSourceMode = VLCMediaSourceModeLAN;
     [_baseDataSource reloadViews];
     [_baseDataSource updateHeaderPathBreadcrumbs];
 }

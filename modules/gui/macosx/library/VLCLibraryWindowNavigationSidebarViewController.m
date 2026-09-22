@@ -315,9 +315,13 @@ static NSString * const VLCLibrarySegmentCellIdentifier = @"VLCLibrarySegmentCel
 
 - (void)selectSegment:(NSInteger)segmentType
 {
-    NSAssert(segmentType > VLCLibraryLowSentinelSegment &&
-             segmentType < VLCLibraryHighSentinelSegment,
-             @"Invalid segment type value provided");
+    /* The value can come from a window saved by an older build, and name a
+     * segment that no longer exists (Streams went away with the podcast and
+     * radio discovery): show Browse rather than assert at launch. */
+    if (segmentType <= VLCLibraryLowSentinelSegment ||
+        segmentType >= VLCLibraryHighSentinelSegment) {
+        segmentType = VLCLibraryBrowseSegmentType;
+    }
 
     if (segmentType == VLCLibraryHeaderSegmentType) {
         return;

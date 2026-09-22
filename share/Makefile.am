@@ -46,8 +46,6 @@ LUA_MODULES = \
 	$(NULL)
 
 LUA_MODULES_DOC = \
-	lua/sd/icecast.lua \
-	lua/sd/icast.lua \
 	$(NULL)
 
 LUA_MODULES_PKGDATA = \

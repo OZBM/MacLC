@@ -138,30 +138,6 @@
                           @"Duplicate (x) (2)");
 }
 
-- (void)testFlagEmojiStringForCountryCode
-{
-    XCTAssertEqualObjects(flagEmojiStringForCountryCode(@"us"), @"🇺🇸");
-    XCTAssertEqualObjects(flagEmojiStringForCountryCode(@"HK"), @"🇭🇰");
-    XCTAssertEqualObjects(flagEmojiStringForCountryCode(@"aA"), @"🇦🇦");
-    XCTAssertEqualObjects(flagEmojiStringForCountryCode(@"ZZ"), @"🇿🇿");
-    XCTAssertNil(flagEmojiStringForCountryCode(@"U1"));
-    XCTAssertNil(flagEmojiStringForCountryCode(@""));
-    XCTAssertNil(flagEmojiStringForCountryCode(@"U"));
-    XCTAssertNil(flagEmojiStringForCountryCode(@"USA"));
-    XCTAssertNil(flagEmojiStringForCountryCode(@"U-") );
-    XCTAssertNil(flagEmojiStringForCountryCode(@"éé"));
-    XCTAssertNil(flagEmojiStringForCountryCode(nil));
-
-    for (unichar first = 'A'; first <= 'Z'; first++) {
-        for (unichar second = 'A'; second <= 'Z'; second++) {
-            NSString * const code = [NSString stringWithFormat:@"%C%C", first, second];
-            NSString * const flag = flagEmojiStringForCountryCode(code);
-            XCTAssertNotNil(flag, @"Expected a flag for %@", code);
-            XCTAssertEqual(flag.length, (NSUInteger)4, @"Unexpected UTF-16 length for %@", code);
-        }
-    }
-}
-
 - (void)testBase64EncodingAndDecoding
 {
     XCTAssertNil([NSString base64StringWithCString:NULL]);

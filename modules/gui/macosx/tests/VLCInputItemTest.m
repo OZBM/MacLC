@@ -220,7 +220,7 @@
     XCTAssertEqual(notifications[1].object, inputItem);
 }
 
-- (void)testURLFactoryAndRadioCountryCode
+- (void)testURLFactory
 {
     NSURL * const url = [NSURL URLWithString:@"file:///tmp/Example%20Video.mkv"];
     VLCInputItem * const inputItem = [VLCInputItem inputItemFromURL:url];
@@ -228,15 +228,6 @@
     XCTAssertNotNil(inputItem);
     XCTAssertEqualObjects(inputItem.MRL, @"file:///tmp/Example%20Video.mkv");
     XCTAssertEqualObjects(inputItem.name, @"Example Video");
-    XCTAssertNil(inputItem.radioCountryCodeForFlagArtwork);
-
-    VLCInputItem * const radioItem =
-        [VLCInputItem inputItemFromURL:[NSURL URLWithString:@"radio://us/station"]];
-    XCTAssertEqualObjects(radioItem.radioCountryCodeForFlagArtwork, @"US");
-
-    VLCInputItem * const invalidRadioItem =
-        [VLCInputItem inputItemFromURL:[NSURL URLWithString:@"radio://u1/station"]];
-    XCTAssertNil(invalidRadioItem.radioCountryCodeForFlagArtwork);
 }
 
 - (void)testStreamAndArtworkState

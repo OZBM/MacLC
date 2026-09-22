@@ -831,41 +831,6 @@ NSArray<NSString *> *defaultBookmarkedLocations()
 @end
 
 
-@interface VLCLibraryStreamsSegment : VLCLibrarySegment
-@end
-
-@implementation VLCLibraryStreamsSegment
-
-- (instancetype)init
-{
-    self = [super initWithSegmentType:VLCLibraryStreamsSegmentType];
-    if (self) {
-        self.internalDisplayString = _NS("Streams");
-        self.internalSearchFieldPlaceholder = _NS("Search your streams");
-        self.internalDisplayImage = [MacLCDesign symbolNamed:@"antenna.radiowaves.left.and.right"
-                                                   pointSize:15.
-                                                      weight:NSFontWeightRegular
-                                          accessibilityLabel:_NS("Streams")];
-        self.internalLibraryViewControllerClass = VLCLibraryMediaSourceViewController.class;
-        self.internalLibraryViewControllerCreator = ^{
-            return [[VLCLibraryMediaSourceViewController alloc] initWithLibraryWindow:VLCMain.sharedInstance.libraryWindow];
-        };
-        self.internalLibraryViewPresenter = ^(VLCLibraryAbstractSegmentViewController * const controller) {
-            [(VLCLibraryMediaSourceViewController *)controller presentStreamsView];
-        };
-        self.internalSaveViewModePreference = ^(const NSInteger viewMode) {
-            VLCLibraryWindowPersistentPreferences.sharedInstance.streamLibraryViewMode = viewMode;
-        };
-        self.internalGetViewModePreference = ^{
-            return VLCLibraryWindowPersistentPreferences.sharedInstance.streamLibraryViewMode;
-        };
-        self.internalToolbarDisplayFlags = mediaSourceViewToolbarDisplayFlags;
-    }
-    return self;
-}
-
-@end
-
 // MARK: - VLCLibrarySegment
 
 @implementation VLCLibrarySegment
@@ -889,7 +854,6 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     [segments addObjectsFromArray:@[
         [[VLCLibraryHeaderSegment alloc] initWithDisplayString:_NS("Explore")],
         [[VLCLibraryBrowseSegment alloc] init],
-        [[VLCLibraryStreamsSegment alloc] init],
     ]];
 
     return segments.copy;
@@ -928,8 +892,6 @@ NSArray<NSString *> *defaultBookmarkedLocations()
             return [[VLCLibraryGroupSegment alloc] init];
         case VLCLibraryBrowseSegmentType:
             return [[VLCLibraryBrowseSegment alloc] init];
-        case VLCLibraryStreamsSegmentType:
-            return [[VLCLibraryStreamsSegment alloc] init];
         default:
             return nil;
     }
