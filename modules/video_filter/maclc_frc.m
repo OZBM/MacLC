@@ -230,23 +230,50 @@ kernel void maclc_frc_interp(texture2d<float, access::sample> prev_plane [[textu
     constexpr sampler smp(coord::normalized, address::clamp_to_edge, filter::linear);\n\
     const float2 uv = (float2(gid) + 0.5) / float2(w, h);\n\
     const float t = p.phase;\n\
+    constexpr sampler blk(coord::pixel, address::clamp_to_edge, filter::nearest);\n\
     /* The field is indexed by blocks of the current frame and points at the\n\
        previous one. Estimating the other direction as well was measured to\n\
-       change nothing and cost 1.5 ms a frame, so one field it is. */\n\
-    const float2 mv = p.motion > 0.5 ? motion.sample(smp, uv).xy * p.mv_norm : float2(0.0);\n\
-    const float2 uv_cur  = uv - (1.0 - t) * mv;\n\
-    const float2 uv_prev = uv + t * mv;\n\
-    const float4 c = cur_plane.sample(smp, uv_cur);\n\
-    const float4 v = prev_plane.sample(smp, uv_prev);\n\
-    const float yc = cur_luma.sample(smp, uv_cur).r;\n\
-    const float yv = prev_luma.sample(smp, uv_prev).r;\n\
-    /* Where the two motion-compensated samples disagree the block vector is\n\
-       wrong or the area is occluded: show the nearer frame instead of a ghost.\n\
-       Without motion the two samples are simply the two frames, and every\n\
-       moving pixel would look occluded, so a cross-fade must stay a cross-fade. */\n\
-    const float occluded = p.motion * smoothstep(p.occ_lo, p.occ_hi, abs(yc - yv));\n\
-    const float weight = mix(t, t < 0.5 ? 0.0 : 1.0, occluded);\n\
-    out_plane.write(mix(v, c, weight), gid);\n\
+       change nothing and cost 1.5 ms a frame, so one field it is.\n\
+\n\
+       Each pixel sits between four block centres. Blending the four vectors\n\
+       and warping once gives, at an object edge where they disagree, a vector\n\
+       that describes nothing. Warping four times and blending the results is\n\
+       what overlapped block motion compensation means, and it is the same\n\
+       four weights either way. */\n\
+    const float2 grid = float2(motion.get_width(), motion.get_height());\n\
+    const float2 bpos = uv * grid - 0.5;\n\
+    const float2 b0 = floor(bpos);\n\
+    const float2 f = bpos - b0;\n\
+    const float wgt[4] = { (1.0 - f.x) * (1.0 - f.y), f.x * (1.0 - f.y),\n\
+                           (1.0 - f.x) * f.y,         f.x * f.y };\n\
+    /* Without motion the four candidates are the same one, and the blend\n\
+       engine would pay four times for a cross-fade. */\n\
+    const uint candidates = p.motion > 0.5 ? 4 : 1;\n\
+    float4 acc = float4(0.0);\n\
+    float acc_w = 0.0;\n\
+    for (uint k = 0; k < candidates; k++) {\n\
+        const float kw = candidates == 1 ? 1.0 : wgt[k];\n\
+        if (kw < 0.001) continue;\n\
+        const float2 at = b0 + float2(float(k & 1), float(k >> 1)) + 0.5;\n\
+        const float2 mv = p.motion > 0.5 ? motion.sample(blk, at).xy * p.mv_norm\n\
+                                         : float2(0.0);\n\
+        const float2 uv_cur  = uv - (1.0 - t) * mv;\n\
+        const float2 uv_prev = uv + t * mv;\n\
+        const float4 c = cur_plane.sample(smp, uv_cur);\n\
+        const float4 v = prev_plane.sample(smp, uv_prev);\n\
+        const float yc = cur_luma.sample(smp, uv_cur).r;\n\
+        const float yv = prev_luma.sample(smp, uv_prev).r;\n\
+        /* Where the two motion-compensated samples disagree the vector is\n\
+           wrong or the area is occluded: show the nearer frame instead of a\n\
+           ghost. Without motion the two samples are simply the two frames,\n\
+           and every moving pixel would look occluded, so a cross-fade must\n\
+           stay a cross-fade. */\n\
+        const float occluded = p.motion * smoothstep(p.occ_lo, p.occ_hi, abs(yc - yv));\n\
+        const float weight = mix(t, t < 0.5 ? 0.0 : 1.0, occluded);\n\
+        acc += kw * mix(v, c, weight);\n\
+        acc_w += kw;\n\
+    }\n\
+    out_plane.write(acc_w > 0.0 ? acc / acc_w : float4(0.0), gid);\n\
 }\n";
 
 struct maclc_frc_params
