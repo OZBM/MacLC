@@ -129,6 +129,16 @@ static const char *const overrun_names[] = {
 #define OVERRUN_TEXT N_("When too slow")
 #define OVERRUN_LONGTEXT N_("What to do when a pass no longer fits in the time " \
     "one source frame lasts.")
+static const int me_scale_values[] = { 0, 1, 2, 4, 8 };
+static const char *const me_scale_names[] = {
+    N_("Automatic"), N_("Full size"), N_("Half"), N_("A quarter"), N_("An eighth"),
+};
+
+#define MESCALE_TEXT N_("Search the motion on")
+#define MESCALE_LONGTEXT N_("The size of the picture the motion search works " \
+    "on, for the motion compensation engine. A smaller one reaches further in " \
+    "the original picture, which is what fast motion needs, and costs less; " \
+    "too small and it stops seeing small movements.")
 #define SVPPATH_TEXT N_("SmoothVideo Project folder")
 #define SVPPATH_LONGTEXT N_("Where SVP 4 Mac is installed. Left empty, the " \
     "Applications folder is used. MacLC loads the libraries SVP installed on " \
@@ -187,6 +197,8 @@ vlc_module_begin()
     add_integer(CFG_PREFIX "rife-compute", MACLC_FRC_RIFE_COMPUTE_MEASURE,
                 RIFECOMPUTE_TEXT, RIFECOMPUTE_LONGTEXT)
         change_integer_list(rife_compute_values, rife_compute_names)
+    add_integer(CFG_PREFIX "me-scale", 0, MESCALE_TEXT, MESCALE_LONGTEXT)
+        change_integer_list(me_scale_values, me_scale_names)
     add_string(CFG_PREFIX "svp-path", NULL, SVPPATH_TEXT, SVPPATH_LONGTEXT)
 vlc_module_end()
 
@@ -293,6 +305,8 @@ struct maclc_frc_params
     CVPixelBufferRef _estimate_prev;
     VTPixelTransferSessionRef _xfer_luma;
     unsigned _mv_cols, _mv_rows;
+    unsigned _est_width, _est_height;  /* the size the motion search works on */
+    int _me_scale;                     /* what the user asked for, 0 for automatic */
     float *_mv_field;                  /* smoothed, 2 floats per block */
     float *_mv_scratch;
 
@@ -669,6 +683,41 @@ static bool MetalEngineStart(MacLCFrcContext *ctx, int engine)
     if (engine == ENGINE_BLEND)
         return true;
 
+    /* The motion search does not want the whole picture. Measured on a
+     * rotating source against the real frames of a 48 fps master, with true
+     * motion on, the best size is the same one whatever the picture is:
+     *
+     *   4K    full 30.09 dB/16.7 ms, half 30.58/10.8, quarter 31.35/9.1,
+     *         eighth 30.42/10.1
+     *   1080p full 31.76 dB/5.6 ms, half 32.18/4.3, quarter 30.32/4.0
+     *
+     * A quarter of 4K and a half of 1080p are both 960x540, and both are the
+     * peak; an eighth of 4K and a quarter of 1080p are both 480x270, and both
+     * fall off. What governs it is the size the search runs at, not the
+     * fraction. Below that size the search stops seeing small movements;
+     * above it, it stops reaching far enough for fast ones -- and pays more
+     * to miss them. So: halve while the result stays at least 960 across. */
+    ctx->_est_width = ctx->_width;
+    ctx->_est_height = ctx->_height;
+    if (ctx->_me_scale > 0)
+    {
+        ctx->_est_width = ctx->_width / (unsigned)ctx->_me_scale;
+        ctx->_est_height = ctx->_height / (unsigned)ctx->_me_scale;
+    }
+    else
+    {
+        while (ctx->_est_width >= 1920 && ctx->_est_height >= 2)
+        {
+            ctx->_est_width /= 2;
+            ctx->_est_height /= 2;
+        }
+    }
+    if (ctx->_est_width < 64 || ctx->_est_height < 64)
+    {
+        ctx->_est_width = ctx->_width;
+        ctx->_est_height = ctx->_height;
+    }
+
     if (@available(macOS 26.0, *))
     {
         /* 16x16 blocks: the 4x4 search exists but costs twelve times as much
@@ -687,19 +736,22 @@ static bool MetalEngineStart(MacLCFrcContext *ctx, int engine)
         };
         if (VTMotionEstimationSessionCreate(kCFAllocatorDefault,
                                             (__bridge CFDictionaryRef)options,
-                                            ctx->_width, ctx->_height,
+                                            ctx->_est_width, ctx->_est_height,
                                             &ctx->_estimator) != noErr)
         {
             msg_Dbg(filter, "no motion estimator for %ux%u",
-                    ctx->_width, ctx->_height);
+                    ctx->_est_width, ctx->_est_height);
             return false;
         }
+        if (ctx->_est_width != ctx->_width)
+            msg_Dbg(filter, "searching the motion on %ux%u for a %ux%u picture",
+                    ctx->_est_width, ctx->_est_height, ctx->_width, ctx->_height);
     }
     else
         return false;
 
-    ctx->_mv_cols = (ctx->_width + 15) / 16;
-    ctx->_mv_rows = (ctx->_height + 15) / 16;
+    ctx->_mv_cols = (ctx->_est_width + 15) / 16;
+    ctx->_mv_rows = (ctx->_est_height + 15) / 16;
     const size_t field_size = (size_t)ctx->_mv_cols * ctx->_mv_rows * 2;
     ctx->_mv_field = calloc(field_size, sizeof(*ctx->_mv_field));
     ctx->_mv_scratch = calloc(field_size, sizeof(*ctx->_mv_scratch));
@@ -730,6 +782,11 @@ static bool MetalEngineStart(MacLCFrcContext *ctx, int engine)
         return false;
     VTSessionSetProperty(ctx->_xfer_luma,
                          kVTPixelTransferPropertyKey_RealTime, kCFBooleanTrue);
+    /* This session is now also the downscaler, so say what to do with a
+     * picture whose shape does not match: fill it, never letterbox it. */
+    VTSessionSetProperty(ctx->_xfer_luma,
+                         kVTPixelTransferPropertyKey_ScalingMode,
+                         kVTScalingMode_Normal);
     return true;
 }
 
@@ -1158,7 +1215,10 @@ static bool MetalRun(MacLCFrcContext *ctx, CVPixelBufferRef previous,
             break;
         }
         struct maclc_frc_params params = {
-            .mv_norm = { 1.f / (float)ctx->_width, 1.f / (float)ctx->_height },
+            /* The vectors are in the search's own pixels, so they are
+             * normalised by the size it ran at, not by the picture's. */
+            .mv_norm = { 1.f / (float)ctx->_est_width,
+                         1.f / (float)ctx->_est_height },
             .phase = (float)(i + 1) / (float)ctx->_factor,
             .motion = motion ? 1.f : 0.f,
             .occ_lo = 0.08f,
@@ -1639,6 +1699,7 @@ static int Open(filter_t *filter)
         ctx->_rife_model = var_InheritString(filter, CFG_PREFIX "rife-model");
         ctx->_rife_scale = var_InheritFloat(filter, CFG_PREFIX "rife-scale");
         ctx->_rife_compute = var_InheritInteger(filter, CFG_PREFIX "rife-compute");
+        ctx->_me_scale = var_InheritInteger(filter, CFG_PREFIX "me-scale");
         ctx->_svp_path = var_InheritString(filter, CFG_PREFIX "svp-path");
         ctx->_factor = factor;
         ctx->_width = fmt->i_visible_width;
