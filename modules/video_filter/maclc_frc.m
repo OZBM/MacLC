@@ -142,6 +142,21 @@ static const char *const overrun_names[] = {
 #define RIFEMODEL_LONGTEXT N_("The folder or the Core ML package that holds " \
     "the network. Left empty, MacLC looks in its own Resources folder and " \
     "then in Application Support.")
+static const int rife_compute_values[] = {
+    MACLC_FRC_RIFE_COMPUTE_MEASURE, MACLC_FRC_RIFE_COMPUTE_NEURAL,
+    MACLC_FRC_RIFE_COMPUTE_GPU, MACLC_FRC_RIFE_COMPUTE_CPU,
+};
+static const char *const rife_compute_names[] = {
+    N_("Whichever is faster here"), N_("Neural Engine"), N_("Graphics processor"),
+    N_("Processor"),
+};
+
+#define RIFECOMPUTE_TEXT N_("Run RIFE on")
+#define RIFECOMPUTE_LONGTEXT N_("Which part of the chip runs the network. " \
+    "The Neural Engine is not always the fastest: a network it cannot run " \
+    "whole is cut into pieces that travel back and forth to the graphics " \
+    "processor. Left to itself, MacLC times both on this Mac and keeps the " \
+    "faster one.")
 #define RIFESCALE_TEXT N_("RIFE detail level")
 #define RIFESCALE_LONGTEXT N_("The size the motion is worked out at, as a " \
     "fraction of the picture. Half costs about a third as much, which is what " \
@@ -169,6 +184,9 @@ vlc_module_begin()
     add_string(CFG_PREFIX "rife-model", NULL, RIFEMODEL_TEXT, RIFEMODEL_LONGTEXT)
     add_float_with_range(CFG_PREFIX "rife-scale", 1.f, 0.25f, 1.f,
                          RIFESCALE_TEXT, RIFESCALE_LONGTEXT)
+    add_integer(CFG_PREFIX "rife-compute", MACLC_FRC_RIFE_COMPUTE_MEASURE,
+                RIFECOMPUTE_TEXT, RIFECOMPUTE_LONGTEXT)
+        change_integer_list(rife_compute_values, rife_compute_names)
     add_string(CFG_PREFIX "svp-path", NULL, SVPPATH_TEXT, SVPPATH_LONGTEXT)
 vlc_module_end()
 
@@ -284,6 +302,7 @@ struct maclc_frc_params
     char *_rife_model;
     bool _rife;
     float _rife_scale;
+    int _rife_compute;
 
     /* real-time budget */
     vlc_tick_t _budget;
@@ -728,6 +747,7 @@ static bool BackendEngineStart(MacLCFrcContext *ctx, int engine)
         /* More than one inference at a time only makes the Metal queues fight
          * over the same memory on Apple silicon. */
         .rife_threads   = 1,
+        .rife_compute   = ctx->_rife_compute,
         .rife_scene_cut = true,
     };
 
@@ -1610,6 +1630,7 @@ static int Open(filter_t *filter)
         ctx->_rife = var_InheritBool(filter, CFG_PREFIX "rife");
         ctx->_rife_model = var_InheritString(filter, CFG_PREFIX "rife-model");
         ctx->_rife_scale = var_InheritFloat(filter, CFG_PREFIX "rife-scale");
+        ctx->_rife_compute = var_InheritInteger(filter, CFG_PREFIX "rife-compute");
         ctx->_svp_path = var_InheritString(filter, CFG_PREFIX "svp-path");
         ctx->_factor = factor;
         ctx->_width = fmt->i_visible_width;

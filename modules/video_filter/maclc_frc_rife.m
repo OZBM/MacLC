@@ -64,6 +64,7 @@
 @property (nonatomic, copy) NSArray<MLFeatureValue *> *timestepValues;
 
 @property (nonatomic, strong) MLModel *model;
+@property (nonatomic, strong) NSURL *computeURL;   /* the compiled model, to reload it under another configuration */
 @property (nonatomic, strong) MLMultiArray *input0Array;
 @property (nonatomic, strong) MLMultiArray *input1Array;
 
@@ -260,6 +261,26 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
  * Context Implementation
  *****************************************************************************/
 
+static MLComputeUnits ComputeUnitsFor(int choice)
+{
+    switch (choice)
+    {
+        case MACLC_FRC_RIFE_COMPUTE_NEURAL: return MLComputeUnitsAll;
+        case MACLC_FRC_RIFE_COMPUTE_CPU:    return MLComputeUnitsCPUOnly;
+        default:                            return MLComputeUnitsCPUAndGPU;
+    }
+}
+
+static const char *ComputeUnitsName(int choice)
+{
+    switch (choice)
+    {
+        case MACLC_FRC_RIFE_COMPUTE_NEURAL: return "the Neural Engine and the GPU";
+        case MACLC_FRC_RIFE_COMPUTE_CPU:    return "the processor";
+        default:                            return "the GPU";
+    }
+}
+
 @implementation MacLCFrcRifeContext
 
 - (BOOL)setupWithBackendSetup:(const struct maclc_frc_backend_setup *)setup
@@ -336,9 +357,15 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
     if (!compiledModelURL)
         return NO;
 
-    /* Load the model permitting Apple Neural Engine (ANE), GPU and CPU execution. */
+    /* Which silicon runs the network is not obvious and is not the same for
+     * every model: measured here on an M3 Max, RIFE v4.25 at 1920x1088 takes
+     * about 33 ms with the GPU alone and about 285 ms when the Neural Engine
+     * is allowed, because the warps it cannot run split the network into
+     * pieces that then travel back and forth. So unless the user names a
+     * choice, both are timed on this machine and the faster one is kept. */
+    self.computeURL = compiledModelURL;
     MLModelConfiguration *modelConfig = [[MLModelConfiguration alloc] init];
-    modelConfig.computeUnits = MLComputeUnitsAll;
+    modelConfig.computeUnits = ComputeUnitsFor(setup->rife_compute);
 
     NSError *loadErr = nil;
     _model = [MLModel modelWithContentsOfURL:compiledModelURL configuration:modelConfig error:&loadErr];
@@ -719,7 +746,87 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
     }
 
     _featureDict = [NSMutableDictionary dictionaryWithCapacity:3];
+
+    /* The first inference of a freshly compiled model pays for its own
+     * warm-up -- a second or so -- and the filter's budget guard would see
+     * that as an engine far too slow to keep and throw it away. Both the
+     * warm-up and the choice of silicon happen here, before anyone is timing. */
+    [self chooseComputeUnits:setup->rife_compute];
     return YES;
+}
+
+/* Times one inference under a configuration, in microseconds, or 0 on failure. */
+- (vlc_tick_t)timeOneInferenceWithUnits:(MLComputeUnits)units reload:(BOOL)reload
+{
+    if (reload)
+    {
+        MLModelConfiguration *cfg = [[MLModelConfiguration alloc] init];
+        cfg.computeUnits = units;
+        NSError *err = nil;
+        MLModel *m = [MLModel modelWithContentsOfURL:self.computeURL configuration:cfg error:&err];
+        if (!m)
+            return 0;
+        _model = m;
+    }
+
+    CVPixelBufferRef a = PoolTake(_bgraPool);
+    CVPixelBufferRef b = PoolTake(_bgraPool);
+    vlc_tick_t spent = 0;
+    if (a != NULL && b != NULL)
+    {
+        _featureDict[_input0Name] = [MLFeatureValue featureValueWithPixelBuffer:a];
+        _featureDict[_input1Name] = [MLFeatureValue featureValueWithPixelBuffer:b];
+        if (_timestepName != nil && _timestepValues.count > 0)
+            _featureDict[_timestepName] = _timestepValues[0];
+
+        NSError *err = nil;
+        id<MLFeatureProvider> provider =
+            [[MLDictionaryFeatureProvider alloc] initWithDictionary:_featureDict error:&err];
+        if (provider != nil)
+        {
+            /* Once to warm up, once to time. */
+            if ([_model predictionFromFeatures:provider error:&err] != nil)
+            {
+                const vlc_tick_t started = vlc_tick_now();
+                if ([_model predictionFromFeatures:provider error:&err] != nil)
+                    spent = vlc_tick_now() - started;
+            }
+        }
+        [_featureDict removeAllObjects];
+    }
+    if (a != NULL) CVPixelBufferRelease(a);
+    if (b != NULL) CVPixelBufferRelease(b);
+    return spent;
+}
+
+- (void)chooseComputeUnits:(int)requested
+{
+    if (!self.inputIsImage)
+    {
+        /* The probe feeds pixel buffers; a model that wants arrays is simply
+         * warmed up under whatever the user asked for. */
+        return;
+    }
+
+    if (requested != MACLC_FRC_RIFE_COMPUTE_MEASURE)
+    {
+        const vlc_tick_t t = [self timeOneInferenceWithUnits:ComputeUnitsFor(requested) reload:NO];
+        msg_Dbg(_log, "RIFE on %s: %.1f ms a frame",
+                ComputeUnitsName(requested), (double)t / 1000.0);
+        return;
+    }
+
+    const vlc_tick_t gpu = [self timeOneInferenceWithUnits:MLComputeUnitsCPUAndGPU reload:YES];
+    const vlc_tick_t all = [self timeOneInferenceWithUnits:MLComputeUnitsAll reload:YES];
+
+    const bool gpu_wins = gpu > 0 && (all == 0 || gpu < all);
+    msg_Dbg(_log, "RIFE measured here: %.1f ms on the GPU, %.1f ms with the "
+            "Neural Engine allowed; keeping %s",
+            (double)gpu / 1000.0, (double)all / 1000.0,
+            gpu_wins ? "the GPU" : "the Neural Engine");
+
+    if (gpu_wins)
+        [self timeOneInferenceWithUnits:MLComputeUnitsCPUAndGPU reload:YES];
 }
 
 /*****************************************************************************

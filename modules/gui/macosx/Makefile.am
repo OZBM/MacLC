@@ -821,4 +821,19 @@ endif
 
 libmacosx_plugin_ladir = $(prefix)/share/macosx/Contents/Resources
 
+# The RIFE network the frame interpolation filter runs on Core ML. A Core ML
+# package is a directory, so its three files are installed one by one rather
+# than through the resource list above.
+maclcmodelsdir = $(prefix)/share/macosx/Contents/Resources/models
+dist_maclcmodels_DATA = gui/macosx/Resources/models/LICENSE.RIFE
+
+maclcrifedir = $(maclcmodelsdir)/rife.mlpackage
+dist_maclcrife_DATA = gui/macosx/Resources/models/rife.mlpackage/Manifest.json
+
+maclcrifedatadir = $(maclcrifedir)/Data/com.apple.CoreML
+dist_maclcrifedata_DATA = gui/macosx/Resources/models/rife.mlpackage/Data/com.apple.CoreML/model.mlmodel
+
+maclcrifeweightsdir = $(maclcrifedatadir)/weights
+dist_maclcrifeweights_DATA = gui/macosx/Resources/models/rife.mlpackage/Data/com.apple.CoreML/weights/weight.bin
+
 include gui/macosx/tests/Makefile.am

@@ -51,7 +51,20 @@ struct maclc_frc_backend_setup
     float         rife_scale;   /* the resolution the flow is computed at,
                                  * 1.0 for the full picture, 0.5 for half */
     unsigned      rife_threads; /* concurrent inferences, 1 on Apple silicon */
+    int           rife_compute; /* which silicon runs the network; see below */
     bool          rife_scene_cut;/* leave a cut alone rather than blend across it */
+};
+
+/* Values of maclc_frc_backend_setup.rife_compute. Measuring is the default
+ * because the answer is not the same for every model: a network the Neural
+ * Engine cannot run whole is split into pieces that then travel between it
+ * and the GPU, which costs far more than staying on the GPU throughout. */
+enum
+{
+    MACLC_FRC_RIFE_COMPUTE_MEASURE = 0,
+    MACLC_FRC_RIFE_COMPUTE_NEURAL,
+    MACLC_FRC_RIFE_COMPUTE_GPU,
+    MACLC_FRC_RIFE_COMPUTE_CPU,
 };
 
 struct maclc_frc_backend;
