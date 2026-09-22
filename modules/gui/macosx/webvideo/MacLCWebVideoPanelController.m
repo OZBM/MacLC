@@ -311,6 +311,9 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (void)clearPreviewAndError {
+    /* A thumbnail still downloading belongs to the preview going away. */
+    [_thumbnailTask cancel];
+    _thumbnailTask = nil;
     if (_previewCard) {
         [_previewCard removeFromSuperview];
         _previewCard = nil;
@@ -689,15 +692,20 @@ NS_ASSUME_NONNULL_BEGIN
     [_mainStack insertArrangedSubview:_previewCard atIndex:2];
     [self animateWindowHeightChange];
     
+    [_thumbnailTask cancel];
+    _thumbnailTask = nil;
     if (item.thumbnailAddress) {
         NSURL *url = [NSURL URLWithString:item.thumbnailAddress];
         if (url) {
+            /* The image goes to this preview's own view: a slow download
+             * for an earlier address must not land on a later preview. */
+            __weak NSImageView * const thumbnailView = _thumbnailView;
             _thumbnailTask = [_session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
                 if (data) {
                     NSImage *image = [[NSImage alloc] initWithData:data];
                     if (image) {
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            self.thumbnailView.image = image;
+                            thumbnailView.image = image;
                         });
                     }
                 }
