@@ -37,28 +37,51 @@
 
 - (instancetype)initWithInputNode:(VLCInputNode *)inputNode
 {
+    return [self initWithInputNode:inputNode fallbackTitle:nil];
+}
+
+- (instancetype)initWithInputNode:(VLCInputNode *)inputNode
+                    fallbackTitle:(NSString *)fallbackTitle
+{
     self = [super init];
-    if (self && inputNode != nil && inputNode.inputItem != nil) {
-        _inputNode = inputNode;
-
-        VLCInputItem * const inputItem = inputNode.inputItem;
-        self.title = inputItem.name;
-
-        NSImage * const folderImage = [NSImage imageNamed:NSImageNameFolder];
-        self.image = folderImage.copy;
-        // HACK: We have no way when we get the clicked item from the path control
-        // of knowing specifically which input node this path item corresponds to,
-        // as the path control returns a copy for clickedPathItem that is not of
-        // this class. As a very awkward workaround, lets set the accessibility
-        // description of the image and we will use this as an identifier.
-        self.image.accessibilityDescription = [NSString stringWithFormat:@"%@: %@", 
-                                               VLCInputNodePathControlItem.accessibilityDescriptionPrefix, 
-                                               inputItem.path];
-    } else if (inputNode == nil) {
-        NSLog(@"WARNING: Received nil input node, cannot create VLCInputNodePathControlItem");
-    } else if (inputNode.inputItem == nil) {
-        NSLog(@"WARNING: Received nil input node's input item, cannot create VLCInputNodePathControlItem");
+    if (self == nil) {
+        return nil;
     }
+    if (inputNode == nil) {
+        NSLog(@"WARNING: Received nil input node, cannot create VLCInputNodePathControlItem");
+        return self;
+    }
+
+    _inputNode = inputNode;
+
+    /* A media source's root node has no input item: vlc_media_tree_New()
+     * leaves root->p_item NULL. Opening a discovery service that has found
+     * nothing yet shows exactly that node, so it needs an item too. */
+    VLCInputItem * const inputItem = inputNode.inputItem;
+    NSString *identifier = inputItem.path;
+    if (identifier.length == 0) {
+        identifier = inputItem.MRL;
+    }
+    if (identifier.length == 0) {
+        identifier = fallbackTitle;
+    }
+    if (identifier.length == 0) {
+        identifier = NSUUID.UUID.UUIDString;
+    }
+
+    NSString * const name = inputItem.name;
+    self.title = name.length > 0 ? name : (fallbackTitle ?: @"");
+
+    NSImage * const folderImage = [NSImage imageNamed:NSImageNameFolder];
+    self.image = folderImage != nil ? folderImage.copy : [[NSImage alloc] initWithSize:NSMakeSize(16., 16.)];
+    // HACK: We have no way when we get the clicked item from the path control
+    // of knowing specifically which input node this path item corresponds to,
+    // as the path control returns a copy for clickedPathItem that is not of
+    // this class. As a very awkward workaround, lets set the accessibility
+    // description of the image and we will use this as an identifier.
+    self.image.accessibilityDescription = [NSString stringWithFormat:@"%@: %@",
+                                           VLCInputNodePathControlItem.accessibilityDescriptionPrefix,
+                                           identifier];
     return self;
 }
 

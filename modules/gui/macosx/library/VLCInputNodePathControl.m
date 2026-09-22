@@ -28,16 +28,20 @@
 
 - (void)appendInputNodePathControlItem:(VLCInputNodePathControlItem *)inputNodePathControlItem
 {
-    NSParameterAssert(inputNodePathControlItem != nil);
-    NSParameterAssert(inputNodePathControlItem.image != nil);
-    NSParameterAssert(inputNodePathControlItem.image.accessibilityDescription != nil);
-    NSParameterAssert(![inputNodePathControlItem.image.accessibilityDescription isEqualToString:@""]);
+    /* The identifier is how a clicked item finds its node again. An item
+     * without one used to fail an assertion here, which is a crash in this
+     * build: a breadcrumb is never worth that, so it is left out instead. */
+    NSString * const identifier = inputNodePathControlItem.image.accessibilityDescription;
+    if (inputNodePathControlItem == nil || identifier.length == 0) {
+        NSLog(@"WARNING: path control item without an identifier, not shown: %@", inputNodePathControlItem);
+        return;
+    }
 
     if (self.inputNodePathControlItems == nil) {
         _inputNodePathControlItems = [NSMutableDictionary dictionary];
     }
 
-    [self.inputNodePathControlItems setObject:inputNodePathControlItem forKey:inputNodePathControlItem.image.accessibilityDescription];
+    [self.inputNodePathControlItems setObject:inputNodePathControlItem forKey:identifier];
 
     NSMutableArray * const pathItems = self.pathItems.mutableCopy;
     [pathItems addObject:inputNodePathControlItem];

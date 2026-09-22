@@ -34,6 +34,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initWithInputNode:(VLCInputNode *)inputNode;
 
+/* The root of a media source's tree has no input item to take a name from:
+ * fallbackTitle names the item then, and identifies it. */
+- (instancetype)initWithInputNode:(VLCInputNode *)inputNode
+                    fallbackTitle:(nullable NSString *)fallbackTitle;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -931,8 +931,9 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
     _childDataSource = childDataSource;
 
     VLCInputNode * const node = childDataSource.nodeToDisplay;
-    VLCInputNodePathControlItem * const nodePathItem = 
-        [[VLCInputNodePathControlItem alloc] initWithInputNode:node];
+    VLCInputNodePathControlItem * const nodePathItem =
+        [[VLCInputNodePathControlItem alloc] initWithInputNode:node
+                                                 fallbackTitle:childDataSource.displayedMediaSource.mediaSourceDescription];
 
     [self.pathControl appendInputNodePathControlItem:nodePathItem];
     self.pathControl.hidden = YES;
