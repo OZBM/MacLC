@@ -97,6 +97,8 @@ framework_conditions = [
             'CoreGraphics',
             'AVKit',
             'Metal',
+            'CoreML',
+            'Accelerate',
         ],
         'condition': host_system == 'darwin'
     },

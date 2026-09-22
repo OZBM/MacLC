@@ -5,8 +5,8 @@
  * Copyright © 2026 Hazen Studio
  *
  * Raises the frame rate of the video to the refresh rate of the display by
- * synthesising intermediate frames. Four engines are available, from the
- * slowest and best looking to the cheapest:
+ * synthesising intermediate frames. Six engines are available. Four are built
+ * into the player, from the slowest and best looking to the cheapest:
  *
  *   quality / balanced  VTFrameRateConversion, Apple's optical-flow frame
  *                       interpolator. Works on 64-bit half-float RGBA, so the
@@ -21,6 +21,17 @@
  *                       engine fast enough for 4K or for 60 fps sources.
  *   blend               The same Metal kernel with the motion field forced to
  *                       zero: a plain cross-fade. Last resort.
+ *
+ * Two more reach outside the player and live in their own files, behind
+ * maclc_frc_backend.h. Neither is ever picked automatically: the user asks for
+ * them, and starting one fails plainly when what it needs is not installed.
+ *
+ *   svp                 The SmoothVideo Project graph, hosted by VapourSynth
+ *                       (maclc_frc_vs.m). Uses the libraries SVP 4 Mac
+ *                       installed, with its motion vectors or, when the RIFE
+ *                       option is on, with the neural network SVP ships.
+ *   rife                The RIFE neural network on Core ML (maclc_frc_rife.m),
+ *                       with no other software to install.
  *
  * Every engine is timed; when a pass no longer fits in the time one source
  * frame lasts, the filter falls back to a cheaper engine and finally stops
@@ -48,6 +59,7 @@
 
 #include "vt_utils.h"
 #include "maclc_frc_geometry.h"
+#include "maclc_frc_backend.h"
 
 #define CFG_PREFIX "maclc-frc-"
 
@@ -59,6 +71,8 @@ enum maclc_frc_engine
     ENGINE_LOWLATENCY,
     ENGINE_MOTION,
     ENGINE_BLEND,
+    ENGINE_SVP,
+    ENGINE_RIFE,
 };
 
 enum maclc_frc_target
@@ -82,10 +96,12 @@ static void Close(filter_t *);
 static const int engine_values[] = {
     ENGINE_AUTO, ENGINE_QUALITY, ENGINE_BALANCED,
     ENGINE_LOWLATENCY, ENGINE_MOTION, ENGINE_BLEND,
+    ENGINE_SVP, ENGINE_RIFE,
 };
 static const char *const engine_names[] = {
     N_("Automatic"), N_("Quality (optical flow)"), N_("Balanced (optical flow)"),
     N_("Low latency (up to 720p)"), N_("Motion compensation"), N_("Blend"),
+    N_("SmoothVideo Project"), N_("RIFE neural network"),
 };
 
 static const int target_values[] = {
@@ -113,6 +129,23 @@ static const char *const overrun_names[] = {
 #define OVERRUN_TEXT N_("When too slow")
 #define OVERRUN_LONGTEXT N_("What to do when a pass no longer fits in the time " \
     "one source frame lasts.")
+#define SVPPATH_TEXT N_("SmoothVideo Project folder")
+#define SVPPATH_LONGTEXT N_("Where SVP 4 Mac is installed. Left empty, the " \
+    "Applications folder is used. MacLC loads the libraries SVP installed on " \
+    "this Mac; it does not carry them.")
+#define RIFE_TEXT N_("Use the RIFE neural network")
+#define RIFE_LONGTEXT N_("Make the in-between frames with the RIFE network " \
+    "rather than with motion vectors. The SmoothVideo Project engine then " \
+    "uses the copy of RIFE that SVP installed. The RIFE engine always uses " \
+    "the network, whatever this says.")
+#define RIFEMODEL_TEXT N_("RIFE model")
+#define RIFEMODEL_LONGTEXT N_("The folder or the Core ML package that holds " \
+    "the network. Left empty, MacLC looks in its own Resources folder and " \
+    "then in Application Support.")
+#define RIFESCALE_TEXT N_("RIFE detail level")
+#define RIFESCALE_LONGTEXT N_("The size the motion is worked out at, as a " \
+    "fraction of the picture. Half costs about a third as much, which is what " \
+    "lets 4K keep up.")
 #define MAXFACTOR_TEXT N_("Maximum multiplier")
 #define MAXFACTOR_LONGTEXT N_("Never produce more than this many output frames " \
     "per source frame.")
@@ -132,6 +165,11 @@ vlc_module_begin()
         change_integer_list(overrun_values, overrun_names)
     add_integer_with_range(CFG_PREFIX "max-factor", 5, 2, 8,
                            MAXFACTOR_TEXT, MAXFACTOR_LONGTEXT)
+    add_bool(CFG_PREFIX "rife", false, RIFE_TEXT, RIFE_LONGTEXT)
+    add_string(CFG_PREFIX "rife-model", NULL, RIFEMODEL_TEXT, RIFEMODEL_LONGTEXT)
+    add_float_with_range(CFG_PREFIX "rife-scale", 1.f, 0.25f, 1.f,
+                         RIFESCALE_TEXT, RIFESCALE_LONGTEXT)
+    add_string(CFG_PREFIX "svp-path", NULL, SVPPATH_TEXT, SVPPATH_LONGTEXT)
 vlc_module_end()
 
 /* The interpolated planes are written by this kernel. The motion field holds
@@ -240,6 +278,13 @@ struct maclc_frc_params
     float *_mv_field;                  /* smoothed, 2 floats per block */
     float *_mv_scratch;
 
+    /* engines that live in their own files */
+    struct maclc_frc_backend *_backend;
+    char *_svp_path;
+    char *_rife_model;
+    bool _rife;
+    float _rife_scale;
+
     /* real-time budget */
     vlc_tick_t _budget;
     vlc_tick_t _spent;                 /* exponential moving average */
@@ -320,6 +365,11 @@ static bool ChromaIsSupported(vlc_fourcc_t chroma, OSType *cv_fmt, bool *ten_bit
 
 static void EngineRelease(MacLCFrcContext *ctx)
 {
+    if (ctx->_backend != NULL)
+    {
+        ctx->_backend->ops->stop(ctx->_backend);
+        ctx->_backend = NULL;
+    }
     if (ctx->_processor != nil)
     {
         [ctx->_processor endSession];
@@ -400,6 +450,8 @@ static const char *EngineName(int engine)
         case ENGINE_LOWLATENCY: return "low latency";
         case ENGINE_MOTION:     return "motion compensation";
         case ENGINE_BLEND:      return "blend";
+        case ENGINE_SVP:        return "SmoothVideo Project";
+        case ENGINE_RIFE:       return "RIFE";
         default:                return "none";
     }
 }
@@ -654,6 +706,36 @@ static bool MetalEngineStart(MacLCFrcContext *ctx, int engine)
     return true;
 }
 
+/* The SmoothVideo Project and RIFE engines are built elsewhere; all this does
+ * is fill in what they are told about the stream. */
+static bool BackendEngineStart(MacLCFrcContext *ctx, int engine)
+{
+    const struct maclc_frc_backend_setup setup = {
+        .log            = VLC_OBJECT(ctx->_filter),
+        .width          = ctx->_width,
+        .height         = ctx->_height,
+        .cv_fmt         = ctx->_cv_fmt,
+        .ten_bit        = ctx->_ten_bit,
+        .factor         = ctx->_factor,
+        .budget         = ctx->_budget,
+        .out_pool       = ctx->_out_pool,
+        .svp_path       = ctx->_svp_path,
+        /* The RIFE engine is the network by definition; for the SVP graph it
+         * is the choice between the neural mode and the motion vectors. */
+        .rife           = engine == ENGINE_RIFE ? true : ctx->_rife,
+        .rife_model     = ctx->_rife_model,
+        .rife_scale     = ctx->_rife_scale,
+        /* More than one inference at a time only makes the Metal queues fight
+         * over the same memory on Apple silicon. */
+        .rife_threads   = 1,
+        .rife_scene_cut = true,
+    };
+
+    ctx->_backend = engine == ENGINE_RIFE ? maclc_frc_rife_start(&setup)
+                                          : maclc_frc_vs_start(&setup);
+    return ctx->_backend != NULL;
+}
+
 static bool EngineStart(MacLCFrcContext *ctx, int engine)
 {
     EngineRelease(ctx);
@@ -671,6 +753,10 @@ static bool EngineStart(MacLCFrcContext *ctx, int engine)
         case ENGINE_MOTION:
         case ENGINE_BLEND:
             ok = MetalEngineStart(ctx, engine);
+            break;
+        case ENGINE_SVP:
+        case ENGINE_RIFE:
+            ok = BackendEngineStart(ctx, engine);
             break;
         default:
             ok = false;
@@ -690,6 +776,7 @@ static bool EngineStart(MacLCFrcContext *ctx, int engine)
 
 /* Engines from the best looking to the cheapest; degrading walks down it. */
 static const int engine_ladder[] = {
+    ENGINE_RIFE, ENGINE_SVP,
     ENGINE_QUALITY, ENGINE_BALANCED, ENGINE_LOWLATENCY, ENGINE_MOTION, ENGINE_BLEND,
 };
 
@@ -702,8 +789,13 @@ static bool EngineDegrade(MacLCFrcContext *ctx)
     for (unsigned i = rank + 1; i < ARRAY_SIZE(engine_ladder); i++)
     {
         /* Low latency is not a step down from the optical-flow engines: it is
-         * limited to 720p, so it would have been chosen already. */
-        if (engine_ladder[i] == ENGINE_LOWLATENCY)
+         * limited to 720p, so it would have been chosen already. Neither of
+         * the engines that reach outside the player is ever stepped into:
+         * they are above everything else in the ladder anyway, and they need
+         * software this Mac may not have. */
+        if (engine_ladder[i] == ENGINE_LOWLATENCY
+         || engine_ladder[i] == ENGINE_SVP
+         || engine_ladder[i] == ENGINE_RIFE)
             continue;
         if (EngineStart(ctx, engine_ladder[i]))
         {
@@ -1240,6 +1332,8 @@ static void DropHistory(MacLCFrcContext *ctx)
         CVPixelBufferRelease(ctx->_estimate_prev);
         ctx->_estimate_prev = NULL;
     }
+    if (ctx->_backend != NULL)
+        ctx->_backend->ops->flush(ctx->_backend);
     ctx->_restart = true;
 }
 
@@ -1363,6 +1457,11 @@ static picture_t *Filter(filter_t *filter, picture_t *source)
                 ok = MetalRun(ctx, ctx->_prev_buffer, current,
                               false, produced);
                 break;
+            case ENGINE_SVP:
+            case ENGINE_RIFE:
+                ok = ctx->_backend->ops->run(ctx->_backend, ctx->_prev_buffer,
+                                             current, produced);
+                break;
             default:
                 ok = false;
                 break;
@@ -1445,6 +1544,14 @@ static unsigned FactorFor(filter_t *filter, unsigned source_fps, int target)
     return maclc_frc_factor(source_fps, wanted, limit);
 }
 
+static void FreeOptions(MacLCFrcContext *ctx)
+{
+    free(ctx->_rife_model);
+    ctx->_rife_model = NULL;
+    free(ctx->_svp_path);
+    ctx->_svp_path = NULL;
+}
+
 static int Open(filter_t *filter)
 {
     if (!video_format_IsSimilar(&filter->fmt_in.video, &filter->fmt_out.video)
@@ -1500,6 +1607,10 @@ static int Open(filter_t *filter)
         ctx->_filter = filter;
         ctx->_requested = var_InheritInteger(filter, CFG_PREFIX "engine");
         ctx->_overrun = var_InheritInteger(filter, CFG_PREFIX "overrun");
+        ctx->_rife = var_InheritBool(filter, CFG_PREFIX "rife");
+        ctx->_rife_model = var_InheritString(filter, CFG_PREFIX "rife-model");
+        ctx->_rife_scale = var_InheritFloat(filter, CFG_PREFIX "rife-scale");
+        ctx->_svp_path = var_InheritString(filter, CFG_PREFIX "svp-path");
         ctx->_factor = factor;
         ctx->_width = fmt->i_visible_width;
         ctx->_height = fmt->i_visible_height;
@@ -1521,7 +1632,10 @@ static int Open(filter_t *filter)
               }, (factor + 1) * 3)
             : cvpxpool_create(&filter->fmt_out.video, (factor + 1) * 3);
         if (ctx->_out_pool == NULL)
+        {
+            FreeOptions(ctx);
             return VLC_ENOMEM;
+        }
 
         int order[ARRAY_SIZE(engine_ladder) + 1];
         unsigned candidates = 0;
@@ -1563,6 +1677,7 @@ static int Open(filter_t *filter)
             EngineRelease(ctx);
             CVPixelBufferPoolRelease(ctx->_out_pool);
             ctx->_out_pool = NULL;
+            FreeOptions(ctx);
             return VLC_EGENERIC;
         }
 
@@ -1592,5 +1707,6 @@ static void Close(filter_t *filter)
         }
         if (filter->vctx_out != NULL)
             vlc_video_context_Release(filter->vctx_out);
+        FreeOptions(ctx);
     }
 }

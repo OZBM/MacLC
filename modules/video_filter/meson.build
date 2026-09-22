@@ -341,7 +341,9 @@ vlc_modules += {
 # MacLC real-time frame interpolation (Apple Silicon)
 vlc_modules += {
     'name' : 'maclc_frc',
-    'sources' : files('maclc_frc.m', 'maclc_frc_geometry.c', '../codec/vt_utils.c'),
+    'sources' : files('maclc_frc.m', 'maclc_frc_geometry.c',
+                      'maclc_frc_vs.m', 'maclc_frc_rife.m',
+                      '../codec/vt_utils.c'),
     'dependencies' : [
         frameworks['Foundation'],
         frameworks['CoreGraphics'],
@@ -349,6 +351,8 @@ vlc_modules += {
         frameworks['CoreMedia'],
         frameworks['VideoToolbox'],
         frameworks['Metal'],
+        frameworks['CoreML'],
+        frameworks['Accelerate'],
     ],
     'objc_args' : ['-fobjc-arc'],
     'include_directories' : [include_directories('../codec')],

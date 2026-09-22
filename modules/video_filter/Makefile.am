@@ -152,12 +152,15 @@ endif
 # MacLC real-time frame interpolation (Apple Silicon)
 libmaclc_frc_plugin_la_SOURCES = video_filter/maclc_frc.m \
 	video_filter/maclc_frc_geometry.c video_filter/maclc_frc_geometry.h \
+	video_filter/maclc_frc_backend.h \
+	video_filter/maclc_frc_vs.m video_filter/maclc_frc_rife.m \
 	codec/vt_utils.c codec/vt_utils.h
 libmaclc_frc_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-arc -fobjc-exceptions
 libmaclc_frc_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(video_filter_RPATH) \
 	-Wl,-framework,Foundation -Wl,-framework,CoreGraphics \
 	-Wl,-framework,CoreVideo -Wl,-framework,CoreMedia \
-	-Wl,-framework,VideoToolbox -Wl,-framework,Metal
+	-Wl,-framework,VideoToolbox -Wl,-framework,Metal \
+	-Wl,-framework,CoreML -Wl,-framework,Accelerate
 
 if HAVE_OSX
 video_filter_PLUGINS += libmaclc_frc_plugin.la
