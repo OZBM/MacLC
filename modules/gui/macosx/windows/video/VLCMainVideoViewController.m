@@ -582,8 +582,17 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         return;
     }
 
+    /* The interface is gone while the application quits, but fade
+     * animations queued before can still complete and land here: there
+     * is nothing left to hide then, and no object to read the timeout
+     * from (var_Create asserts on a NULL object). */
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf == NULL) {
+        return;
+    }
+
     /* Get timeout and make sure it is not lower than 1 second */
-    long long timeToKeepVisibleInSec = MAX(var_CreateGetInteger(getIntf(), "mouse-hide-timeout") / 1000, 1);
+    long long timeToKeepVisibleInSec = MAX(var_InheritInteger(p_intf, "mouse-hide-timeout") / 1000, 1);
 
     _hideControlsTimer = [NSTimer scheduledTimerWithTimeInterval:timeToKeepVisibleInSec
                                                           target:self

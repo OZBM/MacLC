@@ -440,19 +440,27 @@ _##field##TextField.delegate = self
 
 - (void)updateStatistics:(NSNotification *)aNotification
 {
-    NSAssert(self.representedInputItems.count == 1, @"Should not be updating stats for many items");
     VLCPlayerController * const playerController =
         VLCMain.sharedInstance.playQueueController.playerController;
     VLCInputItem * const currentPlayingItem = playerController.currentMedia;
+    /* A last statistics update can arrive after playback stopped: there is
+     * no current item then (and @[nil] raises). */
+    if (currentPlayingItem == nil) {
+        return;
+    }
     VLCInputItem * const firstItem = self.representedInputItems.firstObject;
-    
-    if (self.mainMenuInstance && ![currentPlayingItem.MRL isEqualToString:firstItem.MRL]) {
+
+    /* The window may show nothing yet (opened before playback started) or
+     * a previous item: follow what plays. */
+    if (self.mainMenuInstance &&
+        (self.representedInputItems.count != 1 || ![currentPlayingItem.MRL isEqualToString:firstItem.MRL])) {
         self.representedInputItems = @[currentPlayingItem];
     }
 
-    NSAssert(_statisticsEnabled, @"Statistics should not be updated when they are disabled!");
     VLCInputStats * const inputStats = aNotification.userInfo[VLCPlayerInputStats];
-    NSAssert(inputStats != nil, @"inputStats received for statistics update should not be nil!");
+    if (!_statisticsEnabled || inputStats == nil || self.representedInputItems.count != 1) {
+        return;
+    }
 
     /* input */
     [_inputReadBytesTextField setStringValue: [NSString stringWithFormat:

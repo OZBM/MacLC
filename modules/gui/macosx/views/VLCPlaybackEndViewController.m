@@ -162,7 +162,12 @@ NSString * const VLCPlaybackEndViewReturnToLibraryNotificationName = @"VLCPlayba
             return [playableExtensions containsObject:siblingItemPath.pathExtension.lowercaseString];
         }]];
     const NSInteger itemIdx = [itemPlayableSiblingItemPaths indexOfObject:itemUrl.lastPathComponent];
-    NSParameterAssert(itemIdx != NSNotFound);
+    /* The played file is not among its playable siblings when its
+     * extension is not a known media one, or when it was renamed or deleted
+     * during playback: it then has no "next" file. */
+    if (itemIdx == NSNotFound) {
+        return nil;
+    }
     if ((NSUInteger)(itemIdx + 1) >= itemPlayableSiblingItemPaths.count) {
         NSLog(@"Played item was last in parent folder.");
         return nil;

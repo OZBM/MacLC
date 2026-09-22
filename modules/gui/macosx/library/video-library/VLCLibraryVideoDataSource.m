@@ -336,20 +336,34 @@ NSString * const VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
 - (void)deleteDataForMediaItem:(VLCMediaLibraryMediaItem * const)mediaItem
                   inVideoGroup:(const VLCMediaLibraryParentGroupType)group
 {
-    [self changeDataForSpecificMediaItem:mediaItem
-                            inVideoGroup:group
-                          arrayOperation:^(NSMutableArray * const mediaArray, const NSUInteger mediaItemIndex) {
+    NSMutableArray * const groupArray = (NSMutableArray *)[self arrayForGroup:group];
+    if (groupArray == nil) {
+        return;
+    }
+    const NSUInteger mediaItemIndex = [self indexOfMediaItem:mediaItem.libraryID inArray:groupArray];
+    if (mediaItemIndex == NSNotFound) {
+        return;
+    }
 
-        [mediaArray removeObjectAtIndex:mediaItemIndex];
+    /* A deletion changes the number of rows, and the last recent video
+     * takes its whole section with it: the section index of the group is
+     * computed from whether recents exist, so a targeted delete would then
+     * name a section that is gone (-1), and the table would keep a stale
+     * row count. Both views reload instead; deletions are rare. */
+    [groupArray removeObjectAtIndex:mediaItemIndex];
+    [self rebuildFlattenedRows];
 
-    } completionHandler:^(NSIndexSet * const rowIndexSet) {
+    [_collectionViewFlowLayout resetLayout];
+    if (self.tableView.dataSource == self) {
+        [self.tableView reloadData];
+    }
+    if (self.collectionView.dataSource == self) {
+        [self.collectionView reloadData];
+    }
 
-        NSAssert(self.collectionView.dataSource == self, @"Cannot reload a collection view with a different data source");
-        const NSInteger section = [self videoGroupToRow:group];
-        NSSet<NSIndexPath *> * const indexPathSet =
-            [rowIndexSet indexPathSetWithSection:section];
-        [self.collectionView deleteItemsAtIndexPaths:indexPathSet];
-    }];
+    [NSNotificationCenter.defaultCenter postNotificationName:VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
+                                                      object:self
+                                                    userInfo:nil];
 }
 
 #pragma mark - Public query methods
@@ -490,11 +504,11 @@ NSString * const VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
 {
     switch ([self rowToVideoGroup:indexPath.section]) {
         case VLCMediaLibraryParentGroupTypeRecentVideos:
-            return _recentsArray[indexPath.item];
+            return indexPath.item < (NSInteger)_recentsArray.count ? _recentsArray[indexPath.item] : nil;
         case VLCMediaLibraryParentGroupTypeVideoLibrary:
-            return _libraryArray[indexPath.item];
+            return indexPath.item < (NSInteger)_libraryArray.count ? _libraryArray[indexPath.item] : nil;
         default:
-            NSAssert(NO, @"Unknown video group received");
+            /* A section index from before the recents appeared or went. */
             return nil;
     }
 }
@@ -535,7 +549,8 @@ NSString * const VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
         case VLCMediaLibraryParentGroupTypeVideoLibrary:
             return _NS("Library");
         default:
-            NSAssert(NO, @"Received unknown video group");
+            /* titleForRow: asks with VLCMediaLibraryParentGroupTypeUnknown
+             * for a row that is out of range. */
             return @"";
     }
 }
@@ -555,8 +570,7 @@ NSString * const VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
         case VLCMediaLibraryParentGroupTypeVideoLibrary:
             return _libraryArray.count;
         default:
-            NSAssert(NO, @"Unknown video group received.");
-            return NSNotFound;
+            return 0;
     }
 }
 

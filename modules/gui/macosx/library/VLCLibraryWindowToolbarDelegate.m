@@ -48,13 +48,15 @@ NSString * const VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier =
     self.toolbar.autosavesConfiguration = YES;
     
     if (@available(macOS 11.0, *)) {
-        const NSInteger navSidebarToggleToolbarItemIndex = 
+        /* The toolbar is customisable and autosaved: a user who removed the
+         * sidebar toggle gets a toolbar without it at every launch, so its
+         * absence is a state to live with, not an assertion. The separator
+         * then goes first. */
+        const NSUInteger navSidebarToggleToolbarItemIndex =
             [self.toolbar.items indexOfObject:self.toggleNavSidebarToolbarItem];
 
-        NSAssert(navSidebarToggleToolbarItemIndex != NSNotFound,
-                 @"Could not find navigation sidebar toggle toolbar item!");
-
-        const NSInteger trackingSeparatorItemIndex = navSidebarToggleToolbarItemIndex + 1;
+        const NSInteger trackingSeparatorItemIndex =
+            navSidebarToggleToolbarItemIndex == NSNotFound ? 0 : (NSInteger)navSidebarToggleToolbarItemIndex + 1;
         // Defensive: avoid duplicate separator when toolbar autosaves configuration restores it
         NSToolbarItem *existingSeparator = nil;
         for (NSToolbarItem *item in self.toolbar.items) {

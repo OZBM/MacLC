@@ -221,9 +221,9 @@
         [self setChildViewController:self.titlesSidebarViewController];
     } else if ([selectedSegmentLabel isEqualToString:self.chaptersSidebarViewController.title]) {
         [self setChildViewController:self.chaptersSidebarViewController];
-    } else {
-        NSAssert(NO, @"Invalid or unknown segment selected for sidebar!");
     }
+    /* No segment selected (-1) or a label that no longer matches a child:
+     * keep the current child rather than failing an assertion. */
 }
 
 - (void)setChildViewController:(NSViewController<VLCLibraryWindowSidebarChildViewController> *)viewController
