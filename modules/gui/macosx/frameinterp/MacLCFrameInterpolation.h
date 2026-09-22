@@ -73,6 +73,11 @@ typedef NS_ENUM(NSInteger, MacLCFrameInterpolationTarget) {
 
 + (void)setEnabled:(BOOL)enabled;
 
+/** Rebuilds the filter chain so a running filter picks up changed options.
+ *  Does nothing when interpolation is off. The filter reads its options once,
+ *  when it opens, so anything changed underneath it needs this. */
++ (void)restartIfRunning;
+
 /** Human name of an engine, for menus. */
 + (NSString *)nameForEngine:(MacLCFrameInterpolationEngine)engine;
 /** One line on what an engine costs and what it is for. */

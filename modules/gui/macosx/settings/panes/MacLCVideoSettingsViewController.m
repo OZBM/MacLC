@@ -659,11 +659,9 @@
         MacLCConfigPutPsz("deinterlace-mode", [modes[mIdx] UTF8String]);
     }
 
-    const NSInteger engine = _interpolationRow.popUpButton.selectedTag;
-    if (engine >= 0)
-        MacLCFrameInterpolation.engine = (MacLCFrameInterpolationEngine)engine;
-    MacLCFrameInterpolation.target =
-        (MacLCFrameInterpolationTarget)_interpolationTargetRow.popUpButton.selectedTag;
+    /* The filter reads every one of these once, when it opens, so they are
+     * written before the engine is set -- setting the engine restarts a
+     * running filter, and it should restart onto the new values. */
     MacLCConfigPutInt("maclc-frc-overrun", _interpolationOverrunRow.popUpButton.selectedTag);
     MacLCConfigPutInt("maclc-frc-rife",
                       _interpolationRifeRow.checkboxButton.state == NSControlStateValueOn);
@@ -673,7 +671,16 @@
                       [_interpolationRifeModelRow.textField.stringValue UTF8String]);
     MacLCConfigPutPsz("maclc-frc-svp-path",
                       [_interpolationSvpPathRow.textField.stringValue UTF8String]);
+
+    const NSInteger engine = _interpolationRow.popUpButton.selectedTag;
+    if (engine >= 0)
+        MacLCFrameInterpolation.engine = (MacLCFrameInterpolationEngine)engine;
+    MacLCFrameInterpolation.target =
+        (MacLCFrameInterpolationTarget)_interpolationTargetRow.popUpButton.selectedTag;
     [MacLCFrameInterpolation setEnabled:engine >= 0];
+    /* Nothing above restarts the filter when the engine and the target were
+     * already what they are and only a sub-option moved. */
+    [MacLCFrameInterpolation restartIfRunning];
 
     NSString *aspectTitle = _aspectRatioRow.popUpButton.titleOfSelectedItem;
     if ([aspectTitle isEqualToString:_NS("Default")]) {

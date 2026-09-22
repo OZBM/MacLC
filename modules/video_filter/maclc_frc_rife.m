@@ -794,9 +794,25 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
 - (BOOL)convertMultiArrayToBGRA:(MLMultiArray *)multiArray
                  dstPixelBuffer:(CVPixelBufferRef)bgraBuf
 {
-    const size_t planePixels = (size_t)_workingWidth * _workingHeight;
     const float minVal = 0.0f;
     const float maxVal = 1.0f;
+
+    /* Core ML is free to pad rows and planes, and does on some devices, so the
+     * layout comes from the array rather than from the picture's size. The
+     * last three strides are plane, row and column whether the shape is
+     * [1, 3, H, W] or [3, H, W]. */
+    NSArray<NSNumber *> *strides = multiArray.strides;
+    if (strides.count < 3)
+        return false;
+    const size_t planeStride = strides[strides.count - 3].unsignedLongValue;
+    const size_t rowStride   = strides[strides.count - 2].unsignedLongValue;
+    if (strides[strides.count - 1].unsignedLongValue != 1
+     || rowStride < (size_t)_workingWidth
+     || planeStride < rowStride * (size_t)_workingHeight)
+        return NO;
+
+    /* The scratch planes are packed, so everything downstream counts pixels. */
+    const size_t planePixels = (size_t)_workingWidth * _workingHeight;
 
     float *srcFloatR = NULL;
     float *srcFloatG = NULL;
@@ -805,12 +821,13 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
     if (multiArray.dataType == MLMultiArrayDataTypeFloat16)
     {
         uint16_t *src16R = (uint16_t *)multiArray.dataPointer;
-        uint16_t *src16G = src16R + planePixels;
-        uint16_t *src16B = src16G + planePixels;
+        uint16_t *src16G = src16R + planeStride;
+        uint16_t *src16B = src16G + planeStride;
+        const size_t srcRowBytes16 = rowStride * sizeof(uint16_t);
 
-        vImage_Buffer srcBuf16R = { .data = src16R, .height = _workingHeight, .width = _workingWidth, .rowBytes = _workingWidth * sizeof(uint16_t) };
-        vImage_Buffer srcBuf16G = { .data = src16G, .height = _workingHeight, .width = _workingWidth, .rowBytes = _workingWidth * sizeof(uint16_t) };
-        vImage_Buffer srcBuf16B = { .data = src16B, .height = _workingHeight, .width = _workingWidth, .rowBytes = _workingWidth * sizeof(uint16_t) };
+        vImage_Buffer srcBuf16R = { .data = src16R, .height = _workingHeight, .width = _workingWidth, .rowBytes = srcRowBytes16 };
+        vImage_Buffer srcBuf16G = { .data = src16G, .height = _workingHeight, .width = _workingWidth, .rowBytes = srcRowBytes16 };
+        vImage_Buffer srcBuf16B = { .data = src16B, .height = _workingHeight, .width = _workingWidth, .rowBytes = srcRowBytes16 };
 
         vImage_Buffer dstBufFR = { .data = _rScratchF, .height = _workingHeight, .width = _workingWidth, .rowBytes = _workingWidth * sizeof(float) };
         vImage_Buffer dstBufFG = { .data = _gScratchF, .height = _workingHeight, .width = _workingWidth, .rowBytes = _workingWidth * sizeof(float) };
@@ -826,9 +843,25 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
     }
     else
     {
-        srcFloatR = (float *)multiArray.dataPointer;
-        srcFloatG = srcFloatR + planePixels;
-        srcFloatB = srcFloatG + planePixels;
+        float *plane0 = (float *)multiArray.dataPointer;
+        const size_t srcRowBytesF = rowStride * sizeof(float);
+        vImage_Buffer srcF[3] = {
+            { .data = plane0,                   .height = _workingHeight, .width = _workingWidth, .rowBytes = srcRowBytesF },
+            { .data = plane0 + planeStride,     .height = _workingHeight, .width = _workingWidth, .rowBytes = srcRowBytesF },
+            { .data = plane0 + planeStride * 2, .height = _workingHeight, .width = _workingWidth, .rowBytes = srcRowBytesF },
+        };
+        float *scratch[3] = { _rScratchF, _gScratchF, _bScratchF };
+        for (unsigned i = 0; i < 3; i++)
+        {
+            vImage_Buffer dst = { .data = scratch[i], .height = _workingHeight,
+                                  .width = _workingWidth,
+                                  .rowBytes = (size_t)_workingWidth * sizeof(float) };
+            if (vImageCopyBuffer(&srcF[i], &dst, sizeof(float), kvImageNoFlags) != kvImageNoError)
+                return NO;
+        }
+        srcFloatR = _rScratchF;
+        srcFloatG = _gScratchF;
+        srcFloatB = _bScratchF;
     }
 
     /* Constrain synthesized floating-point color values to the valid [0.0, 1.0] unit range. */
@@ -1092,6 +1125,9 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
         _cachedWorkCur = NULL;
     }
     _cachedWorkCurArray = nil;
+    /* The feature dictionary holds the last pair's pictures; a seek means they
+     * are no longer worth keeping alive. */
+    [_featureDict removeAllObjects];
 }
 
 - (void)stop

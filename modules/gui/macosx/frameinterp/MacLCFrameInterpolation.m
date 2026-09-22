@@ -259,7 +259,12 @@ static NSMutableArray<NSString *> *FilterList(void)
                 svpBundlePath = [fm fileExistsAtPath:candidate] ? candidate : svpConfig;
             }
         } else {
-            svpBundlePath = @"/Applications/SVP 4 Mac.app";
+            /* The engine looks in both places, so this has to as well, or an
+             * SVP installed for one user alone shows up as missing. */
+            NSString * const inHome =
+                [NSHomeDirectory() stringByAppendingPathComponent:@"Applications/SVP 4 Mac.app"];
+            svpBundlePath = [fm fileExistsAtPath:@"/Applications/SVP 4 Mac.app"]
+                ? @"/Applications/SVP 4 Mac.app" : inHome;
         }
 
         if (![fm fileExistsAtPath:svpBundlePath]) {
@@ -267,13 +272,25 @@ static NSMutableArray<NSString *> *FilterList(void)
                 return [NSString stringWithFormat:
                     _NS("SVP 4 Mac is not installed; it was looked for at %@."), svpConfig];
             } else {
-                return _NS("SVP 4 Mac is not installed; it was looked for at /Applications/SVP 4 Mac.app.");
+                return _NS("SVP 4 Mac is not installed; it was looked for at "
+                           "/Applications/SVP 4 Mac.app and in your own Applications folder.");
             }
         }
         return nil;
     }
 
     if (engine == MacLCFrameInterpolationEngineRIFE) {
+        /* The engine only takes a compiled model or a package, so a folder
+         * that holds neither holds nothing, whatever else Finder left in it. */
+        BOOL (^holdsAModel)(NSString *) = ^BOOL(NSString *folder) {
+            for (NSString *item in [fm contentsOfDirectoryAtPath:folder error:nil]) {
+                if ([item.pathExtension isEqualToString:@"mlmodelc"]
+                 || [item.pathExtension isEqualToString:@"mlpackage"]) {
+                    return YES;
+                }
+            }
+            return NO;
+        };
         NSString * const customModel = self.RIFEModelPath;
         if (customModel.length > 0 && [fm fileExistsAtPath:customModel]) {
             return nil;
@@ -283,8 +300,7 @@ static NSMutableArray<NSString *> *FilterList(void)
         BOOL isDir = NO;
         if ([fm fileExistsAtPath:bundleModels isDirectory:&isDir]) {
             if (isDir) {
-                NSArray * const items = [fm contentsOfDirectoryAtPath:bundleModels error:nil];
-                if (items.count > 0) {
+                if (holdsAModel(bundleModels)) {
                     return nil;
                 }
             } else {
@@ -296,8 +312,7 @@ static NSMutableArray<NSString *> *FilterList(void)
             [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/MacLC/models"];
         if ([fm fileExistsAtPath:appSupportModels isDirectory:&isDir]) {
             if (isDir) {
-                NSArray * const items = [fm contentsOfDirectoryAtPath:appSupportModels error:nil];
-                if (items.count > 0) {
+                if (holdsAModel(appSupportModels)) {
                     return nil;
                 }
             } else {

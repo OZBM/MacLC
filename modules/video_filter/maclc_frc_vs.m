@@ -10,6 +10,7 @@
 #endif
 
 #include <vlc_common.h>
+#include <vlc_threads.h>
 #include <vlc_tick.h>
 
 #import <Foundation/Foundation.h>
@@ -63,6 +64,7 @@ struct maclc_frc_vs_backend
 
     /* VapourSynth engine instances */
     VSCore *vs_core;
+    bool core_is_the_script_s;  /* createScript took it, even if it failed */
     VSScript *vs_script;
     VSNode *in_node;
     VSNode *out_node;
@@ -88,6 +90,13 @@ struct maclc_frc_vs_backend
     uint64_t run_generation;
     unsigned run_pending;
     const VSFrame *run_frames[8];
+
+    /* What VapourSynth still has in its hands. A pass that gives up on its
+     * deadline leaves requests running, and freeing the core or this very
+     * structure while one of them is still in flight is a crash waiting for a
+     * slow machine, so nothing is torn down until both of these reach zero. */
+    unsigned async_inflight;   /* requests made, callback not yet returned */
+    unsigned active_workers;   /* threads inside the source filter */
 };
 
 /*****************************************************************************
@@ -117,6 +126,18 @@ static bool RingHasFrame(const struct maclc_frc_vs_backend *backend, int64_t n)
             return true;
     }
     return false;
+}
+
+/* The newest frame published so far, or -1 when nothing has been. */
+static int64_t RingNewestIndex(const struct maclc_frc_vs_backend *backend)
+{
+    int64_t newest = -1;
+    for (int i = 0; i < backend->ring_count; i++)
+    {
+        if (backend->ring[i].index > newest)
+            newest = backend->ring[i].index;
+    }
+    return newest;
 }
 
 static CVPixelBufferRef RingGetFrame(const struct maclc_frc_vs_backend *backend, int64_t n)
@@ -379,6 +400,13 @@ static CVPixelBufferRef PoolTake(CVPixelBufferPoolRef pool)
  * condition variable gate inside InFilterGetFrame ensures that frame
  * requests block cleanly until run() publishes the necessary frames,
  * without suffering the single-frame throughput serialization of fmFrameState. */
+/* Both counters are watched by stop(); the lock is already held. */
+static void WorkerLeave(struct maclc_frc_vs_backend *backend)
+{
+    if (--backend->active_workers == 0)
+        pthread_cond_broadcast(&backend->run_cond);
+}
+
 static const VSFrame *VS_CC InFilterGetFrame(int n, int activationReason,
                                              void *instanceData,
                                              void **frameData,
@@ -394,31 +422,49 @@ static const VSFrame *VS_CC InFilterGetFrame(int n, int activationReason,
     struct maclc_frc_vs_backend *backend = (struct maclc_frc_vs_backend *)instanceData;
 
     pthread_mutex_lock(&backend->lock);
-    while (!RingHasFrame(backend, n) && !backend->b_flushing && !backend->b_stopped && !backend->run_cancelled)
+    backend->active_workers++;
+
+    /* run() publishes both frames of the pair before it asks for anything, so
+     * a request for something newer than the pair belongs to a pass that has
+     * already been given up on: waiting for it would wait forever. */
+    while (!RingHasFrame(backend, n)
+        && n <= RingNewestIndex(backend)
+        && !backend->b_flushing && !backend->b_stopped && !backend->run_cancelled)
     {
         pthread_cond_wait(&backend->ring_cond, &backend->lock);
     }
 
+    CVPixelBufferRef buf = NULL;
+    const char *refusal = NULL;
     if (backend->b_flushing || backend->b_stopped || backend->run_cancelled)
+        refusal = "frame request abandoned: the sequence was flushed or stopped";
+    else if (!RingHasFrame(backend, n))
+        refusal = "frame request abandoned: that frame is not in the player's hands";
+    else
     {
-        vsapi->setFilterError("Frame request aborted due to flush, stop, or timeout", frameCtx);
-        pthread_mutex_unlock(&backend->lock);
-        return NULL;
+        buf = RingGetFrame(backend, n);
+        if (buf == NULL)
+            refusal = "frame request abandoned: no source frame";
+        else
+            CVPixelBufferRetain(buf);
     }
 
-    CVPixelBufferRef buf = RingGetFrame(backend, n);
-    if (buf == NULL)
+    if (refusal != NULL)
     {
-        vsapi->setFilterError("Source frame not found in ring buffer", frameCtx);
+        vsapi->setFilterError(refusal, frameCtx);
+        WorkerLeave(backend);
         pthread_mutex_unlock(&backend->lock);
         return NULL;
     }
-    CVPixelBufferRetain(buf);
     pthread_mutex_unlock(&backend->lock);
 
     /* Perform pixel conversion outside the lock to avoid stalling other workers */
     VSFrame *frame = CVPixelBufferToVSFrame(backend, buf);
     CVPixelBufferRelease(buf);
+
+    pthread_mutex_lock(&backend->lock);
+    WorkerLeave(backend);
+    pthread_mutex_unlock(&backend->lock);
 
     if (frame == NULL)
     {
@@ -448,6 +494,8 @@ static void VS_CC FrameDoneCallback(void *userData, const VSFrame *f, int n,
     struct maclc_frc_vs_backend *backend = ticket->backend;
 
     pthread_mutex_lock(&backend->lock);
+    if (backend->async_inflight > 0 && --backend->async_inflight == 0)
+        pthread_cond_broadcast(&backend->run_cond);
     if (ticket->generation == backend->run_generation && !backend->run_cancelled)
     {
         if (f != NULL && errorMsg == NULL)
@@ -460,8 +508,8 @@ static void VS_CC FrameDoneCallback(void *userData, const VSFrame *f, int n,
             if (f != NULL)
                 backend->vsapi->freeFrame(f);
         }
-        if (--backend->run_pending == 0)
-            pthread_cond_signal(&backend->run_cond);
+        if (--backend->run_pending == 0 || backend->run_failed)
+            pthread_cond_broadcast(&backend->run_cond);
     }
     else
     {
@@ -629,6 +677,9 @@ static bool maclc_frc_vs_run(struct maclc_frc_backend *b,
         ticket->slot = i;
 
         int out_frame_no = (int)(n * backend->setup.factor + (i + 1));
+        pthread_mutex_lock(&backend->lock);
+        backend->async_inflight++;
+        pthread_mutex_unlock(&backend->lock);
         backend->vsapi->getFrameAsync(out_frame_no, backend->out_node,
                                       FrameDoneCallback, ticket);
     }
@@ -782,8 +833,36 @@ static void maclc_frc_vs_stop(struct maclc_frc_backend *b)
     backend->run_generation++;
     pthread_cond_broadcast(&backend->ring_cond);
     pthread_cond_broadcast(&backend->run_cond);
+
+    /* Freeing a node or a core while a request is still running is undefined,
+     * and the callback would come back to a structure that no longer exists.
+     * Every worker and every callback is on its way out by now -- they all
+     * check b_stopped -- so this wait is short; it is bounded anyway, because
+     * leaking a backend is a far smaller thing than a crash on quit. */
+    const vlc_tick_t quiesce_deadline = vlc_tick_now() + VLC_TICK_FROM_SEC(2);
+    while (backend->async_inflight > 0 || backend->active_workers > 0)
+    {
+        const vlc_tick_t left = quiesce_deadline - vlc_tick_now();
+        if (left <= 0)
+            break;
+        struct timespec ts = {
+            .tv_sec = left / CLOCK_FREQ,
+            .tv_nsec = (left % CLOCK_FREQ) * 1000,
+        };
+        if (pthread_cond_timedwait_relative_np(&backend->run_cond, &backend->lock, &ts) != 0)
+            break;
+    }
+    const bool quiet = backend->async_inflight == 0 && backend->active_workers == 0;
     RingClear(backend);
     pthread_mutex_unlock(&backend->lock);
+
+    if (!quiet)
+    {
+        msg_Err(backend->setup.log, "VapourSynth did not let go within two "
+                "seconds; leaving its core and this engine behind rather than "
+                "freeing them under it");
+        return;
+    }
 
     /* Output and input nodes must be freed before freeing the script context,
      * as required by VSScript documentation to prevent dangling core references. */
@@ -806,11 +885,12 @@ static void maclc_frc_vs_stop(struct maclc_frc_backend *b)
         backend->vs_script = NULL;
         backend->vs_core = NULL;
     }
-    else if (backend->vs_core != NULL)
+    else if (backend->vs_core != NULL && !backend->core_is_the_script_s)
     {
         backend->vsapi->freeCore(backend->vs_core);
         backend->vs_core = NULL;
     }
+    backend->vs_core = NULL;
 
     if (backend->vss_handle != NULL)
     {
@@ -997,6 +1077,10 @@ maclc_frc_vs_start(const struct maclc_frc_backend_setup *setup)
         return NULL;
     }
 
+    /* createScript owns the core from here on, on success and on failure
+     * alike (VSScript4.h). The pointer stays, because frames are still
+     * allocated from it; what changes is who frees it. */
+    backend->core_is_the_script_s = true;
     backend->vs_script = vssapi->createScript(core);
     if (backend->vs_script == NULL)
     {
