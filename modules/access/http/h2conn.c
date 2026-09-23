@@ -37,6 +37,7 @@
 #include <vlc_poll.h>
 #include <vlc_block.h>
 #include <vlc_interrupt.h>
+#include <vlc_network.h>
 #include <vlc_tls.h>
 
 #include "h2frame.h"
@@ -838,6 +839,13 @@ static void vlc_h2_conn_destroy(struct vlc_h2_conn *conn)
     assert(conn->streams == NULL);
 
     vlc_h2_error(conn, VLC_H2_NO_ERROR);
+
+    /* On macOS, pthread_cancel() does not wake the receive thread up from
+     * poll(): a server that keeps the connection open after GOAWAY (as the
+     * one behind an HTTP redirect often does) left vlc_join() waiting
+     * forever. Ending the receive half of the socket makes the thread read
+     * EOF and leave on its own. */
+    shutdown(vlc_tls_GetFD(conn->conn.tls), SHUT_RD);
 
     vlc_cancel(conn->thread);
     vlc_join(conn->thread, NULL);
