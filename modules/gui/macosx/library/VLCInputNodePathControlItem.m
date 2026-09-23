@@ -58,9 +58,9 @@
      * leaves root->p_item NULL. Opening a discovery service that has found
      * nothing yet shows exactly that node, so it needs an item too. */
     VLCInputItem * const inputItem = inputNode.inputItem;
-    NSString *identifier = inputItem.path;
+    NSString *identifier = inputItem.MRL;
     if (identifier.length == 0) {
-        identifier = inputItem.MRL;
+        identifier = inputItem.path;
     }
     if (identifier.length == 0) {
         identifier = fallbackTitle;

@@ -251,11 +251,14 @@ NSString * const VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
 
     [self rebuildFlattenedRows];
 
-    NSAssert(self.tableView == nil || self.tableView.dataSource == self, @"Cannot reload a table view with a different data source");
-    [self.tableView reloadData];
-
-    NSAssert(self.collectionView == nil || self.collectionView.dataSource == self, @"Cannot reload a collection view with a different data source");
-    [self.collectionView reloadData];
+    /* A library update can land after the view went to another data
+     * source (the user moved to another section): leave it alone then. */
+    if (self.tableView.dataSource == self) {
+        [self.tableView reloadData];
+    }
+    if (self.collectionView.dataSource == self) {
+        [self.collectionView reloadData];
+    }
 
     [NSNotificationCenter.defaultCenter postNotificationName:VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
                                                       object:self
@@ -303,8 +306,7 @@ NSString * const VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
     completionHandler(rowIndexSet);
 
     // Targeted table view update using flattened row index
-    if (flatRowIndex != NSNotFound) {
-        NSAssert(self.tableView.dataSource == self, @"Cannot reload a table view with a different data source");
+    if (flatRowIndex != NSNotFound && self.tableView.dataSource == self) {
         [self.tableView reloadDataForRowIndexes:[NSIndexSet indexSetWithIndex:flatRowIndex]
                                   columnIndexes:[NSIndexSet indexSetWithIndex:0]];
     }
@@ -325,7 +327,9 @@ NSString * const VLCLibraryVideoDataSourceDisplayedCollectionChangedNotification
 
     } completionHandler:^(NSIndexSet * const rowIndexSet) {
 
-        NSAssert(self.collectionView.dataSource == self, @"Cannot reload a collection view with a different data source");
+        if (self.collectionView.dataSource != self) {
+            return;
+        }
         const NSInteger section = [self videoGroupToRow:group];
         NSSet<NSIndexPath *> * const indexPathSet =
             [rowIndexSet indexPathSetWithSection:section];

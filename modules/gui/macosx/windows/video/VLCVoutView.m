@@ -250,7 +250,11 @@
 {
     i_lastScrollWheelDirection = 0;
     f_cumulatedXScrollValue = f_cumulatedYScrollValue = 0.;
-    msg_Dbg(getIntf(), "Reset scrolling timer");
+    /* The timer can fire after the interface is gone, while quitting. */
+    intf_thread_t * const p_intf = getIntf();
+    if (p_intf != NULL) {
+        msg_Dbg(p_intf, "Reset scrolling timer");
+    }
 }
 
 - (void)scrollWheel:(NSEvent *)theEvent
