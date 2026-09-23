@@ -44,6 +44,7 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
 @interface MacLCSettingsWindowController () <NSSplitViewDelegate, NSTableViewDataSource, NSTableViewDelegate, NSSearchFieldDelegate, NSWindowDelegate, NSToolbarDelegate>
 {
     intf_thread_t *_p_intf;
+    BOOL _paneShown; /* the current pane got paneDidAppear, not paneDidDisappear */
 }
 
 @property (nonatomic, strong) NSArray<id<MacLCSettingsPane>> *allPanes;
@@ -263,6 +264,12 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
 
     if (_currentPane) {
         [_currentPane loadSettings];
+        /* Closing the window told the pane it disappeared: it stopped
+         * observing what it shows live (display headroom, video engine). */
+        if (!_paneShown && [_currentPane respondsToSelector:@selector(paneDidAppear)]) {
+            [_currentPane paneDidAppear];
+        }
+        _paneShown = YES;
     }
 }
 
@@ -279,6 +286,7 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
     if (_currentPane && [_currentPane respondsToSelector:@selector(paneDidDisappear)]) {
         [_currentPane paneDidDisappear];
     }
+    _paneShown = NO;
 }
 
 #pragma mark - Sidebar Table View Data Source & Delegate
@@ -386,6 +394,7 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
     if ([newPane respondsToSelector:@selector(paneDidAppear)]) {
         [newPane paneDidAppear];
     }
+    _paneShown = YES;
 
     self.window.title = newPane.paneTitle;
     [[NSUserDefaults standardUserDefaults] setObject:newPane.paneIdentifier forKey:kMacLCLastSelectedPaneKey];

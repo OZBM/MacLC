@@ -34,8 +34,19 @@
 
 #import "views/VLCUIUnits.h"
 
+/* The display link calls back on its own thread, and the tick runs later on
+ * the main queue: both can come after the cell is gone. They reach it
+ * through this box only, which every pending block keeps alive. */
+@interface VLCPlaybackProgressSliderCellTarget : NSObject
+@property (weak) VLCPlaybackProgressSliderCell *cell;
+@end
+
+@implementation VLCPlaybackProgressSliderCellTarget
+@end
+
 @interface VLCPlaybackProgressSliderCell ()
 {
+    VLCPlaybackProgressSliderCellTarget *_displayLinkTarget;
     NSInteger _animationWidth;
     NSInteger _animationPosition;
     double _lastTime;
@@ -61,9 +72,10 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
                                     void *displayLinkContext)
 {
     const CVTimeStamp inNowCopy = *inNow;
+    VLCPlaybackProgressSliderCellTarget * const target =
+        (__bridge VLCPlaybackProgressSliderCellTarget *)displayLinkContext;
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlaybackProgressSliderCell * const sliderCell = (__bridge VLCPlaybackProgressSliderCell*)displayLinkContext;
-        [sliderCell displayLink:displayLink tickWithTime:&inNowCopy];
+        [target.cell displayLink:displayLink tickWithTime:&inNowCopy];
     });
     return kCVReturnSuccess;
 }
@@ -91,6 +103,7 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
 
 - (void)dealloc
 {
+    CVDisplayLinkStop(_displayLink);
     CVDisplayLinkRelease(_displayLink);
 }
 
@@ -98,7 +111,9 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
 {
     const CVReturn ret = CVDisplayLinkCreateWithActiveCGDisplays(&_displayLink);
     NSAssert(ret == kCVReturnSuccess && _displayLink != NULL, @"Could not init displaylink");
-    CVDisplayLinkSetOutputCallback(_displayLink, DisplayLinkCallback, (__bridge void*) self);
+    _displayLinkTarget = [[VLCPlaybackProgressSliderCellTarget alloc] init];
+    _displayLinkTarget.cell = self;
+    CVDisplayLinkSetOutputCallback(_displayLink, DisplayLinkCallback, (__bridge void*) _displayLinkTarget);
 }
 
 - (void)setSliderStyleLight

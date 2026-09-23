@@ -397,7 +397,7 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     if (!p_aout)
         return nil;
 
-    return [NSString stringWithFormat:@"%@;%@;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%i;%f;%f",
+    NSString * const profile = [NSString stringWithFormat:@"%@;%@;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%f;%i;%f;%f",
                      B64EncAndFree(var_GetNonEmptyString(p_aout, "equalizer-preset")),
                      B64EncAndFree(var_InheritString(p_aout, "audio-filter")),
                      var_InheritFloat(p_aout, "compressor-rms-peak"),
@@ -416,6 +416,8 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
                      var_InheritBool(p_aout, "equalizer-2pass"),
                      var_InheritFloat(p_aout, "pitch-shift"),
                      var_InheritFloat(p_aout, "pan-control")];
+    aout_Release(p_aout);
+    return profile;
 }
 
 - (void)saveCurrentProfile
@@ -727,6 +729,7 @@ static bool GetEqualizerStatus(intf_thread_t *__unused p_custom_intf,
                VLC_VAR_STRING | VLC_VAR_DOINHERIT);
     var_Create(p_aout, "equalizer-preamp",
                VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+    aout_Release(p_aout);
     [self updatePresetSelector];
 
     /* Set the the checkboxes */

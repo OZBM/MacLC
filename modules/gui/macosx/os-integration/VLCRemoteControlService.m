@@ -226,8 +226,17 @@ static inline NSArray * RemoteCommandCenterCommandsToHandle()
 {
     MPRemoteCommandCenter *cc = [MPRemoteCommandCenter sharedCommandCenter];
 
+    /* The play queue returns VLC error codes: 0 is success. */
     if (event.command == cc.playCommand) {
-        return [_playQueueController startPlayQueue] ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusNoActionableNowPlayingItem;
+        switch (_playerController.playerState) {
+            case VLC_PLAYER_STATE_PLAYING:
+                return MPRemoteCommandHandlerStatusSuccess;
+            case VLC_PLAYER_STATE_PAUSED:
+                [_playQueueController resumePlayback];
+                return MPRemoteCommandHandlerStatusSuccess;
+            default:
+                return [_playQueueController startPlayQueue] == VLC_SUCCESS ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusNoActionableNowPlayingItem;
+        }
     }
     if (event.command == cc.pauseCommand) {
         [_playQueueController pausePlayback];
@@ -242,10 +251,10 @@ static inline NSArray * RemoteCommandCenterCommandsToHandle()
         return MPRemoteCommandHandlerStatusSuccess;
     }
     if (event.command == cc.nextTrackCommand) {
-        return [_playQueueController playNextItem] ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusCommandFailed;
+        return [_playQueueController playNextItem] == VLC_SUCCESS ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusCommandFailed;
     }
     if (event.command == cc.previousTrackCommand) {
-        return [_playQueueController playPreviousItem] ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusCommandFailed;
+        return [_playQueueController playPreviousItem] == VLC_SUCCESS ? MPRemoteCommandHandlerStatusSuccess : MPRemoteCommandHandlerStatusCommandFailed;
     }
     if (event.command == cc.skipForwardCommand) {
         [_playerController jumpForwardMedium];

@@ -28,6 +28,23 @@
 
 #include <vlc_common.h>
 #include <vlc_configuration.h>
+#include <vlc_plugin.h>
+
+/* config_Get*() and config_Put*() assert that the option exists and has
+ * their type: a settings pane asking for an option a build lacks, or with
+ * the wrong type, must not abort the player. */
+static module_config_t *FindConfig(const char *name, int kind)
+{
+    module_config_t * const item = config_FindConfig(name);
+    if (item == NULL)
+        return NULL;
+    switch (kind) {
+        case CONFIG_ITEM_STRING:  return IsConfigStringType(item->i_type) ? item : NULL;
+        case CONFIG_ITEM_INTEGER: return IsConfigIntegerType(item->i_type) ? item : NULL;
+        case CONFIG_ITEM_FLOAT:   return IsConfigFloatType(item->i_type) ? item : NULL;
+    }
+    return NULL;
+}
 
 BOOL MacLCConfigExists(const char *name)
 {
@@ -36,42 +53,42 @@ BOOL MacLCConfigExists(const char *name)
 
 char *MacLCConfigGetPsz(const char *name)
 {
-    if (!config_FindConfig(name))
+    if (!FindConfig(name, CONFIG_ITEM_STRING))
         return NULL;
     return config_GetPsz(name);
 }
 
 int64_t MacLCConfigGetInt(const char *name, int64_t fallback)
 {
-    if (!config_FindConfig(name))
+    if (!FindConfig(name, CONFIG_ITEM_INTEGER))
         return fallback;
     return config_GetInt(name);
 }
 
 float MacLCConfigGetFloat(const char *name, float fallback)
 {
-    if (!config_FindConfig(name))
+    if (!FindConfig(name, CONFIG_ITEM_FLOAT))
         return fallback;
     return config_GetFloat(name);
 }
 
 void MacLCConfigPutPsz(const char *name, const char *value)
 {
-    if (!config_FindConfig(name))
+    if (!FindConfig(name, CONFIG_ITEM_STRING))
         return;
     config_PutPsz(name, value);
 }
 
 void MacLCConfigPutInt(const char *name, int64_t value)
 {
-    if (!config_FindConfig(name))
+    if (!FindConfig(name, CONFIG_ITEM_INTEGER))
         return;
     config_PutInt(name, value);
 }
 
 void MacLCConfigPutFloat(const char *name, float value)
 {
-    if (!config_FindConfig(name))
+    if (!FindConfig(name, CONFIG_ITEM_FLOAT))
         return;
     config_PutFloat(name, value);
 }

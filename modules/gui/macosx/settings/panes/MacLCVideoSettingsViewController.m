@@ -641,7 +641,10 @@
 - (void)applyChanges
 {
     MacLCConfigPutInt("video", _videoEnableRow.checkboxButton.state == NSControlStateValueOn);
-    MacLCConfigPutInt("macosx-vdev", _targetScreenRow.popUpButton.selectedTag);
+    /* A display saved then unplugged matches no item: keep it saved rather
+     * than writing the -1 of an empty selection. */
+    if (_targetScreenRow.popUpButton.selectedTag >= 0)
+        MacLCConfigPutInt("macosx-vdev", _targetScreenRow.popUpButton.selectedTag);
     MacLCConfigPutInt("video-on-top", _onTopRow.checkboxButton.state == NSControlStateValueOn);
     MacLCConfigPutInt("macosx-video-autoresize", _autoResizeRow.checkboxButton.state == NSControlStateValueOn);
     MacLCConfigPutInt("macosx-pause-minimized", _pauseMinimizedRow.checkboxButton.state == NSControlStateValueOn);

@@ -1497,7 +1497,7 @@ static int BossCallback(vlc_object_t *p_this,
 - (const struct vlc_player_chapter *)chapterAtIndexForCurrentTitle:(size_t)index
 {
     const struct vlc_player_title *p_current_title = [self selectedTitle];
-    if (p_current_title == NULL || !p_current_title->chapter_count) {
+    if (p_current_title == NULL || index >= p_current_title->chapter_count) {
         return NULL;
     }
 
@@ -1798,11 +1798,13 @@ static int BossCallback(vlc_object_t *p_this,
 
 - (VLCTrackMetaData *)selectedTrackMetadataOfCategory:(enum es_format_category_e)category
 {
+    /* The track is only valid while the player is locked. */
     vlc_player_Lock(_p_player);
     const struct vlc_player_track * const p_track =
         vlc_player_GetSelectedTrack(_p_player, category);
+    VLCTrackMetaData * const metadata = [[VLCTrackMetaData alloc] initWithTrackStructure:p_track];
     vlc_player_Unlock(_p_player);
-    return [[VLCTrackMetaData alloc] initWithTrackStructure:p_track];
+    return metadata;
 }
 
 - (BOOL)videoTracksEnabled
@@ -2432,7 +2434,9 @@ static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
 {
     self = [super init];
     if (self && p_track != NULL) {
-        _esID = p_track->es_id;
+        /* Menus keep this object after the track list changed: without a
+         * reference, selecting it would use a freed ES id. */
+        _esID = p_track->es_id != NULL ? vlc_es_id_Hold(p_track->es_id) : NULL;
         _name = toNSStr(p_track->name);
         _selected = p_track->selected;
         _videoTransferFunction = (p_track->fmt.i_cat == VIDEO_ES)
@@ -2445,6 +2449,12 @@ static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
             : 0;
     }
     return self;
+}
+
+- (void)dealloc
+{
+    if (_esID != NULL)
+        vlc_es_id_Release(_esID);
 }
 
 - (NSString *)description

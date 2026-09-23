@@ -213,6 +213,10 @@
         for (NSValue *ptr in vouts) {
             vout_thread_t *p_vout = [ptr pointerValue];
 
+            /* The subtitle delay filter proxies its variable to the video
+             * output only while it runs: created here, the value is also
+             * what the filter inherits when the line below starts it. */
+            var_Create(p_vout, SUBSDELAY_CFG_FACTOR, VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
             var_SetFloat(p_vout, SUBSDELAY_CFG_FACTOR, f_factor);
             vout_Release(p_vout);
         }

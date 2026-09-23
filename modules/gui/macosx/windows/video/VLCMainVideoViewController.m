@@ -557,6 +557,7 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     }
 
     const bool floatOnTopEnabled = var_GetBool(voutThread, "video-on-top");
+    vout_Release(voutThread);
     self.floatOnTopIndicatorImageView.hidden = !floatOnTopEnabled;
 }
 

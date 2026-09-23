@@ -1359,6 +1359,9 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 
 - (IBAction)createVideoSnapshot:(id)sender
 {
+    /* Without a video output, there is nothing to take. */
+    if (!_playerController.activeVideoPlayback)
+        return;
     [_playerController takeSnapshot];
     [[MacLCOSDController sharedController] showMessage:_NS("Snapshot Taken")
                                             symbolName:@"camera.fill"];
@@ -1826,6 +1829,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     }
 
     if (var_Get(p_object, psz_variable, &val) < 0) {
+        free(text);
         return;
     }
 

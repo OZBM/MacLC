@@ -549,7 +549,12 @@ static int WindowFloatOnTop(vlc_object_t *obj,
     // TODO: find a cleaner way for "start in fullscreen"
     // Start in fs, because either prefs settings, or fullscreen button was pressed before
     /* detect the video-splitter and prevent starts in fullscreen if it is enabled */
-    char *psz_splitter = var_GetString(voutView.voutThread, "video-splitter");
+    char *psz_splitter = NULL;
+    vout_thread_t * const p_vout = voutView.voutThread; /* held */
+    if (p_vout != NULL) {
+        psz_splitter = var_GetString(p_vout, "video-splitter");
+        vout_Release(p_vout);
+    }
     BOOL b_have_splitter = psz_splitter != NULL && strcmp(psz_splitter, "none");
     free(psz_splitter);
 
@@ -796,7 +801,8 @@ static int WindowFloatOnTop(vlc_object_t *obj,
     if (b_nativeFullscreenMode) {
         if(!o_current_window)
             o_current_window = VLCMain.sharedInstance.libraryWindow ;
-        assert(o_current_window);
+        if (o_current_window == nil)
+            return;
 
         // fullscreen might be triggered twice (vout event)
         // so ignore duplicate events here
@@ -808,7 +814,10 @@ static int WindowFloatOnTop(vlc_object_t *obj,
             });
         }
     } else {
-        assert(o_current_window);
+        /* The window may be gone already: a fullscreen request can come
+         * from a video output that is closing. */
+        if (o_current_window == nil)
+            return;
 
         if (b_fullscreen) {
             if (_playerController.playerState != VLC_PLAYER_STATE_STOPPED && [_playerController activeVideoPlayback]) {
