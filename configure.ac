@@ -2,7 +2,7 @@ dnl Autoconf settings for vlc
 
 AC_COPYRIGHT([Copyright 1999-2026 VLC authors and VideoLAN])
 
-AC_INIT([vlc], [1.0])
+AC_INIT([vlc], [1.1])
 
 dnl MacLC carries its own product version, set in AC_INIT above. The VERSION_*
 dnl tuple below is libvlc's API version, not the product's: lib/core.c asserts
