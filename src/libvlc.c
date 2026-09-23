@@ -424,7 +424,9 @@ static void GetFilenames( libvlc_int_t *p_vlc, unsigned n,
         }
 
         char *mrl = NULL;
-        if( strstr( args[n], "://" ) == NULL )
+        /* A magnet link is a URI without "//": not a file path either. */
+        if( strstr( args[n], "://" ) == NULL
+         && strncasecmp( args[n], "magnet:", 7 ) != 0 )
         {
             mrl = vlc_path2uri( args[n], NULL );
             if( !mrl )

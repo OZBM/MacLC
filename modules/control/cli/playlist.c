@@ -100,7 +100,8 @@ static input_item_t *parse_MRL(const char *mrl)
 
         if (psz_item_mrl == NULL)
         {
-            if (strstr( psz_item, "://" ) != NULL)
+            if (strstr( psz_item, "://" ) != NULL
+             || strncasecmp( psz_item, "magnet:", 7 ) == 0)
                 psz_item_mrl = strdup(psz_item);
             else
                 psz_item_mrl = vlc_path2uri(psz_item, NULL);
@@ -373,7 +374,9 @@ static int PlaylistAddCommon(struct cli_client *cl, const char *const *args,
     {
         input_item_t *item;
 
-        if (strstr(args[i], "://" ) != NULL)
+        /* A magnet link is a URI without "//": not a file path either. */
+        if (strstr(args[i], "://" ) != NULL
+         || strncasecmp(args[i], "magnet:", 7) == 0)
             item = input_item_New(args[i], NULL);
         else
         {
