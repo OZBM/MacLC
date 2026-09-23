@@ -420,6 +420,16 @@ static const struct input_item_parser_cbs_t parserCallbacks =
     return (BOOL)_vlcInputItem->b_net;
 }
 
+- (BOOL)isTorrent
+{
+    NSString *mrl = self.MRL;
+    if (mrl == nil)
+        return NO;
+    return [mrl.lowercaseString hasPrefix:@"magnet:"] ||
+           [mrl.lowercaseString containsString:@".torrent#!"] ||
+           [mrl.lowercaseString hasSuffix:@".torrent"];
+}
+
 - (void)subTreeAdded:(input_item_node_t *)p_node
 {
     if (_subTree) {

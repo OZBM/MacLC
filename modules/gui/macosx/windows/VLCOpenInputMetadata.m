@@ -46,6 +46,11 @@
     if (!self)
         return nil;
 
+    if ([path.lowercaseString hasPrefix:@"magnet:"]) {
+        self.MRLString = [path copy];
+        return self;
+    }
+
     char *vlc_uri_psz = vlc_path2uri([path UTF8String], "file");
     if (!vlc_uri_psz)
         return nil;

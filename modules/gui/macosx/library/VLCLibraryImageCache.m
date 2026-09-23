@@ -410,6 +410,7 @@ static NSString *thumbnailHashForString(NSString *string)
 
         if (inputItem.inputType == ITEM_TYPE_FILE &&
             !inputItem.isStream &&
+            !inputItem.isTorrent &&
             input_item_Playable(inputItem.path.UTF8String)) {
             NSImage * const cachedThumbnail =
                 [self thumbnailFromCacheForInputItem:inputItem
@@ -450,7 +451,7 @@ static NSString *thumbnailHashForString(NSString *string)
             return;
         }
 
-        if (inputItem.isStream || inputItem.path.length == 0) {
+        if (inputItem.isStream || inputItem.isTorrent || inputItem.path.length == 0) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 completionHandler(self->_noArtImage);
             });

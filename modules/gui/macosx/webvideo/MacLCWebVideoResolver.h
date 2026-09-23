@@ -53,6 +53,9 @@ typedef NS_ENUM(NSInteger, MacLCWebVideoErrorCode) {
 @property (readonly, copy, nullable) NSString *thumbnailAddress;
 @property (readonly, copy, nullable) NSString *formatDescription;
 @property (readonly, getter=isLive) BOOL live;
+/** A magnet link or a .torrent address: played by the BitTorrent module
+ * as it is, with no page to resolve and no thumbnail to fetch. */
+@property (readonly, getter=isTorrent) BOOL torrent;
 
 /** Playlist entries, empty for a single video. */
 @property (readonly, copy) NSArray<MacLCWebVideoItem *> *children;

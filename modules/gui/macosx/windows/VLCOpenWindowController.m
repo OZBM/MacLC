@@ -549,7 +549,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     [openPanel setAllowsMultipleSelection: YES];
     [openPanel setCanChooseDirectories: YES];
-    [openPanel setAllowedFileTypes:[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA]];
+    [openPanel setAllowedFileTypes:[[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA] arrayByAddingObject:@"torrent"]];
     [openPanel setTitle: _NS("Open File")];
     [openPanel setPrompt: _NS("Open")];
 
@@ -632,7 +632,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     [openPanel setAllowsMultipleSelection: NO];
     [openPanel setCanChooseDirectories: YES];
-    [openPanel setAllowedFileTypes:[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA]];
+    [openPanel setAllowedFileTypes:[[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA] arrayByAddingObject:@"torrent"]];
     [openPanel setTitle: _NS("Open File")];
     [openPanel setPrompt: _NS("Open")];
     [openPanel beginSheetModalForWindow:[sender window] completionHandler:^(NSInteger returnCode) {
@@ -1053,14 +1053,16 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
     } else {
         mrlString = [_netHTTPURLTextField.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
 
-        // Fixup the user-provided URI
-        const char *orig_uri = [mrlString UTF8String];
-        if (orig_uri == NULL)
-            return;
-        char *fixed_uri = vlc_uri_fixup(orig_uri);
-        if (fixed_uri) {
-            mrlString = [[NSString alloc] initWithUTF8String:fixed_uri];
-            free(fixed_uri);
+        // Fixup the user-provided URI unless it's a magnet link
+        if (![mrlString.lowercaseString hasPrefix:@"magnet:"]) {
+            const char *orig_uri = [mrlString UTF8String];
+            if (orig_uri == NULL)
+                return;
+            char *fixed_uri = vlc_uri_fixup(orig_uri);
+            if (fixed_uri) {
+                mrlString = [[NSString alloc] initWithUTF8String:fixed_uri];
+                free(fixed_uri);
+            }
         }
     }
 

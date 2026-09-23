@@ -32,6 +32,7 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
 @property (readwrite, copy, nullable) NSString *thumbnailAddress;
 @property (readwrite, copy, nullable) NSString *formatDescription;
 @property (readwrite, getter=isLive) BOOL live;
+@property (readwrite, getter=isTorrent) BOOL torrent;
 @property (readwrite, copy) NSArray<MacLCWebVideoItem *> *children;
 @property (readwrite, strong, nullable) VLCOpenInputMetadata *playQueueItem;
 @end
@@ -83,6 +84,7 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
     NSURL *url = [NSURL URLWithString:trimmed];
     if (url && url.scheme) {
         NSString *scheme = url.scheme.lowercaseString;
+        if ([scheme isEqualToString:@"magnet"]) return YES;
         if (![scheme isEqualToString:@"http"] && ![scheme isEqualToString:@"https"]) return NO;
         if (url.host && [url.host rangeOfString:@"."].location != NSNotFound) return YES;
         return NO;
@@ -176,6 +178,38 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
     if (!normalised) {
         NSError *err = [NSError errorWithDomain:MacLCWebVideoErrorDomain code:MacLCWebVideoErrorInvalidAddress userInfo:@{NSLocalizedDescriptionKey: @"The address is invalid."}];
         [self _reportError:err item:nil completion:completion];
+        return nil;
+    }
+
+    if ([normalised.lowercaseString hasPrefix:@"magnet:"] || [normalised.lowercaseString hasSuffix:@".torrent"]) {
+        MacLCWebVideoItem *item = [[MacLCWebVideoItem alloc] init];
+        item.pageAddress = normalised;
+        NSString *title = nil;
+        if ([normalised.lowercaseString hasPrefix:@"magnet:"]) {
+            NSURLComponents *components = [NSURLComponents componentsWithString:normalised];
+            for (NSURLQueryItem *qi in components.queryItems) {
+                if ([qi.name isEqualToString:@"dn"]) {
+                    /* Form encoding: '+' stands for a space in dn. */
+                    title = [qi.value stringByReplacingOccurrencesOfString:@"+" withString:@" "];
+                    /* Some indexers put line breaks in it (Torrentio). */
+                    title = [[title componentsSeparatedByCharactersInSet:NSCharacterSet.newlineCharacterSet]
+                             componentsJoinedByString:@" "];
+                    break;
+                }
+            }
+        } else {
+            NSURL *url = [NSURL URLWithString:normalised];
+            title = url.lastPathComponent;
+        }
+        item.title = title.length > 0 ? title : @"BitTorrent";
+        item.siteName = @"BitTorrent";
+        item.torrent = YES;
+        VLCOpenInputMetadata *meta = [[VLCOpenInputMetadata alloc] init];
+        meta.MRLString = normalised;
+        meta.itemName = item.title;
+        item.playQueueItem = meta;
+        
+        [self _reportError:nil item:item completion:completion];
         return nil;
     }
 

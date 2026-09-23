@@ -694,7 +694,13 @@ NS_ASSUME_NONNULL_BEGIN
     
     [_thumbnailTask cancel];
     _thumbnailTask = nil;
-    if (item.thumbnailAddress) {
+    if (item.isTorrent) {
+        _thumbnailView.image = [MacLCDesign symbolNamed:@"arrow.down.circle"
+                                              pointSize:40.0
+                                                 weight:NSFontWeightLight
+                                     accessibilityLabel:_NS("BitTorrent")];
+        _thumbnailView.contentTintColor = MacLCDesign.primaryLabel;
+    } else if (item.thumbnailAddress) {
         NSURL *url = [NSURL URLWithString:item.thumbnailAddress];
         if (url) {
             /* The image goes to this preview's own view: a slow download
