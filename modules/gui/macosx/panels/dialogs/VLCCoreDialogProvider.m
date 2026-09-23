@@ -33,7 +33,15 @@
 @interface VLCCoreDialogProvider ()
 {
     VLCErrorWindowController *_errorPanel;
+    /* The progress dialog on screen, and those waiting for the window. The
+     * provider holds a reference on each until it calls
+     * vlc_dialog_id_dismiss(), which also means "cancelled": a dialog is
+     * only dismissed when the user cancels it or the core releases it. */
+    vlc_dialog_id *_progressDialogID;
+    NSMutableArray<NSDictionary *> *_pendingProgressDialogs;
 }
+
+- (void)cancelDialog:(vlc_dialog_id *)dialogID;
 
 - (void)displayErrorWithTitle:(NSString *)title
                          text:(NSString *)text;
@@ -150,12 +158,13 @@ static void displayProgressCallback(void *p_data,
     }
 }
 
-static void cancelCallback(void * __unused p_data,
-                           vlc_dialog_id * __unused p_id)
+static void cancelCallback(void *p_data,
+                           vlc_dialog_id *p_id)
 {
     @autoreleasepool {
+        VLCCoreDialogProvider *dialogProvider = (__bridge VLCCoreDialogProvider *)p_data;
         dispatch_async(dispatch_get_main_queue(), ^{
-            [NSApp stopModalWithCode: 0];
+            [dialogProvider cancelDialog:p_id];
         });
     }
 }
@@ -167,7 +176,8 @@ static void updateProgressCallback(void *p_data,
 {
     @autoreleasepool {
         VLCCoreDialogProvider *dialogProvider = (__bridge VLCCoreDialogProvider *)p_data;
-        dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
+        /* AppKit views: main thread only. */
+        dispatch_async(dispatch_get_main_queue(), ^{
             [dialogProvider updateDisplayedProgressDialog:p_id
                                                  position:f_value
                                                      text:VLCSubstituteBrandNames(toNSStr(psz_text))];
@@ -347,23 +357,100 @@ static void updateProgressCallback(void *p_data,
         _progressCancelButton.enabled = NO;
     }
 
+    /* One window: a second dialog waits for the first to go. */
+    if (_progressDialogID != NULL && _progressDialogID != dialogID) {
+        if (_pendingProgressDialogs == nil) {
+            _pendingProgressDialogs = [NSMutableArray array];
+        }
+        [_pendingProgressDialogs addObject:@{
+            @"id": [NSValue valueWithPointer:dialogID],
+            @"title": title ?: @"",
+            @"text": text ?: @"",
+            @"indeterminate": @(indeterminate),
+            @"position": @(position),
+            @"cancel": cancelTitle ?: @"",
+        }];
+        return;
+    }
+    _progressDialogID = dialogID;
+
     [_progressIndicator startAnimation:self];
 
-    [_progressWindow center];
-    [NSApp runModalForWindow:_progressWindow];
-    [_progressWindow close];
+    /* Not modal: this runs in a block on the main queue, and a modal loop
+     * here kept that queue busy for as long as the dialog stayed up, so
+     * everything the core sends to the main thread synchronously waited
+     * behind it - creating a video window among them, which froze
+     * playback and quitting. */
+    if (!_progressWindow.visible) {
+        [_progressWindow center];
+    }
+    [_progressWindow orderFront:self];
+}
 
+- (NSUInteger)indexOfPendingProgressDialog:(vlc_dialog_id *)dialogID
+{
+    return [_pendingProgressDialogs indexOfObjectPassingTest:^BOOL(NSDictionary * const entry, NSUInteger __unused idx, BOOL * __unused stop) {
+        return [entry[@"id"] pointerValue] == dialogID;
+    }];
+}
+
+- (void)closeProgressDialog
+{
+    vlc_dialog_id * const dialogID = _progressDialogID;
+    if (dialogID == NULL) {
+        return;
+    }
+    _progressDialogID = NULL;
     [_progressIndicator stopAnimation:self];
-
+    [_progressWindow orderOut:self];
     vlc_dialog_id_dismiss(dialogID);
+
+    if (_pendingProgressDialogs.count > 0) {
+        NSDictionary * const next = _pendingProgressDialogs.firstObject;
+        [_pendingProgressDialogs removeObjectAtIndex:0];
+        [self displayProgressDialog:[next[@"id"] pointerValue]
+                              title:next[@"title"]
+                               text:next[@"text"]
+                      indeterminate:[next[@"indeterminate"] boolValue]
+                           position:[next[@"position"] floatValue]
+                        cancelTitle:next[@"cancel"]];
+    }
+}
+
+- (void)cancelDialog:(vlc_dialog_id *)dialogID
+{
+    if (dialogID == _progressDialogID) {
+        [self closeProgressDialog];
+        return;
+    }
+    const NSUInteger pending = [self indexOfPendingProgressDialog:dialogID];
+    if (pending != NSNotFound) {
+        [_pendingProgressDialogs removeObjectAtIndex:pending];
+        vlc_dialog_id_dismiss(dialogID);
+        return;
+    }
+    /* Login and question dialogs are still modal alerts. */
+    [NSApp stopModalWithCode:0];
 }
 
 - (void)updateDisplayedProgressDialog:(vlc_dialog_id *)dialogID
                              position:(float)position
                                  text:(NSString *)text
 {
+    if (dialogID != _progressDialogID) {
+        const NSUInteger pending = [self indexOfPendingProgressDialog:dialogID];
+        if (pending != NSNotFound && text.length > 0) {
+            NSMutableDictionary * const entry = [_pendingProgressDialogs[pending] mutableCopy];
+            entry[@"text"] = text;
+            entry[@"position"] = @(position);
+            _pendingProgressDialogs[pending] = entry;
+        }
+        return; /* waiting for the window, or dismissed meanwhile */
+    }
     if (!_progressIndicator.indeterminate) {
         _progressIndicator.doubleValue = position;
+    }
+    if (text.length > 0) {
         _progressDescriptionLabel.stringValue = text;
     }
 }
@@ -379,7 +466,7 @@ static void updateProgressCallback(void *p_data,
 
 - (IBAction)progressDialogAction:(id)sender
 {
-    [NSApp stopModalWithCode: -1];
+    [self closeProgressDialog];
 }
 
 @end
