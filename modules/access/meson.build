@@ -597,6 +597,16 @@ if srt_dep.found()
     }
 endif
 
+# BitTorrent (libtorrent-rasterbar)
+libtorrent_dep = dependency('libtorrent-rasterbar', version: '>= 2.0', required: get_option('bittorrent'))
+if libtorrent_dep.found()
+    vlc_modules += {
+        'name' : 'bittorrent',
+        'sources' : files('bittorrent/bittorrent.cpp', 'bittorrent/session.cpp'),
+        'dependencies' : [libtorrent_dep],
+    }
+endif
+
 # RIST
 if librist_dep.found()
     vlc_modules += {

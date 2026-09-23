@@ -493,6 +493,16 @@ libaccess_srt_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(access_RPATH)
 access_PLUGINS += $(LTLIBaccess_srt)
 EXTRA_LTLIBRARIES += libaccess_srt_plugin.la
 
+### BitTorrent ###
+
+libbittorrent_plugin_la_SOURCES = access/bittorrent/bittorrent.cpp \
+	access/bittorrent/session.cpp access/bittorrent/bittorrent.h
+libbittorrent_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) $(BITTORRENT_CFLAGS)
+libbittorrent_plugin_la_LIBADD = $(BITTORRENT_LIBS)
+libbittorrent_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(access_RPATH)
+access_PLUGINS += $(LTLIBbittorrent)
+EXTRA_LTLIBRARIES += libbittorrent_plugin.la
+
 ### RIST ###
 
 librist_plugin_la_SOURCES = access/rist.c access/rist.h

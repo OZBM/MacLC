@@ -554,6 +554,11 @@ option('srt',
     value : 'auto',
     description : 'SRT input/output plugin')
 
+option('bittorrent',
+    type : 'feature',
+    value : 'auto',
+    description : 'BitTorrent streaming with libtorrent-rasterbar')
+
 option('vulkan',
     type : 'feature',
     value : 'auto',

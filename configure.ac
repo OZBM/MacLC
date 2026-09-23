@@ -2442,6 +2442,26 @@ dnl
 PKG_ENABLE_MODULES_VLC([SMB2], [smb2], [libsmb2 >= 3.0.0], (support smb2 protocol via libsmb2), [auto])
 
 dnl
+dnl  BitTorrent streaming (libtorrent-rasterbar)
+dnl
+PKG_ENABLE_MODULES_VLC([BITTORRENT], [bittorrent], [libtorrent-rasterbar >= 2.0], [BitTorrent streaming with libtorrent-rasterbar], [auto])
+AS_IF([test -n "${BITTORRENT_LIBS}"], [
+  dnl libtorrent's headers include Boost's, which its pkg-config file does
+  dnl not locate: look next to libtorrent, then in the usual prefixes.
+  AC_MSG_CHECKING([for the Boost headers libtorrent needs])
+  bittorrent_boost=""
+  for dir in "$($PKG_CONFIG --variable=includedir libtorrent-rasterbar 2>/dev/null)" /opt/homebrew/include /usr/local/include /usr/include; do
+    AS_IF([test -n "${dir}" -a -f "${dir}/boost/version.hpp"], [bittorrent_boost="${dir}"; break])
+  done
+  AS_IF([test -n "${bittorrent_boost}"], [
+    AC_MSG_RESULT([${bittorrent_boost}])
+    BITTORRENT_CFLAGS="${BITTORRENT_CFLAGS} -I${bittorrent_boost}"
+  ], [
+    AC_MSG_RESULT([not found])
+  ])
+])
+
+dnl
 dnl  Video4Linux 2
 dnl
 AC_ARG_ENABLE([v4l2], AS_HELP_STRING([--disable-v4l2],
