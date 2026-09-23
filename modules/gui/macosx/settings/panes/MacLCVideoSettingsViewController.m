@@ -477,8 +477,8 @@
 
     _snapFormatRow = [MacLCSettingsRow popUpRowWithTitle:_NS("Snapshot Format")
                                              explanation:_NS("Image compression and encoding format used for captured screenshots.")
-                                                   items:@[@"png", @"jpg", @"tiff"]
-                                                    tags:@[@0, @1, @2]
+                                                   items:@[@"png", @"jpg", @"tiff", @"webp"]
+                                                    tags:@[@0, @1, @2, @3]
                                            selectedIndex:0
                                                   action:^(NSInteger selectedIndex, NSInteger tag) {
         weakSelf.hasUnsavedChanges = YES;
@@ -632,6 +632,9 @@
     NSString *fmtStr = snapFormat ? toNSStr(snapFormat) : @"png";
     free(snapFormat);
     [_snapFormatRow.popUpButton selectItemWithTitle:fmtStr];
+    if (_snapFormatRow.popUpButton.selectedItem == nil) {
+        [_snapFormatRow.popUpButton selectItemWithTitle:@"png"];
+    }
 
     _snapSequentialRow.checkboxButton.state = MacLCConfigGetInt("snapshot-sequential", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
@@ -703,7 +706,8 @@
 
     MacLCConfigPutPsz("snapshot-path", [_snapFolderRow.textField.stringValue UTF8String]);
     MacLCConfigPutPsz("snapshot-prefix", [_snapPrefixRow.textField.stringValue UTF8String]);
-    MacLCConfigPutPsz("snapshot-format", [_snapFormatRow.popUpButton.titleOfSelectedItem UTF8String]);
+    NSString *snapFormatVal = _snapFormatRow.popUpButton.titleOfSelectedItem ?: @"png";
+    MacLCConfigPutPsz("snapshot-format", [snapFormatVal UTF8String]);
     MacLCConfigPutInt("snapshot-sequential", _snapSequentialRow.checkboxButton.state == NSControlStateValueOn);
 
     self.hasUnsavedChanges = NO;

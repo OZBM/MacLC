@@ -61,6 +61,57 @@
 
 @end
 
+static NSArray<NSString *> *subtitleEncodingTitles(void)
+{
+    return @[
+        _NS("Default (UTF-8)"),
+        @"ISO-8859-1 (Latin 1)",
+        @"Windows-1252",
+        @"UTF-16",
+        @"ISO-8859-15",
+        @"Big5",
+        @"GB18030",
+        @"Shift-JIS"
+    ];
+}
+
+static NSArray<NSString *> *subtitleEncodingCharsets(void)
+{
+    return @[
+        @"",
+        @"ISO-8859-1",
+        @"Windows-1252",
+        @"UTF-16",
+        @"ISO-8859-15",
+        @"Big5",
+        @"GB18030",
+        @"Shift_JIS"
+    ];
+}
+
+static NSInteger indexForStoredEncoding(NSString *stored)
+{
+    if (stored.length == 0 || [stored caseInsensitiveCompare:@"UTF-8"] == NSOrderedSame) {
+        return 0;
+    }
+
+    NSArray<NSString *> *charsets = subtitleEncodingCharsets();
+    for (NSUInteger i = 0; i < charsets.count; i++) {
+        if (charsets[i].length > 0 && [stored caseInsensitiveCompare:charsets[i]] == NSOrderedSame) {
+            return (NSInteger)i;
+        }
+    }
+
+    NSArray<NSString *> *titles = subtitleEncodingTitles();
+    for (NSUInteger i = 0; i < titles.count; i++) {
+        if ([stored caseInsensitiveCompare:titles[i]] == NSOrderedSame) {
+            return (NSInteger)i;
+        }
+    }
+
+    return 0;
+}
+
 @implementation MacLCSubtitlesSettingsViewController
 
 - (instancetype)initWithIntf:(intf_thread_t *)intf
@@ -164,10 +215,7 @@
     _subLangRow.defaultHint = _NS("Default: Empty");
     [generalCard.contentStackView addArrangedSubview:_subLangRow];
 
-    NSArray<NSString *> *encodings = @[
-        _NS("Default (UTF-8)"), @"ISO-8859-1 (Latin 1)", @"Windows-1252",
-        @"UTF-16", @"ISO-8859-15", @"Big5", @"GB18030", @"Shift-JIS"
-    ];
+    NSArray<NSString *> *encodings = subtitleEncodingTitles();
     _encodingRow = [MacLCSettingsRow popUpRowWithTitle:_NS("Default Text Encoding")
                                            explanation:_NS("Character encoding used for subtitle files that do not declare their own format.")
                                                  items:encodings
@@ -349,11 +397,8 @@
     char *enc = MacLCConfigGetPsz("subsdec-encoding");
     NSString *encStr = enc ? toNSStr(enc) : @"";
     free(enc);
-    if (encStr.length == 0 || [encStr isEqualToString:@"UTF-8"]) {
-        [_encodingRow.popUpButton selectItemAtIndex:0];
-    } else {
-        [_encodingRow.popUpButton selectItemWithTitle:encStr];
-    }
+    NSInteger encodingIndex = indexForStoredEncoding(encStr);
+    [_encodingRow.popUpButton selectItemAtIndex:encodingIndex];
 
     _autodetectRow.checkboxButton.state = MacLCConfigGetInt("sub-autodetect-file", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
@@ -390,12 +435,12 @@
     MacLCConfigPutInt("osd", _osdRow.checkboxButton.state == NSControlStateValueOn);
     MacLCConfigPutPsz("sub-language", [_subLangRow.textField.stringValue UTF8String]);
 
-    NSString *enc = _encodingRow.popUpButton.titleOfSelectedItem;
-    if ([enc hasPrefix:_NS("Default")]) {
-        MacLCConfigPutPsz("subsdec-encoding", "");
-    } else {
-        MacLCConfigPutPsz("subsdec-encoding", [enc UTF8String]);
+    NSArray<NSString *> *charsets = subtitleEncodingCharsets();
+    NSInteger encIdx = _encodingRow.popUpButton.indexOfSelectedItem;
+    if (encIdx < 0 || encIdx >= (NSInteger)charsets.count) {
+        encIdx = 0;
     }
+    MacLCConfigPutPsz("subsdec-encoding", [charsets[encIdx] UTF8String]);
 
     MacLCConfigPutInt("sub-autodetect-file", _autodetectRow.checkboxButton.state == NSControlStateValueOn);
     MacLCConfigPutPsz("freetype-font", [_fontRow.textField.stringValue UTF8String]);

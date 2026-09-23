@@ -449,7 +449,10 @@ NSString * const MacLCHDRExpansionChangedNotification =
     /* Sharpness and smoothing */
     [_upscalerPopup selectItemWithTag:MacLCConfigGetInt("gl-upscaler", 0)];
     [_downscalerPopup selectItemWithTag:MacLCConfigGetInt("gl-downscaler", 0)];
-    [_ditherPopup selectItemWithTag:MacLCConfigGetInt("dither-algo", 0)];
+    [_ditherPopup selectItemWithTag:MacLCConfigGetInt("dither-algo", -1)];
+    if (_ditherPopup.selectedItem == nil) {
+        [_ditherPopup selectItemWithTag:-1];
+    }
 
     /* Video engine */
     char *psz_vout = MacLCConfigGetPsz("vout");
