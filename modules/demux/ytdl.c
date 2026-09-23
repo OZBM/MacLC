@@ -493,6 +493,12 @@ static int OpenFilter(vlc_object_t *obj)
     if (strncasecmp(s->psz_url, "http:", 5)
      && strncasecmp(s->psz_url, "https:", 6))
         return VLC_EGENERIC;
+    /* A file inside an archive or a torrent fetched over HTTP: yt-dlp would
+     * only download the container again, seconds for nothing. The demux URL
+     * has lost the "#!" part; the stream it reads kept it. */
+    if (s->s != NULL && s->s->psz_url != NULL
+     && strstr(s->s->psz_url, "#!") != NULL)
+        return VLC_EGENERIC;
     if (!var_InheritBool(obj, "ytdl"))
         return VLC_EGENERIC;
 
