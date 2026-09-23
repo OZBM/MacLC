@@ -148,6 +148,12 @@ int main(int i_argc, const char *ppsz_argv[])
     setenv("VLC_LIBEXEC_PATH", TOP_BUILDDIR"/modules", 1);
 #endif
 
+    /* The bundled OpenSSL looks for its CA certificates under /opt/homebrew,
+     * which most Macs lack; without them, libtorrent rejects every HTTPS
+     * tracker and web seed. Point it at the bundle macOS maintains. */
+    if (getenv("SSL_CERT_FILE") == NULL && access("/etc/ssl/cert.pem", R_OK) == 0)
+        setenv("SSL_CERT_FILE", "/etc/ssl/cert.pem", 0);
+
 #ifndef ALLOW_RUN_AS_ROOT
     if (geteuid() == 0)
     {

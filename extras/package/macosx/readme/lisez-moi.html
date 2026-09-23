@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MacLC — Lisez-moi en premier</title>
+</head>
+<body>
+<h1>MacLC — Lisez-moi en premier</h1>
+
+<p><strong>Installation :</strong> Glissez <strong>MacLC</strong> dans votre dossier <strong>Applications</strong>. Ne lancez pas l'application depuis l'image disque.</p>
+
+<h2>Premier lancement : « Ouvrir quand même »</h2>
+<ol>
+<li>Lancez <strong>MacLC</strong> une première fois depuis vos Applications. macOS indique qu'Apple n'a pas pu vérifier que MacLC ne contient pas de logiciel malveillant. Cliquez sur <strong>Terminé</strong>.</li>
+<li>Ouvrez <strong>Réglages Système</strong> &gt; <strong>Confidentialité et sécurité</strong>, puis faites défiler jusqu'à la section <strong>Sécurité</strong>.</li>
+<li>À côté de la mention <strong>« L'ouverture de MacLC a été bloquée pour protéger votre Mac »</strong>, cliquez sur <strong>Ouvrir quand même</strong>.</li>
+<li>Confirmez en cliquant sur <strong>Ouvrir quand même</strong> et authentifiez-vous avec Touch ID ou votre mot de passe.</li>
+</ol>
+<p>Le bouton « Ouvrir quand même » reste accessible pendant environ une heure après la tentative bloquée. Cette manipulation n'est nécessaire qu'une seule fois : MacLC s'ouvrira ensuite normalement, Une nouvelle version téléchargée vous le redemandera une fois.</p>
+
+<p><strong>Alternative dans le Terminal :</strong></p>
+<p><code>xattr -dr com.apple.quarantine /Applications/MacLC.app</code></p>
+<p>Cette commande retire l'attribut « téléchargé depuis Internet » et produit le même effet que le bouton Ouvrir quand même.</p>
+
+<h2>Pourquoi macOS demande-t-il cela ?</h2>
+<p>macOS ouvre les applications téléchargées sans demander confirmation uniquement si elles sont signées avec un certificat Developer ID d'Apple et notarisées par Apple. Cela nécessite une adhésion payante à l'Apple Developer Program (99 USD par an) et l'envoi de chaque binaire à Apple.</p>
+<p>MacLC est un projet libre, gratuit et non commercial : il est signé « ad hoc » (une signature qui garantit que les fichiers n'ont pas été modifiés depuis leur compilation, mais qui n'identifie pas l'auteur auprès d'Apple). macOS ne peut donc pas vérifier qui a conçu l'application et vous demande confirmation une fois. Ce n'est pas le signe que l'application est endommagée ou dangereuse ; le code source est public (https://github.com/OZBM/MacLC) et la page de version fournit le SHA-256 de l'image disque pour comparaison dans le Terminal :</p>
+<p><code>shasum -a 256 maclc-1.1.1.dmg</code></p>
+<p><strong>Alerte d'application endommagée :</strong> Si macOS indique que MacLC <strong>« est endommagé et ne peut pas être ouvert »</strong>, le téléchargement est incomplet ou a été altéré. Téléchargez-le à nouveau et vérifiez son empreinte SHA-256. Ne contournez pas cette alerte.</p>
+
+<h2>Configuration requise et compléments optionnels</h2>
+<p><strong>Configuration requise :</strong> macOS 26 ou ultérieur, Apple Silicon. Tout le nécessaire est intégré dans l'application ; rien d'autre n'est à installer.</p>
+<p><strong>Compléments optionnels :</strong></p>
+<ul>
+<li><strong>yt-dlp :</strong> Optionnel, utile uniquement pour la commande « Open Web Video » du menu Fichier (<code>brew install yt-dlp</code>).</li>
+<li><strong>SVP 4 Mac :</strong> Optionnel, utile uniquement si vous utilisez le moteur d'interpolation de mouvement SVP.</li>
+</ul>
+</body>
+</html>

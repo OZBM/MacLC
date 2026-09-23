@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MacLC — Read Me First</title>
+</head>
+<body>
+<h1>MacLC — Read Me First</h1>
+
+<p><strong>Installation:</strong> Drag <strong>MacLC</strong> into your <strong>Applications</strong> folder. Do not run it from the disk image.</p>
+
+<h2>First launch: "Open Anyway"</h2>
+<ol>
+<li>Open <strong>MacLC</strong> once from Applications. macOS will report that it cannot verify MacLC is free of malware. Click <strong>Done</strong>.</li>
+<li>Open <strong>System Settings</strong> &gt; <strong>Privacy &amp; Security</strong>, scroll down to the <strong>Security</strong> section.</li>
+<li>Next to <strong>"MacLC was blocked to protect your Mac"</strong>, click <strong>Open Anyway</strong>.</li>
+<li>Confirm <strong>Open Anyway</strong> and authenticate with Touch ID or your password.</li>
+</ol>
+<p>The "Open Anyway" button remains available for about an hour after the blocked attempt. This step is needed only once; after that, MacLC opens normally. A newly downloaded version asks once again.</p>
+
+<p><strong>Alternative for Terminal users:</strong></p>
+<p><code>xattr -dr com.apple.quarantine /Applications/MacLC.app</code></p>
+<p>This removes the "downloaded from the internet" flag and produces the exact same effect as clicking Open Anyway.</p>
+
+<h2>Why does macOS ask for this?</h2>
+<p>macOS opens downloaded apps without asking only if they are signed with an Apple Developer ID certificate and notarized by Apple. That requires a paid Apple Developer Program membership (99 USD per year) and sending every build to Apple.</p>
+<p>MacLC is a free, open-source, non-commercial project: it is signed "ad hoc" (a signature that proves the files were not altered since they were built, but does not identify the author to Apple). macOS therefore cannot check who made it and asks you to confirm once. This is not a sign that the app is damaged or dangerous; the source code is public (https://github.com/OZBM/MacLC) and the release page lists the SHA-256 of the disk image to compare:</p>
+<p><code>shasum -a 256 maclc-1.1.1.dmg</code></p>
+<p><strong>Damaged alert:</strong> If macOS says MacLC <strong>"is damaged and can't be opened"</strong>, the download is incomplete or altered. Download it again and check the SHA-256. Do not bypass that one.</p>
+
+<h2>Requirements &amp; Optional Extras</h2>
+<p><strong>Requirements:</strong> macOS 26 or later, Apple Silicon. Everything needed is inside the app; nothing else to install.</p>
+<p><strong>Optional extras:</strong></p>
+<ul>
+<li><strong>yt-dlp:</strong> Optional, needed only for File &gt; Open Web Video (<code>brew install yt-dlp</code>).</li>
+<li><strong>SVP 4 Mac:</strong> Optional, needed only if using the SVP motion interpolation engine.</li>
+</ul>
+</body>
+</html>

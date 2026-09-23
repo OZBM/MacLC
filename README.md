@@ -9,7 +9,7 @@ It keeps everything VLC can play, and rebuilds the parts VLC never had the resou
 make native: HDR on Apple displays, a settings window a person can actually read, and an
 interface that uses the system's own materials instead of drawing its own.
 
-[Features](#what-maclc-adds) · [HDR](#1-hdr-that-actually-uses-your-display) · [Building](#building) · [Status](#project-status--honesty-section) · [License](#license-and-trademarks)
+[Features](#what-maclc-adds) · [HDR](#1-hdr-that-actually-uses-your-display) · [Installation](#installation) · [Building](#building) · [Status](#project-status--honesty-section) · [License](#license-and-trademarks)
 
 </div>
 
@@ -219,13 +219,64 @@ summary: 8 panes, 8 ok, 0 failed
 
 ## Requirements
 
-- **Apple Silicon** (M1 or newer). Intel Macs are out of scope — not blocked, just never targeted or tested.
-- **macOS 13 Ventura** minimum for the new interface code.
+- **Apple Silicon** (M1 or newer, arm64). Intel Macs are out of scope — not blocked, just never targeted or tested.
+- **macOS 26 Tahoe** or later for the pre-built application bundle (the bundled libraries require macOS 26). The underlying interface code builds for macOS 13+.
 - Full HDR feature set wants **macOS 14+** (`preferredDynamicRange`) and **macOS 15+** (`toneMapMode`); older systems fall back to a BT.709 retag.
 - Hardware AV1 decoding needs an **M3 or M4** and macOS 14+.
 - SDR → HDR needs a display with real extended range (XDR, or an HDR external panel). On an SDR display it does nothing.
 
 Developed and measured on an **M3 Max (Mac15,9), macOS 26.2**.
+
+---
+
+## Installation
+
+Download the disk image (`.dmg`) from the [Releases](https://github.com/OZBM/MacLC/releases) page.
+
+1. Open the downloaded `.dmg`.
+2. Drag **MacLC.app** into your **/Applications** folder. Do not run it directly from the disk image.
+
+The application is self-contained: all required third-party libraries (~150 dylibs including FFmpeg, libass, FreeType, libmatroska, libplacebo, libtorrent-rasterbar) are bundled in `MacLC.app/Contents/Frameworks/`. Third-party licences are in `MacLC.app/Contents/Resources/Licenses/`. Nothing else needs to be installed to run the player.
+
+### First launch: why macOS asks you to click Open Anyway
+
+MacLC is a free, open-source, non-commercial project. It is signed "ad hoc" on Apple Silicon (guaranteeing file integrity since compilation), but it is not signed with a paid Apple Developer ID certificate (99 USD per year) and is not notarized by Apple.
+
+On macOS 15 and later (including macOS 26 Tahoe), Gatekeeper blocks the first launch of downloaded apps that lack notarization, and the legacy Control-click > Open shortcut no longer works. To authorize MacLC on its first launch:
+
+1. Double-click **MacLC** in `/Applications`. macOS will display an alert stating that it could not verify MacLC is free of malware. Click **Done**.
+2. Open **System Settings** > **Privacy & Security** and scroll down to the **Security** section.
+3. Next to **"MacLC was blocked to protect your Mac"**, click **Open Anyway**.
+4. Confirm **Open Anyway** and authenticate with Touch ID or your password.
+
+The "Open Anyway" button remains available in System Settings for about an hour after the blocked launch attempt. This step is only required on the first launch. Afterward, MacLC opens normally; a newly downloaded version asks once again.
+
+#### Terminal alternative
+
+If you prefer using Terminal, you can strip the quarantine flag before opening the application:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/MacLC.app
+```
+
+This removes the "downloaded from the internet" extended attribute and produces the exact same result as clicking Open Anyway.
+
+#### Integrity verification & damaged downloads
+
+The source code is public at [github.com/OZBM/MacLC](https://github.com/OZBM/MacLC). Each release provides the SHA-256 checksum of the disk image so you can verify its integrity in Terminal:
+
+```bash
+shasum -a 256 maclc-1.1.1.dmg
+```
+
+If macOS ever reports that MacLC **"is damaged and can't be opened"**, do not attempt to bypass it: this means the download was incomplete or corrupted in transit. Delete the file, download it again, and check the SHA-256 hash.
+
+#### Optional extras
+
+Media playback requires no external tools or libraries. Two optional features can use external tools if they are present on your system:
+
+- **Open Web Video**: Uses [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to resolve streaming URLs (`brew install yt-dlp`).
+- **SVP motion interpolation**: Interacts with [SVP 4 Mac](https://www.svp-team.com/) and VapourSynth if you use the SmoothVideo Project interpolation engine.
 
 ---
 

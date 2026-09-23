@@ -84,14 +84,18 @@ endif
 	install_name_tool -rpath "$(libdir)" "@executable_path/../Frameworks/" $@/Contents/MacOS/MacLC
 	cp "$(macos_destdir)$(pkglibexecdir)/vlc-preparser" $@/Contents/MacOS/
 	install_name_tool -rpath "$(libdir)" "@executable_path/../Frameworks/" $@/Contents/MacOS/vlc-preparser
-	## Generate plugin cache
+	find $@ -type d -exec chmod ugo+rx '{}' \;
+	find $@ -type f -exec chmod ugo+r '{}' \;
+	python3 "$(srcdir)/extras/package/macosx/bundle-dylibs.py" "$@"
+	codesign --force --deep --sign - "$@"
 	if test "$(build)" = "$(host)"; then \
 		VLC_LIB_PATH="$@/Contents/Frameworks" bin/vlc-cache-gen $@/Contents/Frameworks/plugins ; \
 	else \
 		echo "Cross-compilation: cache generation skipped!" ; \
 	fi
-	find $@ -type d -exec chmod ugo+rx '{}' \;
-	find $@ -type f -exec chmod ugo+r '{}' \;
+	codesign --force --sign - "$@/Contents/Frameworks/plugins/plugins.dat"
+	codesign --force --sign - "$@"
+	codesign --verify --deep --strict "$@"
 
 # Deliberate alias for backwards compatibility
 VLC.app: MacLC.app
@@ -115,6 +119,8 @@ else !HAVE_DMGBUILD
 	cp -Rp "$(top_builddir)/MacLC.app" "$(top_builddir)/maclc-$(VERSION)/MacLC.app"
 	## Symlink to Applications so users can easily drag-and-drop the App to it
 	$(LN_S) -f /Applications "$(top_builddir)/maclc-$(VERSION)/"
+	textutil -convert rtf -output "$(top_builddir)/maclc-$(VERSION)/Read Me First.rtf" "$(srcdir)/extras/package/macosx/readme/read-me-first.html"
+	textutil -convert rtf -output "$(top_builddir)/maclc-$(VERSION)/Lisez-moi en premier.rtf" "$(srcdir)/extras/package/macosx/readme/lisez-moi.html"
 	## Create DMG
 	hdiutil create -srcfolder "$(top_builddir)/maclc-$(VERSION)" -volname "MacLC" \
 		-format UDBZ -fs HFS+ -o "$(top_builddir)/maclc-$(VERSION).dmg"
@@ -172,6 +178,9 @@ EXTRA_DIST += \
 	extras/package/macosx/build.sh \
 	extras/package/macosx/codesign.sh \
 	extras/package/macosx/configure.sh \
+	extras/package/macosx/bundle-dylibs.py \
+	extras/package/macosx/readme/read-me-first.html \
+	extras/package/macosx/readme/lisez-moi.html \
 	extras/package/macosx/dmg/dmg_settings.py \
 	extras/package/macosx/dmg/disk_image.icns \
 	extras/package/macosx/dmg/background.tiff \
