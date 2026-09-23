@@ -38,6 +38,7 @@
      * vlc_dialog_id_dismiss(), which also means "cancelled": a dialog is
      * only dismissed when the user cancels it or the core releases it. */
     vlc_dialog_id *_progressDialogID;
+    vlc_dialog_id *_modalDialogID; /* login or question alert running */
     NSMutableArray<NSDictionary *> *_pendingProgressDialogs;
 }
 
@@ -176,11 +177,13 @@ static void updateProgressCallback(void *p_data,
 {
     @autoreleasepool {
         VLCCoreDialogProvider *dialogProvider = (__bridge VLCCoreDialogProvider *)p_data;
-        /* AppKit views: main thread only. */
+        /* The text belongs to the caller: copy it before leaving. AppKit
+         * views: main thread only. */
+        NSString * const text = VLCSubstituteBrandNames(toNSStr(psz_text));
         dispatch_async(dispatch_get_main_queue(), ^{
             [dialogProvider updateDisplayedProgressDialog:p_id
                                                  position:f_value
-                                                     text:VLCSubstituteBrandNames(toNSStr(psz_text))];
+                                                     text:text];
         });
     }
 }
@@ -266,7 +269,9 @@ static void updateProgressCallback(void *p_data,
     _authenticationStorePasswordCheckbox.state = NSOffState;
 
     [_authenticationWindow center];
+    _modalDialogID = dialogID;
     NSInteger returnValue = [NSApp runModalForWindow:_authenticationWindow];
+    _modalDialogID = NULL;
     [_authenticationWindow close];
 
     username = _authenticationLoginTextField.stringValue;
@@ -317,7 +322,9 @@ static void updateProgressCallback(void *p_data,
             break;
     }
 
+    _modalDialogID = dialogID;
     NSInteger returnValue = [alert runModal];
+    _modalDialogID = NULL;
     switch (returnValue) {
         case NSAlertFirstButtonReturn:
             vlc_dialog_id_post_action(dialogID, 1);
@@ -341,6 +348,21 @@ static void updateProgressCallback(void *p_data,
                      position:(float)position
                   cancelTitle:(NSString *)cancelTitle
 {
+    /* One window: a second dialog waits for the first to go. */
+    if (_progressDialogID != NULL && _progressDialogID != dialogID) {
+        if (_pendingProgressDialogs == nil) {
+            _pendingProgressDialogs = [NSMutableArray array];
+        }
+        [_pendingProgressDialogs addObject:@{
+            @"id": [NSValue valueWithPointer:dialogID],
+            @"title": title ?: @"",
+            @"text": text ?: @"",
+            @"indeterminate": @(indeterminate),
+            @"position": @(position),
+            @"cancel": cancelTitle ?: @"",
+        }];
+        return;
+    }
     _progressTitleLabel.stringValue = title;
     _progressWindow.title = title;
 
@@ -357,21 +379,6 @@ static void updateProgressCallback(void *p_data,
         _progressCancelButton.enabled = NO;
     }
 
-    /* One window: a second dialog waits for the first to go. */
-    if (_progressDialogID != NULL && _progressDialogID != dialogID) {
-        if (_pendingProgressDialogs == nil) {
-            _pendingProgressDialogs = [NSMutableArray array];
-        }
-        [_pendingProgressDialogs addObject:@{
-            @"id": [NSValue valueWithPointer:dialogID],
-            @"title": title ?: @"",
-            @"text": text ?: @"",
-            @"indeterminate": @(indeterminate),
-            @"position": @(position),
-            @"cancel": cancelTitle ?: @"",
-        }];
-        return;
-    }
     _progressDialogID = dialogID;
 
     [_progressIndicator startAnimation:self];
@@ -429,8 +436,12 @@ static void updateProgressCallback(void *p_data,
         vlc_dialog_id_dismiss(dialogID);
         return;
     }
-    /* Login and question dialogs are still modal alerts. */
-    [NSApp stopModalWithCode:0];
+    /* Login and question dialogs are still modal alerts. Another id is a
+     * progress dialog closed meanwhile: stopping the modal session then
+     * would end someone else's (an open panel). */
+    if (dialogID == _modalDialogID) {
+        [NSApp stopModalWithCode:0];
+    }
 }
 
 - (void)updateDisplayedProgressDialog:(vlc_dialog_id *)dialogID
@@ -439,9 +450,10 @@ static void updateProgressCallback(void *p_data,
 {
     if (dialogID != _progressDialogID) {
         const NSUInteger pending = [self indexOfPendingProgressDialog:dialogID];
-        if (pending != NSNotFound && text.length > 0) {
+        if (pending != NSNotFound) {
             NSMutableDictionary * const entry = [_pendingProgressDialogs[pending] mutableCopy];
-            entry[@"text"] = text;
+            if (text.length > 0)
+                entry[@"text"] = text;
             entry[@"position"] = @(position);
             _pendingProgressDialogs[pending] = entry;
         }

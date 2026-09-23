@@ -350,13 +350,17 @@ void StopAtExit()
 {
     Session *s;
     {
-        std::lock_guard<std::mutex> lock(g_mutex);
+        std::unique_lock<std::mutex> lock(g_mutex);
         /* From here on Acquire() neither starts nor deletes a session, so
          * s stays valid for the join below. */
         g_exiting = true;
         s = g_session;
         if (s == nullptr)
             return;
+        /* An Acquire() already past that check adds its torrent without the
+         * lock: the session must outlive the call. */
+        while (s->adding > 0)
+            g_cond.wait_for(lock, std::chrono::milliseconds(50));
         s->quit = true;
     }
     if (s->thread.joinable())

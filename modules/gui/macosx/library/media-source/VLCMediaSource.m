@@ -584,9 +584,9 @@ static const char *const remoteBrowseDescription = "Remote Browse";
                 if (urlNode) {
                     input_item_node_AppendNode(directoryNode, urlNode);
                 }
-                input_item_Release(urlInputItem);
-                urlInputItem = NULL;
             }
+            if (urlInputItem != NULL)
+                input_item_Release(urlInputItem);
         }
 
         if (self.didFinishGeneratingChildNodesForNodeHandler) {

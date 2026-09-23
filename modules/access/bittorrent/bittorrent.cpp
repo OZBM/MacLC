@@ -391,10 +391,18 @@ bool LoadFile(const std::string &path, std::vector<char> &out)
 
 void SaveFile(const std::string &path, const std::vector<char> &data)
 {
-    const std::string tmp = path + ".part";
-    FILE *f = vlc_fopen(tmp.c_str(), "wb");
-    if (f == NULL)
+    /* A name of its own: two players can fetch the same magnet. */
+    std::string tmp = path + ".XXXXXX";
+    const int fd = vlc_mkstemp(&tmp[0]);
+    if (fd == -1)
         return;
+    FILE *f = fdopen(fd, "wb");
+    if (f == NULL)
+    {
+        vlc_close(fd);
+        vlc_unlink(tmp.c_str());
+        return;
+    }
     const bool ok = fwrite(data.data(), 1, data.size(), f) == data.size();
     if (fclose(f) == 0 && ok)
         vlc_rename(tmp.c_str(), path.c_str());

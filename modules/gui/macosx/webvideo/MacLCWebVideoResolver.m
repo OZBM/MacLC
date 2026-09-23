@@ -113,6 +113,9 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
         }
     }
     if (![self looksLikeWebVideoAddress:trimmed]) return nil;
+    /* NSURL rejects many valid magnet links (raw spaces, IPv6 trackers):
+     * never turn one into an https address. */
+    if ([trimmed.lowercaseString hasPrefix:@"magnet:"]) return trimmed;
 
     NSURL *url = [NSURL URLWithString:trimmed];
     if (!url || !url.scheme) {
