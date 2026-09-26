@@ -172,6 +172,21 @@ void MetadataExtractor::populateItem( medialibrary::parser::IItem& item, input_i
         t.bitrate = p_es->i_bitrate;
         t.language = emptyStringWrapper( p_es->psz_language );
         t.description = emptyStringWrapper( p_es->psz_description );
+        /* The library only stores a few fields per track: MacLC names the
+         * dynamic range of an HDR video track in its description when the
+         * file gives none, and its library screens badge the video from it
+         * (MacLCMediaFormat). HDR10+ metadata only shows up while decoding,
+         * so a PQ track reads as HDR10 here. */
+        if ( p_es->i_cat == VIDEO_ES && t.description.empty() )
+        {
+            const video_format_t *fmt = &p_es->video;
+            if ( fmt->dovi.profile > 0 || fmt->dovi.rpu_present )
+                t.description = "Dolby Vision";
+            else if ( fmt->transfer == TRANSFER_FUNC_SMPTE_ST2084 )
+                t.description = "HDR10";
+            else if ( fmt->transfer == TRANSFER_FUNC_HLG )
+                t.description = "HLG";
+        }
 
         item.addTrack( std::move( t ) );
     }
