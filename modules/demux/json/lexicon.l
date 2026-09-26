@@ -26,6 +26,11 @@
 %option nostdinit
 %option nounput
 %option noyywrap
+/* Input always comes from YY_INPUT: without this, the scanner still calls
+ * isatty(fileno(stdin)) when it creates its buffer, which blocks for as long
+ * as another thread holds the lock of stdin (an interface reading commands
+ * from it), stalling every preparser request behind it. */
+%option never-interactive
 %option prefix="json"
 
 %{
