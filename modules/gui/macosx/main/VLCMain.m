@@ -52,6 +52,8 @@
 #import "library/VLCLibraryWindow.h"
 #import "webvideo/MacLCWebVideoPanelController.h"
 #import "library/VLCLibraryWindowController.h"
+#import "library/VLCLibraryWindowNavigationSidebarViewController.h"
+#import "library/VLCLibraryWindowSplitViewController.h"
 
 #import "main/CompatibilityFixes.h"
 #import "main/VLCMain+OldPrefs.h"
@@ -417,6 +419,27 @@ static VLCMain *sharedInstance = nil;
             } else {
                 [window goToBrowseSection:window];
             }
+        });
+    }
+
+    /* Developer hooks for headless library checks: MACLC_DEBUG_ML_FOLDER=/dir
+     * adds that folder to the media library at launch, and
+     * MACLC_DEBUG_LIBRARY_SECTION=<segment type number> selects that section
+     * of the library window. Unset, they do nothing. */
+    const char * const debugLibraryFolder = getenv("MACLC_DEBUG_ML_FOLDER");
+    if (debugLibraryFolder != NULL) {
+        NSURL * const folderURL =
+            [NSURL fileURLWithPath:[NSString stringWithUTF8String:debugLibraryFolder] isDirectory:YES];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self.libraryController addFolderWithFileURL:folderURL];
+        });
+    }
+    const char * const debugLibrarySection = getenv("MACLC_DEBUG_LIBRARY_SECTION");
+    if (debugLibrarySection != NULL) {
+        const NSInteger segmentType = atoi(debugLibrarySection);
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;
+            [window.splitViewController.navSidebarViewController selectSegment:segmentType];
         });
     }
 
