@@ -19,6 +19,8 @@
  *****************************************************************************/
 
 #import "medialib/sections/MacLCLibrarySectionViewController.h"
+#import "medialib/sections/MacLCLibraryDetailScaffold.h"
+#import "medialib/sections/MacLCLibraryGridSection.h"
 
 @class VLCMediaLibraryShow;
 @class VLCMediaLibraryAlbum;
@@ -38,38 +40,38 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 /// Every video that is not an episode. Grid / list, sortable.
-@interface MacLCLibraryVideosViewController : MacLCLibrarySectionViewController
+@interface MacLCLibraryVideosViewController : MacLCLibraryGridSection
 - (instancetype)init;
 @end
 
 /// Shows grid; pushes MacLCShowDetailViewController.
-@interface MacLCLibraryShowsViewController : MacLCLibrarySectionViewController
+@interface MacLCLibraryShowsViewController : MacLCLibraryGridSection
 - (instancetype)init;
 @end
 
 /// Artists grid (circles) / list; pushes MacLCArtistDetailViewController.
-@interface MacLCLibraryArtistsViewController : MacLCLibrarySectionViewController
+@interface MacLCLibraryArtistsViewController : MacLCLibraryGridSection
 - (instancetype)init;
 @end
 
 /// Albums grid / list; pushes MacLCAlbumDetailViewController.
-@interface MacLCLibraryAlbumsViewController : MacLCLibrarySectionViewController
+@interface MacLCLibraryAlbumsViewController : MacLCLibraryGridSection
 - (instancetype)init;
 @end
 
 /// Songs table (list only), sortable columns.
-@interface MacLCLibrarySongsViewController : MacLCLibrarySectionViewController
+@interface MacLCLibrarySongsViewController : MacLCLibraryGridSection
 - (instancetype)init;
 @end
 
 /// Genres grid; pushes MacLCGenreDetailViewController.
-@interface MacLCLibraryGenresViewController : MacLCLibrarySectionViewController
+@interface MacLCLibraryGenresViewController : MacLCLibraryGridSection
 - (instancetype)init;
 @end
 
 /// Playlists grid; pushes MacLCPlaylistDetailViewController. The sidebar
 /// lists the playlists too and shows one through -showItem:.
-@interface MacLCLibraryPlaylistsViewController : MacLCLibrarySectionViewController
+@interface MacLCLibraryPlaylistsViewController : MacLCLibraryGridSection
 - (instancetype)init;
 @end
 
@@ -80,23 +82,23 @@ NS_ASSUME_NONNULL_BEGIN
 
 // MARK: - Details (pushed on a section's stack)
 
-@interface MacLCShowDetailViewController : NSViewController
+@interface MacLCShowDetailViewController : MacLCLibraryDetailScaffold
 - (instancetype)initWithShow:(VLCMediaLibraryShow *)show;
 @end
 
-@interface MacLCAlbumDetailViewController : NSViewController
+@interface MacLCAlbumDetailViewController : MacLCLibraryDetailScaffold
 - (instancetype)initWithAlbum:(VLCMediaLibraryAlbum *)album;
 @end
 
-@interface MacLCArtistDetailViewController : NSViewController
+@interface MacLCArtistDetailViewController : MacLCLibraryDetailScaffold
 - (instancetype)initWithArtist:(VLCMediaLibraryArtist *)artist;
 @end
 
-@interface MacLCGenreDetailViewController : NSViewController
+@interface MacLCGenreDetailViewController : MacLCLibraryDetailScaffold
 - (instancetype)initWithGenre:(VLCMediaLibraryGenre *)genre;
 @end
 
-@interface MacLCPlaylistDetailViewController : NSViewController
+@interface MacLCPlaylistDetailViewController : MacLCLibraryDetailScaffold
 - (instancetype)initWithPlaylist:(VLCMediaLibraryPlaylist *)playlist;
 @end
 

@@ -1,0 +1,793 @@
+/*****************************************************************************
+ * MacLCNowPlayingBar.m: floating Liquid Glass mini player of the library
+ *****************************************************************************
+ * Copyright (C) 2026 Hazen Studio
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+#import "medialib/shell/MacLCNowPlayingBar.h"
+
+#import "library/VLCLibraryWindow.h"
+#import "theme/MacLCGlassView.h"
+#import "theme/MacLCSymbolButton.h"
+#import "theme/MacLCDesign.h"
+#import "library/VLCLibraryImageCache.h"
+#import "playqueue/VLCPlayQueueController.h"
+#import "playqueue/VLCPlayQueueModel.h"
+#import "playqueue/VLCPlayQueueItem.h"
+#import "playqueue/VLCPlayerController.h"
+#import "main/VLCMain.h"
+#import "extensions/NSString+Helpers.h"
+#import "windows/VLCDetachedAudioWindow.h"
+
+#import <vlc_common.h>
+
+@interface MacLCNowPlayingBar ()
+{
+    __weak VLCLibraryWindow *_libraryWindow;
+    MacLCGlassView *_glassView;
+    NSButton *_artworkButton;
+    NSTextField *_titleLabel;
+    NSTextField *_subtitleLabel;
+    NSStackView *_titleStack;
+    MacLCSymbolButton *_backwardButton;
+    MacLCSymbolButton *_playPauseButton;
+    MacLCSymbolButton *_forwardButton;
+    NSTextField *_elapsedLabel;
+    NSSlider *_slider;
+    NSTextField *_remainingLabel;
+    MacLCSymbolButton *_volumeButton;
+    NSPopover *_volumePopover;
+    NSSlider *_volumeSlider;
+    BOOL _isDraggingSlider;
+    BOOL _shown;
+    NSArray<NSLayoutConstraint *> *_superviewConstraints;
+    BOOL _kvoRegistered;
+    NSView *_liveVideoView;
+}
+
+@end
+
+@implementation MacLCNowPlayingBar
+
++ (CGFloat)reservedHeight
+{
+    return 76.0;
+}
+
+- (instancetype)initWithLibraryWindow:(VLCLibraryWindow *)libraryWindow
+{
+    self = [super initWithFrame:NSZeroRect];
+    if (self) {
+        _libraryWindow = libraryWindow;
+        _shown = NO;
+        self.wantsLayer = YES;
+        self.hidden = YES;
+
+        [self setupViews];
+        [self registerNotifications];
+        [self updateMetadata];
+        [self updatePlaybackState];
+        [self updateTimeAndPosition];
+        [self updateVolumeState];
+        [self updateVisibilityAnimated:NO];
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+    if (_kvoRegistered && _libraryWindow != nil) {
+        [_libraryWindow removeObserver:self
+                            forKeyPath:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey];
+        _kvoRegistered = NO;
+    }
+}
+
+- (BOOL)isShown
+{
+    return _shown;
+}
+
+- (void)viewDidMoveToSuperview
+{
+    [super viewDidMoveToSuperview];
+
+    if (_superviewConstraints.count > 0) {
+        [NSLayoutConstraint deactivateConstraints:_superviewConstraints];
+        _superviewConstraints = nil;
+    }
+
+    NSView *superview = self.superview;
+    if (superview == nil) {
+        return;
+    }
+
+    self.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSLayoutConstraint *widthFit = [self.widthAnchor constraintEqualToAnchor:superview.widthAnchor constant:-48.0];
+    widthFit.priority = NSLayoutPriorityDefaultHigh;
+
+    _superviewConstraints = @[
+        [self.bottomAnchor constraintEqualToAnchor:superview.bottomAnchor constant:-16.0],
+        [self.centerXAnchor constraintEqualToAnchor:superview.centerXAnchor],
+        [self.heightAnchor constraintEqualToConstant:60.0],
+        [self.widthAnchor constraintLessThanOrEqualToConstant:760.0],
+        widthFit,
+        [self.leadingAnchor constraintGreaterThanOrEqualToAnchor:superview.leadingAnchor constant:24.0],
+        [self.trailingAnchor constraintLessThanOrEqualToAnchor:superview.trailingAnchor constant:-24.0],
+    ];
+
+    [NSLayoutConstraint activateConstraints:_superviewConstraints];
+}
+
+- (void)setupViews
+{
+    _glassView = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
+    _glassView.translatesAutoresizingMaskIntoConstraints = NO;
+    _glassView.cornerRadius = 30.0;
+    [self addSubview:_glassView];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [_glassView.topAnchor constraintEqualToAnchor:self.topAnchor],
+        [_glassView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
+        [_glassView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
+        [_glassView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
+    ]];
+
+    NSView *contentView = _glassView.contentView;
+
+    _artworkButton = [[NSButton alloc] initWithFrame:NSZeroRect];
+    _artworkButton.translatesAutoresizingMaskIntoConstraints = NO;
+    _artworkButton.bordered = NO;
+    _artworkButton.imagePosition = NSImageOnly;
+    _artworkButton.imageScaling = NSImageScaleProportionallyUpOrDown;
+    _artworkButton.wantsLayer = YES;
+    _artworkButton.layer.cornerRadius = 6.0;
+    _artworkButton.layer.masksToBounds = YES;
+    _artworkButton.layer.cornerCurve = kCACornerCurveContinuous;
+    _artworkButton.target = self;
+    _artworkButton.action = @selector(artworkClicked:);
+    _artworkButton.accessibilityLabel = _NS("Show Video");
+    _artworkButton.toolTip = _NS("Show Video");
+    [contentView addSubview:_artworkButton];
+
+    _titleLabel = [NSTextField labelWithString:@""];
+    _titleLabel.font = MacLCDesign.headline;
+    _titleLabel.textColor = MacLCDesign.primaryLabel;
+    _titleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+    _titleLabel.maximumNumberOfLines = 1;
+    _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [_titleLabel setContentHuggingPriority:NSLayoutPriorityDefaultLow
+                           forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_titleLabel setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
+                                          forOrientation:NSLayoutConstraintOrientationHorizontal];
+
+    _subtitleLabel = [NSTextField labelWithString:@""];
+    _subtitleLabel.font = MacLCDesign.subheadline;
+    _subtitleLabel.textColor = MacLCDesign.secondaryLabel;
+    _subtitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+    _subtitleLabel.maximumNumberOfLines = 1;
+    _subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [_subtitleLabel setContentHuggingPriority:NSLayoutPriorityDefaultLow
+                              forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_subtitleLabel setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
+                                             forOrientation:NSLayoutConstraintOrientationHorizontal];
+
+    _titleStack = [NSStackView stackViewWithViews:@[_titleLabel, _subtitleLabel]];
+    _titleStack.orientation = NSUserInterfaceLayoutOrientationVertical;
+    _titleStack.alignment = NSLayoutAttributeLeading;
+    _titleStack.spacing = 2.0;
+    _titleStack.translatesAutoresizingMaskIntoConstraints = NO;
+    [_titleStack setContentHuggingPriority:NSLayoutPriorityDefaultLow
+                           forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_titleStack setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
+                                          forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [contentView addSubview:_titleStack];
+
+    _backwardButton = [MacLCSymbolButton buttonWithSymbolName:@"backward.fill"
+                                                       label:_NS("Previous")
+                                                   pointSize:15.0
+                                                      target:self
+                                                      action:@selector(previousClicked:)];
+    _backwardButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [contentView addSubview:_backwardButton];
+
+    _playPauseButton = [MacLCSymbolButton buttonWithSymbolName:@"play.fill"
+                                                         label:_NS("Play")
+                                                     pointSize:24.0
+                                                        target:self
+                                                        action:@selector(playPauseClicked:)];
+    _playPauseButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [contentView addSubview:_playPauseButton];
+
+    _forwardButton = [MacLCSymbolButton buttonWithSymbolName:@"forward.fill"
+                                                      label:_NS("Next")
+                                                  pointSize:15.0
+                                                     target:self
+                                                     action:@selector(nextClicked:)];
+    _forwardButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [contentView addSubview:_forwardButton];
+
+    _elapsedLabel = [NSTextField labelWithString:@"0:00"];
+    _elapsedLabel.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleFootnote];
+    _elapsedLabel.textColor = MacLCDesign.secondaryLabel;
+    _elapsedLabel.alignment = NSTextAlignmentRight;
+    _elapsedLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [_elapsedLabel setContentHuggingPriority:NSLayoutPriorityRequired
+                             forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_elapsedLabel setContentCompressionResistancePriority:NSLayoutPriorityRequired
+                                           forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [contentView addSubview:_elapsedLabel];
+
+    _slider = [[NSSlider alloc] initWithFrame:NSZeroRect];
+    _slider.translatesAutoresizingMaskIntoConstraints = NO;
+    _slider.sliderType = NSSliderTypeLinear;
+    _slider.controlSize = NSControlSizeSmall;
+    _slider.minValue = 0.0;
+    _slider.maxValue = 1.0;
+    _slider.doubleValue = 0.0;
+    _slider.continuous = YES;
+    _slider.target = self;
+    _slider.action = @selector(sliderAction:);
+    _slider.accessibilityLabel = _NS("Playback Position");
+    _slider.toolTip = _NS("Playback Position");
+    [_slider setContentHuggingPriority:NSLayoutPriorityDefaultLow
+                        forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [contentView addSubview:_slider];
+
+    _remainingLabel = [NSTextField labelWithString:@"--:--"];
+    _remainingLabel.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleFootnote];
+    _remainingLabel.textColor = MacLCDesign.secondaryLabel;
+    _remainingLabel.alignment = NSTextAlignmentLeft;
+    _remainingLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [_remainingLabel setContentHuggingPriority:NSLayoutPriorityRequired
+                               forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_remainingLabel setContentCompressionResistancePriority:NSLayoutPriorityRequired
+                                             forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [contentView addSubview:_remainingLabel];
+
+    _volumeButton = [MacLCSymbolButton buttonWithSymbolName:@"speaker.wave.2.fill"
+                                                      label:_NS("Volume")
+                                                  pointSize:15.0
+                                                     target:self
+                                                     action:@selector(volumeClicked:)];
+    _volumeButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [contentView addSubview:_volumeButton];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [_artworkButton.widthAnchor constraintEqualToConstant:40.0],
+        [_artworkButton.heightAnchor constraintEqualToConstant:40.0],
+        [_artworkButton.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:12.0],
+        [_artworkButton.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+
+        [_titleStack.leadingAnchor constraintEqualToAnchor:_artworkButton.trailingAnchor constant:10.0],
+        [_titleStack.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+        [_titleStack.trailingAnchor constraintLessThanOrEqualToAnchor:_backwardButton.leadingAnchor constant:-8.0],
+
+        [_backwardButton.widthAnchor constraintGreaterThanOrEqualToConstant:28.0],
+        [_backwardButton.heightAnchor constraintGreaterThanOrEqualToConstant:28.0],
+        [_backwardButton.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+
+        [_playPauseButton.widthAnchor constraintEqualToConstant:36.0],
+        [_playPauseButton.heightAnchor constraintEqualToConstant:36.0],
+        [_playPauseButton.leadingAnchor constraintEqualToAnchor:_backwardButton.trailingAnchor constant:4.0],
+        [_playPauseButton.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+
+        [_forwardButton.widthAnchor constraintGreaterThanOrEqualToConstant:28.0],
+        [_forwardButton.heightAnchor constraintGreaterThanOrEqualToConstant:28.0],
+        [_forwardButton.leadingAnchor constraintEqualToAnchor:_playPauseButton.trailingAnchor constant:4.0],
+        [_forwardButton.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+
+        [_elapsedLabel.leadingAnchor constraintEqualToAnchor:_forwardButton.trailingAnchor constant:12.0],
+        [_elapsedLabel.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+
+        [_slider.leadingAnchor constraintEqualToAnchor:_elapsedLabel.trailingAnchor constant:8.0],
+        [_slider.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+        [_slider.widthAnchor constraintGreaterThanOrEqualToConstant:160.0],
+
+        [_remainingLabel.leadingAnchor constraintEqualToAnchor:_slider.trailingAnchor constant:8.0],
+        [_remainingLabel.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+
+        [_volumeButton.widthAnchor constraintGreaterThanOrEqualToConstant:28.0],
+        [_volumeButton.heightAnchor constraintGreaterThanOrEqualToConstant:28.0],
+        [_volumeButton.leadingAnchor constraintEqualToAnchor:_remainingLabel.trailingAnchor constant:12.0],
+        [_volumeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-12.0],
+        [_volumeButton.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+    ]];
+}
+
+- (void)registerNotifications
+{
+    NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
+
+    [nc addObserver:self
+           selector:@selector(handlePlayQueueChange:)
+               name:VLCPlayQueueCurrentItemIndexChanged
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(handlePlayQueueChange:)
+               name:VLCPlayQueueItemsAdded
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(handlePlayQueueChange:)
+               name:VLCPlayQueueItemsRemoved
+             object:nil];
+
+    [nc addObserver:self
+           selector:@selector(handleMediaChange:)
+               name:VLCPlayerCurrentMediaItemChanged
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(handleMediaChange:)
+               name:VLCPlayerMetadataChangedForCurrentMedia
+             object:nil];
+
+    [nc addObserver:self
+           selector:@selector(handleStateChange:)
+               name:VLCPlayerStateChanged
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(handleTimePositionChange:)
+               name:VLCPlayerTimeAndPositionChanged
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(handleTimePositionChange:)
+               name:VLCPlayerLengthChanged
+             object:nil];
+
+    [nc addObserver:self
+           selector:@selector(handleNavigationChange:)
+               name:VLCPlaybackHasPreviousChanged
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(handleNavigationChange:)
+               name:VLCPlaybackHasNextChanged
+             object:nil];
+
+    [nc addObserver:self
+           selector:@selector(handleVolumeChange:)
+               name:VLCPlayerVolumeChanged
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(handleVolumeChange:)
+               name:VLCPlayerMuteChanged
+             object:nil];
+
+    if (_libraryWindow != nil) {
+        [_libraryWindow addObserver:self
+                         forKeyPath:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey
+                            options:NSKeyValueObservingOptionNew
+                            context:nil];
+        _kvoRegistered = YES;
+    }
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary<NSKeyValueChangeKey,id> *)change
+                       context:(void *)context
+{
+    if ([keyPath isEqualToString:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self updateVisibilityAnimated:YES];
+        });
+    } else {
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+    }
+}
+
+#pragma mark - State Updaters
+
+- (void)updateVisibilityAnimated:(BOOL)animated
+{
+    BOOL hasCurrentItem = NO;
+    VLCPlayQueueController *playQueue = VLCMain.sharedInstance.playQueueController;
+    if (playQueue != nil) {
+        size_t idx = playQueue.currentPlayQueueIndex;
+        if (idx != (size_t)-1 && idx < playQueue.playQueueModel.numberOfPlayQueueItems) {
+            hasCurrentItem = YES;
+        }
+    }
+
+    BOOL embeddedVideo = NO;
+    if (_libraryWindow != nil) {
+        embeddedVideo = _libraryWindow.embeddedVideoPlaybackActive;
+    }
+
+    BOOL shouldShow = hasCurrentItem && !embeddedVideo;
+    [self setShown:shouldShow animated:animated];
+}
+
+- (void)setShown:(BOOL)shown animated:(BOOL)animated
+{
+    if (_shown == shown) {
+        return;
+    }
+    _shown = shown;
+    if (self.visibilityHandler != nil) {
+        self.visibilityHandler(shown);
+    }
+
+    if (animated) {
+        if (shown) {
+            self.hidden = NO;
+            [MacLCDesign animateEntranceOfView:self];
+        } else {
+            [MacLCDesign animateExitOfView:self completion:nil];
+        }
+    } else {
+        self.hidden = !shown;
+        self.alphaValue = shown ? 1.0 : 0.0;
+    }
+}
+
+- (void)setLiveVideoView:(NSView *)videoView
+{
+    if (_liveVideoView == videoView) {
+        return;
+    }
+
+    NSView * const artworkContainer = _artworkButton.superview;
+    if (_liveVideoView != nil) {
+        _liveVideoView.layer.cornerRadius = 0.0;
+        _liveVideoView.layer.masksToBounds = NO;
+        /* The video view controller may already have taken the view back. */
+        if (_liveVideoView.superview == artworkContainer) {
+            [_liveVideoView removeFromSuperview];
+        }
+    }
+    _liveVideoView = videoView;
+
+    if (videoView == nil) {
+        [self updateMetadata];
+        return;
+    }
+
+    /* The borderless button stays on top, without an image, so a click on the
+     * picture still brings the video back. */
+    _artworkButton.image = nil;
+    videoView.translatesAutoresizingMaskIntoConstraints = NO;
+    videoView.wantsLayer = YES;
+    videoView.layer.cornerRadius = 6.0;
+    videoView.layer.cornerCurve = kCACornerCurveContinuous;
+    videoView.layer.masksToBounds = YES;
+    [artworkContainer addSubview:videoView positioned:NSWindowBelow relativeTo:_artworkButton];
+    [NSLayoutConstraint activateConstraints:@[
+        [videoView.leadingAnchor constraintEqualToAnchor:_artworkButton.leadingAnchor],
+        [videoView.trailingAnchor constraintEqualToAnchor:_artworkButton.trailingAnchor],
+        [videoView.topAnchor constraintEqualToAnchor:_artworkButton.topAnchor],
+        [videoView.bottomAnchor constraintEqualToAnchor:_artworkButton.bottomAnchor],
+    ]];
+}
+
+- (void)updateMetadata
+{
+    VLCPlayQueueController *playQueue = VLCMain.sharedInstance.playQueueController;
+    VLCPlayerController *player = playQueue.playerController;
+
+    size_t currentIndex = playQueue.currentPlayQueueIndex;
+    VLCPlayQueueItem *currentItem = nil;
+    if (currentIndex != (size_t)-1 && currentIndex < playQueue.playQueueModel.numberOfPlayQueueItems) {
+        currentItem = [playQueue.playQueueModel playQueueItemAtIndex:currentIndex];
+    }
+
+    NSString *title = player.nameOfCurrentMediaItem ?: currentItem.title ?: @"";
+    _titleLabel.stringValue = title;
+
+    BOOL isAudio = player.currentMediaIsAudioOnly ||
+                   (player.videoTracks.count == 0 && player.audioTracks.count > 0);
+
+    if (isAudio) {
+        NSString *artist = currentItem.artistName;
+        NSString *album = currentItem.albumName;
+        if (artist.length > 0 && album.length > 0) {
+            _subtitleLabel.stringValue = [NSString stringWithFormat:@"%@ · %@", artist, album];
+        } else if (artist.length > 0) {
+            _subtitleLabel.stringValue = artist;
+        } else if (album.length > 0) {
+            _subtitleLabel.stringValue = album;
+        } else {
+            _subtitleLabel.stringValue = _NS("Audio");
+        }
+        NSString *label = _NS("Show Player");
+        _artworkButton.accessibilityLabel = label;
+        _artworkButton.toolTip = label;
+    } else {
+        _subtitleLabel.stringValue = _NS("Video");
+        NSString *label = _NS("Show Video");
+        _artworkButton.accessibilityLabel = label;
+        _artworkButton.toolTip = label;
+    }
+
+    if (_liveVideoView != nil) {
+        /* The live video stands in for the artwork. */
+    } else if (currentItem != nil) {
+        [VLCLibraryImageCache thumbnailForPlayQueueItem:currentItem
+                                         withCompletion:^(const NSImage *thumbnail) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (self->_liveVideoView != nil) {
+                    return;
+                }
+                if (thumbnail != nil) {
+                    self->_artworkButton.image = (NSImage *)thumbnail;
+                } else {
+                    NSString *placeholder = isAudio ? @"music.note" : @"film";
+                    self->_artworkButton.image = [MacLCDesign symbolNamed:placeholder
+                                                               pointSize:18.0
+                                                                  weight:NSFontWeightMedium
+                                                      accessibilityLabel:nil];
+                }
+            });
+        }];
+    } else {
+        NSString *placeholder = isAudio ? @"music.note" : @"film";
+        _artworkButton.image = [MacLCDesign symbolNamed:placeholder
+                                             pointSize:18.0
+                                                weight:NSFontWeightMedium
+                                    accessibilityLabel:nil];
+    }
+
+    [self updateNavigationState];
+}
+
+- (void)updatePlaybackState
+{
+    VLCPlayerController *player = VLCMain.sharedInstance.playQueueController.playerController;
+    if (player.playerState == VLC_PLAYER_STATE_PLAYING) {
+        [_playPauseButton setSymbolName:@"pause.fill" animated:YES];
+        _playPauseButton.label = _NS("Pause");
+    } else {
+        [_playPauseButton setSymbolName:@"play.fill" animated:YES];
+        _playPauseButton.label = _NS("Play");
+    }
+}
+
+- (void)updateNavigationState
+{
+    VLCPlayQueueController *playQueue = VLCMain.sharedInstance.playQueueController;
+    _backwardButton.enabled = playQueue.hasPreviousPlayQueueItem;
+    _forwardButton.enabled = playQueue.hasNextPlayQueueItem;
+}
+
+- (void)updateTimeAndPosition
+{
+    if (_isDraggingSlider) {
+        return;
+    }
+
+    VLCPlayerController *player = VLCMain.sharedInstance.playQueueController.playerController;
+    if (!player) {
+        return;
+    }
+
+    _slider.doubleValue = player.position;
+
+    vlc_tick_t time = player.time;
+    vlc_tick_t length = player.length;
+
+    if (time != VLC_TICK_INVALID && time >= 0) {
+        _elapsedLabel.stringValue = [NSString stringWithTimeFromTicks:time];
+        if (length > 0) {
+            _remainingLabel.stringValue = [NSString stringWithDuration:length
+                                                           currentTime:time
+                                                              negative:YES];
+        } else {
+            _remainingLabel.stringValue = @"";
+        }
+    } else {
+        _elapsedLabel.stringValue = @"0:00";
+        _remainingLabel.stringValue = @"--:--";
+    }
+
+    _slider.enabled = player.seekable && length > 0;
+}
+
+- (void)updateVolumeState
+{
+    VLCPlayerController *player = VLCMain.sharedInstance.playQueueController.playerController;
+    if (!player) {
+        return;
+    }
+
+    if (_volumeSlider != nil) {
+        _volumeSlider.floatValue = player.volume;
+    }
+
+    if (player.mute) {
+        [_volumeButton setSymbolName:@"speaker.slash.fill" animated:YES];
+    } else if (player.volume <= 0.001) {
+        [_volumeButton setSymbolName:@"speaker.fill" animated:YES];
+    } else if (player.volume <= 0.5) {
+        [_volumeButton setSymbolName:@"speaker.wave.1.fill" animated:YES];
+    } else {
+        [_volumeButton setSymbolName:@"speaker.wave.2.fill" animated:YES];
+    }
+}
+
+#pragma mark - Notification Handlers
+
+- (void)handlePlayQueueChange:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateMetadata];
+        [self updateVisibilityAnimated:YES];
+    });
+}
+
+- (void)handleMediaChange:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateMetadata];
+        [self updateTimeAndPosition];
+        [self updateVisibilityAnimated:YES];
+    });
+}
+
+- (void)handleStateChange:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updatePlaybackState];
+        [self updateVisibilityAnimated:YES];
+    });
+}
+
+- (void)handleTimePositionChange:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateTimeAndPosition];
+    });
+}
+
+- (void)handleNavigationChange:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateNavigationState];
+    });
+}
+
+- (void)handleVolumeChange:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateVolumeState];
+    });
+}
+
+#pragma mark - Actions
+
+- (void)artworkClicked:(id)sender
+{
+    VLCPlayerController *player = VLCMain.sharedInstance.playQueueController.playerController;
+    BOOL isAudio = player.currentMediaIsAudioOnly ||
+                   (player.videoTracks.count == 0 && player.audioTracks.count > 0);
+
+    if (isAudio) {
+        [VLCMain.sharedInstance.detachedAudioWindow makeKeyAndOrderFront:self];
+    } else {
+        if (_libraryWindow != nil) {
+            [_libraryWindow enableVideoPlaybackAppearance];
+        }
+    }
+}
+
+- (void)previousClicked:(id)sender
+{
+    [VLCMain.sharedInstance.playQueueController playPreviousItem];
+}
+
+- (void)playPauseClicked:(id)sender
+{
+    [VLCMain.sharedInstance.playQueueController.playerController togglePlayPause];
+}
+
+- (void)nextClicked:(id)sender
+{
+    [VLCMain.sharedInstance.playQueueController playNextItem];
+}
+
+- (void)sliderAction:(NSSlider *)sender
+{
+    VLCPlayerController *player = VLCMain.sharedInstance.playQueueController.playerController;
+    if (!player) {
+        return;
+    }
+
+    NSEvent *event = NSApp.currentEvent;
+    NSEventType type = event.type;
+
+    switch (type) {
+        case NSEventTypeLeftMouseDown:
+        case NSEventTypeLeftMouseDragged:
+        case NSEventTypeScrollWheel: {
+            _isDraggingSlider = YES;
+            float pos = sender.floatValue;
+            [player setPositionFast:pos];
+            vlc_tick_t length = player.length;
+            if (length > 0) {
+                vlc_tick_t current = (vlc_tick_t)(pos * length);
+                _elapsedLabel.stringValue = [NSString stringWithTimeFromTicks:current];
+                _remainingLabel.stringValue = [NSString stringWithDuration:length
+                                                               currentTime:current
+                                                                  negative:YES];
+            }
+            break;
+        }
+        case NSEventTypeLeftMouseUp: {
+            _isDraggingSlider = NO;
+            float pos = sender.floatValue;
+            [player setPositionPrecise:pos];
+            break;
+        }
+        default: {
+            float pos = sender.floatValue;
+            [player setPositionPrecise:pos];
+            break;
+        }
+    }
+}
+
+- (void)volumeClicked:(id)sender
+{
+    if (_volumePopover != nil && _volumePopover.isShown) {
+        [_volumePopover close];
+        return;
+    }
+
+    VLCPlayerController *player = VLCMain.sharedInstance.playQueueController.playerController;
+
+    _volumePopover = [[NSPopover alloc] init];
+    _volumePopover.behavior = NSPopoverBehaviorTransient;
+
+    NSViewController *vc = [[NSViewController alloc] init];
+    NSView *container = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 160, 36)];
+
+    _volumeSlider = [[NSSlider alloc] initWithFrame:NSMakeRect(14, 6, 132, 24)];
+    _volumeSlider.sliderType = NSSliderTypeLinear;
+    _volumeSlider.controlSize = NSControlSizeSmall;
+    _volumeSlider.minValue = 0.0;
+    _volumeSlider.maxValue = VLCVolumeMaximum;
+    _volumeSlider.floatValue = player.volume;
+    _volumeSlider.continuous = YES;
+    _volumeSlider.target = self;
+    _volumeSlider.action = @selector(volumeSliderChanged:);
+    _volumeSlider.accessibilityLabel = _NS("Volume");
+    _volumeSlider.toolTip = _NS("Volume");
+
+    [container addSubview:_volumeSlider];
+    vc.view = container;
+    _volumePopover.contentViewController = vc;
+
+    [_volumePopover showRelativeToRect:_volumeButton.bounds
+                                ofView:_volumeButton
+                         preferredEdge:NSRectEdgeMaxY];
+}
+
+- (void)volumeSliderChanged:(NSSlider *)sender
+{
+    VLCPlayerController *player = VLCMain.sharedInstance.playQueueController.playerController;
+    if (!player) {
+        return;
+    }
+
+    player.volume = sender.floatValue;
+    if (player.mute && sender.floatValue > 0.001) {
+        player.mute = NO;
+    }
+    [self updateVolumeState];
+}
+
+@end

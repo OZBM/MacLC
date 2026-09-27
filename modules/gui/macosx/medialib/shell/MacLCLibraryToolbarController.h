@@ -20,6 +20,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+#import "medialib/MacLCLibraryTypes.h"
+
 @class VLCLibraryWindow;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -60,6 +62,18 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Makes the search field first responder (Edit ▸ Find, ⌘F).
 - (void)focusSearchField;
+
+// Menu bar commands: the window forwards the View menu to these.
+@property (readonly) BOOL canGoBack;
+@property (readonly) BOOL canGoForward;
+- (void)goBack;
+- (void)goForward;
+/// NO when the visible screen has no Grid/List choice.
+@property (readonly) BOOL canChangeViewMode;
+@property (readonly) MacLCLibraryViewMode viewMode;
+- (void)showViewMode:(MacLCLibraryViewMode)viewMode;
+/// The sort menu of the visible section; nil when it cannot be sorted.
+@property (readonly, nullable) NSMenu *sortMenu;
 
 @end
 

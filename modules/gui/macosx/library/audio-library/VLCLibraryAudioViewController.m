@@ -34,6 +34,7 @@
 #import "library/VLCLibraryModel.h"
 #import "library/VLCLibrarySegment.h"
 #import "library/VLCLibraryWindowNavigationSidebarViewController.h"
+#import "medialib/shell/MacLCLibrarySidebarViewController.h"
 #import "library/VLCLibraryWindowSplitViewController.h"
 #import "library/VLCLibraryTwoPaneSplitViewDelegate.h"
 #import "library/VLCLibraryWindow.h"

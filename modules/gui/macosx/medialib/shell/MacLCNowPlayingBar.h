@@ -57,6 +57,15 @@ NS_ASSUME_NONNULL_BEGIN
 /// Height including the 16 pt gap under it, for content insets.
 @property (class, readonly) CGFloat reservedHeight;
 
+/// Called on the main thread each time the bar shows or hides, so the owner
+/// can inset the content scrolling under it.
+@property (nonatomic, copy, nullable) void (^visibilityHandler)(BOOL shown);
+
+/// Shows the live video (a view acquired from the video view controller) in
+/// place of the artwork, or goes back to the artwork with nil. The caller
+/// acquires and returns the view; the bar only hosts it.
+- (void)setLiveVideoView:(nullable NSView *)videoView;
+
 @end
 
 NS_ASSUME_NONNULL_END

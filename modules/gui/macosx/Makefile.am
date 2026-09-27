@@ -281,10 +281,10 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/library/home-library/VLCLibraryHomeViewVideoContainerView.h \
 	gui/macosx/library/home-library/VLCLibraryHomeViewVideoCarouselContainerView.h \
 	gui/macosx/library/home-library/VLCLibraryHomeViewVideoCarouselContainerView.m \
-    gui/macosx/library/home-library/VLCLibraryHomeViewVideoContainerViewDataSource.h \
-    gui/macosx/library/home-library/VLCLibraryHomeViewVideoContainerViewDataSource.m \
+	gui/macosx/library/home-library/VLCLibraryHomeViewVideoContainerViewDataSource.h \
+	gui/macosx/library/home-library/VLCLibraryHomeViewVideoContainerViewDataSource.m \
 	gui/macosx/library/home-library/VLCLibraryHomeViewVideoGridContainerView.h \
-    gui/macosx/library/home-library/VLCLibraryHomeViewVideoGridContainerView.m \
+	gui/macosx/library/home-library/VLCLibraryHomeViewVideoGridContainerView.m \
 	gui/macosx/library/video-library/VLCLibraryMoviesDataSource.h \
 	gui/macosx/library/video-library/VLCLibraryMoviesDataSource.m \
 	gui/macosx/library/video-library/VLCLibraryShowsDataSource.h \
@@ -525,6 +525,72 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/frameinterp/MacLCFrameInterpolation.m \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.h \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.m \
+	gui/macosx/medialib/components/MacLCArtworkView.h \
+	gui/macosx/medialib/components/MacLCArtworkView.m \
+	gui/macosx/medialib/components/MacLCCollectionLayout.h \
+	gui/macosx/medialib/components/MacLCCollectionLayout.m \
+	gui/macosx/medialib/components/MacLCDetailHeaderView.h \
+	gui/macosx/medialib/components/MacLCDetailHeaderView.m \
+	gui/macosx/medialib/components/MacLCEmptyStateView.h \
+	gui/macosx/medialib/components/MacLCEmptyStateView.m \
+	gui/macosx/medialib/components/MacLCHeroView.h \
+	gui/macosx/medialib/components/MacLCHeroView.m \
+	gui/macosx/medialib/components/MacLCMediaCardItem.h \
+	gui/macosx/medialib/components/MacLCMediaCardItem.m \
+	gui/macosx/medialib/components/MacLCSectionHeaderView.h \
+	gui/macosx/medialib/components/MacLCSectionHeaderView.m \
+	gui/macosx/medialib/components/MacLCTrackListController.h \
+	gui/macosx/medialib/components/MacLCTrackListController.m \
+	gui/macosx/medialib/data/MacLCArtworkLoader.h \
+	gui/macosx/medialib/data/MacLCArtworkLoader.m \
+	gui/macosx/medialib/data/MacLCLibraryActions.h \
+	gui/macosx/medialib/data/MacLCLibraryActions.m \
+	gui/macosx/medialib/data/MacLCLibraryStore.h \
+	gui/macosx/medialib/data/MacLCLibraryStore.m \
+	gui/macosx/medialib/data/MacLCMediaFormat.h \
+	gui/macosx/medialib/data/MacLCMediaFormat.m \
+	gui/macosx/medialib/MacLCLibraryFormatting.h \
+	gui/macosx/medialib/MacLCLibraryFormatting.m \
+	gui/macosx/medialib/MacLCLibraryTypes.h \
+	gui/macosx/medialib/sections/MacLCAlbumDetailViewController.m \
+	gui/macosx/medialib/sections/MacLCArtistDetailViewController.m \
+	gui/macosx/medialib/sections/MacLCGenreDetailViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryAlbumsViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryArtistsViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryDetailScaffold.h \
+	gui/macosx/medialib/sections/MacLCLibraryDetailScaffold.m \
+	gui/macosx/medialib/sections/MacLCLibraryFavoritesViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryGenresViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryGridSection.h \
+	gui/macosx/medialib/sections/MacLCLibraryGridSection.m \
+	gui/macosx/medialib/sections/MacLCLibraryGridViewController.h \
+	gui/macosx/medialib/sections/MacLCLibraryGridViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryHomeViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryPlaylistsViewController.m \
+	gui/macosx/medialib/sections/MacLCLibrarySections.h \
+	gui/macosx/medialib/sections/MacLCLibrarySectionViewController.h \
+	gui/macosx/medialib/sections/MacLCLibrarySectionViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryShowsViewController.m \
+	gui/macosx/medialib/sections/MacLCLibrarySongsViewController.m \
+	gui/macosx/medialib/sections/MacLCLibraryVideosViewController.m \
+	gui/macosx/medialib/sections/MacLCPlaylistDetailViewController.m \
+	gui/macosx/medialib/sections/MacLCShowDetailViewController.m \
+	gui/macosx/medialib/shell/MacLCLibraryFoldersController.h \
+	gui/macosx/medialib/shell/MacLCLibraryFoldersController.m \
+	gui/macosx/medialib/shell/MacLCLibraryRouter.h \
+	gui/macosx/medialib/shell/MacLCLibraryRouter.m \
+	gui/macosx/medialib/shell/MacLCLibrarySidebarViewController.h \
+	gui/macosx/medialib/shell/MacLCLibrarySidebarViewController.m \
+	gui/macosx/medialib/shell/MacLCLibraryToolbarController.h \
+	gui/macosx/medialib/shell/MacLCLibraryToolbarController.m \
+	gui/macosx/medialib/shell/MacLCNowPlayingBar.h \
+	gui/macosx/medialib/shell/MacLCNowPlayingBar.m \
+	gui/macosx/medialib/shell/MacLCUpNextViewController.h \
+	gui/macosx/medialib/shell/MacLCUpNextViewController.m \
+	gui/macosx/menus/MacLCLibraryMenus.h \
+	gui/macosx/menus/MacLCLibraryMenus.m \
+	gui/macosx/menus/MacLCMenuSymbols.h \
+	gui/macosx/menus/MacLCMenuSymbols.m \
 	video_filter/maclc_frc_geometry.h \
 	video_filter/maclc_frc_geometry.c \
 	gui/macosx/theme/MacLCCardView.h \

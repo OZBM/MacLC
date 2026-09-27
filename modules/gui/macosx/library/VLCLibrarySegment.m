@@ -57,6 +57,8 @@
 
 #import "library/video-library/VLCLibraryVideoViewController.h"
 
+#import "medialib/shell/MacLCLibraryRouter.h"
+
 #import <vlc_modules.h>
 
 NSString * const VLCLibraryBookmarkedLocationsKey = @"VLCLibraryBookmarkedLocations";
@@ -982,29 +984,49 @@ NSArray<NSString *> *defaultBookmarkedLocations()
     return self.internalDisplayImage;
 }
 
+/* Every media library segment is shown by the native library: the router
+ * owns one section view controller per segment and presents it. Browse and
+ * its bookmarks keep their own view controllers. */
+
 - (nullable Class)libraryViewControllerClass
 {
+    if ([MacLCLibraryRouter handlesSegmentType:self.segmentType]) {
+        return MacLCLibraryRouter.class;
+    }
     return self.internalLibraryViewControllerClass;
 }
 
 - (nullable VLCLibraryAbstractSegmentViewController *)newLibraryViewController
 {
+    if ([MacLCLibraryRouter handlesSegmentType:self.segmentType]) {
+        return [MacLCLibraryRouter routerForLibraryWindow:VLCMain.sharedInstance.libraryWindow];
+    }
     return self.internalLibraryViewControllerCreator();
 }
 
 - (void)presentLibraryViewUsingController:(VLCLibraryAbstractSegmentViewController *)controller
 {
+    if ([controller isKindOfClass:MacLCLibraryRouter.class]) {
+        [(MacLCLibraryRouter *)controller presentSegmentType:self.segmentType];
+        return;
+    }
     self.internalLibraryViewPresenter(controller);
 }
 
 - (NSInteger)viewMode
 {
+    /* Header segments have no view mode, and native sections keep their own. */
+    if (self.internalGetViewModePreference == nil) {
+        return VLCLibraryGridViewModeSegment;
+    }
     return self.internalGetViewModePreference();
 }
 
 - (void)setViewMode:(NSInteger)viewMode
 {
-    self.internalSaveViewModePreference(viewMode);
+    if (self.internalSaveViewModePreference != nil) {
+        self.internalSaveViewModePreference(viewMode);
+    }
 }
 
 - (NSUInteger)toolbarDisplayFlags

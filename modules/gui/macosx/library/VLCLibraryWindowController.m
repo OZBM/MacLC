@@ -25,6 +25,7 @@
 #import "library/VLCLibrarySegment.h"
 #import "library/VLCLibraryWindow.h"
 #import "library/VLCLibraryWindowNavigationSidebarViewController.h"
+#import "medialib/shell/MacLCLibrarySidebarViewController.h"
 #import "library/VLCLibraryWindowSplitViewController.h"
 
 #import "library/audio-library/VLCLibraryAudioViewController.h"

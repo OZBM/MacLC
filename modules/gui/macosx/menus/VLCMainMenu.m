@@ -36,6 +36,8 @@
 
 #import "menus/VLCRecentStreamsMenuController.h"
 #import "menus/renderers/VLCRendererMenuController.h"
+#import "menus/MacLCMenuSymbols.h"
+#import "menus/MacLCLibraryMenus.h"
 
 #import "panels/VLCAudioEffectsWindowController.h"
 #import "panels/VLCTrackSynchronizationWindowController.h"
@@ -321,6 +323,17 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [self updateVideoSubmenuEnablement];
     [self updateAudioSubmenuEnablement];
     [self updateRecentMenuEnablement];
+
+    NSMenu *mainMenu = _fileMenu.supermenu ?: [NSApp mainMenu];
+    NSMenu *view = [MacLCLibraryMenus installInMainMenu:mainMenu
+                                               fileMenu:_fileMenu
+                                               editMenu:_editMenu];
+    _viewMenu = view;
+
+    [MacLCMenuSymbols applySymbolsToMenu:[NSApp mainMenu]];
+    if (_voutMenu != nil) {
+        [MacLCMenuSymbols applySymbolsToMenu:_voutMenu];
+    }
 }
 
 - (void)setupMenu:(NSMenu *)menu withIntList:(char *)psz_name andSelector:(SEL)selector
@@ -383,7 +396,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
      /* xgettext: Label for the macOS main "File" menu */
     [_fileMenu setTitle: _PNS("macOS MainMenu", "File")];
     [_open_generic setTitle: _NS("Open with Options…")];
-    [_open_file setTitle: _NS("Open…")];
+    [_open_file setTitle: _NS("Open File…")];
     [_open_disc setTitle: _NS("Open Disc…")];
     [_open_net setTitle: _NS("Open Network Stream…")];
     [_open_capture setTitle: _NS("Open Capture Device…")];
@@ -426,8 +439,8 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_libraryPlayQueueMode setTitle: _NS("Library Play Queue Mode")];
     [_sortPlayQueue setTitle: _NS("Sort Play Queue")];
     [_quitAfterPB setTitle: _NS("Quit After Playback")];
-    [_fwd setTitle: _NS("Step Forward")];
-    [_bwd setTitle: _NS("Step Backward")];
+    [_fwd setTitle: _NS("Jump Forward")];
+    [_bwd setTitle: _NS("Jump Backward")];
     [_jumpToTime setTitle: _NS("Go to Time…")];
     [_rendererMenuItem setTitle:_NS("Play On")];
     [_rendererNoneItem setTitle:_NS("This Mac")];
@@ -457,7 +470,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_double_window setTitle: _NS("Double Size")];
     [_fittoscreen setTitle: _NS("Fit to Screen")];
     [_fullscreenItem setTitle: _NS("Full Screen")];
-    [_floatontop setTitle: _NS("Keep on Top")];
+    [_floatontop setTitle: _NS("Float on Top")];
     [_snapshot setTitle: _NS("Take Snapshot")];
     [_videotrack setTitle: _NS("Video Track")];
     [_videotrackMenu setTitle: _NS("Video Track")];
@@ -554,74 +567,6 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_voutMenuSubtitlestrackMenu setTitle: _NS("Subtitle Track")];
     [_voutMenufullscreen setTitle: _NS("Full Screen")];
     [_voutMenusnapshot setTitle: _NS("Take Snapshot")];
-
-    /* File menu */
-    [_open_generic vlc_setActionImageWithSystemSymbolName:@"doc.badge.ellipsis"];
-    [_open_file vlc_setActionImageWithSystemSymbolName:@"doc"];
-    [_open_disc vlc_setActionImageWithSystemSymbolName:@"opticaldisc"];
-    [_open_net vlc_setActionImageWithSystemSymbolName:@"antenna.radiowaves.left.and.right"];
-    [_open_capture vlc_setActionImageWithSystemSymbolName:@"camera.viewfinder"];
-    [_connect_to_server vlc_setActionImageWithSystemSymbolName:@"server.rack"];
-    [_revealInFinder vlc_setActionImageWithSystemSymbolName:@"folder"];
-    [_save_playlist vlc_setActionImageWithSystemSymbolName:@"square.and.arrow.down"];
-    [_convertandsave vlc_setActionImageWithSystemSymbolName:@"arrow.triangle.2.circlepath"];
-
-    /* Playback menu */
-    [_play vlc_setActionImageWithSystemSymbolName:@"play.fill"];
-    [_stop vlc_setActionImageWithSystemSymbolName:@"stop.fill"];
-    [_record vlc_setActionImageWithSystemSymbolName:@"record.circle"];
-    [_previous vlc_setActionImageWithSystemSymbolName:@"backward.end.fill"];
-    [_next vlc_setActionImageWithSystemSymbolName:@"forward.end.fill"];
-    [_fwd vlc_setActionImageWithSystemSymbolName:@"goforward.10"];
-    [_bwd vlc_setActionImageWithSystemSymbolName:@"gobackward.10"];
-    [_random vlc_setActionImageWithSystemSymbolName:@"shuffle"];
-    [_repeat vlc_setActionImageWithSystemSymbolName:@"repeat"];
-    [_AtoBloop vlc_setActionImageWithSystemSymbolName:@"repeat.1"];
-    [_jumpToTime vlc_setActionImageWithSystemSymbolName:@"timer"];
-    [_sortPlayQueue vlc_setActionImageWithSystemSymbolName:@"arrow.up.arrow.down"];
-    [_lyrics vlc_setActionImageWithSystemSymbolName:@"text.quote"];
-
-    /* Audio menu */
-    [_vol_up vlc_setActionImageWithSystemSymbolName:@"speaker.wave.3.fill"];
-    [_vol_down vlc_setActionImageWithSystemSymbolName:@"speaker.wave.1.fill"];
-    [_mute vlc_setActionImageWithSystemSymbolName:@"speaker.slash.fill"];
-    [_audiotrack vlc_setActionImageWithSystemSymbolName:@"waveform"];
-    [_channels vlc_setActionImageWithSystemSymbolName:@"speaker.2.fill"];
-    [_audioDevice vlc_setActionImageWithSystemSymbolName:@"airplay.audio"];
-    [_visual vlc_setActionImageWithSystemSymbolName:@"music.note.tv"];
-
-    /* Video menu */
-    [_fullscreenItem vlc_setActionImageWithSystemSymbolName:@"arrow.up.left.and.arrow.down.right"];
-    [_snapshot vlc_setActionImageWithSystemSymbolName:@"camera"];
-    [_floatontop vlc_setActionImageWithSystemSymbolName:@"square.3.layers.3d.top.filled"];
-    [_videotrack vlc_setActionImageWithSystemSymbolName:@"video"];
-
-    /* Subtitles menu */
-    [_openSubtitleFile vlc_setActionImageWithSystemSymbolName:@"captions.bubble"];
-    [_subtitle_track vlc_setActionImageWithSystemSymbolName:@"text.bubble"];
-
-    /* Window menu */
-    [_info vlc_setActionImageWithSystemSymbolName:@"info.circle"];
-    [_audioeffects vlc_setActionImageWithSystemSymbolName:@"slider.horizontal.3"];
-    [_videoeffects vlc_setActionImageWithSystemSymbolName:@"wand.and.sparkles"];
-    [_bookmarks vlc_setActionImageWithSystemSymbolName:@"bookmark"];
-    [_playQueue vlc_setActionImageWithSystemSymbolName:@"list.bullet"];
-
-    /* Vout context menu */
-    [_voutMenuplay vlc_setActionImageWithSystemSymbolName:@"play.fill"];
-    [_voutMenustop vlc_setActionImageWithSystemSymbolName:@"stop.fill"];
-    [_voutMenuRecord vlc_setActionImageWithSystemSymbolName:@"record.circle"];
-    [_voutMenuprev vlc_setActionImageWithSystemSymbolName:@"backward.end.fill"];
-    [_voutMenunext vlc_setActionImageWithSystemSymbolName:@"forward.end.fill"];
-    [_voutMenuvolup vlc_setActionImageWithSystemSymbolName:@"speaker.wave.3.fill"];
-    [_voutMenuvoldown vlc_setActionImageWithSystemSymbolName:@"speaker.wave.1.fill"];
-    [_voutMenumute vlc_setActionImageWithSystemSymbolName:@"speaker.slash.fill"];
-    [_voutMenuAudiotrack vlc_setActionImageWithSystemSymbolName:@"waveform"];
-    [_voutMenuVideotrack vlc_setActionImageWithSystemSymbolName:@"video"];
-    [_voutMenuOpenSubtitleFile vlc_setActionImageWithSystemSymbolName:@"captions.bubble"];
-    [_voutMenuSubtitlestrack vlc_setActionImageWithSystemSymbolName:@"text.bubble"];
-    [_voutMenufullscreen vlc_setActionImageWithSystemSymbolName:@"arrow.up.left.and.arrow.down.right"];
-    [_voutMenusnapshot vlc_setActionImageWithSystemSymbolName:@"camera"];
 }
 
 - (void)setupKeyboardShortcuts
@@ -1884,7 +1829,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [parent setEnabled:NO];
 
     /* Aspect Ratio */
-    if ([[parent title] isEqualToString:_NS("Aspect ratio")] == YES) {
+    if ([[parent title] isEqualToString:_NS("Aspect Ratio")] == YES) {
         NSMenuItem *lmi_tmp2;
         lmi_tmp2 = [menu addItemWithTitle:_NS("Lock Aspect Ratio")
                                    action:@selector(lockVideosAspectRatio:)

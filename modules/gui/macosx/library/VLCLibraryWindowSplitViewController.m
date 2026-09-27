@@ -22,11 +22,15 @@
 
 #import "VLCLibraryWindowSplitViewController.h"
 
+#import "extensions/NSView+VLCAdditions.h"
+
 #import "library/VLCLibraryWindow.h"
-#import "library/VLCLibraryWindowNavigationSidebarViewController.h"
-#import "library/VLCLibraryWindowSidebarRootViewController.h"
 
 #import "main/VLCMain.h"
+
+#import "medialib/shell/MacLCLibrarySidebarViewController.h"
+#import "medialib/shell/MacLCNowPlayingBar.h"
+#import "medialib/shell/MacLCUpNextViewController.h"
 
 #import "views/VLCBottomBarView.h"
 #import "views/VLCUIUnits.h"
@@ -56,32 +60,52 @@
     self.splitView.wantsLayer = YES;
 
     _navSidebarViewController =
-        [[VLCLibraryWindowNavigationSidebarViewController alloc] initWithLibraryWindow:VLCMain.sharedInstance.libraryWindow];
-    _libraryTargetViewController = [[NSViewController alloc] init];
+        [[MacLCLibrarySidebarViewController alloc] initWithLibraryWindow:libraryWindow];
     _multifunctionSidebarViewController =
-        [[VLCLibraryWindowSidebarRootViewController alloc] initWithLibraryWindow:VLCMain.sharedInstance.libraryWindow];
+        [[MacLCUpNextViewController alloc] initWithLibraryWindow:libraryWindow];
 
-    self.libraryTargetViewController.view = self.libraryWindow.libraryTargetView;
+    /* Library sections, Browse and the embedded video all replace the
+     * subviews of libraryTargetView, so the floating Now Playing bar lives one
+     * level up, in a container that also holds libraryTargetView. */
+    NSView * const libraryTargetView = self.libraryWindow.libraryTargetView;
+    NSView * const contentView = [[NSView alloc] init];
+    libraryTargetView.translatesAutoresizingMaskIntoConstraints = NO;
+    [contentView addSubview:libraryTargetView];
+    [libraryTargetView applyConstraintsToFillSuperview];
 
+    _nowPlayingBar = [[MacLCNowPlayingBar alloc] initWithLibraryWindow:libraryWindow];
+    [contentView addSubview:_nowPlayingBar]; // it constrains itself, bottom centre
+    __weak NSView * const weakLibraryTargetView = libraryTargetView;
+    _nowPlayingBar.visibilityHandler = ^(const BOOL shown) {
+        /* Let the content scroll under the bar but end above it. */
+        weakLibraryTargetView.additionalSafeAreaInsets =
+            NSEdgeInsetsMake(0., 0., shown ? MacLCNowPlayingBar.reservedHeight : 0., 0.);
+    };
+    _nowPlayingBar.visibilityHandler(_nowPlayingBar.isShown);
+
+    _libraryTargetViewController = [[NSViewController alloc] init];
+    self.libraryTargetViewController.view = contentView;
+
+    /* macOS 26: the sidebar and the inspector float as Liquid Glass over the
+     * content, which extends under them through its safe area. */
     _navSidebarItem = [NSSplitViewItem sidebarWithViewController:self.navSidebarViewController];
     _libraryTargetViewItem = [NSSplitViewItem splitViewItemWithViewController:self.libraryTargetViewController];
+    _multifunctionSidebarItem = [NSSplitViewItem inspectorWithViewController:self.multifunctionSidebarViewController];
 
-    _multifunctionSidebarItem = [NSSplitViewItem splitViewItemWithViewController:self.multifunctionSidebarViewController];
-
-    if (@available(macOS 11.0, *)) {
-        _navSidebarItem.allowsFullHeightLayout = YES;
-    }
+    _navSidebarItem.allowsFullHeightLayout = YES;
+    _multifunctionSidebarItem.allowsFullHeightLayout = YES;
+    _libraryTargetViewItem.automaticallyAdjustsSafeAreaInsets = YES;
 
     _navSidebarItem.preferredThicknessFraction = 0.2;
     _navSidebarItem.minimumThickness = VLCUIUnits.libraryWindowNavSidebarMinWidth;
     _navSidebarItem.maximumThickness = VLCUIUnits.libraryWindowNavSidebarMaxWidth;
 
-    self.multifunctionSidebarItem.preferredThicknessFraction = 0.2;
-    self.multifunctionSidebarItem.maximumThickness =
-        VLCUIUnits.libraryWindowPlayQueueSidebarMaxWidth;
+    self.multifunctionSidebarItem.minimumThickness = 280.;
+    self.multifunctionSidebarItem.maximumThickness = 420.;
     self.multifunctionSidebarItem.canCollapse = YES;
     self.multifunctionSidebarItem.collapseBehavior =
         NSSplitViewItemCollapseBehaviorPreferResizingSiblingsWithFixedSplitView;
+    self.multifunctionSidebarItem.collapsed = YES;
 
     self.splitViewItems = @[_navSidebarItem, _libraryTargetViewItem, self.multifunctionSidebarItem];
 
@@ -140,7 +164,6 @@
     }
 
     _mainVideoModeEnabled = mainVideoModeEnabled;
-    self.multifunctionSidebarViewController.mainVideoModeEnabled = mainVideoModeEnabled;
 }
 
 - (BOOL)splitView:(NSSplitView *)splitView canCollapseSubview:(NSView *)subview

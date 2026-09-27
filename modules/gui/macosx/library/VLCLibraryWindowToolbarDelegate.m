@@ -26,6 +26,7 @@
 
 #import "library/VLCLibraryWindow.h"
 #import "library/VLCLibraryWindowSidebarRootViewController.h"
+#import "medialib/shell/MacLCUpNextViewController.h"
 #import "library/VLCLibraryWindowSplitViewController.h"
 
 #import "main/VLCMain.h"

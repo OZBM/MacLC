@@ -50,6 +50,7 @@
 #import "library/VLCLibrarySortingMenuController.h"
 #import "library/VLCLibraryWindowChaptersSidebarViewController.h"
 #import "library/VLCLibraryWindowNavigationSidebarViewController.h"
+#import "medialib/shell/MacLCLibrarySidebarViewController.h"
 #import "library/VLCLibraryWindowPersistentPreferences.h"
 #import "library/VLCLibraryWindowSidebarRootViewController.h"
 #import "library/VLCLibraryWindowSplitViewController.h"
@@ -75,6 +76,14 @@
 #import "media-source/VLCLibraryMediaSourceViewNavigationStack.h"
 #import "media-source/VLCMediaSourceBaseDataSource.h"
 
+#import "medialib/data/MacLCLibraryActions.h"
+#import "medialib/data/MacLCLibraryStore.h"
+#import "medialib/shell/MacLCLibraryFoldersController.h"
+#import "medialib/shell/MacLCLibraryToolbarController.h"
+#import "medialib/shell/MacLCNowPlayingBar.h"
+#import "medialib/shell/MacLCUpNextViewController.h"
+
+#import "menus/MacLCLibraryMenus.h"
 #import "menus/VLCMainMenu.h"
 
 #import "playqueue/VLCPlayerController.h"
@@ -111,8 +120,9 @@ const CGFloat VLCLibraryWindowMinimalHeight = 307.;
 const NSUserInterfaceItemIdentifier VLCLibraryWindowIdentifier = @"VLCLibraryWindow";
 NSString * const VLCLibraryWindowEmbeddedVideoPlaybackActiveKey = @"embeddedVideoPlaybackActive";
 
-@interface VLCLibraryWindow () <NSControlTextEditingDelegate>
+@interface VLCLibraryWindow () <NSControlTextEditingDelegate, MacLCLibraryMenuActions>
 {
+    MacLCLibraryToolbarController *_libraryToolbarController;
     NSInteger _currentSelectedViewModeSegment;
     VLCVideoWindowCommon *_temporaryAudioDecorativeWindow;
     NSView *_acquiredVideoView;
@@ -235,6 +245,12 @@ static int ShowController(vlc_object_t * __unused p_this,
     self.placeholderLabel.font = MacLCDesign.title3;
     self.placeholderLabel.textColor = MacLCDesign.secondaryLabel;
     ((NSButton *)self.placeholderGoToBrowseButton).bezelColor = MacLCDesign.accent;
+
+    /* The native library brings its own chrome: a code-built toolbar replaces
+     * the XIB one, and the floating Now Playing bar of the split view
+     * controller replaces the XIB controls bar, which stays hidden. */
+    _libraryToolbarController = [[MacLCLibraryToolbarController alloc] initWithLibraryWindow:self];
+    [_libraryToolbarController install];
 }
 
 - (void)dealloc
@@ -539,6 +555,7 @@ static int ShowController(vlc_object_t * __unused p_this,
     }
 
     if (controller.currentMediaIsAudioOnly && _acquiredVideoView) {
+        [self.splitViewController.nowPlayingBar setLiveVideoView:nil];
         [self.videoViewController returnVideoView:_acquiredVideoView];
         _acquiredVideoView = nil;
     } else if (!controller.currentMediaIsAudioOnly && _acquiredVideoView == nil) {
@@ -584,10 +601,7 @@ static int ShowController(vlc_object_t * __unused p_this,
 
     _acquiredVideoView = [self.videoViewController acquireVideoView];
     if (_acquiredVideoView) {
-        [self.controlsBar.artworkImageView addSubview:_acquiredVideoView
-                                           positioned:NSWindowBelow
-                                           relativeTo:self.artworkButton];
-        [_acquiredVideoView applyConstraintsToFillSuperview];
+        [self.splitViewController.nowPlayingBar setLiveVideoView:_acquiredVideoView];
     }
 }
 
@@ -608,21 +622,17 @@ static int ShowController(vlc_object_t * __unused p_this,
     }];
 }
 
+/* The XIB controls bar is replaced by MacLCNowPlayingBar, which shows and
+ * hides itself from the play queue and the video state: the old bar must
+ * never come back. */
 - (void)showControlsBarImmediately
 {
-    self.controlsBar.bottomBarView.hidden = NO;
-    self.controlsBar.bottomBarView.alphaValue = 1;
+    [self hideControlsBarImmediately];
 }
 
 - (void)showControlsBar
 {
-    self.controlsBar.bottomBarView.hidden = NO;
-
-    [NSAnimationContext runAnimationRespectingPreferencesWithDuration:VLCUIUnits.controlsFadeAnimationDuration
-                                                              changes:^(NSAnimationContext * const __unused context) {
-        context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn];
-        self.controlsBar.bottomBarView.animator.alphaValue = 1;
-    } completionHandler:nil];
+    [self hideControlsBarImmediately];
 }
 
 - (BOOL)shouldShowControlsBarForPlaybackContext
@@ -697,6 +707,7 @@ static int ShowController(vlc_object_t * __unused p_this,
     }
 
     if (_acquiredVideoView) {
+        [self.splitViewController.nowPlayingBar setLiveVideoView:nil];
         [self.videoViewController returnVideoView:_acquiredVideoView];
         _acquiredVideoView = nil;
     }
@@ -831,6 +842,109 @@ static int ShowController(vlc_object_t * __unused p_this,
     }
 
     [super mouseMoved:o_event];
+}
+
+#pragma mark - library menu commands
+
+/* The File and View menus send these through the responder chain
+ * (menus/MacLCLibraryMenus.m); the toolbar controller does the work so the
+ * toolbar and the menu bar always agree. */
+
+- (IBAction)newLibraryPlaylist:(id)sender
+{
+    [MacLCLibraryActions newPlaylistWithItems:@[] fromWindow:self];
+}
+
+- (IBAction)addFolderToLibrary:(id)sender
+{
+    [MacLCLibraryFoldersController.sharedController chooseFoldersToAddForWindow:self];
+}
+
+- (IBAction)showLibraryFolders:(id)sender
+{
+    [MacLCLibraryFoldersController.sharedController beginSheetForWindow:self];
+}
+
+- (IBAction)goBackInLibrary:(id)sender
+{
+    if (self.embeddedVideoPlaybackActive) {
+        [self disableVideoPlaybackAppearance];
+        return;
+    }
+    [_libraryToolbarController goBack];
+}
+
+- (IBAction)goForwardInLibrary:(id)sender
+{
+    [_libraryToolbarController goForward];
+}
+
+- (IBAction)toggleSidebar:(id)sender
+{
+    [self.splitViewController toggleNavigationSidebar:sender];
+}
+
+- (IBAction)toggleUpNext:(id)sender
+{
+    [self.splitViewController toggleMultifunctionSidebar:sender];
+}
+
+- (IBAction)showLibraryAsGrid:(id)sender
+{
+    [_libraryToolbarController showViewMode:MacLCLibraryViewModeGrid];
+}
+
+- (IBAction)showLibraryAsList:(id)sender
+{
+    [_libraryToolbarController showViewMode:MacLCLibraryViewModeList];
+}
+
+- (nullable NSMenu *)macLCLibrarySortMenu
+{
+    return self.embeddedVideoPlaybackActive ? nil : _libraryToolbarController.sortMenu;
+}
+
+/* Edit ▸ Find */
+- (IBAction)highlightSearchField:(id)sender
+{
+    if (self.embeddedVideoPlaybackActive) {
+        [self disableVideoPlaybackAppearance];
+    }
+    [_libraryToolbarController focusSearchField];
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem
+{
+    const SEL action = menuItem.action;
+    const BOOL libraryShown = !self.embeddedVideoPlaybackActive;
+
+    if (action == @selector(newLibraryPlaylist:) ||
+        action == @selector(addFolderToLibrary:) ||
+        action == @selector(showLibraryFolders:)) {
+        return MacLCLibraryStore.sharedStore != nil;
+    } else if (action == @selector(goBackInLibrary:)) {
+        return !libraryShown || _libraryToolbarController.canGoBack;
+    } else if (action == @selector(goForwardInLibrary:)) {
+        return libraryShown && _libraryToolbarController.canGoForward;
+    } else if (action == @selector(toggleSidebar:)) {
+        menuItem.title = self.splitViewController.navSidebarItem.isCollapsed ? _NS("Show Sidebar")
+                                                                             : _NS("Hide Sidebar");
+        return !self.splitViewController.mainVideoModeEnabled;
+    } else if (action == @selector(toggleUpNext:)) {
+        menuItem.title = self.splitViewController.multifunctionSidebarItem.isCollapsed ? _NS("Show Up Next")
+                                                                                       : _NS("Hide Up Next");
+        return YES;
+    } else if (action == @selector(showLibraryAsGrid:) || action == @selector(showLibraryAsList:)) {
+        const BOOL available = libraryShown && _libraryToolbarController.canChangeViewMode;
+        const MacLCLibraryViewMode mode =
+            action == @selector(showLibraryAsGrid:) ? MacLCLibraryViewModeGrid : MacLCLibraryViewModeList;
+        menuItem.state = available && _libraryToolbarController.viewMode == mode ? NSControlStateValueOn
+                                                                                 : NSControlStateValueOff;
+        return available;
+    } else if (action == @selector(highlightSearchField:)) {
+        return YES;
+    }
+    return [super validateMenuItem:menuItem];
 }
 
 #pragma mark - NSControlTextEditingDelegate

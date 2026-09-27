@@ -57,6 +57,10 @@ typedef NS_ENUM(NSInteger, MacLCCardSubtitleStyle) {
                     shape:(MacLCArtworkShape)shape
             subtitleStyle:(MacLCCardSubtitleStyle)subtitleStyle;
 
+/// Called on double-click (and by the grid on Return) instead of playing the
+/// item, when set: grids open containers (albums, shows...) this way.
+@property (nonatomic, copy, nullable) void (^activationHandler)(id<VLCMediaLibraryItemProtocol> item);
+
 /// Height of the text block under the artwork (title + subtitle), so layouts
 /// can size items: artwork height + 8 + this.
 + (CGFloat)textBlockHeightWithSubtitle:(BOOL)hasSubtitle;

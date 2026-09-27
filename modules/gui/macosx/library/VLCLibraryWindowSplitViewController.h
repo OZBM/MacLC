@@ -25,8 +25,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class VLCLibraryWindow;
-@class VLCLibraryWindowNavigationSidebarViewController;
-@class VLCLibraryWindowSidebarRootViewController;
+@class MacLCLibrarySidebarViewController;
+@class MacLCNowPlayingBar;
+@class MacLCUpNextViewController;
 
 typedef NS_ENUM(NSUInteger, VLCLibraryWindowSplitViewDividerIndex) {
     VLCLibraryWindowNavigationSidebarSplitViewDividerIndex = 0,
@@ -38,9 +39,14 @@ typedef NS_ENUM(NSUInteger, VLCLibraryWindowSplitViewDividerIndex) {
 
 @property (readwrite, weak) IBOutlet VLCLibraryWindow *libraryWindow;
 
-@property (readonly) VLCLibraryWindowNavigationSidebarViewController *navSidebarViewController;
+/// The library's source list (sidebar item).
+@property (readonly) MacLCLibrarySidebarViewController *navSidebarViewController;
+/// Its view holds the window's libraryTargetView and, floating over it, the
+/// Now Playing bar.
 @property (readonly) NSViewController *libraryTargetViewController;
-@property (readonly) VLCLibraryWindowSidebarRootViewController *multifunctionSidebarViewController;
+/// The Up Next queue (inspector item).
+@property (readonly) MacLCUpNextViewController *multifunctionSidebarViewController;
+@property (readonly) MacLCNowPlayingBar *nowPlayingBar;
 
 @property (readonly) NSSplitViewItem *navSidebarItem;
 @property (readonly) NSSplitViewItem *libraryTargetViewItem;

@@ -45,6 +45,7 @@ NSString * const VLCPlaybackHasNextChanged = @"VLCPlaybackHasNextChanged";
 NSString * const VLCPlayQueueCurrentItemIndexChanged = @"VLCPlayQueueCurrentItemIndexChanged";
 NSString * const VLCPlayQueueItemsAdded = @"VLCPlayQueueItemsAdded";
 NSString * const VLCPlayQueueItemsRemoved = @"VLCPlayQueueItemsRemoved";
+NSString * const VLCPlayQueueItemsChanged = @"VLCPlayQueueItemsChanged";
 
 NSString * const VLCLibraryPlayQueueModeDefaultsKey = @"VLCLibraryPlayQueueMode";
 
@@ -319,6 +320,7 @@ static const struct vlc_playlist_callbacks playlist_callbacks = {
     [_playQueueModel addItems:items];
 
     [_playQueueDataSource playQueueUpdated];
+    [_defaultNotificationCenter postNotificationName:VLCPlayQueueItemsChanged object:self];
 }
 
 - (void)playQueueAdded:(NSArray *)items atIndex:(size_t)insertionIndex count:(size_t)numberOfItems
@@ -327,12 +329,14 @@ static const struct vlc_playlist_callbacks playlist_callbacks = {
 
     [_playQueueDataSource playQueueUpdated];
     [_defaultNotificationCenter postNotificationName:VLCPlayQueueItemsAdded object:self];
+    [_defaultNotificationCenter postNotificationName:VLCPlayQueueItemsChanged object:self];
 }
 
 - (void)playQueueMovedIndex:(size_t)index toTarget:(size_t)target numberOfItems:(size_t)count
 {
     [_playQueueModel moveItemAtIndex:index toTarget:target];
     [_playQueueDataSource playQueueUpdated];
+    [_defaultNotificationCenter postNotificationName:VLCPlayQueueItemsChanged object:self];
 }
 
 - (void)playQueueRemovedItemsAtIndex:(size_t)index count:(size_t)numberOfItems
@@ -342,6 +346,7 @@ static const struct vlc_playlist_callbacks playlist_callbacks = {
 
     [_playQueueDataSource playQueueUpdated];
     [_defaultNotificationCenter postNotificationName:VLCPlayQueueItemsRemoved object:self];
+    [_defaultNotificationCenter postNotificationName:VLCPlayQueueItemsChanged object:self];
 }
 
 - (void)playQueueUpdatedForIndex:(size_t)firstUpdatedIndex items:(vlc_playlist_item_t *const *)items count:(size_t)numberOfItems
@@ -359,6 +364,7 @@ static const struct vlc_playlist_callbacks playlist_callbacks = {
 
     [_playQueueDataSource playQueueUpdated];
 
+    [_defaultNotificationCenter postNotificationName:VLCPlayQueueItemsChanged object:self];
 }
 
 - (void)playQueuePlaybackRepeatUpdated:(enum vlc_playlist_playback_repeat)currentRepeatMode

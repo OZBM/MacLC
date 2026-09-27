@@ -79,6 +79,12 @@ FOUNDATION_EXPORT MacLCLibraryItemID MacLCLibraryItemIdentifier(id<VLCMediaLibra
 - (NSArray *)itemsInCollection:(MacLCLibraryCollection)collection;
 - (NSUInteger)countOfCollection:(MacLCLibraryCollection)collection;
 
+/// Names by library id, from the cached Artists, Albums and Genres lists
+/// (O(1), main thread): what song rows show without querying the database.
+- (nullable NSString *)nameOfArtistWithID:(int64_t)artistID;
+- (nullable NSString *)titleOfAlbumWithID:(int64_t)albumID;
+- (nullable NSString *)nameOfGenreWithID:(int64_t)genreID;
+
 /// Children of a container. Each call returns what is cached and, when the
 /// cache is cold, fetches in the background and calls the completion on the
 /// main thread (the completion is also called, synchronously, when the

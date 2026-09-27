@@ -53,6 +53,7 @@
 #import "webvideo/MacLCWebVideoPanelController.h"
 #import "library/VLCLibraryWindowController.h"
 #import "library/VLCLibraryWindowNavigationSidebarViewController.h"
+#import "medialib/shell/MacLCLibrarySidebarViewController.h"
 #import "library/VLCLibraryWindowSplitViewController.h"
 
 #import "main/CompatibilityFixes.h"
@@ -441,6 +442,61 @@ static VLCMain *sharedInstance = nil;
             VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;
             [window.splitViewController.navSidebarViewController selectSegment:segmentType];
         });
+    }
+
+    /* Developer hooks for screenshots that Stage Manager cannot spoil (a
+     * background launch stays a thumbnail in the strip, so the window server
+     * has nothing full size to capture): MACLC_DEBUG_SNAPSHOT=/dir/name
+     * renders the library window, title bar and toolbar included, into
+     * /dir/name-<seconds>.png after each delay listed in
+     * MACLC_DEBUG_SNAPSHOT_DELAYS (seconds, comma-separated, default 6).
+     * MACLC_DEBUG_APPEARANCE=dark|light forces the appearance,
+     * MACLC_DEBUG_WINDOW_SIZE=<width>x<height> resizes the library window and
+     * MACLC_DEBUG_UP_NEXT=1 opens the Up Next inspector. Unset, they do
+     * nothing. */
+    const char * const debugAppearance = getenv("MACLC_DEBUG_APPEARANCE");
+    if (debugAppearance != NULL) {
+        NSApp.appearance = [NSAppearance appearanceNamed:strcmp(debugAppearance, "dark") == 0
+                                                             ? NSAppearanceNameDarkAqua
+                                                             : NSAppearanceNameAqua];
+    }
+    const char * const debugWindowSize = getenv("MACLC_DEBUG_WINDOW_SIZE");
+    if (debugWindowSize != NULL) {
+        int width = 0, height = 0;
+        if (sscanf(debugWindowSize, "%dx%d", &width, &height) == 2 && width > 0 && height > 0) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                NSWindow * const window = self->_libraryWindowController.window;
+                NSRect frame = window.frame;
+                frame.origin.y += frame.size.height - height;
+                frame.size = NSMakeSize(width, height);
+                [window setFrame:frame display:YES];
+            });
+        }
+    }
+    if (getenv("MACLC_DEBUG_UP_NEXT") != NULL) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;
+            [window.splitViewController toggleMultifunctionSidebar:nil];
+        });
+    }
+    const char * const debugSnapshot = getenv("MACLC_DEBUG_SNAPSHOT");
+    if (debugSnapshot != NULL) {
+        NSString * const prefix = [NSString stringWithUTF8String:debugSnapshot];
+        const char * const debugDelays = getenv("MACLC_DEBUG_SNAPSHOT_DELAYS");
+        NSString * const delays = debugDelays != NULL ? [NSString stringWithUTF8String:debugDelays] : @"6";
+        for (NSString * const delayString in [delays componentsSeparatedByString:@","]) {
+            const double delay = delayString.doubleValue;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                NSWindow * const window = self->_libraryWindowController.window;
+                NSView * const frameView = window.contentView.superview ?: window.contentView;
+                const NSRect bounds = frameView.bounds;
+                NSBitmapImageRep * const rep = [frameView bitmapImageRepForCachingDisplayInRect:bounds];
+                [frameView cacheDisplayInRect:bounds toBitmapImageRep:rep];
+                NSData * const png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+                NSString * const path = [NSString stringWithFormat:@"%@-%@.png", prefix, delayString];
+                [png writeToFile:path atomically:YES];
+            });
+        }
     }
 
     /* Developer hook for headless UI checks: MACLC_DEBUG_OPEN_WEB_VIDEO opens
