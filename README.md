@@ -204,6 +204,29 @@ window status=OK
 summary: 8 panes, 8 ok, 0 failed
 ```
 
+### 10. A native media library
+
+Upstream VLC 4 ships a library interface but this build never compiled its engine, so only
+Browse ever appeared. MacLC now builds the engine — VideoLAN's `libmedialibrary`, linked
+statically into its plugin — and puts a new AppKit interface on top of it
+(`modules/gui/macosx/medialib/`):
+
+- **Home**: the video you are most likely to resume, edge to edge under the toolbar, then
+  Continue Watching, Recently Added and your albums as shelves.
+- **Videos, Shows, Artists, Albums, Songs, Genres, Favorites, Playlists**, each with its own
+  sort options and search; albums, shows, artists, genres and playlists open detail screens
+  with Play, Shuffle and a track list.
+- **Up Next** in the window's inspector (queue, chapters when the media has them, reorder by
+  dragging), and a floating **Now Playing** capsule that keeps a live picture of the video
+  when you go back to the library.
+- **Liquid Glass where macOS 26 puts it** — sidebar, toolbar, inspector and the one Now
+  Playing capsule — and nowhere in the content. Every toolbar command is also in the menu
+  bar (File ▸ New Playlist…, Add Folder to Library…, Library Folders…; a View menu).
+- **HDR stays visible in the library**: video cards carry *Dolby Vision*, *HDR10*, *HLG*,
+  *4K* badges, read from the colour metadata when a file is indexed.
+- **Tags come from TagLib**, linked statically as well, so genres, track numbers, years and
+  embedded artwork need nothing installed.
+
 ---
 
 ## Options added
@@ -299,6 +322,13 @@ make -C build/modules libmacosx_plugin.la
 
 **Build notes**
 
+- The media library engine and TagLib are built from the versions and checksums of
+  `contrib/src` into `build-deps/prefix` and linked statically, so the app carries them. Run
+  `extras/package/macosx/build-medialibrary.sh` and `extras/package/macosx/build-taglib.sh`
+  once, then configure with `build-deps/prefix/lib/pkgconfig` and `build-deps/pkgconfig`
+  first in `PKG_CONFIG_PATH`. Library thumbnails also need the PNG and JPEG encoders: pass
+  Homebrew's headers in `CPPFLAGS` (`-I$(brew --prefix jpeg-turbo)/include
+  -I$(brew --prefix libpng)/include`).
 - `automake` 1.18 is required — the tree's `aclocal.m4` declares `am__api_version='1.18'`. Without it, `Makefile.in` cannot be regenerated when source files are added.
 - Any file containing `_NS("…")` must also be listed in `po/POTFILES.in`.
 - `make MacLC.app` does not currently assemble a bundle on its own: `extras/package/macosx/package.mak` copies `$(prefix)/bin/vlc`, but this configuration installs neither `bin/vlc` nor `vlc-preparser` into the destdir. This predates the rename. The bundle used for testing was assembled by hand from the build outputs. `pseudo-bundle` also fails here, because `CONTRIB_DIR` is empty and `build/Frameworks` already exists.
@@ -324,9 +354,17 @@ worse than no README.
 - Brand substitution passes 22 cases, including `VLC.app`, `VLCKit`, `libvlccore`, `vlc://quit`, `VLC_PLUGIN_PATH` and a French UI string.
 - SDR → HDR, as described above.
 - All eight settings panes construct, with every SF Symbol resolving.
+- The media library indexes a synthetic library (movies with HDR10 and HLG colour tags, a
+  show, three tagged albums with embedded covers); every section, detail screen, Up Next
+  and the Now Playing capsule render as designed on screenshots (light mode; Home also in
+  dark mode); playing a video embedded and going back to the library keeps the live
+  picture; the app quits cleanly.
 
 **Known debt**
 
+- The media library has only been driven headlessly: dragging and dropping, context menus
+  and resizing with the mouse, VoiceOver and a large real library are still untested.
+- The Edit menu lists AppKit's *Start Dictation…* and *Emoji & Symbols* more than once.
 - `MacLCHDRSettingsViewController` defines its own `MacLCSettingsRowView` and `MacLCStatusRowView` while the settings window has `MacLCSettingsRow`. Written in parallel; should be consolidated onto the shared builder.
 - Config hardening was applied where it was needed (the web-remote card). Other panes cannot abort, but a row whose option is missing is still shown and does nothing. Making every row declare its option name would let `MacLCSettingsRow` skip it generically.
 - Adding a `_Nullable` declaration to `NSString+Helpers.h` outside any `NS_ASSUME_NONNULL` region produces 38 nullability warnings across the module.
@@ -342,6 +380,11 @@ MacLC is a fork of VLC and is released under the **GNU General Public License v2
 later**, the same terms as VLC. `libVLC`, the engine, remains **LGPLv2.1 or later**. See
 [`COPYING`](COPYING) and [`COPYING.LIB`](COPYING.LIB). Complete corresponding source is
 this repository.
+
+The app statically includes VideoLAN's `libmedialibrary` (LGPLv2.1 or later) and TagLib
+(LGPLv2.1 or MPL 1.1). `extras/package/macosx/build-medialibrary.sh` and
+`build-taglib.sh` download their exact sources, check them against `contrib/src/*/SHA512SUMS`
+and build them.
 
 **MacLC is not affiliated with, endorsed by, or supported by VideoLAN.**
 "VLC", "VideoLAN" and the traffic-cone logo are trademarks of the VideoLAN organisation.
