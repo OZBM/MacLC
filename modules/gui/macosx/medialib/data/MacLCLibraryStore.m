@@ -89,6 +89,9 @@ static NSComparisonResult MacLCCompareNames(NSString *lhs, NSString *rhs)
 @interface MacLCLibraryStore ()
 {
     vlc_medialibrary_t *_mediaLibrary;
+    /* Set on the fetch queue at termination: the media library is released
+     * right after the interface, so nothing may query it any more. */
+    BOOL _closed;
     vlc_ml_event_callback_t *_eventCallback;
     dispatch_queue_t _fetchQueue;
 
@@ -268,6 +271,10 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
         _eventCallback = vlc_ml_event_register_callback(_mediaLibrary,
                                                         MacLCLibraryStoreEventCallback,
                                                         (__bridge void *)self);
+        [NSNotificationCenter.defaultCenter addObserver:self
+                                               selector:@selector(applicationWillTerminate:)
+                                                   name:NSApplicationWillTerminateNotification
+                                                 object:nil];
 
         [self scheduleRefetchOfCollections:
             [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, MacLCLibraryCollectionCount)]];
@@ -278,9 +285,24 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
 
 - (void)dealloc
 {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
     if (_eventCallback != NULL) {
         vlc_ml_event_unregister_callback(_mediaLibrary, _eventCallback);
     }
+}
+
+- (void)applicationWillTerminate:(NSNotification *)notification
+{
+    /* The media library asserts that every callback is gone when it is
+     * released, which happens right after the interface closes. */
+    if (_eventCallback != NULL) {
+        vlc_ml_event_unregister_callback(_mediaLibrary, _eventCallback);
+        _eventCallback = NULL;
+    }
+    /* Let a fetch in flight finish, then keep later ones away. */
+    dispatch_sync(_fetchQueue, ^{
+        self->_closed = YES;
+    });
 }
 
 // MARK: - State
@@ -397,6 +419,9 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
     _refetchRunning = YES;
 
     dispatch_async(_fetchQueue, ^{
+        if (self->_closed) {
+            return;
+        }
         NSMutableDictionary<NSNumber *, NSArray *> * const results = [NSMutableDictionary dictionary];
         [collections enumerateIndexesUsingBlock:^(NSUInteger collection, BOOL * const stop) {
             NSArray * const items = [self fetchCollection:(MacLCLibraryCollection)collection];
@@ -697,6 +722,9 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
         return;
     }
     dispatch_async(_fetchQueue, ^{
+        if (self->_closed) {
+            return;
+        }
         NSArray * const items = fetchBlock() ?: @[];
         dispatch_async(dispatch_get_main_queue(), ^{
             self->_childrenCache[key] = items;
@@ -800,6 +828,9 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
 {
     vlc_medialibrary_t * const ml = _mediaLibrary;
     dispatch_async(_fetchQueue, ^{
+        if (self->_closed) {
+            return;
+        }
         vlc_ml_query_params_t params = vlc_ml_query_params_create();
         vlc_ml_folder_list_t * const list = vlc_ml_list_entry_points(ml, &params);
         NSMutableArray * const folders = [NSMutableArray array];
@@ -870,6 +901,9 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
 {
     vlc_medialibrary_t * const ml = _mediaLibrary;
     dispatch_async(_fetchQueue, ^{
+        if (self->_closed) {
+            return;
+        }
         vlc_ml_reload_folder(ml, NULL);
     });
 }

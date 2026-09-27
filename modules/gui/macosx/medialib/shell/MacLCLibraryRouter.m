@@ -56,11 +56,12 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
     dispatch_once(&onceToken, ^{
         sRouterTable = [NSMapTable weakToStrongObjectsMapTable];
     });
-    NSValue * const key = [NSValue valueWithNonretainedObject:libraryWindow];
-    MacLCLibraryRouter *router = [sRouterTable objectForKey:key];
+    /* The window itself is the weak key: a wrapper object would be released
+     * right away and take the entry with it. */
+    MacLCLibraryRouter *router = [sRouterTable objectForKey:libraryWindow];
     if (router == nil) {
         router = [[MacLCLibraryRouter alloc] initWithLibraryWindow:libraryWindow];
-        [sRouterTable setObject:router forKey:key];
+        [sRouterTable setObject:router forKey:libraryWindow];
     }
     return router;
 }
@@ -201,6 +202,10 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
 
 - (void)updateWindowChromeFromSection:(MacLCLibrarySectionViewController *)section
 {
+    /* The embedded video names the window after the media meanwhile. */
+    if (self.libraryWindow.embeddedVideoPlaybackActive) {
+        return;
+    }
     self.libraryWindow.title = section.sectionTitle ?: @"";
     self.libraryWindow.subtitle = section.sectionSubtitle ?: @"";
 }

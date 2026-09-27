@@ -29,6 +29,7 @@
 #import "library/VLCLibraryDataTypes.h"
 #import "library/VLCLibraryImageCache.h"
 #import "library/VLCLibraryWindow.h"
+#import "library/VLCLibraryWindowChaptersSidebarViewController.h"
 #import "main/VLCMain.h"
 #import "medialib/MacLCLibraryFormatting.h"
 #import "medialib/components/MacLCEmptyStateView.h"
@@ -155,8 +156,10 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     __weak VLCLibraryWindow *_libraryWindow;
     NSScrollView *_scrollView;
     MacLCUpNextTableView *_tableView;
+    NSSegmentedControl *_segmentedControl;
     NSPopUpButton *_moreButton;
     MacLCEmptyStateView *_emptyState;
+    VLCLibraryWindowChaptersSidebarViewController *_chaptersViewController;
     NSArray<VLCPlayQueueItem *> *_items;
 }
 @end
@@ -191,6 +194,16 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     title.font = MacLCDesign.headline;
     title.accessibilityRole = NSAccessibilityStaticTextRole;
 
+    _segmentedControl = [NSSegmentedControl segmentedControlWithLabels:@[_NS("Queue"), _NS("Chapters")]
+                                                          trackingMode:NSSegmentSwitchTrackingSelectOne
+                                                                target:self
+                                                                action:@selector(segmentedControlChanged:)];
+    _segmentedControl.segmentStyle = NSSegmentStyleAutomatic;
+    _segmentedControl.controlSize = NSControlSizeSmall;
+    _segmentedControl.accessibilityLabel = _NS("Up Next View");
+    _segmentedControl.selectedSegment = 0;
+    _segmentedControl.hidden = YES;
+
     _moreButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:YES];
     _moreButton.bezelStyle = NSBezelStyleGlass;
     _moreButton.controlSize = NSControlSizeRegular;
@@ -201,10 +214,31 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     _moreButton.menu.delegate = (id<NSMenuDelegate>)self;
     [self rebuildMoreMenu];
 
-    NSStackView * const header = [NSStackView stackViewWithViews:@[title, _moreButton]];
-    header.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    header.distribution = NSStackViewDistributionEqualSpacing;
+    NSStackView * const trailingControls = [NSStackView stackViewWithViews:@[_segmentedControl, _moreButton]];
+    trailingControls.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    trailingControls.spacing = MacLCDesign.spacingS;
+    trailingControls.alignment = NSLayoutAttributeCenterY;
+
+    /* Title leading, controls trailing, whatever the inspector's width (a
+     * stack view kept them side by side). */
+    NSView * const header = [[NSView alloc] initWithFrame:NSZeroRect];
     header.translatesAutoresizingMaskIntoConstraints = NO;
+    title.translatesAutoresizingMaskIntoConstraints = NO;
+    trailingControls.translatesAutoresizingMaskIntoConstraints = NO;
+    [header addSubview:title];
+    [header addSubview:trailingControls];
+    NSLayoutConstraint * const compactHeight = [header.heightAnchor constraintEqualToConstant:28.0];
+    compactHeight.priority = NSLayoutPriorityDefaultLow;
+    [NSLayoutConstraint activateConstraints:@[
+        [title.leadingAnchor constraintEqualToAnchor:header.leadingAnchor],
+        [title.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
+        [trailingControls.trailingAnchor constraintEqualToAnchor:header.trailingAnchor],
+        [trailingControls.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
+        [trailingControls.leadingAnchor constraintGreaterThanOrEqualToAnchor:title.trailingAnchor constant:8.0],
+        [header.heightAnchor constraintGreaterThanOrEqualToAnchor:trailingControls.heightAnchor],
+        [header.heightAnchor constraintGreaterThanOrEqualToAnchor:title.heightAnchor],
+        compactHeight,
+    ]];
     [root addSubview:header];
 
     _tableView = [[MacLCUpNextTableView alloc] initWithFrame:NSMakeRect(0, 0, 320, 400)];
@@ -219,8 +253,10 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     [_tableView addTableColumn:[[NSTableColumn alloc] initWithIdentifier:@"item"]];
     _tableView.tableColumns.firstObject.resizingMask = NSTableColumnAutoresizingMask;
     _tableView.columnAutoresizingStyle = NSTableViewFirstColumnOnlyAutoresizingStyle;
+    /* The only column spans the inspector (it stayed at 100 pt otherwise). */
+    _tableView.autoresizingMask = NSViewWidthSizable;
     [_tableView registerForDraggedTypes:@[MacLCUpNextRowPasteboardType, NSPasteboardTypeFileURL,
-                                          VLCMediaLibraryMediaItemPasteboardType]];
+                                          VLCMediaLibraryMediaItemPasteboardType, VLCMediaLibraryMediaItemUTI]];
     [_tableView setDraggingSourceOperationMask:NSDragOperationMove forLocal:YES];
     __weak typeof(self) weakSelf = self;
     _tableView.deleteHandler = ^{
@@ -258,7 +294,16 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     [center addObserver:self selector:@selector(queueChanged:) name:VLCPlayerCurrentMediaItemChanged object:nil];
     [center addObserver:self selector:@selector(orderChanged:) name:VLCPlaybackOrderChanged object:nil];
     [center addObserver:self selector:@selector(orderChanged:) name:VLCPlaybackRepeatChanged object:nil];
+    [center addObserver:self selector:@selector(chaptersChanged:) name:VLCPlayerTitleListChanged object:nil];
+    [center addObserver:self selector:@selector(chaptersChanged:) name:VLCPlayerTitleSelectionChanged object:nil];
     [self reload];
+    [self updateChaptersAvailability];
+}
+
+- (void)viewDidLayout
+{
+    [super viewDidLayout];
+    [_tableView sizeLastColumnToFit];
 }
 
 - (NSInteger)tableViewSelectedRow
@@ -268,9 +313,79 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
 
 // MARK: - Contents
 
+- (void)segmentedControlChanged:(NSSegmentedControl *)sender
+{
+    [self updateViewMode];
+}
+
+- (void)chaptersChanged:(NSNotification *)notification
+{
+    if (!NSThread.isMainThread) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self updateChaptersAvailability];
+        });
+        return;
+    }
+    [self updateChaptersAvailability];
+}
+
+- (void)updateChaptersAvailability
+{
+    if (!NSThread.isMainThread) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self updateChaptersAvailability];
+        });
+        return;
+    }
+
+    const BOOL hasChapters = self.playQueue.playerController.numberOfChaptersForCurrentTitle > 0;
+    _segmentedControl.hidden = !hasChapters;
+    if (!hasChapters && _segmentedControl.selectedSegment != 0) {
+        _segmentedControl.selectedSegment = 0;
+    }
+    [self updateViewMode];
+}
+
+- (void)updateViewMode
+{
+    const BOOL showChapters = (_segmentedControl.selectedSegment == 1 && !_segmentedControl.isHidden);
+    if (showChapters) {
+        if (_chaptersViewController == nil) {
+            _chaptersViewController = [[VLCLibraryWindowChaptersSidebarViewController alloc] initWithLibraryWindow:_libraryWindow];
+            [self addChildViewController:_chaptersViewController];
+            NSView * const chaptersView = _chaptersViewController.view;
+            chaptersView.translatesAutoresizingMaskIntoConstraints = NO;
+            [self.view addSubview:chaptersView];
+            [NSLayoutConstraint activateConstraints:@[
+                [chaptersView.topAnchor constraintEqualToAnchor:_scrollView.topAnchor],
+                [chaptersView.leadingAnchor constraintEqualToAnchor:_scrollView.leadingAnchor],
+                [chaptersView.trailingAnchor constraintEqualToAnchor:_scrollView.trailingAnchor],
+                [chaptersView.bottomAnchor constraintEqualToAnchor:_scrollView.bottomAnchor],
+            ]];
+        }
+        _chaptersViewController.view.hidden = NO;
+        _scrollView.hidden = YES;
+        _emptyState.hidden = YES;
+    } else {
+        if (_chaptersViewController != nil) {
+            _chaptersViewController.view.hidden = YES;
+        }
+        _scrollView.hidden = NO;
+        _emptyState.hidden = NO;
+    }
+}
+
 - (void)queueChanged:(NSNotification *)notification
 {
+    if (!NSThread.isMainThread) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self reload];
+            [self updateChaptersAvailability];
+        });
+        return;
+    }
     [self reload];
+    [self updateChaptersAvailability];
 }
 
 - (void)orderChanged:(NSNotification *)notification
@@ -298,6 +413,7 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
             [_emptyState.trailingAnchor constraintLessThanOrEqualToAnchor:self.view.trailingAnchor constant:-16.0],
         ]];
     }
+    [self updateViewMode];
 }
 
 - (void)rebuildMoreMenu
@@ -455,32 +571,116 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     VLCPlayQueueController * const queue = self.playQueue;
 
     if (info.draggingSource == tableView) {
-        NSMutableArray<VLCPlayQueueItem *> * const moved = [NSMutableArray array];
+        NSMutableIndexSet * const sourceRows = [NSMutableIndexSet indexSet];
         for (NSPasteboardItem * const item in pasteboard.pasteboardItems) {
-            const NSInteger source = [item stringForType:MacLCUpNextRowPasteboardType].integerValue;
-            if (source >= 0 && source < (NSInteger)_items.count) {
-                [moved addObject:_items[(NSUInteger)source]];
+            NSString * const str = [item stringForType:MacLCUpNextRowPasteboardType];
+            if (str != nil) {
+                const NSInteger source = str.integerValue;
+                if (source >= 0 && source < (NSInteger)_items.count) {
+                    [sourceRows addIndex:(NSUInteger)source];
+                }
             }
         }
-        size_t target = (size_t)MAX(row, 0);
-        for (VLCPlayQueueItem * const item in moved) {
-            const NSUInteger current = [_items indexOfObject:item];
-            if (current != NSNotFound && current < target) {
-                target -= 1;
-            }
-            [queue moveItemWithID:(int64_t)item.uniqueID toPosition:target];
-            target += 1;
+        if (sourceRows.count == 0) {
+            return NO;
         }
-        return moved.count > 0;
+
+        NSMutableArray<VLCPlayQueueItem *> * const draggedItems = [NSMutableArray arrayWithCapacity:sourceRows.count];
+        [sourceRows enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL * const stop) {
+            [draggedItems addObject:self->_items[idx]];
+        }];
+
+        const NSInteger clampedRow = MAX(0, MIN(row, (NSInteger)_items.count));
+
+        // Count how many dragged items were originally above the drop row
+        NSUInteger countAbove = 0;
+        for (VLCPlayQueueItem * const item in draggedItems) {
+            const NSUInteger origIdx = [_items indexOfObject:item];
+            if (origIdx < (NSUInteger)clampedRow) {
+                countAbove++;
+            }
+        }
+
+        const size_t insertionIndex = (size_t)clampedRow - countAbove;
+
+        // Construct desired final ordering
+        NSMutableArray<VLCPlayQueueItem *> * const desired = [_items mutableCopy];
+        [desired removeObjectsInArray:draggedItems];
+        [desired insertObjects:draggedItems
+                     atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(insertionIndex, draggedItems.count)]];
+
+        NSMutableArray<VLCPlayQueueItem *> * const currentList = [_items mutableCopy];
+
+        // Items coming from above the drop row move down: process in reverse order
+        NSMutableArray<VLCPlayQueueItem *> * const itemsFromAbove = [NSMutableArray array];
+        NSMutableArray<VLCPlayQueueItem *> * const itemsFromBelow = [NSMutableArray array];
+        for (VLCPlayQueueItem * const item in draggedItems) {
+            const NSUInteger origIdx = [_items indexOfObject:item];
+            if (origIdx < (NSUInteger)clampedRow) {
+                [itemsFromAbove addObject:item];
+            } else {
+                [itemsFromBelow addObject:item];
+            }
+        }
+
+        for (VLCPlayQueueItem * const item in itemsFromAbove.reverseObjectEnumerator) {
+            const size_t targetPos = (size_t)[desired indexOfObject:item];
+            const NSUInteger curPos = [currentList indexOfObject:item];
+            if (curPos != NSNotFound && curPos != targetPos) {
+                [queue moveItemWithID:(int64_t)item.uniqueID toPosition:targetPos];
+                [currentList removeObjectAtIndex:curPos];
+                [currentList insertObject:item atIndex:targetPos];
+            }
+        }
+
+        for (VLCPlayQueueItem * const item in itemsFromBelow) {
+            const size_t targetPos = (size_t)[desired indexOfObject:item];
+            const NSUInteger curPos = [currentList indexOfObject:item];
+            if (curPos != NSNotFound && curPos != targetPos) {
+                [queue moveItemWithID:(int64_t)item.uniqueID toPosition:targetPos];
+                [currentList removeObjectAtIndex:curPos];
+                [currentList insertObject:item atIndex:targetPos];
+            }
+        }
+
+        return YES;
     }
 
-    NSData * const libraryData = [pasteboard dataForType:VLCMediaLibraryMediaItemPasteboardType];
-    if (libraryData != nil) {
-        NSArray<VLCMediaLibraryMediaItem *> * const media = [VLCMediaLibraryMediaItem mediaItemsFromPasteboardData:libraryData];
-        if (media.count > 0) {
-            [MacLCLibraryActions addToUpNext:media];
-            return YES;
+    NSMutableArray<VLCMediaLibraryMediaItem *> * const allMediaItems = [NSMutableArray array];
+    for (NSPasteboardItem * const pboardItem in pasteboard.pasteboardItems) {
+        NSData *itemData = [pboardItem dataForType:VLCMediaLibraryMediaItemPasteboardType];
+        if (!itemData) {
+            itemData = [pboardItem dataForType:VLCMediaLibraryMediaItemUTI];
         }
+        if (itemData) {
+            NSArray<VLCMediaLibraryMediaItem *> * const items = [VLCMediaLibraryMediaItem mediaItemsFromPasteboardData:itemData];
+            if (items) {
+                [allMediaItems addObjectsFromArray:items];
+            }
+        }
+    }
+    if (allMediaItems.count == 0) {
+        NSData *itemData = [pasteboard dataForType:VLCMediaLibraryMediaItemPasteboardType];
+        if (!itemData) {
+            itemData = [pasteboard dataForType:VLCMediaLibraryMediaItemUTI];
+        }
+        if (itemData) {
+            NSArray<VLCMediaLibraryMediaItem *> * const items = [VLCMediaLibraryMediaItem mediaItemsFromPasteboardData:itemData];
+            if (items) {
+                [allMediaItems addObjectsFromArray:items];
+            }
+        }
+    }
+    if (allMediaItems.count > 0) {
+        size_t insertionIndex = (size_t)MAX(0, MIN(row, (NSInteger)_items.count));
+        for (VLCMediaLibraryMediaItem * const mediaItem in allMediaItems) {
+            input_item_t * const p_input = mediaItem.inputItem.vlcInputItem;
+            if (p_input != NULL) {
+                [queue addInputItem:p_input atPosition:insertionIndex startPlayback:NO];
+                insertionIndex++;
+            }
+        }
+        return YES;
     }
 
     NSArray<NSURL *> * const urls = [pasteboard readObjectsForClasses:@[NSURL.class]
@@ -493,7 +693,8 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
         }
     }
     if (inputs.count > 0) {
-        [queue addPlayQueueItems:inputs];
+        const size_t insertionIndex = (size_t)MAX(0, MIN(row, (NSInteger)_items.count));
+        [queue addPlayQueueItems:inputs atPosition:insertionIndex startPlayback:NO];
         return YES;
     }
     return NO;
@@ -516,13 +717,20 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     const BOOL played = currentIndex != (size_t)-1 && (size_t)row < currentIndex;
 
     cell.representedID = item.uniqueID;
-    cell.titleField.stringValue = item.title ?: @"";
+    /* The tagged title first: the item's name is often its file name. */
+    NSString *title = item.inputItem.title;
+    if (title.length == 0) {
+        title = item.title ?: @"";
+    }
+    cell.titleField.stringValue = title;
     cell.titleField.font = playing
         ? [NSFont systemFontOfSize:MacLCDesign.body.pointSize weight:NSFontWeightSemibold] : MacLCDesign.body;
     cell.titleField.textColor = played ? NSColor.secondaryLabelColor : NSColor.labelColor;
     cell.subtitleField.stringValue = item.artistName.length > 0 ? item.artistName : (item.albumName ?: @"");
     cell.subtitleField.hidden = cell.subtitleField.stringValue.length == 0;
-    cell.durationField.stringValue = item.duration > 0 ? MacLCDurationString(MS_FROM_VLC_TICK(item.duration)) : @"";
+    /* A clock reading, like a track list: "Less than a minute" crowded out
+     * the title. */
+    cell.durationField.stringValue = item.duration > 0 ? [NSString stringWithTimeFromTicks:item.duration] : @"";
     cell.playingView.hidden = !playing;
 
     cell.artworkView.image = nil;
@@ -533,7 +741,7 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
         }
     }];
     cell.accessibilityLabel = [NSString stringWithFormat:@"%@%@", playing ? [_NS("Now Playing") stringByAppendingString:@", "] : @"",
-                               item.title ?: @""];
+                               title];
     return cell;
 }
 

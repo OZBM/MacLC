@@ -94,6 +94,16 @@ static const NSTimeInterval MacLCSearchDebounce = 0.12;
     [self updateItems];
 }
 
+- (void)refreshWindowTitle
+{
+    MacLCLibrarySectionViewController * const section = [self currentSection];
+    if (section != nil && !_libraryWindow.embeddedVideoPlaybackActive) {
+        _libraryWindow.title = section.sectionTitle ?: @"";
+        _libraryWindow.subtitle = section.sectionSubtitle ?: @"";
+    }
+    [self updateItems];
+}
+
 - (void)focusSearchField
 {
     [_searchItem beginSearchInteraction];
@@ -131,7 +141,7 @@ static const NSTimeInterval MacLCSearchDebounce = 0.12;
     MacLCLibrarySectionViewController * const section = [self currentSection];
     const BOOL browsing = [self isBrowsing];
 
-    if (browsing) {
+    if (browsing && !_libraryWindow.embeddedVideoPlaybackActive) {
         _libraryWindow.title = _NS("Browse");
         _libraryWindow.subtitle = @"";
     }
@@ -257,6 +267,8 @@ static const NSTimeInterval MacLCSearchDebounce = 0.12;
 
 - (void)searchFieldDidEndSearching:(NSSearchField *)sender
 {
+    /* A debounced search still pending must not bring the query back. */
+    _pendingSearch = @"";
     [self applySearch:@""];
 }
 

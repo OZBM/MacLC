@@ -71,13 +71,14 @@ static NSUserInterfaceItemIdentifier const kHeaderCellID = @"MacLCSidebarHeaderC
 static NSUserInterfaceItemIdentifier const kRowCellID = @"MacLCSidebarRowCell";
 static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutlineColumn";
 
-@interface MacLCLibrarySidebarViewController () <NSOutlineViewDataSource, NSOutlineViewDelegate>
+@interface MacLCLibrarySidebarViewController () <NSMenuDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate>
 {
     NSScrollView *_scrollView;
     NSOutlineView *_outlineView;
     VLCLibraryWindow *__weak _libraryWindow;
     NSArray<MacLCSidebarItem *> *_rootItems;
     BOOL _updatingSelection;
+    BOOL _observingWindow;
     NSProgressIndicator *_indexingSpinner;
 }
 @end
@@ -106,7 +107,8 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
     _outlineView.floatsGroupRows = NO;
     _outlineView.headerView = nil;
     _outlineView.rowSizeStyle = NSTableViewRowSizeStyleDefault;
-    _outlineView.allowsEmptySelection = NO;
+    /* Empty when the screen shown has no row (the Playlists list). */
+    _outlineView.allowsEmptySelection = YES;
     _outlineView.indentationPerLevel = 0;
 
     NSTableColumn * const column =
@@ -114,9 +116,15 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
     column.resizingMask = NSTableColumnAutoresizingMask;
     [_outlineView addTableColumn:column];
     _outlineView.outlineTableColumn = column;
+    /* The only column spans the sidebar, whatever its width. */
+    _outlineView.columnAutoresizingStyle = NSTableViewFirstColumnOnlyAutoresizingStyle;
+    _outlineView.autoresizingMask = NSViewWidthSizable;
 
     _outlineView.dataSource = self;
     _outlineView.delegate = self;
+    /* The context menu is rebuilt for the clicked row each time it opens. */
+    _outlineView.menu = [[NSMenu alloc] initWithTitle:@""];
+    _outlineView.menu.delegate = self;
 
     _scrollView = [[NSScrollView alloc] initWithFrame:container.bounds];
     _scrollView.documentView = _outlineView;
@@ -140,6 +148,9 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
     [super viewDidLoad];
 
     [self rebuildModel];
+    /* The outline view asked for its rows when it got its data source, before
+     * the model existed. */
+    [_outlineView reloadData];
 
     // Expand all headers by default.
     for (MacLCSidebarItem * const item in _rootItems) {
@@ -162,13 +173,24 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
                name:VLCLibraryBookmarkedLocationsChanged
              object:nil];
 
-    // Select the window's current segment.
-    [self selectSegment:_libraryWindow.librarySegmentType];
+    // Select the window's current segment, and follow it.
+    [self selectRowForSegmentType:_libraryWindow.librarySegmentType];
+    [_libraryWindow addObserver:self forKeyPath:@"librarySegmentType" options:0 context:nil];
+    _observingWindow = YES;
 }
 
 - (void)dealloc
 {
     [NSNotificationCenter.defaultCenter removeObserver:self];
+    if (_observingWindow) {
+        [_libraryWindow removeObserver:self forKeyPath:@"librarySegmentType"];
+    }
+}
+
+- (void)viewDidLayout
+{
+    [super viewDidLayout];
+    [_outlineView sizeLastColumnToFit];
 }
 
 #pragma mark - Model
@@ -556,21 +578,49 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
 
 #pragma mark - Right-click delivery
 
-- (NSMenu *)menuForEvent:(NSEvent *)event
+- (void)menuNeedsUpdate:(NSMenu *)menu
 {
-    NSPoint const point = [_outlineView convertPoint:event.locationInWindow fromView:nil];
-    const NSInteger row = [_outlineView rowAtPoint:point];
+    [menu removeAllItems];
+    const NSInteger row = _outlineView.clickedRow;
     if (row < 0) {
-        return nil;
+        return;
     }
-    id const item = [_outlineView itemAtRow:row];
-    return [self outlineView:_outlineView menuForItem:item];
+    NSMenu * const rowMenu = [self outlineView:_outlineView menuForItem:[_outlineView itemAtRow:row]];
+    for (NSMenuItem * const item in rowMenu.itemArray.copy) {
+        [rowMenu removeItem:item];
+        [menu addItem:item];
+    }
 }
 
 #pragma mark - selectSegment:
 
 - (void)selectSegment:(NSInteger)segmentType
 {
+    [self selectRowForSegmentType:segmentType];
+    /* Callers expect the old sidebar's behaviour: selecting navigates. */
+    if (_libraryWindow.librarySegmentType != segmentType) {
+        _libraryWindow.librarySegmentType = segmentType;
+    }
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary *)change
+                       context:(void *)context
+{
+    [self selectRowForSegmentType:_libraryWindow.librarySegmentType];
+}
+
+/* Moves the selection to the segment's row without navigating. A playlist or
+ * bookmark row stays selected when its segment is the one shown. */
+- (void)selectRowForSegmentType:(NSInteger)segmentType
+{
+    const NSInteger selectedRow = _outlineView.selectedRow;
+    if (selectedRow >= 0 &&
+        ((MacLCSidebarItem *)[_outlineView itemAtRow:selectedRow]).segmentType == segmentType) {
+        return;
+    }
+
     _updatingSelection = YES;
 
     MacLCSidebarItem * const target = [self itemForSegmentType:segmentType];
@@ -587,6 +637,8 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
             [_outlineView selectRowIndexes:[NSIndexSet indexSetWithIndex:row]
                       byExtendingSelection:NO];
         }
+    } else {
+        [_outlineView deselectAll:nil];
     }
 
     _updatingSelection = NO;
@@ -599,7 +651,9 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
             return root;
         }
         for (MacLCSidebarItem * const child in root.children) {
-            if (child.segmentType == segmentType) {
+            /* A playlist or bookmark row stands for one item, not for its
+             * whole segment: only a click selects it. */
+            if (child.segmentType == segmentType && child.playlist == nil && child.bookmark == nil) {
                 return child;
             }
         }

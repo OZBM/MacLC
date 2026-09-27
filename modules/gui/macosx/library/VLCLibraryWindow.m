@@ -171,6 +171,11 @@ static int ShowController(vlc_object_t * __unused p_this,
 
 @end
 
+/* Implemented by VLCVideoWindowCommon: names the window after the media. */
+@interface VLCVideoWindowCommon (MacLCMediaTitle)
+- (void)mediaMetadataChanged:(NSNotification *)notification;
+@end
+
 @implementation VLCLibraryWindow
 
 - (void)awakeFromNib
@@ -722,6 +727,8 @@ static int ShowController(vlc_object_t * __unused p_this,
     [self willChangeValueForKey:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey];
     _embeddedVideoPlaybackActive = YES;
     [self didChangeValueForKey:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey];
+    self.subtitle = @"";
+    [self mediaMetadataChanged:nil];
 
     if ([self.librarySegmentViewController isKindOfClass:VLCLibraryAbstractMediaLibrarySegmentViewController.class]) {
         [(VLCLibraryAbstractMediaLibrarySegmentViewController *)self.librarySegmentViewController disconnect];
@@ -771,6 +778,9 @@ static int ShowController(vlc_object_t * __unused p_this,
     [self willChangeValueForKey:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey];
     _embeddedVideoPlaybackActive = NO;
     [self didChangeValueForKey:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey];
+    /* Back to the section's own title, without the media's proxy icon. */
+    self.representedURL = nil;
+    [_libraryToolbarController refreshWindowTitle];
 
     if (self.presentLoadingOverlayOnVideoPlaybackHide) {
         [self showLoadingOverlay];
@@ -842,6 +852,18 @@ static int ShowController(vlc_object_t * __unused p_this,
     }
 
     [super mouseMoved:o_event];
+}
+
+#pragma mark - window title
+
+/* The library names the window after the section on screen (the router
+ * sets title and subtitle); the media's title only belongs to the embedded
+ * video. */
+- (void)mediaMetadataChanged:(NSNotification *)notification
+{
+    if (self.embeddedVideoPlaybackActive) {
+        [super mediaMetadataChanged:notification];
+    }
 }
 
 #pragma mark - library menu commands

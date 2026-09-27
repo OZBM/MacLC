@@ -44,8 +44,10 @@ NSUInteger kVLCMaximumLibraryImageCacheSize = 500;
 /* 256 MB cost limit based on estimated pixel data size per image */
 static const NSUInteger kVLCLibraryImageCacheCostLimit = 256 * 1024 * 1024;
 static const NSTimeInterval kVLCThumbnailCacheMaximumAge = 30 * 24 * 60 * 60;
+/* 16:9, like the video cards of the library: the media library keeps one
+ * small thumbnail per media, whoever asks for it first. */
 uint32_t kVLCDesiredThumbnailWidth = 512;
-uint32_t kVLCDesiredThumbnailHeight = 512;
+uint32_t kVLCDesiredThumbnailHeight = 288;
 float kVLCDefaultThumbnailPosition = .15;
 const NSUInteger kVLCCompositeImageDefaultCompositedGridItemCount = 4;
 

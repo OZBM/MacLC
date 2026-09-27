@@ -24,6 +24,7 @@
 #import "theme/MacLCGlassView.h"
 #import "theme/MacLCSymbolButton.h"
 #import "theme/MacLCDesign.h"
+#import "library/VLCInputItem.h"
 #import "library/VLCLibraryImageCache.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "playqueue/VLCPlayQueueModel.h"
@@ -119,8 +120,10 @@
 
     self.translatesAutoresizingMaskIntoConstraints = NO;
 
+    /* Below NSLayoutPriorityWindowSizeStayPut: the bar follows the window,
+     * it must never size it (at DefaultHigh it pinned the window to 808 pt). */
     NSLayoutConstraint *widthFit = [self.widthAnchor constraintEqualToAnchor:superview.widthAnchor constant:-48.0];
-    widthFit.priority = NSLayoutPriorityDefaultHigh;
+    widthFit.priority = NSLayoutPriorityDragThatCannotResizeWindow - 1;
 
     _superviewConstraints = @[
         [self.bottomAnchor constraintEqualToAnchor:superview.bottomAnchor constant:-16.0],
@@ -486,7 +489,14 @@
         currentItem = [playQueue.playQueueModel playQueueItemAtIndex:currentIndex];
     }
 
-    NSString *title = player.nameOfCurrentMediaItem ?: currentItem.title ?: @"";
+    /* The tagged title first: the item's name is often just its file name. */
+    NSString *title = player.currentMedia.title;
+    if (title.length == 0) {
+        title = currentItem.title;
+    }
+    if (title.length == 0) {
+        title = player.nameOfCurrentMediaItem ?: @"";
+    }
     _titleLabel.stringValue = title;
 
     BOOL isAudio = player.currentMediaIsAudioOnly ||
@@ -520,7 +530,13 @@
         [VLCLibraryImageCache thumbnailForPlayQueueItem:currentItem
                                          withCompletion:^(const NSImage *thumbnail) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                if (self->_liveVideoView != nil) {
+                /* Skip artwork that arrives after the track changed. */
+                VLCPlayQueueController * const queue = VLCMain.sharedInstance.playQueueController;
+                const size_t index = queue.currentPlayQueueIndex;
+                VLCPlayQueueItem * const playing =
+                    index != (size_t)-1 && index < queue.playQueueModel.numberOfPlayQueueItems
+                        ? [queue.playQueueModel playQueueItemAtIndex:index] : nil;
+                if (self->_liveVideoView != nil || playing != currentItem) {
                     return;
                 }
                 if (thumbnail != nil) {

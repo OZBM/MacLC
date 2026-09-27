@@ -195,8 +195,16 @@ static const CGFloat MacLCDetailHeaderCompactWidth = 640.0;
 
     const CGFloat artworkWidth = _shape == MacLCArtworkShapeVideo ? 320.0 : 200.0;
     _artworkWidth = [_artworkView.widthAnchor constraintEqualToConstant:artworkWidth];
+    /* The header is as tall as its artwork (or its text, if taller): without
+     * this it took every point the detail screen gave it, and the list below
+     * got none. */
+    NSLayoutConstraint * const hugArtwork =
+        [_artworkView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-MacLCDetailHeaderInset];
+    hugArtwork.priority = NSLayoutPriorityDefaultHigh;
     [NSLayoutConstraint activateConstraints:@[
         _artworkWidth,
+        hugArtwork,
+        [column.bottomAnchor constraintLessThanOrEqualToAnchor:self.bottomAnchor constant:-MacLCDetailHeaderInset],
         [_artworkView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:MacLCDetailHeaderInset],
         [_artworkView.topAnchor constraintEqualToAnchor:self.topAnchor constant:MacLCDetailHeaderInset],
         [_artworkView.bottomAnchor constraintLessThanOrEqualToAnchor:self.bottomAnchor constant:-MacLCDetailHeaderInset],

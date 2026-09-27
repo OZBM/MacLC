@@ -289,8 +289,12 @@ NSUserInterfaceItemIdentifier const MacLCMediaCardItemIdentifier = @"MacLCMediaC
         VLCMediaLibraryShow *show = (VLCMediaLibraryShow *)_libraryItem;
         uint32_t seasons = show.seasonCount;
         uint32_t episodes = show.episodeCount;
-        NSString *seasonsStr = (seasons == 1) ? _NS("1 season") : [NSString stringWithFormat:_NS("%u seasons"), seasons];
         NSString *episodesStr = (episodes == 1) ? _NS("1 episode") : [NSString stringWithFormat:_NS("%u episodes"), episodes];
+        /* Files named without a season number leave the count at zero. */
+        if (seasons == 0) {
+            return episodesStr;
+        }
+        NSString *seasonsStr = (seasons == 1) ? _NS("1 season") : [NSString stringWithFormat:_NS("%u seasons"), seasons];
         return [NSString stringWithFormat:@"%@ · %@", seasonsStr, episodesStr];
     } else if ([_libraryItem isKindOfClass:[VLCMediaLibraryAlbum class]]) {
         VLCMediaLibraryAlbum *album = (VLCMediaLibraryAlbum *)_libraryItem;
@@ -316,9 +320,11 @@ NSUserInterfaceItemIdentifier const MacLCMediaCardItemIdentifier = @"MacLCMediaC
         }
         return countStr;
     } else if ([_libraryItem isKindOfClass:[VLCMediaLibraryGenre class]]) {
+        /* The track count comes with the genre; its albums would take a
+         * database query per card. */
         VLCMediaLibraryGenre *genre = (VLCMediaLibraryGenre *)_libraryItem;
-        NSUInteger albumsCount = genre.albums.count;
-        return (albumsCount == 1) ? _NS("1 album") : [NSString stringWithFormat:_NS("%lu albums"), (unsigned long)albumsCount];
+        unsigned int tracks = genre.numberOfTracks;
+        return (tracks == 1) ? _NS("1 song") : [NSString stringWithFormat:_NS("%u songs"), tracks];
     }
 
     return _libraryItem.secondaryDetailString ?: @"";
@@ -326,14 +332,22 @@ NSUserInterfaceItemIdentifier const MacLCMediaCardItemIdentifier = @"MacLCMediaC
 
 - (NSString *)formatDurationAbbreviated:(NSTimeInterval)seconds
 {
+    /* "1h 32m", and "45s" for clips shorter than a minute (not "0m"). */
     static NSDateComponentsFormatter *formatter;
+    static NSDateComponentsFormatter *secondsFormatter;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         formatter = [[NSDateComponentsFormatter alloc] init];
         formatter.unitsStyle = NSDateComponentsFormatterUnitsStyleAbbreviated;
         formatter.allowedUnits = NSCalendarUnitHour | NSCalendarUnitMinute;
         formatter.zeroFormattingBehavior = NSDateComponentsFormatterZeroFormattingBehaviorDropLeading;
+        secondsFormatter = [[NSDateComponentsFormatter alloc] init];
+        secondsFormatter.unitsStyle = NSDateComponentsFormatterUnitsStyleAbbreviated;
+        secondsFormatter.allowedUnits = NSCalendarUnitSecond;
     });
+    if (seconds < 60.0) {
+        return seconds >= 1.0 ? [secondsFormatter stringFromTimeInterval:round(seconds)] ?: @"" : @"";
+    }
     return [formatter stringFromTimeInterval:seconds] ?: @"";
 }
 

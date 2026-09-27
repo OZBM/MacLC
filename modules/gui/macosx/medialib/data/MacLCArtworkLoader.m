@@ -69,6 +69,9 @@ static const NSUInteger MacLCArtworkCacheCostLimit = 192 * 1024 * 1024;
     NSMutableArray<NSNumber *> *_thumbnailQueue;      // media ids, newest last
     NSMutableSet<NSNumber *> *_thumbnailsInFlight;
     NSMutableSet<NSNumber *> *_thumbnailsAttempted;
+    /* Bumped when a media gets a new thumbnail, so cached decodes of the old
+     * file miss. Main thread only. */
+    NSMutableDictionary<NSString *, NSNumber *> *_artworkGenerations;
     NSMutableDictionary<NSNumber *, NSMutableArray *> *_bannerWaiters;
 }
 
@@ -116,6 +119,7 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
         _thumbnailQueue = [NSMutableArray array];
         _thumbnailsInFlight = [NSMutableSet set];
         _thumbnailsAttempted = [NSMutableSet set];
+        _artworkGenerations = [NSMutableDictionary dictionary];
         _bannerWaiters = [NSMutableDictionary dictionary];
 
         if (VLCMain.sharedInstance.libraryController.shouldUseMediaLibrary) {
@@ -125,6 +129,10 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
             _eventCallback = vlc_ml_event_register_callback(_mediaLibrary,
                                                             MacLCArtworkLoaderEventCallback,
                                                             (__bridge void *)self);
+            [NSNotificationCenter.defaultCenter addObserver:self
+                                                   selector:@selector(applicationWillTerminate:)
+                                                       name:NSApplicationWillTerminateNotification
+                                                     object:nil];
         }
 
         __weak typeof(self) weakSelf = self;
@@ -139,8 +147,21 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
     return self;
 }
 
+- (void)applicationWillTerminate:(NSNotification *)notification
+{
+    /* The media library is released right after the interface and asserts
+     * that no callback is left; no thumbnail may be requested after this. */
+    if (_eventCallback != NULL) {
+        vlc_ml_event_unregister_callback(_mediaLibrary, _eventCallback);
+        _eventCallback = NULL;
+    }
+    [_thumbnailQueue removeAllObjects];
+    _mediaLibrary = NULL;
+}
+
 - (void)dealloc
 {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
     if (_eventCallback != NULL) {
         vlc_ml_event_unregister_callback(_mediaLibrary, _eventCallback);
     }
@@ -173,7 +194,9 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
     const NSSize pixelSize = NSMakeSize(ceil(pointSize.width * backingScale / 32.0) * 32.0,
                                         ceil(pointSize.height * backingScale / 32.0) * 32.0);
     NSString * const identifier = MacLCLibraryItemIdentifier(item);
-    NSString * const key = [MacLCArtworkLoader cacheKeyForIdentifier:identifier pixelSize:pixelSize];
+    NSString * const key = [MacLCArtworkLoader cacheKeyForIdentifier:
+        [NSString stringWithFormat:@"%@#%ld", identifier, (long)_artworkGenerations[identifier].integerValue]
+                                                          pixelSize:pixelSize];
 
     NSImage * const cached = [_cache objectForKey:key];
     if (cached != nil) {
@@ -199,6 +222,12 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
         VLCMediaLibraryMediaItem *mediaNeedingThumbnail = nil;
         if (path == nil) {
             mediaNeedingThumbnail = [MacLCArtworkLoader mediaNeedingThumbnailForItem:item];
+        } else if ([item isKindOfClass:VLCMediaLibraryMediaItem.class] &&
+                   ((VLCMediaLibraryMediaItem *)item).mediaType == VLC_ML_MEDIA_TYPE_VIDEO &&
+                   [MacLCArtworkLoader isSquareImageAtPath:path]) {
+            /* Older builds asked for square thumbnails, which crop a 16:9
+             * frame to its middle: ask once for a thumbnail of the card's shape. */
+            mediaNeedingThumbnail = (VLCMediaLibraryMediaItem *)item;
         }
         NSImage * const image = path != nil
             ? [MacLCArtworkLoader imageAtPath:path pixelSize:pixelSize pointSize:pointSize fill:YES]
@@ -273,6 +302,20 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
         return media;
     }
     return nil;
+}
+
++ (BOOL)isSquareImageAtPath:(NSString *)path
+{
+    CGImageSourceRef const source = CGImageSourceCreateWithURL((__bridge CFURLRef)[NSURL fileURLWithPath:path], NULL);
+    if (source == NULL) {
+        return NO;
+    }
+    NSDictionary * const properties =
+        (__bridge_transfer NSDictionary *)CGImageSourceCopyPropertiesAtIndex(source, 0, NULL);
+    CFRelease(source);
+    const CGFloat width = [properties[(NSString *)kCGImagePropertyPixelWidth] doubleValue];
+    const CGFloat height = [properties[(NSString *)kCGImagePropertyPixelHeight] doubleValue];
+    return width > 0.0 && height > 0.0 && width / height < 1.2 && height / width < 1.2;
 }
 
 + (nullable NSString *)pathForArtworkMRL:(nullable NSString *)mrl
@@ -354,6 +397,9 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
         vlc_medialibrary_t * const ml = _mediaLibrary;
         const int64_t mediaID = key.longLongValue;
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+            if (self->_mediaLibrary == NULL) { // terminating
+                return;
+            }
             const int ret = vlc_ml_media_generate_thumbnail(ml, mediaID, VLC_ML_THUMBNAIL_SMALL,
                                                             MacLCSmallThumbnailWidth,
                                                             MacLCSmallThumbnailHeight,
@@ -382,6 +428,7 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
     [_thumbnailsInFlight removeObject:key];
     if (success) {
         NSString * const identifier = [NSString stringWithFormat:@"media:%lld", mediaID];
+        _artworkGenerations[identifier] = @(_artworkGenerations[identifier].integerValue + 1);
         [NSNotificationCenter.defaultCenter postNotificationName:MacLCArtworkLoaderArtworkDidChangeNotification
                                                           object:identifier];
     }
@@ -469,6 +516,10 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
                     return;
                 }
                 dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+                    MacLCArtworkLoader * const loader = weakSelf;
+                    if (loader == nil || loader->_mediaLibrary == NULL) {
+                        return;
+                    }
                     NSString *path = nil;
                     vlc_ml_media_t * const p_media = vlc_ml_get_media(ml, media.libraryID);
                     if (p_media != NULL) {
@@ -486,10 +537,22 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
             strongSelf->_bannerWaiters[waiterKey] = waiters;
             if (!alreadyRequested) {
                 dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-                    vlc_ml_media_generate_thumbnail(ml, media.libraryID, VLC_ML_THUMBNAIL_BANNER,
-                                                    MacLCBannerThumbnailWidth,
-                                                    MacLCBannerThumbnailHeight,
-                                                    MacLCThumbnailPosition);
+                    MacLCArtworkLoader * const loader = weakSelf;
+                    if (loader == nil || loader->_mediaLibrary == NULL) {
+                        return;
+                    }
+                    const int ret = vlc_ml_media_generate_thumbnail(ml, media.libraryID, VLC_ML_THUMBNAIL_BANNER,
+                                                                    MacLCBannerThumbnailWidth,
+                                                                    MacLCBannerThumbnailHeight,
+                                                                    MacLCThumbnailPosition);
+                    if (ret != VLC_SUCCESS) {
+                        /* No event will come: release the waiters now. */
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [weakSelf thumbnailGeneratedForMediaID:media.libraryID
+                                                              size:VLC_ML_THUMBNAIL_BANNER
+                                                           success:NO];
+                        });
+                    }
                 });
             }
         });

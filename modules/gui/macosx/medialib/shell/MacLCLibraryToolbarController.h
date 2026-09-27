@@ -63,6 +63,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Makes the search field first responder (Edit ▸ Find, ⌘F).
 - (void)focusSearchField;
 
+/// Names the window after the screen on screen again (after embedded video).
+- (void)refreshWindowTitle;
+
 // Menu bar commands: the window forwards the View menu to these.
 @property (readonly) BOOL canGoBack;
 @property (readonly) BOOL canGoForward;

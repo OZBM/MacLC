@@ -42,6 +42,7 @@
 @interface VLCLibraryWindowSplitViewController ()
 
 @property (readwrite) BOOL priorNavSidebarCollapsedState;
+@property (readwrite, strong) NSView *legacyBottomBarView;
 
 @end
 
@@ -52,12 +53,15 @@
     [super viewDidLoad];
 
     VLCLibraryWindow * const libraryWindow = VLCMain.sharedInstance.libraryWindow;
-    [libraryWindow addObserver:self
-                    forKeyPath:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey
-                       options:0
-                       context:nil];
 
     self.splitView.wantsLayer = YES;
+    /* A new name for the new layout: the old one remembered a sidebar that
+     * embedded video had collapsed, and a play queue that no longer exists. */
+    self.splitView.autosaveName = @"MacLCLibrarySplitView";
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(applicationWillTerminate:)
+                                               name:NSApplicationWillTerminateNotification
+                                             object:nil];
 
     _navSidebarViewController =
         [[MacLCLibrarySidebarViewController alloc] initWithLibraryWindow:libraryWindow];
@@ -109,26 +113,20 @@
 
     self.splitViewItems = @[_navSidebarItem, _libraryTargetViewItem, self.multifunctionSidebarItem];
 
-    VLCMainWindowControlsBar * const controlsBar = libraryWindow.controlsBar;
-    VLCBottomBarView * const bottomBarView = controlsBar.bottomBarView;
-    bottomBarView.translatesAutoresizingMaskIntoConstraints = NO;
-    [NSLayoutConstraint activateConstraints:@[
-        [bottomBarView.leadingAnchor constraintEqualToAnchor:self.libraryTargetViewController.view.leadingAnchor
-                                                    constant:VLCUIUnits.largeSpacing * 2],
-        [bottomBarView.trailingAnchor constraintEqualToAnchor:self.libraryTargetViewController.view.trailingAnchor
-                                                     constant:-(VLCUIUnits.largeSpacing * 2)],
-    ]];
+    /* The XIB controls bar is replaced by the Now Playing bar. Detach it (but
+     * keep it alive, its controller still updates it): its fixed-width
+     * content would otherwise set a minimum width for the content, which
+     * collapsed the sidebar and pinned the window to 808 pt. */
+    VLCBottomBarView * const bottomBarView = libraryWindow.controlsBar.bottomBarView;
+    _legacyBottomBarView = bottomBarView;
+    [bottomBarView removeFromSuperview];
 }
 
-- (void)observeValueForKeyPath:(NSString *)keyPath
-                      ofObject:(id)object
-                        change:(NSDictionary *)change
-                       context:(void *)context
+- (void)applicationWillTerminate:(NSNotification *)notification
 {
-    if([keyPath isEqualToString:VLCLibraryWindowEmbeddedVideoPlaybackActiveKey]) {
-        VLCLibraryWindow * const libraryWindow = VLCMain.sharedInstance.libraryWindow;
-        const BOOL videoPlaybackActive = libraryWindow.embeddedVideoPlaybackActive;
-        _navSidebarItem.collapsed = videoPlaybackActive;
+    /* Embedded video hides the sidebar; save the user's choice instead. */
+    if (self.mainVideoModeEnabled) {
+        self.navSidebarItem.collapsed = self.priorNavSidebarCollapsedState;
     }
 }
 

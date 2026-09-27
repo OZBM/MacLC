@@ -125,6 +125,8 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
     _scrollView.drawsBackground = NO;
     _scrollView.hasVerticalScroller = YES;
     _scrollView.autohidesScrollers = YES;
+    /* The hero runs under the toolbar: insets come from -updateContentInsets. */
+    _scrollView.automaticallyAdjustsContentInsets = NO;
     [root addSubview:_scrollView];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -194,6 +196,28 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)viewDidLayout
+{
+    [super viewDidLayout];
+    [self updateContentInsets];
+}
+
+/* The safe area holds the toolbar, the floating sidebar and inspector, and
+ * the Now Playing bar. The hero starts at the very top, under the toolbar's
+ * glass; everything else stays inside the safe area. */
+- (void)updateContentInsets
+{
+    const NSEdgeInsets safe = self.view.safeAreaInsets;
+    const CGFloat top = _heroItem != nil && _searchString.length == 0 ? 0.0 : safe.top;
+    const NSEdgeInsets insets = NSEdgeInsetsMake(top, safe.left, safe.bottom, safe.right);
+    const NSEdgeInsets current = _scrollView.contentInsets;
+    if (current.top != insets.top || current.left != insets.left ||
+        current.bottom != insets.bottom || current.right != insets.right) {
+        _scrollView.contentInsets = insets;
+        _scrollView.scrollerInsets = NSEdgeInsetsMake(safe.top - top, 0.0, 0.0, 0.0);
+    }
 }
 
 // MARK: - Layout Configuration
@@ -418,7 +442,6 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
     NSDiffableDataSourceSnapshot<NSString *, MacLCLibraryItemID> *snapshot = [[NSDiffableDataSourceSnapshot alloc] init];
     [_activeSections removeAllObjects];
     [_itemsByID removeAllObjects];
-    NSMutableSet<MacLCLibraryItemID> *seenIDs = [NSMutableSet set];
 
     if (_heroItem != nil) {
         [_activeSections addObject:MacLCHeroSectionIdentifier];
@@ -426,12 +449,20 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
         [snapshot appendItemsWithIdentifiers:@[MacLCHeroItemIdentifier] intoSectionWithIdentifier:MacLCHeroSectionIdentifier];
     }
 
+    /* A video can be both in progress and recently added: each shelf gets
+     * its own identifiers (shelf/item), since a snapshot must not hold the
+     * same identifier twice. */
     void (^addShelf)(NSString *sectionID, NSArray *items) = ^(NSString *sectionID, NSArray *items) {
         if (items.count == 0) return;
         NSMutableArray<MacLCLibraryItemID> *sectionItemIDs = [NSMutableArray array];
+        NSMutableSet<MacLCLibraryItemID> *seenIDs = [NSMutableSet set];
         for (id<VLCMediaLibraryItemProtocol> item in items) {
-            MacLCLibraryItemID itemID = MacLCLibraryItemIdentifier(item);
-            if (!itemID || [seenIDs containsObject:itemID]) {
+            MacLCLibraryItemID const libraryItemID = MacLCLibraryItemIdentifier(item);
+            if (!libraryItemID) {
+                continue;
+            }
+            MacLCLibraryItemID const itemID = [NSString stringWithFormat:@"%@/%@", sectionID, libraryItemID];
+            if ([seenIDs containsObject:itemID]) {
                 continue;
             }
             [seenIDs addObject:itemID];
@@ -452,6 +483,7 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
 
     BOOL shouldAnimate = animated && self.view.window.isVisible && !NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
     [_dataSource applySnapshot:snapshot animatingDifferences:shouldAnimate];
+    [self updateContentInsets];
     [self.homeViewController chromeDidChange];
 }
 

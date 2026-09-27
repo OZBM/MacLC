@@ -69,10 +69,43 @@
 
 @end
 
+/// Draws its image through the layer, cropped to fill the view (NSImageView
+/// can only fit), so artwork of any shape covers the card edge to edge.
+@interface MacLCAspectFillImageView : NSView
+@property (nonatomic, strong, nullable) NSImage *image;
+@end
+
+@implementation MacLCAspectFillImageView
+
+- (instancetype)initWithFrame:(NSRect)frameRect
+{
+    self = [super initWithFrame:frameRect];
+    if (self) {
+        self.wantsLayer = YES;
+        self.layerContentsRedrawPolicy = NSViewLayerContentsRedrawNever;
+        self.layer.contentsGravity = kCAGravityResizeAspectFill;
+        self.layer.masksToBounds = YES;
+    }
+    return self;
+}
+
+- (BOOL)wantsUpdateLayer
+{
+    return YES;
+}
+
+- (void)setImage:(NSImage *)image
+{
+    _image = image;
+    self.layer.contents = image;
+}
+
+@end
+
 @interface MacLCArtworkView ()
 
 @property (nonatomic, strong) NSView *containerView;
-@property (nonatomic, strong) NSImageView *imageView;
+@property (nonatomic, strong) MacLCAspectFillImageView *imageView;
 @property (nonatomic, strong) NSView *placeholderView;
 @property (nonatomic, strong) NSImageView *placeholderImageView;
 @property (nonatomic, strong) NSStackView *badgesStackView;
@@ -167,10 +200,7 @@
     ]];
 
     // Main image view
-    _imageView = [[NSImageView alloc] initWithFrame:NSZeroRect];
-    _imageView.wantsLayer = YES;
-    _imageView.layer.contentsGravity = kCAGravityResizeAspectFill;
-    _imageView.imageScaling = NSImageScaleProportionallyUpOrDown;
+    _imageView = [[MacLCAspectFillImageView alloc] initWithFrame:NSZeroRect];
     _imageView.translatesAutoresizingMaskIntoConstraints = NO;
     _imageView.hidden = YES;
     [_containerView addSubview:_imageView];
@@ -548,20 +578,13 @@
         return;
     }
 
-    NSSize size = self.bounds.size;
-    if (size.width <= 0.0 || size.height <= 0.0) {
-        switch (_shape) {
-            case MacLCArtworkShapeVideo:
-                size = NSMakeSize(260.0, 146.0);
-                break;
-            case MacLCArtworkShapeSquare:
-                size = NSMakeSize(180.0, 180.0);
-                break;
-            case MacLCArtworkShapeCircle:
-                size = NSMakeSize(150.0, 150.0);
-                break;
-        }
+    /* The loader crops to the size it is asked for, so ask for the shape's
+     * proportions: a reused view may not have been laid out for it yet. */
+    CGFloat width = self.bounds.size.width;
+    if (width <= 0.0) {
+        width = _shape == MacLCArtworkShapeVideo ? 260.0 : (_shape == MacLCArtworkShapeSquare ? 180.0 : 150.0);
     }
+    const NSSize size = NSMakeSize(width, _shape == MacLCArtworkShapeVideo ? round(width * 9.0 / 16.0) : width);
 
     CGFloat scale = self.window.backingScaleFactor;
     if (scale <= 0.0) {
