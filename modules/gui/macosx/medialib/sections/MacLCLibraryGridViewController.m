@@ -60,6 +60,8 @@ static NSString * const MacLCGridSectionIdentifier = @"grid";
     NSString *_emptySymbolName;
     NSString *_emptyTitle;
     NSString *_emptyMessage;
+    NSString *_emptyActionTitle;
+    void (^_emptyActionHandler)(void);
     MacLCEmptyStateView *_emptyStateView;
 }
 @end
@@ -265,6 +267,15 @@ static NSString * const MacLCGridSectionIdentifier = @"grid";
     }
 }
 
+- (void)setEmptyStateActionTitle:(NSString *)title handler:(void (^)(void))handler
+{
+    _emptyActionTitle = [title copy];
+    _emptyActionHandler = [handler copy];
+    if (self.isViewLoaded) {
+        [self updateEmptyStateWithQuery:_searchString];
+    }
+}
+
 - (void)updateEmptyStateWithQuery:(NSString *)query
 {
     [_emptyStateView removeFromSuperview];
@@ -280,6 +291,9 @@ static NSString * const MacLCGridSectionIdentifier = @"grid";
         _emptyStateView = [MacLCEmptyStateView emptyStateWithSymbolName:_emptySymbolName ?: @"square.dashed"
                                                                   title:_emptyTitle
                                                                 message:_emptyMessage];
+        if (_emptyActionTitle != nil && _emptyActionHandler != nil) {
+            [_emptyStateView addButtonWithTitle:_emptyActionTitle prominent:YES action:_emptyActionHandler];
+        }
     }
     if (_emptyStateView == nil) {
         return;

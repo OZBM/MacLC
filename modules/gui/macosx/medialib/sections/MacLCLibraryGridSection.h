@@ -47,6 +47,7 @@ extern NSString * const MacLCSortKeyArtist;
 /// "video" / "videos" for the "38 videos" subtitle.
 - (void)setCountNounSingular:(NSString *)singular plural:(NSString *)plural;
 - (void)setEmptyStateSymbolName:(NSString *)symbolName title:(NSString *)title message:(nullable NSString *)message;
+- (void)setEmptyStateActionTitle:(nullable NSString *)title handler:(nullable void (^)(void))handler;
 
 /// Builds the detail pushed when a container is opened. nil: items play.
 @property (nonatomic, copy, nullable) NSViewController * _Nullable (^detailFactory)(id<VLCMediaLibraryItemProtocol> item);

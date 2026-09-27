@@ -183,7 +183,7 @@
 
     _placeholderImageView = [[NSImageView alloc] initWithFrame:NSZeroRect];
     _placeholderImageView.imageScaling = NSImageScaleProportionallyUpOrDown;
-    _placeholderImageView.contentTintColor = MacLCDesign.tertiaryLabel;
+    _placeholderImageView.contentTintColor = MacLCDesign.secondaryLabel;
     _placeholderImageView.translatesAutoresizingMaskIntoConstraints = NO;
     [_placeholderView addSubview:_placeholderImageView];
 

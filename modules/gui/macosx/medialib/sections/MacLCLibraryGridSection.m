@@ -85,6 +85,8 @@ NSString * const MacLCSortKeyArtist = @"artist";
     NSString *_emptySymbol;
     NSString *_emptyTitle;
     NSString *_emptyMessage;
+    NSString *_emptyActionTitle;
+    void (^_emptyActionHandler)(void);
     NSString *_searchString;
 
     MacLCLibraryGridViewController *_grid;
@@ -145,6 +147,13 @@ NSString * const MacLCSortKeyArtist = @"artist";
     _countPlural = [plural copy];
 }
 
+- (void)setEmptyStateActionTitle:(NSString *)title handler:(void (^)(void))handler
+{
+    _emptyActionTitle = [title copy];
+    _emptyActionHandler = [handler copy];
+    [_grid setEmptyStateActionTitle:title handler:handler];
+}
+
 - (void)setEmptyStateSymbolName:(NSString *)symbolName title:(NSString *)title message:(nullable NSString *)message
 {
     _emptySymbol = [symbolName copy];
@@ -185,7 +194,8 @@ NSString * const MacLCSortKeyArtist = @"artist";
 - (nullable NSString *)currentSubtitle
 {
     const NSUInteger count = [MacLCLibraryStore.sharedStore countOfCollection:_collection];
-    if (!MacLCLibraryStore.sharedStore.loaded && count == 0) {
+    /* An empty section says so in its empty state, not as "0 playlists". */
+    if (count == 0) {
         return nil;
     }
     return MacLCCountString(count, _countSingular, _countPlural);
@@ -217,6 +227,7 @@ NSString * const MacLCSortKeyArtist = @"artist";
         _grid = [[MacLCLibraryGridViewController alloc] initWithShape:_shape subtitleStyle:_subtitleStyle];
         if (_emptyTitle != nil) {
             [_grid setEmptyStateSymbolName:_emptySymbol title:_emptyTitle message:_emptyMessage];
+            [_grid setEmptyStateActionTitle:_emptyActionTitle handler:_emptyActionHandler];
         }
         __weak typeof(self) weakSelf = self;
         if (self.detailFactory != nil) {

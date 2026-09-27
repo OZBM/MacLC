@@ -51,6 +51,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setEmptyStateSymbolName:(NSString *)symbolName
                           title:(NSString *)title
                         message:(nullable NSString *)message;
+/// A prominent button under that empty state (the next action to take).
+- (void)setEmptyStateActionTitle:(nullable NSString *)title handler:(nullable void (^)(void))handler;
 
 - (void)applySearchString:(NSString *)searchString;
 /// Scrolls to the item, selects it and makes the grid first responder.

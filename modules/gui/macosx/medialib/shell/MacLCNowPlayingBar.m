@@ -104,6 +104,34 @@
     return _shown;
 }
 
+/* Clear glass over a white page has no edge: a soft shadow lifts the capsule
+ * off the content, as the system's floating controls do. */
+- (void)layout
+{
+    [super layout];
+    const CGFloat radius = NSHeight(self.bounds) / 2.0;
+    CGPathRef const path = CGPathCreateWithRoundedRect(NSRectToCGRect(self.bounds), radius, radius, NULL);
+    self.layer.shadowPath = path;
+    CGPathRelease(path);
+    self.layer.shadowColor = NSColor.blackColor.CGColor;
+    self.layer.shadowRadius = 12.0;
+    self.layer.shadowOffset = CGSizeMake(0.0, -3.0);
+    [self updateShadowOpacity];
+}
+
+- (void)viewDidChangeEffectiveAppearance
+{
+    [super viewDidChangeEffectiveAppearance];
+    [self updateShadowOpacity];
+}
+
+- (void)updateShadowOpacity
+{
+    const BOOL dark = [self.effectiveAppearance bestMatchFromAppearancesWithNames:
+        @[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] == NSAppearanceNameDarkAqua;
+    self.layer.shadowOpacity = dark ? 0.45f : 0.16f;
+}
+
 - (void)viewDidMoveToSuperview
 {
     [super viewDidMoveToSuperview];
@@ -196,7 +224,9 @@
     _titleStack.alignment = NSLayoutAttributeLeading;
     _titleStack.spacing = 2.0;
     _titleStack.translatesAutoresizingMaskIntoConstraints = NO;
-    [_titleStack setContentHuggingPriority:NSLayoutPriorityDefaultLow
+    /* Hugs a bit more than the slider, so the slider takes the spare width
+     * (both at DefaultLow left the split between them ambiguous). */
+    [_titleStack setContentHuggingPriority:NSLayoutPriorityDefaultLow + 1
                            forOrientation:NSLayoutConstraintOrientationHorizontal];
     [_titleStack setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
                                           forOrientation:NSLayoutConstraintOrientationHorizontal];

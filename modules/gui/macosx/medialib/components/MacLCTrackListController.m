@@ -157,6 +157,10 @@ static NSUserInterfaceItemIdentifier const MacLCColumnFormat = @"format";
     column.width = width;
     column.minWidth = minWidth;
     column.headerCell.alignment = rightAlign ? NSTextAlignmentRight : NSTextAlignmentLeft;
+    /* Numbers keep their width; the text columns share the spare room (with
+     * every column growing, Time took half an album's list). */
+    column.resizingMask = rightAlign ? NSTableColumnUserResizingMask
+                                     : NSTableColumnAutoresizingMask | NSTableColumnUserResizingMask;
     if (sortable) {
         column.sortDescriptorPrototype = [NSSortDescriptor sortDescriptorWithKey:identifier ascending:YES];
     }

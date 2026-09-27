@@ -178,6 +178,9 @@ static const CGFloat MacLCDetailHeaderCompactWidth = 640.0;
     _moreButton.imagePosition = NSImageOnly;
     ((NSPopUpButtonCell *)_moreButton.cell).arrowPosition = NSPopUpNoArrow;
     _moreButton.toolTip = _NS("More");
+    /* A round button, like the system's glass "···" buttons. */
+    _moreButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [_moreButton.widthAnchor constraintEqualToAnchor:_moreButton.heightAnchor].active = YES;
     _moreButton.accessibilityLabel = _NS("More");
     _moreButton.hidden = YES;
 

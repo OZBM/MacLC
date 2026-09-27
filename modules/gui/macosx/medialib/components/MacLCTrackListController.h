@@ -73,6 +73,9 @@ typedef NS_OPTIONS(NSUInteger, MacLCTrackListColumns) {
 - (void)applySearchString:(NSString *)searchString;
 @property (readonly) NSUInteger numberOfVisibleRows;
 
+/// "3:45" or "1:02:03", the clock format of every track duration.
++ (NSString *)stringForDuration:(int64_t)milliseconds;
+
 @end
 
 NS_ASSUME_NONNULL_END

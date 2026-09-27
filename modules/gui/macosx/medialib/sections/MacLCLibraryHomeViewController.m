@@ -305,17 +305,19 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
         }
 
         NSString *sectionID = strongSelf->_activeSections[indexPath.section];
+        /* "See All" only when the shelf holds more than a screenful. */
+        const BOOL shelfOverflows = [strongSelf->_dataSource.snapshot numberOfItemsInSection:sectionID] > 4;
         if ([sectionID isEqualToString:MacLCContinueWatchingSectionIdentifier]) {
             header.title = _NS("Continue Watching");
             header.subtitle = nil;
-            header.actionTitle = _NS("See All");
+            header.actionTitle = shelfOverflows ? _NS("See All") : nil;
             header.action = ^{
                 VLCMain.sharedInstance.libraryWindow.librarySegmentType = VLCLibraryVideoSegmentType;
             };
         } else if ([sectionID isEqualToString:MacLCRecentlyAddedSectionIdentifier]) {
             header.title = _NS("Recently Added");
             header.subtitle = nil;
-            header.actionTitle = _NS("See All");
+            header.actionTitle = shelfOverflows ? _NS("See All") : nil;
             header.action = ^{
                 VLCMain.sharedInstance.libraryWindow.librarySegmentType = VLCLibraryVideoSegmentType;
             };
@@ -327,7 +329,7 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
         } else if ([sectionID isEqualToString:MacLCAlbumsSectionIdentifier]) {
             header.title = _NS("Albums");
             header.subtitle = nil;
-            header.actionTitle = _NS("See All");
+            header.actionTitle = shelfOverflows ? _NS("See All") : nil;
             header.action = ^{
                 VLCMain.sharedInstance.libraryWindow.librarySegmentType = VLCLibraryAlbumsMusicSubSegmentType;
             };

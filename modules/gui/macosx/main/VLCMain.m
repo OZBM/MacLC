@@ -62,7 +62,6 @@
 #import "medialib/data/MacLCLibraryStore.h"
 #import "medialib/sections/MacLCLibrarySectionViewController.h"
 #import "medialib/shell/MacLCLibraryRouter.h"
-#import "medialib/shell/MacLCUpNextViewController.h"
 
 #import "main/CompatibilityFixes.h"
 #import "main/VLCMain+OldPrefs.h"
@@ -476,51 +475,6 @@ static VLCMain *sharedInstance = nil;
             });
         }
     }
-    /* MACLC_DEBUG_SNAPSHOT=/dir/name renders the library window's layer tree
-     * into /dir/name-<seconds>.png after each delay of
-     * MACLC_DEBUG_SNAPSHOT_DELAYS (comma-separated, default 6): Stage Manager
-     * keeps a background launch in its strip, where the window server only
-     * has a thumbnail to capture. Materials (glass, blur) do not render. */
-    const char * const debugSnapshot = getenv("MACLC_DEBUG_SNAPSHOT");
-    if (debugSnapshot != NULL) {
-        NSString * const prefix = [NSString stringWithUTF8String:debugSnapshot];
-        const char * const debugDelays = getenv("MACLC_DEBUG_SNAPSHOT_DELAYS");
-        NSString * const delays = debugDelays != NULL ? [NSString stringWithUTF8String:debugDelays] : @"6";
-        for (NSString * const delayString in [delays componentsSeparatedByString:@","]) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayString.doubleValue * NSEC_PER_SEC)),
-                           dispatch_get_main_queue(), ^{
-                NSWindow * const window = self->_libraryWindowController.window;
-                NSView * const frameView = window.contentView.superview ?: window.contentView;
-                [frameView layoutSubtreeIfNeeded];
-                [frameView displayIfNeeded];
-                const NSSize size = frameView.bounds.size;
-                const CGFloat scale = window.backingScaleFactor > 0. ? window.backingScaleFactor : 2.;
-                NSBitmapImageRep * const rep =
-                    [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
-                                                            pixelsWide:(NSInteger)(size.width * scale)
-                                                            pixelsHigh:(NSInteger)(size.height * scale)
-                                                         bitsPerSample:8
-                                                       samplesPerPixel:4
-                                                              hasAlpha:YES
-                                                              isPlanar:NO
-                                                        colorSpaceName:NSDeviceRGBColorSpace
-                                                           bytesPerRow:0
-                                                          bitsPerPixel:0];
-                NSGraphicsContext * const context = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
-                CGContextRef const cgContext = context.CGContext;
-                CGContextSetFillColorWithColor(cgContext, NSColor.windowBackgroundColor.CGColor);
-                CGContextFillRect(cgContext, CGRectMake(0., 0., size.width * scale, size.height * scale));
-                CGContextScaleCTM(cgContext, scale, scale);
-                if (frameView.layer.geometryFlipped) {
-                    CGContextTranslateCTM(cgContext, 0., size.height);
-                    CGContextScaleCTM(cgContext, 1., -1.);
-                }
-                [frameView.layer renderInContext:cgContext];
-                NSData * const png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
-                [png writeToFile:[NSString stringWithFormat:@"%@-%@.png", prefix, delayString] atomically:YES];
-            });
-        }
-    }
     /* MACLC_DEBUG_FRONT=1 floats the library window over the current Stage
      * Manager stage without activating MacLC (no keyboard focus is taken), so
      * a background launch can still be captured at full size. */
@@ -531,32 +485,17 @@ static VLCMain *sharedInstance = nil;
             [window orderFrontRegardless];
         });
     }
-    if (getenv("MACLC_DEBUG_DUMP_LAYOUT") != NULL) { // TEMPORARY
+    /* MACLC_DEBUG_DUMP_LAYOUT=1 logs, 5 s after launch, the library window's
+     * frame and size limits, its split view items and the menu bar (a
+     * trailing * marks items with an image), prefixed with LAYOUTDUMP. */
+    if (getenv("MACLC_DEBUG_DUMP_LAYOUT") != NULL) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;
-            NSLog(@"LAYOUTDUMP frame %@ min %@ max %@ contentMin %@ contentMax %@ fitting %@",
-                  NSStringFromRect(window.frame), NSStringFromSize(window.minSize), NSStringFromSize(window.maxSize),
-                  NSStringFromSize(window.contentMinSize), NSStringFromSize(window.contentMaxSize),
-                  NSStringFromSize(window.contentView.fittingSize));
+            NSLog(@"LAYOUTDUMP frame %@ min %@ fitting %@", NSStringFromRect(window.frame),
+                  NSStringFromSize(window.minSize), NSStringFromSize(window.contentView.fittingSize));
             for (NSSplitViewItem * const item in window.splitViewController.splitViewItems) {
-                NSLog(@"LAYOUTDUMP item %@ collapsed %d frame %@ min %.0f", item.viewController.className,
-                      item.isCollapsed, NSStringFromRect(item.viewController.view.frame), item.minimumThickness);
-            }
-            NSScrollView * const sidebarScroll = (NSScrollView *)window.splitViewController.navSidebarViewController.view.subviews.firstObject;
-            NSOutlineView * const outline = (NSOutlineView *)sidebarScroll.documentView;
-            NSLog(@"LAYOUTDUMP sidebar scroll %@ frame %@ outline %@ frame %@ rows %ld cols %@ hidden %d alpha %.2f",
-                  sidebarScroll.className, NSStringFromRect(sidebarScroll.frame), outline.className,
-                  NSStringFromRect(outline.frame), (long)outline.numberOfRows,
-                  [outline.tableColumns valueForKey:@"width"], sidebarScroll.hidden, sidebarScroll.alphaValue);
-            NSView * const upNextView = window.splitViewController.multifunctionSidebarViewController.view;
-            NSLog(@"LAYOUTDUMP upnext view %@ super %@ %@", NSStringFromRect(upNextView.frame),
-                  upNextView.superview.className, NSStringFromRect(upNextView.superview.frame));
-            for (NSView * const sub in upNextView.subviews) {
-                NSLog(@"LAYOUTDUMP upnext sub %@ %@", sub.className, NSStringFromRect(sub.frame));
-                if ([sub isKindOfClass:NSScrollView.class]) {
-                    NSTableView * const table = ((NSScrollView *)sub).documentView;
-                    NSLog(@"LAYOUTDUMP upnext table %@ cols %@", NSStringFromRect(table.frame), [table.tableColumns valueForKey:@"width"]);
-                }
+                NSLog(@"LAYOUTDUMP item %@ collapsed %d frame %@", item.viewController.className,
+                      item.isCollapsed, NSStringFromRect(item.viewController.view.frame));
             }
             for (NSMenuItem * const top in NSApp.mainMenu.itemArray) {
                 NSMutableArray * const titles = [NSMutableArray array];
@@ -566,8 +505,6 @@ static VLCMain *sharedInstance = nil;
                 }
                 NSLog(@"LAYOUTDUMP menu %@: %@", top.submenu.title, [titles componentsJoinedByString:@", "]);
             }
-            NSLog(@"LAYOUTDUMP constraints affecting width: %@",
-                  [window.contentView constraintsAffectingLayoutForOrientation:NSLayoutConstraintOrientationHorizontal]);
         });
     }
     /* MACLC_DEBUG_SHOW_FIRST=1 opens the detail of the first item of the

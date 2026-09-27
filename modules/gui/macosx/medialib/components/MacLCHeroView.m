@@ -77,6 +77,53 @@ static const CGFloat MacLCHeroTextInset = 32.0;
 @interface MacLCHeroScrimView : NSView
 @end
 
+/* The top of the hero sits under the toolbar and the window title: fade it
+ * towards the window background so both read over any frame. */
+@interface MacLCHeroTopScrimView : NSView
+@end
+
+@implementation MacLCHeroTopScrimView
+
+- (instancetype)initWithFrame:(NSRect)frameRect
+{
+    self = [super initWithFrame:frameRect];
+    if (self) {
+        self.wantsLayer = YES;
+    }
+    return self;
+}
+
+- (CALayer *)makeBackingLayer
+{
+    return [CAGradientLayer layer];
+}
+
+- (BOOL)wantsUpdateLayer
+{
+    return YES;
+}
+
+- (void)updateLayer
+{
+    __block CGColorRef top = NULL;
+    [self.effectiveAppearance performAsCurrentDrawingAppearance:^{
+        top = CGColorRetain([NSColor.windowBackgroundColor colorWithAlphaComponent:0.55].CGColor);
+    }];
+    CAGradientLayer * const gradient = (CAGradientLayer *)self.layer;
+    gradient.colors = @[(__bridge id)top, (__bridge_transfer id)CGColorCreateCopyWithAlpha(top, 0.0)];
+    /* Layer coordinates are flipped from the view's: 1 is the top. */
+    gradient.startPoint = CGPointMake(0.5, 1.0);
+    gradient.endPoint = CGPointMake(0.5, 0.0);
+    CGColorRelease(top);
+}
+
+- (NSView *)hitTest:(NSPoint)point
+{
+    return nil;
+}
+
+@end
+
 @implementation MacLCHeroScrimView
 
 - (instancetype)initWithFrame:(NSRect)frameRect
@@ -111,6 +158,7 @@ static const CGFloat MacLCHeroTextInset = 32.0;
     NSView *_extensionView;
     MacLCHeroPictureView *_pictureView;
     MacLCHeroScrimView *_scrimView;
+    MacLCHeroTopScrimView *_topScrimView;
     NSTextField *_eyebrowField;
     NSTextField *_titleField;
     NSTextField *_detailField;
@@ -166,6 +214,9 @@ static const CGFloat MacLCHeroTextInset = 32.0;
     _scrimView = [[MacLCHeroScrimView alloc] initWithFrame:self.bounds];
     _scrimView.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:_scrimView];
+    _topScrimView = [[MacLCHeroTopScrimView alloc] initWithFrame:self.bounds];
+    _topScrimView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self addSubview:_topScrimView];
 
     _eyebrowField = [NSTextField labelWithString:@""];
     _eyebrowField.font = [NSFont systemFontOfSize:MacLCDesign.footnote.pointSize weight:NSFontWeightSemibold];
@@ -218,6 +269,10 @@ static const CGFloat MacLCHeroTextInset = 32.0;
         [_pictureView.bottomAnchor constraintEqualToAnchor:_extensionView.bottomAnchor],
         [_pictureView.leadingAnchor constraintEqualToAnchor:_extensionView.leadingAnchor],
         [_pictureView.trailingAnchor constraintEqualToAnchor:_extensionView.trailingAnchor],
+        [_topScrimView.topAnchor constraintEqualToAnchor:self.topAnchor],
+        [_topScrimView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
+        [_topScrimView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
+        [_topScrimView.heightAnchor constraintEqualToConstant:88.0],
         [_scrimView.topAnchor constraintEqualToAnchor:self.topAnchor],
         [_scrimView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
         [_scrimView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],

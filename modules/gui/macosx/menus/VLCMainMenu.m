@@ -406,7 +406,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_close_window setTitle: _NS("Close Window")];
     [_convertandsave setTitle: _NS("Convert and Stream…")];
     [_save_playlist setTitle: _NS("Save Playlist…")];
-    [_savePlayqueueToLibrary setTitle: _NS("Save Play Queue to Library…")];
+    [_savePlayqueueToLibrary setTitle: _NS("Save Up Next as Playlist…")];
     [_revealInFinder setTitle: _NS("Reveal in Finder")];
 
     [_editMenu setTitle: _NS("Edit")];
@@ -522,7 +522,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [_audioeffects setTitle: _NS("Audio Effects")];
     [_videoeffects setTitle: _NS("Video Effects")];
     [_bookmarks setTitle: _NS("Bookmarks")];
-    [_playQueue setTitle: _NS("Play Queue")];
+    [_playQueue setTitle: _NS("Up Next")];
 
     [_detachedAudioWindow setTitle: _NS("Audio Player")];
     [_info setTitle: _NS("Media Information")];

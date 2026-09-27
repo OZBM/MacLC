@@ -79,6 +79,7 @@
 #import "medialib/data/MacLCLibraryActions.h"
 #import "medialib/data/MacLCLibraryStore.h"
 #import "medialib/shell/MacLCLibraryFoldersController.h"
+#import "medialib/shell/MacLCLibraryRouter.h"
 #import "medialib/shell/MacLCLibraryToolbarController.h"
 #import "medialib/shell/MacLCNowPlayingBar.h"
 #import "medialib/shell/MacLCUpNextViewController.h"
@@ -386,11 +387,19 @@ static int ShowController(vlc_object_t * __unused p_this,
         self.libraryTargetView.subviews = @[view];
     }
 
+    /* The sidebar and the inspector float over the content (macOS 26). The
+     * native library sections extend under them and inset their own content;
+     * the other views (Browse) stay between them. */
+    const BOOL fullBleed = [self.librarySegmentViewController isKindOfClass:MacLCLibraryRouter.class];
+    NSLayoutXAxisAnchor * const leading =
+        fullBleed ? self.libraryTargetView.leadingAnchor : self.libraryTargetView.safeAreaLayoutGuide.leadingAnchor;
+    NSLayoutXAxisAnchor * const trailing =
+        fullBleed ? self.libraryTargetView.trailingAnchor : self.libraryTargetView.safeAreaLayoutGuide.trailingAnchor;
     [NSLayoutConstraint activateConstraints:@[
         [view.topAnchor constraintEqualToAnchor:self.libraryTargetView.topAnchor],
         [view.bottomAnchor constraintEqualToAnchor:self.libraryTargetView.bottomAnchor],
-        [view.leftAnchor constraintEqualToAnchor:self.libraryTargetView.leftAnchor],
-        [view.rightAnchor constraintEqualToAnchor:self.libraryTargetView.rightAnchor]
+        [view.leadingAnchor constraintEqualToAnchor:leading],
+        [view.trailingAnchor constraintEqualToAnchor:trailing]
     ]];
 
     if (VLCMain.sharedInstance.metalLibrary && ((VLCApplication *)NSApplication.sharedApplication).winterHolidaysTheming) {

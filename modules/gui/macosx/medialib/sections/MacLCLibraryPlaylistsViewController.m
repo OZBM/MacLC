@@ -23,6 +23,7 @@
 #import "extensions/NSString+Helpers.h"
 #import "library/VLCLibraryDataTypes.h"
 #import "library/VLCLibrarySegment.h"
+#import "medialib/data/MacLCLibraryActions.h"
 
 @implementation MacLCLibraryPlaylistsViewController
 
@@ -37,7 +38,11 @@
         [self setCountNounSingular:_NS("playlist") plural:_NS("playlists")];
         [self setEmptyStateSymbolName:@"music.note.list"
                                 title:_NS("No Playlists")
-                              message:_NS("Create one with New Playlist in the File menu or the + next to Playlists.")];
+                              message:_NS("Playlists keep songs and videos in the order you choose.")];
+        __weak typeof(self) weakSelf = self;
+        [self setEmptyStateActionTitle:_NS("New Playlist…") handler:^{
+            [MacLCLibraryActions newPlaylistWithItems:@[] fromWindow:weakSelf.view.window];
+        }];
         self.detailFactory = ^NSViewController *(id<VLCMediaLibraryItemProtocol> const item) {
             return [item isKindOfClass:VLCMediaLibraryPlaylist.class]
                 ? [[MacLCPlaylistDetailViewController alloc] initWithPlaylist:(VLCMediaLibraryPlaylist *)item] : nil;

@@ -33,6 +33,7 @@
 #import "main/VLCMain.h"
 #import "medialib/MacLCLibraryFormatting.h"
 #import "medialib/components/MacLCEmptyStateView.h"
+#import "medialib/components/MacLCTrackListController.h"
 #import "medialib/data/MacLCLibraryActions.h"
 #import "playqueue/VLCPlayerController.h"
 #import "playqueue/VLCPlayQueueController.h"
@@ -730,7 +731,8 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     cell.subtitleField.hidden = cell.subtitleField.stringValue.length == 0;
     /* A clock reading, like a track list: "Less than a minute" crowded out
      * the title. */
-    cell.durationField.stringValue = item.duration > 0 ? [NSString stringWithTimeFromTicks:item.duration] : @"";
+    cell.durationField.stringValue =
+        item.duration > 0 ? [MacLCTrackListController stringForDuration:MS_FROM_VLC_TICK(item.duration)] : @"";
     cell.playingView.hidden = !playing;
 
     cell.artworkView.image = nil;
