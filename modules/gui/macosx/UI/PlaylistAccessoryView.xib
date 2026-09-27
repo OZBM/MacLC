@@ -6,7 +6,7 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
-        <customObject id="-2" userLabel="File's Owner" customClass="VLCMainMenu">
+        <customObject id="-2" userLabel="File's Owner" customClass="MacLCPlaylistSaveAccessory">
             <connections>
                 <outlet property="playlistSaveAccessoryPopup" destination="3" id="Yp7-Fa-6HX"/>
                 <outlet property="playlistSaveAccessoryText" destination="2" id="D67-6A-IXs"/>

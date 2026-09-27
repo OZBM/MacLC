@@ -106,6 +106,18 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 - (void)matchKeyEquivalentsOfMenuItem:(NSMenuItem *)menuItem;
 @end
 
+/* File's Owner of PlaylistAccessoryView.xib. AppKit sends -awakeFromNib to
+ * the owner of every nib it loads, and -[VLCMainMenu awakeFromNib], which
+ * sets up the menus of MainMenu.xib, must run once only. */
+@interface MacLCPlaylistSaveAccessory : NSObject
+@property (readwrite, strong) IBOutlet NSView *playlistSaveAccessoryView;
+@property (readwrite, weak) IBOutlet NSPopUpButton *playlistSaveAccessoryPopup;
+@property (readwrite, weak) IBOutlet NSTextField *playlistSaveAccessoryText;
+@end
+
+@implementation MacLCPlaylistSaveAccessory
+@end
+
 @interface VLCMainMenu() <NSMenuDelegate>
 {
     VLCAboutWindowController *_aboutWindowController;
@@ -116,6 +128,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     VLCPlayQueueSortingMenuController *_playQueueSortingController;
     VLCInformationWindowController *_infoWindowController;
     VLCRecentStreamsMenuController *_recentStreamsMenuController;
+    MacLCPlaylistSaveAccessory *_playlistSaveAccessory;
 
     __strong VLCTimeSelectionPanelController *_timeSelectionPanel;
     __strong VLCCustomCropArWindowController *_customARController;
@@ -1476,36 +1489,43 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [dialog show];
 }
 
+- (MacLCPlaylistSaveAccessory *)playlistSaveAccessory
+{
+    if (_playlistSaveAccessory == nil) {
+        _playlistSaveAccessory = [[MacLCPlaylistSaveAccessory alloc] init];
+        [[NSBundle mainBundle] loadNibNamed:@"PlaylistAccessoryView" owner:_playlistSaveAccessory topLevelObjects:nil];
+    }
+    return _playlistSaveAccessory;
+}
+
 - (IBAction)savePlaylist:(id)sender
 {
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        [[NSBundle mainBundle] loadNibNamed:@"PlaylistAccessoryView" owner:self topLevelObjects:nil];
-    });
+    MacLCPlaylistSaveAccessory * const accessory = [self playlistSaveAccessory];
+    NSPopUpButton * const formatPopup = accessory.playlistSaveAccessoryPopup;
 
-    [_playlistSaveAccessoryText setStringValue: _NS("File Format:")];
-    [_playlistSaveAccessoryPopup removeAllItems];
+    [accessory.playlistSaveAccessoryText setStringValue: _NS("File Format:")];
+    [formatPopup removeAllItems];
 
     NSArray *availableExportModules = _playQueueController.availablePlaylistExportModules;
     NSUInteger count = availableExportModules.count;
     NSMutableArray *allowedFileTypes = [NSMutableArray arrayWithCapacity:count];
     for (NSUInteger x = 0; x < count; x++) {
         VLCPlaylistExportModuleDescription *exportModule = availableExportModules[x];
-        [_playlistSaveAccessoryPopup addItemWithTitle:exportModule.humanReadableName];
+        [formatPopup addItemWithTitle:exportModule.humanReadableName];
         [allowedFileTypes addObject:exportModule.fileExtension];
     }
 
     NSSavePanel *savePanel = [NSSavePanel savePanel];
     [savePanel setTitle: _NS("Save Playlist")];
     [savePanel setPrompt: _NS("Save")];
-    [savePanel setAccessoryView: _playlistSaveAccessoryView];
+    [savePanel setAccessoryView: accessory.playlistSaveAccessoryView];
     [savePanel setNameFieldStringValue: _NS("Untitled")];
     [savePanel setAllowedFileTypes:allowedFileTypes];
     [savePanel setCanSelectHiddenExtension:YES];
 
     if ([savePanel runModal] == NSModalResponseOK) {
         NSString *filename = [[savePanel URL] path];
-        VLCPlaylistExportModuleDescription *exportModule = availableExportModules[[_playlistSaveAccessoryPopup indexOfSelectedItem]];
+        VLCPlaylistExportModuleDescription *exportModule = availableExportModules[[formatPopup indexOfSelectedItem]];
 
         if ([[filename pathExtension] caseInsensitiveCompare:exportModule.fileExtension] != NSOrderedSame) {
             filename = [filename stringByAppendingPathExtension:exportModule.fileExtension];
