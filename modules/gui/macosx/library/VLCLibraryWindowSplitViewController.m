@@ -144,8 +144,8 @@
     const BOOL sidebarCollapsed = self.multifunctionSidebarItem.isCollapsed;
     self.multifunctionSidebarItem.animator.collapsed = !sidebarCollapsed;
 
-    const NSControlStateValue controlState =
-        self.multifunctionSidebarItem.isCollapsed ? NSControlStateValueOff : NSControlStateValueOn;
+    /* From the target state: the animation has not changed isCollapsed yet. */
+    const NSControlStateValue controlState = sidebarCollapsed ? NSControlStateValueOn : NSControlStateValueOff;
     self.libraryWindow.playQueueToggle.state = controlState;
     self.libraryWindow.videoViewController.playQueueButton.state = controlState;
 }
@@ -166,9 +166,30 @@
 
 - (BOOL)splitView:(NSSplitView *)splitView canCollapseSubview:(NSView *)subview
 {
-    return subview != self.navSidebarViewController.view
-           || !self.mainVideoModeEnabled
-           || [super splitView:splitView canCollapseSubview:subview];
+    /* The items decide (the content never collapses); embedded video keeps
+     * the sidebar out of the way. */
+    if (self.mainVideoModeEnabled && subview == self.navSidebarViewController.view) {
+        return YES;
+    }
+    return [super splitView:splitView canCollapseSubview:subview];
+}
+
+/* The toolbar's sidebar button and View ▸ Show Sidebar reach the split view
+ * controller first: keep the sidebar away from embedded video here too. */
+- (IBAction)toggleSidebar:(id)sender
+{
+    if (self.mainVideoModeEnabled) {
+        return;
+    }
+    [super toggleSidebar:sender];
+}
+
+- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item
+{
+    if (item.action == @selector(toggleSidebar:) && self.mainVideoModeEnabled) {
+        return NO;
+    }
+    return [super validateUserInterfaceItem:item];
 }
 
 @end

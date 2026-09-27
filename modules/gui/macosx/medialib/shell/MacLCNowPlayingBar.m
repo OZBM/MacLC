@@ -58,6 +58,10 @@
     NSArray<NSLayoutConstraint *> *_superviewConstraints;
     BOOL _kvoRegistered;
     NSView *_liveVideoView;
+    /* Narrow windows drop the times, then the slider takes what is left. */
+    BOOL _compact;
+    NSLayoutConstraint *_elapsedCollapsed;
+    NSLayoutConstraint *_remainingCollapsed;
 }
 
 @end
@@ -109,6 +113,15 @@
 - (void)layout
 {
     [super layout];
+    const BOOL compact = NSWidth(self.bounds) < 480.0;
+    if (compact != _compact) {
+        _compact = compact;
+        _elapsedLabel.hidden = compact;
+        _remainingLabel.hidden = compact;
+        _elapsedCollapsed.active = compact;
+        _remainingCollapsed.active = compact;
+        self.needsLayout = YES;
+    }
     const CGFloat radius = NSHeight(self.bounds) / 2.0;
     CGPathRef const path = CGPathCreateWithRoundedRect(NSRectToCGRect(self.bounds), radius, radius, NULL);
     self.layer.shadowPath = path;
@@ -150,17 +163,27 @@
 
     /* Below NSLayoutPriorityWindowSizeStayPut: the bar follows the window,
      * it must never size it (at DefaultHigh it pinned the window to 808 pt). */
-    NSLayoutConstraint *widthFit = [self.widthAnchor constraintEqualToAnchor:superview.widthAnchor constant:-48.0];
+    /* Centred between the floating sidebar and inspector, not under them. */
+    NSLayoutGuide * const safeArea = superview.safeAreaLayoutGuide;
+    NSLayoutConstraint *widthFit = [self.widthAnchor constraintEqualToAnchor:safeArea.widthAnchor constant:-48.0];
     widthFit.priority = NSLayoutPriorityDragThatCannotResizeWindow - 1;
 
+    /* The margins give way before the window would: a narrow window squeezes
+     * the bar (title, then slider) instead of refusing to shrink. */
+    NSLayoutConstraint * const leadingMargin =
+        [self.leadingAnchor constraintGreaterThanOrEqualToAnchor:safeArea.leadingAnchor constant:24.0];
+    NSLayoutConstraint * const trailingMargin =
+        [self.trailingAnchor constraintLessThanOrEqualToAnchor:safeArea.trailingAnchor constant:-24.0];
+    leadingMargin.priority = NSLayoutPriorityDragThatCannotResizeWindow;
+    trailingMargin.priority = NSLayoutPriorityDragThatCannotResizeWindow;
     _superviewConstraints = @[
         [self.bottomAnchor constraintEqualToAnchor:superview.bottomAnchor constant:-16.0],
-        [self.centerXAnchor constraintEqualToAnchor:superview.centerXAnchor],
+        [self.centerXAnchor constraintEqualToAnchor:safeArea.centerXAnchor],
         [self.heightAnchor constraintEqualToConstant:60.0],
         [self.widthAnchor constraintLessThanOrEqualToConstant:760.0],
         widthFit,
-        [self.leadingAnchor constraintGreaterThanOrEqualToAnchor:superview.leadingAnchor constant:24.0],
-        [self.trailingAnchor constraintLessThanOrEqualToAnchor:superview.trailingAnchor constant:-24.0],
+        leadingMargin,
+        trailingMargin,
     ];
 
     [NSLayoutConstraint activateConstraints:_superviewConstraints];
@@ -263,8 +286,10 @@
     _elapsedLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [_elapsedLabel setContentHuggingPriority:NSLayoutPriorityRequired
                              forOrientation:NSLayoutConstraintOrientationHorizontal];
-    [_elapsedLabel setContentCompressionResistancePriority:NSLayoutPriorityRequired
+    [_elapsedLabel setContentCompressionResistancePriority:NSLayoutPriorityDefaultHigh
                                            forOrientation:NSLayoutConstraintOrientationHorizontal];
+    _elapsedCollapsed = [_elapsedLabel.widthAnchor constraintEqualToConstant:0.0];
+    _elapsedCollapsed.priority = NSLayoutPriorityRequired - 1;
     [contentView addSubview:_elapsedLabel];
 
     _slider = [[NSSlider alloc] initWithFrame:NSZeroRect];
@@ -290,8 +315,10 @@
     _remainingLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [_remainingLabel setContentHuggingPriority:NSLayoutPriorityRequired
                                forOrientation:NSLayoutConstraintOrientationHorizontal];
-    [_remainingLabel setContentCompressionResistancePriority:NSLayoutPriorityRequired
+    [_remainingLabel setContentCompressionResistancePriority:NSLayoutPriorityDefaultHigh
                                              forOrientation:NSLayoutConstraintOrientationHorizontal];
+    _remainingCollapsed = [_remainingLabel.widthAnchor constraintEqualToConstant:0.0];
+    _remainingCollapsed.priority = NSLayoutPriorityRequired - 1;
     [contentView addSubview:_remainingLabel];
 
     _volumeButton = [MacLCSymbolButton buttonWithSymbolName:@"speaker.wave.2.fill"
@@ -302,6 +329,8 @@
     _volumeButton.translatesAutoresizingMaskIntoConstraints = NO;
     [contentView addSubview:_volumeButton];
 
+    NSLayoutConstraint * const sliderMinimumWidth = [_slider.widthAnchor constraintGreaterThanOrEqualToConstant:160.0];
+    sliderMinimumWidth.priority = NSLayoutPriorityDragThatCannotResizeWindow - 2;
     [NSLayoutConstraint activateConstraints:@[
         [_artworkButton.widthAnchor constraintEqualToConstant:40.0],
         [_artworkButton.heightAnchor constraintEqualToConstant:40.0],
@@ -331,7 +360,7 @@
 
         [_slider.leadingAnchor constraintEqualToAnchor:_elapsedLabel.trailingAnchor constant:8.0],
         [_slider.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
-        [_slider.widthAnchor constraintGreaterThanOrEqualToConstant:160.0],
+        sliderMinimumWidth,
 
         [_remainingLabel.leadingAnchor constraintEqualToAnchor:_slider.trailingAnchor constant:8.0],
         [_remainingLabel.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],

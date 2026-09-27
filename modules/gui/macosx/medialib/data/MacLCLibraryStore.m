@@ -913,6 +913,9 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
 - (nullable VLCMediaLibraryPlaylist *)createPlaylistNamed:(NSString *)name
                                                withItems:(NSArray<VLCMediaLibraryMediaItem *> *)items
 {
+    if (_closed) {
+        return nil;
+    }
     vlc_ml_playlist_t * const created = vlc_ml_playlist_create(_mediaLibrary, name.UTF8String);
     if (created == NULL) {
         return nil;
@@ -937,6 +940,9 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
 
 - (BOOL)deletePlaylist:(VLCMediaLibraryPlaylist *)playlist
 {
+    if (_closed) {
+        return NO;
+    }
     const BOOL deleted = vlc_ml_playlist_delete(_mediaLibrary, playlist.libraryID) == VLC_SUCCESS;
     if (deleted) {
         [_childrenCache removeObjectForKey:[MacLCLibraryItemIdentifier(playlist) stringByAppendingString:@"/items"]];

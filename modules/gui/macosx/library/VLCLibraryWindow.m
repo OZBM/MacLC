@@ -179,6 +179,8 @@ static int ShowController(vlc_object_t * __unused p_this,
 
 @implementation VLCLibraryWindow
 
+@synthesize libraryTargetView = _libraryTargetView;
+
 - (void)awakeFromNib
 {
     [super awakeFromNib];
@@ -214,7 +216,10 @@ static int ShowController(vlc_object_t * __unused p_this,
     var_AddCallback(_libvlc, "intf-toggle-fscontrol", ShowFullscreenController, (__bridge void *)self);
     var_AddCallback(_libvlc, "intf-show", ShowController, (__bridge void *)self);
 
-    _libraryTargetView = [[NSView alloc] init];
+    /* The split view controller may have asked for it first (getter). */
+    if (_libraryTargetView == nil) {
+        _libraryTargetView = [[NSView alloc] init];
+    }
 
     self.videoViewController.view.frame = self.mainSplitView.frame;
     self.videoViewController.view.hidden = YES;
@@ -257,6 +262,14 @@ static int ShowController(vlc_object_t * __unused p_this,
      * controller replaces the XIB controls bar, which stays hidden. */
     _libraryToolbarController = [[MacLCLibraryToolbarController alloc] initWithLibraryWindow:self];
     [_libraryToolbarController install];
+}
+
+- (NSView *)libraryTargetView
+{
+    if (_libraryTargetView == nil) {
+        _libraryTargetView = [[NSView alloc] init];
+    }
+    return _libraryTargetView;
 }
 
 - (void)dealloc

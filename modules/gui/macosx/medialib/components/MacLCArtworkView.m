@@ -97,7 +97,20 @@
 - (void)setImage:(NSImage *)image
 {
     _image = image;
-    self.layer.contents = image;
+    [self updateContents];
+}
+
+- (void)viewDidChangeBackingProperties
+{
+    [super viewDidChangeBackingProperties];
+    [self updateContents];
+}
+
+- (void)updateContents
+{
+    const CGFloat scale = self.window.backingScaleFactor > 0.0 ? self.window.backingScaleFactor : 2.0;
+    self.layer.contentsScale = scale;
+    self.layer.contents = [_image layerContentsForContentsScale:scale];
 }
 
 @end

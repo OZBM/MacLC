@@ -157,6 +157,10 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
     }
     [_thumbnailQueue removeAllObjects];
     _mediaLibrary = NULL;
+    /* Decodes may look media up in the library: let the running ones end
+     * before the library goes away (they only post back asynchronously). */
+    [_decodeQueue cancelAllOperations];
+    [_decodeQueue waitUntilAllOperationsAreFinished];
 }
 
 - (void)dealloc
@@ -481,7 +485,8 @@ static void MacLCArtworkLoaderEventCallback(void *data, const vlc_ml_event_t *ev
         }
         NSString *bannerPath = nil;
         BOOL canGenerate = NO;
-        if (media != nil && ml != NULL) {
+        MacLCArtworkLoader * const loader = weakSelf;
+        if (media != nil && ml != NULL && loader != nil && loader->_mediaLibrary != NULL) {
             vlc_ml_media_t * const p_media = vlc_ml_get_media(ml, media.libraryID);
             if (p_media != NULL) {
                 const vlc_ml_thumbnail_t banner = p_media->thumbnails[VLC_ML_THUMBNAIL_BANNER];

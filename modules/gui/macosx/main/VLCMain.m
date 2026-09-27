@@ -435,11 +435,21 @@ static VLCMain *sharedInstance = nil;
      * MACLC_DEBUG_LIBRARY_SECTION=<segment type number> selects that section
      * of the library window. Unset, they do nothing. */
     const char * const debugLibraryFolder = getenv("MACLC_DEBUG_ML_FOLDER");
-    if (debugLibraryFolder != NULL) {
+    if (debugLibraryFolder != NULL && [NSString stringWithUTF8String:debugLibraryFolder] != nil) {
         NSURL * const folderURL =
             [NSURL fileURLWithPath:[NSString stringWithUTF8String:debugLibraryFolder] isDirectory:YES];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             [self.libraryController addFolderWithFileURL:folderURL];
+        });
+    }
+    /* MACLC_DEBUG_ML_REMOVE_FOLDER=/dir takes a test folder back out of the
+     * library (its media and thumbnails with it). */
+    const char * const debugRemoveFolder = getenv("MACLC_DEBUG_ML_REMOVE_FOLDER");
+    if (debugRemoveFolder != NULL && [NSString stringWithUTF8String:debugRemoveFolder] != nil) {
+        NSURL * const folderURL =
+            [NSURL fileURLWithPath:[NSString stringWithUTF8String:debugRemoveFolder] isDirectory:YES];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [MacLCLibraryStore.sharedStore removeFolderAtURL:folderURL];
         });
     }
     const char * const debugLibrarySection = getenv("MACLC_DEBUG_LIBRARY_SECTION");

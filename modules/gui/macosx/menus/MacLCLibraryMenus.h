@@ -31,6 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (IBAction)showLibraryFolders:(nullable id)sender;
 - (IBAction)goBackInLibrary:(nullable id)sender;
 - (IBAction)goForwardInLibrary:(nullable id)sender;
+- (IBAction)toggleSidebar:(nullable id)sender;
 - (IBAction)toggleUpNext:(nullable id)sender;
 - (IBAction)showLibraryAsGrid:(nullable id)sender;
 - (IBAction)showLibraryAsList:(nullable id)sender;

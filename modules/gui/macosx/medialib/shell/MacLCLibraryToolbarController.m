@@ -107,6 +107,11 @@ static const NSTimeInterval MacLCSearchDebounce = 0.12;
 - (void)focusSearchField
 {
     [_searchItem beginSearchInteraction];
+    /* When the field is already expanded, make sure typing goes into it. */
+    NSSearchField * const field = _searchItem.searchField;
+    if (field.window != nil && field.window.firstResponder != field.currentEditor) {
+        [field.window makeFirstResponder:field];
+    }
 }
 
 // MARK: - Current section

@@ -196,6 +196,9 @@
         s_sortMenuDelegate = [[MacLCLibrarySortMenuDelegate alloc] init];
     });
     sortSubmenu.delegate = s_sortMenuDelegate;
+    /* Never empty, so the item stays enabled and the submenu opens (its
+     * delegate fills it for the section on screen). */
+    [s_sortMenuDelegate menuNeedsUpdate:sortSubmenu];
     sortItem.submenu = sortSubmenu;
 
     [viewMenu addItem:sortItem];
