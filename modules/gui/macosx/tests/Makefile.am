@@ -22,11 +22,13 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/tests/MacLCVideoFitGeometryTest.m \
 	gui/macosx/tests/MacLCVolumePathTest.m \
 	gui/macosx/tests/MacLCFrameInterpolationTest.m \
+	gui/macosx/tests/NSMenuVLCAdditionsTest.m \
 	video_filter/maclc_frc_geometry.c \
 	gui/macosx/extensions/VLCHexNumberFormatter.m \
 	gui/macosx/extensions/VLCPositionFormatter.m \
 	gui/macosx/extensions/NSString+Helpers.m \
 	gui/macosx/extensions/MacLCVolumePath.m \
+	gui/macosx/extensions/NSMenu+VLCAdditions.m \
 	gui/macosx/windows/video/MacLCVideoFitGeometry.m \
 	gui/macosx/library/VLCInputItem.m \
 	gui/macosx/library/VLCInputNode.m \

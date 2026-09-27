@@ -35,4 +35,27 @@
     }
 }
 
+- (void)updateSeparatorVisibility
+{
+    /* The first separator after a visible item, shown only once another
+     * visible item follows it. */
+    NSMenuItem *pendingSeparator = nil;
+    BOOL visibleItemAbove = NO;
+
+    for (NSMenuItem * const item in self.itemArray) {
+        if (item.isSeparatorItem) {
+            if (visibleItemAbove && pendingSeparator == nil) {
+                pendingSeparator = item;
+            } else {
+                item.hidden = YES;
+            }
+        } else if (!item.isHidden) {
+            pendingSeparator.hidden = NO;
+            pendingSeparator = nil;
+            visibleItemAbove = YES;
+        }
+    }
+    pendingSeparator.hidden = YES;
+}
+
 @end

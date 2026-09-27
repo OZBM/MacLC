@@ -23,6 +23,7 @@
 #import "VLCMainMenu.h"
 #import "coreinteraction/MacLCOSDController.h"
 
+#import "extensions/NSMenu+VLCAdditions.h"
 #import "extensions/NSMenuItem+VLCAdditions.h"
 #import "extensions/NSScreen+VLCAdditions.h"
 #import "extensions/NSString+Helpers.h"
@@ -272,6 +273,11 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     [extMgr buildMenu:_extensionsMenu];
     [_extensions setEnabled:([_extensionsMenu numberOfItems] > 0)];
     _extensions.hidden = [_extensionsMenu numberOfItems] == 0;
+
+    /* The items hidden above and in -initStrings leave their groups'
+     * separators side by side in the application and Help menus. */
+    [_about.menu updateSeparatorVisibility];
+    [_helpMenu updateSeparatorVisibility];
 
     /* setup post-proc menu */
     [_postprocessingMenu removeAllItems];

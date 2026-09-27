@@ -30,6 +30,12 @@ NS_ASSUME_NONNULL_BEGIN
  * so the following is provided as a convenience method to add multiple entries */
 - (void)addMenuItemsFromArray:(NSArray <NSMenuItem *>*)array;
 
+/* NSMenu draws every separator that is not hidden, including leading and
+ * trailing ones and those left side by side once the items between them are
+ * hidden. This shows a separator only where it divides two groups of visible
+ * items and hides the rest, so call it again after hiding or showing items. */
+- (void)updateSeparatorVisibility;
+
 @end
 
 NS_ASSUME_NONNULL_END
