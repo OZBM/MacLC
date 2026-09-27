@@ -496,8 +496,9 @@ static VLCMain *sharedInstance = nil;
         });
     }
     /* MACLC_DEBUG_DUMP_LAYOUT=1 logs, 5 s after launch, the library window's
-     * frame and size limits, its split view items and the menu bar (a
-     * trailing * marks items with an image), prefixed with LAYOUTDUMP. */
+     * frame and size limits, its split view items and the menu bar as it is
+     * drawn (hidden items left out, a trailing * marks items with an image),
+     * prefixed with LAYOUTDUMP. */
     if (getenv("MACLC_DEBUG_DUMP_LAYOUT") != NULL) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;
@@ -510,6 +511,12 @@ static VLCMain *sharedInstance = nil;
             for (NSMenuItem * const top in NSApp.mainMenu.itemArray) {
                 NSMutableArray * const titles = [NSMutableArray array];
                 for (NSMenuItem * const item in top.submenu.itemArray) {
+                    /* Never drawn. AppKit adds hidden copies of Start
+                     * Dictation… and Emoji & Symbols to the Edit menu only so
+                     * that their other shortcuts (fn-D, ⌃⌘Space, fn-E) work. */
+                    if (item.isHidden) {
+                        continue;
+                    }
                     [titles addObject:item.isSeparatorItem ? @"|" : [NSString stringWithFormat:@"%@%@", item.title,
                         item.image != nil ? @"*" : @""]];
                 }
