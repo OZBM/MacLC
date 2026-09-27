@@ -174,7 +174,7 @@ _##field##TextField.delegate = self
     [_copyrightLabel setStringValue: NSTR(VLC_META_COPYRIGHT)];
     [_albumLabel setStringValue: NSTR(VLC_META_ALBUM)];
     [_trackNumberLabel setStringValue: NSTR(VLC_META_TRACK_NUMBER)];
-    [_trackTotalLabel setStringValue: _NS("Track Total")];
+    [_trackTotalLabel setStringValue: _NS("Track total")];
     [_contentDescriptionLabel setStringValue: NSTR(VLC_META_DESCRIPTION)];
     [_dateLabel setStringValue: NSTR(VLC_META_DATE)];
     [_languageLabel setStringValue: NSTR(VLC_META_LANGUAGE)];

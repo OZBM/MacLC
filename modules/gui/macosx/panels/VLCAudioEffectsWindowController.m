@@ -53,7 +53,7 @@ NSString *VLCAudioEffectsProfileNamesKey = @"AudioEffectProfileNames";
 static inline void enableTextField(NSTextField *const __unsafe_unretained textField,
                                    const BOOL enable)
 {
-    [textField setTextColor:enable ? [NSColor controlTextColor] : [NSColor disabledControlTextColor]];
+    [textField setTextColor:enable ? [NSColor labelColor] : [NSColor secondaryLabelColor]];
 }
 
 @interface VLCAudioEffectsWindowController ()
@@ -232,7 +232,7 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
                              object:nil];
 
     [_applyProfileCheckbox setState:[[NSUserDefaults standardUserDefaults] boolForKey:@"AudioEffectApplyProfileOnStartup"]];
-    [_applyProfileCheckbox setTitle:_NS("Apply profile at next launch")];
+    [_applyProfileCheckbox setTitle:_NS("Apply Profile at Next Launch")];
 
     /* setup the user's language */
     /* Equalizer */
@@ -244,7 +244,7 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     [_equalizerPreampLabel setToolTip:_NS("Set the global gain in dB (-20 ... 20).")];
 
     /* Compressor */
-    [_compressorEnableCheckbox setTitle:_NS("Enable dynamic range compressor")];
+    [_compressorEnableCheckbox setTitle:_NS("Enable Dynamic Range Compressor")];
     [_compressorResetButton setTitle:_NS("Reset")];
     [_compressorBand1Label setStringValue:_NS("RMS/peak")];;
     [_compressorBand2Label setStringValue:_NS("Attack")];
@@ -267,14 +267,14 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     [_spatializerBand5Label setStringValue:_NS("Damp")];
 
     /* Filter */
-    [_filterHeadPhoneCheckbox setTitle:_NS("Headphone virtualization")];
+    [_filterHeadPhoneCheckbox setTitle:_NS("Headphone Virtualization")];
     [_filterHeadPhoneCheckbox setToolTip:_NS("This effect gives you the feeling that you are standing in a room " \
                                              "with a complete 7.1 speaker set when using only a headphone, " \
                                              "providing a more realistic sound experience. It should also be " \
                                              "more comfortable and less tiring when listening to music for " \
                                              "long periods of time.\nIt works with any source format from mono " \
                                              "to 7.1.")];
-    [_filterNormLevelCheckbox setTitle:_NS("Volume normalization")];
+    [_filterNormLevelCheckbox setTitle:_NS("Volume Normalization")];
     [_filterNormLevelCheckbox setToolTip:_NS("Volume normalizer")];
     [_filterNormLevelLabel setToolTip:_NS("If the average power over the last N buffers " \
                                           "is higher than this value, the volume will be normalized. " \
@@ -293,8 +293,8 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     
     /* Advanced */
     [_advancedResetButton setTitle:_NS("Reset")];
-    [_advancedEnablePitchCheckBox setStringValue:_NS("Adjust pitch")];
-    [_advancedEnableStereoPanCheckBox setStringValue:_NS("Adjust pan")];
+    [_advancedEnablePitchCheckBox setStringValue:_NS("Adjust Pitch")];
+    [_advancedEnableStereoPanCheckBox setStringValue:_NS("Adjust Pan")];
     
     
     /* generic */
@@ -548,7 +548,7 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     }
 
     /* show panel */
-    [_textfieldPanel setTitleString:_NS("Duplicate current profile for a new profile")];
+    [_textfieldPanel setTitleString:_NS("Duplicate Current Profile for a New Profile")];
     [_textfieldPanel setSubTitleString:_NS("Enter a name for the new profile:")];
     [_textfieldPanel setCancelButtonString:_NS("Cancel")];
     [_textfieldPanel setOkButtonString:_NS("Save")];
@@ -602,7 +602,7 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     }
 
     /* show panel */
-    [_popupPanel setTitleString:_NS("Remove a preset")];
+    [_popupPanel setTitleString:_NS("Remove Preset")];
     [_popupPanel setSubTitleString:_NS("Select the preset you would like to remove:")];
     [_popupPanel setOkButtonString:_NS("Remove")];
     [_popupPanel setCancelButtonString:_NS("Cancel")];
@@ -881,7 +881,7 @@ static bool GetEqualizerStatus(intf_thread_t *__unused p_custom_intf,
     }
 
     /* show panel */
-    [_textfieldPanel setTitleString:_NS("Save current selection as new preset")];
+    [_textfieldPanel setTitleString:_NS("Save Current Selection as New Preset")];
     [_textfieldPanel setSubTitleString:_NS("Enter a name for the new preset:")];
     [_textfieldPanel setCancelButtonString:_NS("Cancel")];
     [_textfieldPanel setOkButtonString:_NS("Save")];
@@ -927,7 +927,7 @@ static bool GetEqualizerStatus(intf_thread_t *__unused p_custom_intf,
         _popupPanel = [[VLCPopupPanelController alloc] init];
     }
 
-    [_popupPanel setTitleString:_NS("Remove a preset")];
+    [_popupPanel setTitleString:_NS("Remove Preset")];
     [_popupPanel setSubTitleString:_NS("Select the preset you would like to remove:")];
     [_popupPanel setOkButtonString:_NS("Remove")];
     [_popupPanel setCancelButtonString:_NS("Cancel")];

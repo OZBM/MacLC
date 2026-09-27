@@ -284,7 +284,7 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     [_adjustResetButton setTitle: _NS("Reset")];
     [_sharpenCheckbox setTitle:_NS("Sharpen")];
     [_sharpenLabel setStringValue:_NS("Sigma")];
-    [_bandingCheckbox setTitle:_NS("Banding removal")];
+    [_bandingCheckbox setTitle:_NS("Banding Removal")];
     [_bandingLabel setStringValue:_NS("Radius")];
     [_grainCheckbox setTitle:_NS("Film Grain")];
     [_grainLabel setStringValue:_NS("Variance")];
@@ -297,23 +297,23 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
 
     [_transformCheckbox setTitle:_NS("Transform")];
     [_transformPopup removeAllItems];
-    [_transformPopup addItemWithTitle: _NS("Rotate by 90 degrees")];
+    [_transformPopup addItemWithTitle: _NS("Rotate by 90 Degrees")];
     [[_transformPopup lastItem] setRepresentedObject: @"90"];
     [[_transformPopup lastItem] setTag: 90];
-    [_transformPopup addItemWithTitle: _NS("Rotate by 180 degrees")];
+    [_transformPopup addItemWithTitle: _NS("Rotate by 180 Degrees")];
     [[_transformPopup lastItem] setRepresentedObject: @"180"];
     [[_transformPopup lastItem] setTag: 180];
-    [_transformPopup addItemWithTitle: _NS("Rotate by 270 degrees")];
+    [_transformPopup addItemWithTitle: _NS("Rotate by 270 Degrees")];
     [[_transformPopup lastItem] setRepresentedObject: @"270"];
     [[_transformPopup lastItem] setTag: 270];
-    [_transformPopup addItemWithTitle: _NS("Flip horizontally")];
+    [_transformPopup addItemWithTitle: _NS("Flip Horizontally")];
     [[_transformPopup lastItem] setRepresentedObject: @"hflip"];
     [[_transformPopup lastItem] setTag: 1];
-    [_transformPopup addItemWithTitle: _NS("Flip vertically")];
+    [_transformPopup addItemWithTitle: _NS("Flip Vertically")];
     [[_transformPopup lastItem] setRepresentedObject: @"vflip"];
     [[_transformPopup lastItem] setTag: 2];
     [_zoomCheckbox setTitle:_NS("Magnification/Zoom")];
-    [_puzzleCheckbox setTitle:_NS("Puzzle game")];
+    [_puzzleCheckbox setTitle:_NS("Puzzle Game")];
     [_puzzleRowsLabel setStringValue:_NS("Rows")];
     [_puzzleColumnsLabel setStringValue:_NS("Columns")];
     [_cloneCheckbox setTitle:_NS("Clone")];
@@ -322,7 +322,7 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     [_wallNumbersOfRowsLabel setStringValue:_NS("Rows")];
     [_wallNumberOfColumnsLabel setStringValue:_NS("Columns")];
 
-    [_thresholdCheckbox setTitle:_NS("Color threshold")];
+    [_thresholdCheckbox setTitle:_NS("Color Threshold")];
     [_thresholdColorLabel setStringValue:_NS("Color")];
     [_thresholdColorTextField setFormatter:[[VLCHexNumberFormatter alloc] init]];
     [_thresholdSaturationLabel setStringValue:_NS("Saturation")];
@@ -343,20 +343,20 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     [[_gradientModePopup lastItem] setTag: 3];
     [_gradientColorCheckbox setTitle:_NS("Color")];
     [_gradientCartoonCheckbox setTitle:_NS("Cartoon")];
-    [_extractCheckbox setTitle:_NS("Color extraction")];
+    [_extractCheckbox setTitle:_NS("Color Extraction")];
     [_extractLabel setStringValue:_NS("Color")];
     [_extractTextField setFormatter:[[VLCHexNumberFormatter alloc] init]];
-    [_invertCheckbox setTitle:_NS("Invert colors")];
+    [_invertCheckbox setTitle:_NS("Invert Colors")];
     [_posterizeCheckbox setTitle:_NS("Posterize")];
     [_posterizeLabel setStringValue:_NS("Posterize level")];
-    [_blurCheckbox setTitle:_NS("Motion blur")];
+    [_blurCheckbox setTitle:_NS("Motion Blur")];
     [_blurLabel setStringValue:_NS("Factor")];
     [_motiondetectCheckbox setTitle:_NS("Motion Detect")];
-    [_watereffectCheckbox setTitle:_NS("Water effect")];
+    [_watereffectCheckbox setTitle:_NS("Water Effect")];
     [_wavesCheckbox setTitle:_NS("Waves")];
     [_psychedelicCheckbox setTitle:_NS("Psychedelic")];
     [_anaglyphCheckbox setTitle:_NS("Anaglyph")];
-    [_addTextCheckbox setTitle:_NS("Add text")];
+    [_addTextCheckbox setTitle:_NS("Add Text")];
     [_addTextTextLabel setStringValue:_NS("Text")];
     [_addTextPositionLabel setStringValue:_NS("Position")];
     [_addTextPositionPopup removeAllItems];
@@ -378,7 +378,7 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     [[_addTextPositionPopup lastItem] setTag: 9];
     [_addTextPositionPopup addItemWithTitle: _NS("Bottom-Right")];
     [[_addTextPositionPopup lastItem] setTag: 10];
-    [_addLogoCheckbox setTitle:_NS("Add logo")];
+    [_addLogoCheckbox setTitle:_NS("Add Logo")];
     [_addLogoLogoLabel setStringValue:_NS("Logo")];
     [_addLogoPositionLabel setStringValue:_NS("Position")];
     [_addLogoPositionPopup removeAllItems];
@@ -873,8 +873,7 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     }
 
     /* show panel */
-    [[_textfieldPanel window] setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameVibrantDark]];
-    [_textfieldPanel setTitleString:_NS("Duplicate current profile for a new profile")];
+    [_textfieldPanel setTitleString:_NS("Duplicate Profile")];
     [_textfieldPanel setSubTitleString:_NS("Enter a name for the new profile:")];
     [_textfieldPanel setCancelButtonString:_NS("Cancel")];
     [_textfieldPanel setOkButtonString:_NS("Save")];
@@ -931,9 +930,8 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     }
 
     /* show panel */
-    [[_popupPanel window] setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameVibrantDark]];
-    [_popupPanel setTitleString:_NS("Remove a preset")];
-    [_popupPanel setSubTitleString:_NS("Select the preset you would like to remove:")];
+    [_popupPanel setTitleString:_NS("Remove Profile")];
+    [_popupPanel setSubTitleString:_NS("Select the profile you would like to remove:")];
     [_popupPanel setOkButtonString:_NS("Remove")];
     [_popupPanel setCancelButtonString:_NS("Cancel")];
     [_popupPanel setPopupButtonContent:[self nonDefaultProfileNames]];
