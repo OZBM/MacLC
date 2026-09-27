@@ -30,8 +30,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-// Every section is created with -init (segment type fixed by the class) and
-// is described in .agents/reports/spec-native-library.md, section 7.
+// Every section is created with -init (its segment type is fixed by the
+// class); each one's content is described on its interface below.
 
 /// Hero + shelves: Continue Watching, Recently Added, Recently Played Music,
 /// Albums; onboarding empty state when the library is empty.

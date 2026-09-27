@@ -461,7 +461,7 @@ static VLCMain *sharedInstance = nil;
         });
     }
 
-    /* Developer hooks for headless screenshots (.agents/tools/ui-test):
+    /* Developer hooks for headless screenshots:
      * MACLC_DEBUG_APPEARANCE=dark|light forces the appearance,
      * MACLC_DEBUG_WINDOW_SIZE=<width>x<height> resizes the library window and
      * MACLC_DEBUG_UP_NEXT=1 opens the Up Next inspector. Unset, they do
