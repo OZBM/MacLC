@@ -36,8 +36,18 @@
 
 #import "VLCDrawable.h"
 #import "VLCHDRExpander.h"
+#import "VLCHDRNetwork.h"
+#if TARGET_OS_OSX
+#import "MacLCMetalDisplay.h"
+#endif
 #import "MacLCHDRToneMapper.h"
 #include "maclc_hdr_vars.h"
+#include "maclc_sdr2hdr.h"
+
+#if TARGET_OS_OSX
+#import <IOKit/ps/IOPowerSources.h>
+#import <IOKit/ps/IOPSKeys.h>
+#endif
 
 #import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
@@ -552,6 +562,33 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) int hdrMode;
     @property (nonatomic) BOOL sdrToHdr;
     @property (nonatomic) float sdrToHdrBoost;
+    @property (nonatomic) enum maclc_sdr2hdr_quality sdrToHdrQuality;
+    @property (nonatomic) float sdrToHdrMidtones;
+    @property (nonatomic) float sdrToHdrSaturation;
+    @property (nonatomic) enum maclc_sdr2hdr_deband sdrToHdrDeband;
+    @property (nonatomic) BOOL sdrToHdrProtect;
+    @property (nonatomic) BOOL sdrToHdrCompare;
+    /* Set by the compare callback (any thread), consumed by the render path:
+     * the expander is only ever touched from the vout thread. */
+    @property (atomic) BOOL sdrToHdrNeedsReset;
+    @property (nonatomic) struct maclc_sdr2hdr_env cachedEnv;
+    @property (nonatomic) vlc_tick_t lastEnvEvalTime;
+    @property (nonatomic) BOOL envDirty;
+    @property (nonatomic) enum maclc_sdr2hdr_quality cachedResolvedQuality;
+    @property (nonatomic) enum maclc_sdr2hdr_reason cachedResolvedReason;
+    @property (nonatomic) enum maclc_sdr2hdr_gpu_class cachedGpuClass;
+    @property (nonatomic) double gpuTimeEmaMs;
+    @property (nonatomic) double gpuOverloadDurationSec;
+    @property (nonatomic) BOOL gpuSteppedDown;
+    @property (nonatomic) enum maclc_sdr2hdr_quality steppedDownQuality;
+    @property (nonatomic) size_t lastVideoWidth;
+    @property (nonatomic) size_t lastVideoHeight;
+    @property (nonatomic) vlc_fourcc_t lastVideoChroma;
+    @property (nonatomic) vlc_tick_t lastPicDate;
+    @property (nonatomic) char *publishedSdrActive;
+    @property (nonatomic) char *publishedSdrReason;
+    @property (nonatomic) float publishedSdrPeak;
+    @property (nonatomic) vlc_tick_t lastPublishedSdrTime;
     @property (nonatomic) VLCHDRExpander *hdrExpander;
     @property (nonatomic) BOOL hdrExpanderFailed;
     @property (nonatomic) BOOL hasLoggedExpansion;
@@ -1342,6 +1379,18 @@ shouldInheritContentsScale:(CGFloat)newScale
         _hdrExpander = [VLCHDRExpander expanderForObject:VLC_OBJECT(_vd)];
         if (_hdrExpander == nil)
             _hdrExpanderFailed = YES;
+        else if (_hdrExpander.gridProducer == nil) {
+            /* High and Maximum run the trained networks shipped in the app
+             * (or installed in Application Support); without them they run
+             * as Balanced and say so. */
+            vout_display_t *vd = _vd;
+            _hdrExpander.gridProducer =
+                [VLCHDRNetworkSet networkSetWithDevice:MTLCreateSystemDefaultDevice()
+                                         userDirectory:nil
+                                                   log:^(NSString *line) {
+                    msg_Dbg(vd, "SDR to HDR: %s", line.UTF8String);
+                }];
+        }
     }
     return _hdrExpander;
 }
@@ -1365,6 +1414,122 @@ shouldInheritContentsScale:(CGFloat)newScale
     if (self.maclcPresentation == MACLC_HDR_PRESENTATION_SDR)
         return 2;
     return self.hdrMode;
+}
+
+static BOOL IsRunningOnBattery(void)
+{
+#if TARGET_OS_OSX
+    CFTypeRef info = IOPSCopyPowerSourcesInfo();
+    if (info == NULL)
+        return NO;
+    CFStringRef type = IOPSGetProvidingPowerSourceType(info);
+    BOOL onBattery = NO;
+    if (type != NULL) {
+        onBattery = CFEqual(type, CFSTR(kIOPMBatteryPowerKey));
+    }
+    CFRelease(info);
+    return onBattery;
+#else
+    return NO;
+#endif
+}
+
+- (void)resolveQualityForWidth:(size_t)width
+                        height:(size_t)height
+                       quality:(enum maclc_sdr2hdr_quality *)outQuality
+                        reason:(enum maclc_sdr2hdr_reason *)outReason
+{
+    if (width != _lastVideoWidth || height != _lastVideoHeight) {
+        _lastVideoWidth = width;
+        _lastVideoHeight = height;
+        _envDirty = YES;
+        _gpuSteppedDown = NO;
+        _gpuOverloadDurationSec = 0.0;
+        _gpuTimeEmaMs = 0.0;
+    }
+
+    vlc_tick_t now = vlc_tick_now();
+    if (_envDirty || _lastEnvEvalTime == VLC_TICK_INVALID ||
+        (now - _lastEnvEvalTime >= VLC_TICK_FROM_SEC(2))) {
+
+        if (_cachedGpuClass == MACLC_SDR2HDR_GPU_UNKNOWN) {
+            id<MTLDevice> dev = MTLCreateSystemDefaultDevice();
+            _cachedGpuClass = maclc_sdr2hdr_gpu_class_from_name(dev.name.UTF8String);
+        }
+
+        BOOL lowPower = NO;
+        if (@available(macOS 12.0, *)) {
+            lowPower = [NSProcessInfo processInfo].isLowPowerModeEnabled;
+        }
+
+        int thermal = 0;
+        if (@available(macOS 10.10, *)) {
+            thermal = (int)[NSProcessInfo processInfo].thermalState;
+        }
+
+        double fps = 30.0;
+        if (self.vd->source->i_frame_rate > 0 && self.vd->source->i_frame_rate_base > 0) {
+            fps = (double)self.vd->source->i_frame_rate / (double)self.vd->source->i_frame_rate_base;
+        }
+        double pixel_rate = (double)width * (double)height * fps;
+
+        BOOL frc = NO;
+        vlc_object_t *vout_obj = vlc_object_parent(self.vd);
+        if (vout_obj != NULL) {
+            char *filterStr = var_GetString(vout_obj, "video-filter");
+            if (filterStr != NULL) {
+                if (strstr(filterStr, "maclc_frc") != NULL)
+                    frc = YES;
+                free(filterStr);
+            }
+        }
+
+        VLCHDRExpander *exp = self.hdrExpander;
+        BOOL model_available = NO;
+        if (self.sdrToHdrQuality == MACLC_SDR2HDR_MAXIMUM) {
+            model_available = (exp != nil && exp.gridProducer != nil &&
+                               [exp.gridProducer supportsQuality:MACLC_SDR2HDR_MAXIMUM]);
+        } else {
+            model_available = (exp != nil && exp.gridProducer != nil &&
+                               [exp.gridProducer supportsQuality:MACLC_SDR2HDR_HIGH]);
+        }
+
+        struct maclc_sdr2hdr_env env;
+        env.model_available = model_available;
+        env.max_model_available = exp != nil && exp.gridProducer != nil
+            && [exp.gridProducer supportsQuality:MACLC_SDR2HDR_MAXIMUM];
+        env.gpu = _cachedGpuClass;
+        env.on_battery = IsRunningOnBattery();
+        env.low_power_mode = lowPower;
+        env.thermal_state = thermal;
+        env.pixel_rate = pixel_rate;
+        env.frame_interpolation = frc;
+        _cachedEnv = env;
+
+        enum maclc_sdr2hdr_reason reason = MACLC_SDR2HDR_REASON_NONE;
+        enum maclc_sdr2hdr_quality q = maclc_sdr2hdr_resolve_quality(self.sdrToHdrQuality, &env, &reason);
+
+        if (self.sdrToHdrQuality == MACLC_SDR2HDR_MAXIMUM && !model_available) {
+            if (exp != nil && exp.gridProducer != nil &&
+                [exp.gridProducer supportsQuality:MACLC_SDR2HDR_HIGH]) {
+                q = MACLC_SDR2HDR_HIGH;
+                reason = MACLC_SDR2HDR_REASON_MODEL_MISSING;
+            }
+        }
+
+        _cachedResolvedQuality = q;
+        _cachedResolvedReason = reason;
+        _lastEnvEvalTime = now;
+        _envDirty = NO;
+    }
+
+    if (self.sdrToHdrQuality == MACLC_SDR2HDR_AUTO && _gpuSteppedDown) {
+        *outQuality = _steppedDownQuality;
+        *outReason = MACLC_SDR2HDR_REASON_SLOW;
+    } else {
+        *outQuality = _cachedResolvedQuality;
+        *outReason = _cachedResolvedReason;
+    }
 }
 
 - (void)dealloc {
@@ -1392,7 +1557,7 @@ static int MacLCPresentationCallback(vlc_object_t *obj, char const *name,
             maclc_hdr_presentation_name(presentation),
             (presentation == MACLC_HDR_PRESENTATION_DOLBYVISION ||
              presentation == MACLC_HDR_PRESENTATION_HDR10PLUS)
-                ? " (needs the libplacebo output; the interface restarts the track)"
+                ? " (needs the Metal output; the interface restarts the track)"
                 : "");
     if (sdrChanged)
         [sys updateDynamicRangeAndHeadroom];
@@ -1480,6 +1645,87 @@ static int SdrToHdrBoostCallback(vlc_object_t *obj, char const *name,
     return VLC_SUCCESS;
 }
 
+static int SdrToHdrQualityCallback(vlc_object_t *obj, char const *name,
+                                   vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.sdrToHdrQuality = maclc_sdr2hdr_quality_parse(cur.psz_string);
+    sys.envDirty = YES;
+    sys.gpuSteppedDown = NO;
+    sys.gpuOverloadDurationSec = 0.0;
+    sys.gpuTimeEmaMs = 0.0;
+    sys.hasLoggedExpansion = NO;
+    msg_Dbg(sys.vd, "SDR to HDR quality updated via variable callback: %s",
+            maclc_sdr2hdr_quality_name(sys.sdrToHdrQuality));
+    return VLC_SUCCESS;
+}
+
+static int SdrToHdrMidtonesCallback(vlc_object_t *obj, char const *name,
+                                    vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.sdrToHdrMidtones = cur.f_float;
+    sys.hasLoggedExpansion = NO;
+    msg_Dbg(sys.vd, "SDR to HDR midtones updated via variable callback: %.2f",
+            cur.f_float);
+    return VLC_SUCCESS;
+}
+
+static int SdrToHdrSaturationCallback(vlc_object_t *obj, char const *name,
+                                      vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.sdrToHdrSaturation = cur.f_float;
+    sys.hasLoggedExpansion = NO;
+    msg_Dbg(sys.vd, "SDR to HDR saturation updated via variable callback: %.2f",
+            cur.f_float);
+    return VLC_SUCCESS;
+}
+
+static int SdrToHdrDebandCallback(vlc_object_t *obj, char const *name,
+                                  vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.sdrToHdrDeband = maclc_sdr2hdr_deband_parse(cur.psz_string);
+    sys.hasLoggedExpansion = NO;
+    msg_Dbg(sys.vd, "SDR to HDR deband updated via variable callback: %s",
+            maclc_sdr2hdr_deband_name(sys.sdrToHdrDeband));
+    return VLC_SUCCESS;
+}
+
+static int SdrToHdrProtectCallback(vlc_object_t *obj, char const *name,
+                                   vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    sys.sdrToHdrProtect = cur.b_bool;
+    sys.hasLoggedExpansion = NO;
+    msg_Dbg(sys.vd, "SDR to HDR protect updated via variable callback: %s",
+            cur.b_bool ? "enabled" : "disabled");
+    return VLC_SUCCESS;
+}
+
+static int SdrToHdrCompareCallback(vlc_object_t *obj, char const *name,
+                                   vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(name); VLC_UNUSED(prev);
+    VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay *)data;
+    BOOL wasCompare = sys.sdrToHdrCompare;
+    sys.sdrToHdrCompare = cur.b_bool;
+    if (wasCompare && !cur.b_bool) {
+        /* forget what was learnt before the comparison, on the vout thread */
+        sys.sdrToHdrNeedsReset = YES;
+    }
+    sys.hasLoggedExpansion = NO;
+    msg_Dbg(sys.vd, "SDR to HDR compare %s via variable callback",
+            cur.b_bool ? "active (showing SDR)" : "released");
+    return VLC_SUCCESS;
+}
+
 static int HdrModeCallback(vlc_object_t *obj, char const *name,
                            vlc_value_t prev, vlc_value_t cur, void *data)
 {
@@ -1501,6 +1747,11 @@ static void Close(vout_display_t *vd)
     var_DelCallback(vd, "macosx-sdr-to-hdr", SdrToHdrCallback, (__bridge void*)sys);
     var_DelCallback(vd, "macosx-sdr-to-hdr-boost", SdrToHdrBoostCallback,
                     (__bridge void*)sys);
+    var_DelCallback(vd, MACLC_SDR2HDR_VAR_QUALITY, SdrToHdrQualityCallback, (__bridge void*)sys);
+    var_DelCallback(vd, MACLC_SDR2HDR_VAR_MIDTONES, SdrToHdrMidtonesCallback, (__bridge void*)sys);
+    var_DelCallback(vd, MACLC_SDR2HDR_VAR_SATURATION, SdrToHdrSaturationCallback, (__bridge void*)sys);
+    var_DelCallback(vd, MACLC_SDR2HDR_VAR_DEBAND, SdrToHdrDebandCallback, (__bridge void*)sys);
+    var_DelCallback(vd, MACLC_SDR2HDR_VAR_PROTECT, SdrToHdrProtectCallback, (__bridge void*)sys);
 
     vlc_object_t *vout_obj = vlc_object_parent(vd);
     if (vout_obj != NULL) {
@@ -1508,6 +1759,18 @@ static void Close(vout_display_t *vd)
                         (__bridge void*)sys);
         var_DelCallback(vout_obj, "macosx-sdr-to-hdr-boost",
                         SdrToHdrBoostCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_SDR2HDR_VAR_QUALITY,
+                        SdrToHdrQualityCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_SDR2HDR_VAR_MIDTONES,
+                        SdrToHdrMidtonesCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_SDR2HDR_VAR_SATURATION,
+                        SdrToHdrSaturationCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_SDR2HDR_VAR_DEBAND,
+                        SdrToHdrDebandCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_SDR2HDR_VAR_PROTECT,
+                        SdrToHdrProtectCallback, (__bridge void*)sys);
+        var_DelCallback(vout_obj, MACLC_SDR2HDR_VAR_COMPARE,
+                        SdrToHdrCompareCallback, (__bridge void*)sys);
         var_DelCallback(vout_obj, "macosx-hdr-mode", HdrModeCallback,
                         (__bridge void*)sys);
         var_DelCallback(vout_obj, MACLC_HDR_VAR_PRESENTATION,
@@ -1518,6 +1781,15 @@ static void Close(vout_display_t *vd)
                         MacLCHLGCallback, (__bridge void*)sys);
         var_Destroy(vout_obj, "macosx-sdr-to-hdr");
         var_Destroy(vout_obj, "macosx-sdr-to-hdr-boost");
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_QUALITY);
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_MIDTONES);
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_SATURATION);
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_DEBAND);
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_PROTECT);
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_COMPARE);
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_ACTIVE);
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_REASON);
+        var_Destroy(vout_obj, MACLC_SDR2HDR_VAR_PEAK);
         var_Destroy(vout_obj, "macosx-hdr-mode");
         var_Destroy(vout_obj, MACLC_HDR_VAR_PRESENTATION);
         var_Destroy(vout_obj, MACLC_HDR_VAR_PICTURE);
@@ -1526,6 +1798,11 @@ static void Close(vout_display_t *vd)
         var_Destroy(vout_obj, MACLC_HDR_VAR_ACTIVE);
     }
     var_Destroy(vd, "edr-headroom-effective");
+
+    free(sys.publishedSdrActive);
+    sys.publishedSdrActive = NULL;
+    free(sys.publishedSdrReason);
+    sys.publishedSdrReason = NULL;
 
     DeleteCVPXConverter(sys->converter);
 
@@ -1636,21 +1913,54 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         caps |= MACLC_HDR_CAP_HDR10PLUS_SEEN;
     sys.seenCaps = caps;
 
-    /* Dynamic range expansion. An SDR picture is turned into extended-range
-     * linear light with SDR white at 1.0, which the compositor shows as it is:
-     * SDR white stays exactly where plain SDR playback puts it, and the
-     * expansion itself leaves everything below the knee alone, so only the
-     * highlights change. Only worth doing when the layer is asking for HDR in
-     * the first place. */
-    if (sys.sdrToHdr && !source_is_hdr && (hdr_mode == 0 || hdr_mode == 1)) {
+    /* Dynamic range expansion with quality levels (Fast, Balanced, High, Maximum) */
+    BOOL expansionRan = NO;
+    enum maclc_sdr2hdr_quality activeQuality = MACLC_SDR2HDR_AUTO;
+    enum maclc_sdr2hdr_reason activeReason = MACLC_SDR2HDR_REASON_NONE;
+    float activePeak = 0.0f;
+
+    if (render_fmt.i_width != sys.lastVideoWidth ||
+        render_fmt.i_height != sys.lastVideoHeight ||
+        render_fmt.i_chroma != sys.lastVideoChroma) {
+        sys.lastVideoWidth = render_fmt.i_width;
+        sys.lastVideoHeight = render_fmt.i_height;
+        sys.lastVideoChroma = render_fmt.i_chroma;
+        [sys.hdrExpander resetTemporalState];
+        sys.envDirty = YES;
+        sys.gpuSteppedDown = NO;
+        sys.gpuOverloadDurationSec = 0.0;
+        sys.gpuTimeEmaMs = 0.0;
+    }
+    if (sys.sdrToHdrNeedsReset) {
+        sys.sdrToHdrNeedsReset = NO;
+        [sys.hdrExpander resetTemporalState];
+    }
+
+    if (sys.sdrToHdr && !source_is_hdr && !sys.sdrToHdrCompare &&
+        (hdr_mode == 0 || hdr_mode == 1) && (sys.currentHeadroom > 1.0f)) {
         VLCHDRExpander *expander = sys.hdrExpander;
         if (expander != nil) {
-            expander.boost = sys.sdrToHdrBoost;
+            enum maclc_sdr2hdr_quality resolvedQ;
+            enum maclc_sdr2hdr_reason resolvedR;
+            [sys resolveQualityForWidth:render_fmt.i_width
+                                 height:render_fmt.i_height
+                                quality:&resolvedQ
+                                 reason:&resolvedR];
+
+            VLCHDRExpandParams params;
+            params.quality = resolvedQ;
+            params.boost = sys.sdrToHdrBoost;
+            params.midtones = sys.sdrToHdrMidtones;
+            params.saturation = sys.sdrToHdrSaturation;
+            params.deband = sys.sdrToHdrDeband;
+            params.protect = sys.sdrToHdrProtect;
+            params.headroom = (float)sys.currentHeadroom;
+            params.date = pic->date;
 
             CVPixelBufferRef expanded =
                 [expander expandPixelBuffer:pixelBuffer
                                      format:&render_fmt
-                                   headroom:(float)sys.currentHeadroom];
+                                     params:&params];
             if (expanded != NULL) {
                 CVPixelBufferRelease(pixelBuffer);
                 pixelBuffer = expanded;
@@ -1664,17 +1974,101 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
                 memset(&render_fmt.mastering, 0, sizeof(render_fmt.mastering));
                 memset(&render_fmt.lighting, 0, sizeof(render_fmt.lighting));
 
+                expansionRan = YES;
+                activeQuality = expander.lastQuality;
+                activeReason = expander.lastFallback ? MACLC_SDR2HDR_REASON_MODEL_MISSING : resolvedR;
+                activePeak = expander.lastPeakNits;
+
                 if (!sys.hasLoggedExpansion) {
-                    msg_Dbg(vd, "SDR to HDR: white expanded to %.2fx SDR white "
-                                "(boost %.2f, display headroom %.2f), "
-                                "linear light from the GPU",
-                            expander.lastExpansion, sys.sdrToHdrBoost,
+                    msg_Dbg(vd, "SDR to HDR: %s (%s), peak %.0f cd/m2, display headroom %.2f",
+                            maclc_sdr2hdr_quality_name(expander.lastQuality),
+                            maclc_sdr2hdr_reason_name(activeReason),
+                            expander.lastPeakNits,
                             sys.currentHeadroom);
                     sys.hasLoggedExpansion = YES;
+                }
+
+                /* Automatic steps down one level at a time, as far as Fast,
+                 * each step measured afresh (resolvedQ is the stepped level). */
+                if (sys.sdrToHdrQuality == MACLC_SDR2HDR_AUTO && resolvedQ != MACLC_SDR2HDR_FAST) {
+                    double fps = 30.0;
+                    if (vd->source->i_frame_rate > 0 && vd->source->i_frame_rate_base > 0)
+                        fps = (double)vd->source->i_frame_rate / (double)vd->source->i_frame_rate_base;
+                    double frame_interval_ms = 1000.0 / fps;
+                    double dt = (pic->date != VLC_TICK_INVALID && sys.lastPicDate != VLC_TICK_INVALID && pic->date > sys.lastPicDate)
+                        ? (double)(pic->date - sys.lastPicDate) / (double)CLOCK_FREQ : (1.0 / fps);
+                    if (dt > 0.25) dt = 0.25;
+
+                    double gpuMs = expander.lastGPUTimeMs;
+                    double a = 1.0 - exp(-dt / 1.0);
+                    if (sys.gpuTimeEmaMs <= 0.0)
+                        sys.gpuTimeEmaMs = gpuMs;
+                    else
+                        sys.gpuTimeEmaMs += a * (gpuMs - sys.gpuTimeEmaMs);
+
+                    if (sys.gpuTimeEmaMs > 0.25 * frame_interval_ms) {
+                        sys.gpuOverloadDurationSec += dt;
+                        if (sys.gpuOverloadDurationSec >= 2.0) {
+                            sys.gpuSteppedDown = YES;
+                            sys.steppedDownQuality = maclc_sdr2hdr_step_down(resolvedQ);
+                            sys.gpuOverloadDurationSec = 0.0;
+                            sys.gpuTimeEmaMs = 0.0;
+                            msg_Warn(vd, "SDR to HDR: GPU time %.2f ms exceeded 25%% frame budget (%.2f ms) for 2s; stepping down to %s",
+                                     sys.gpuTimeEmaMs, 0.25 * frame_interval_ms, maclc_sdr2hdr_quality_name(sys.steppedDownQuality));
+                        }
+                    } else {
+                        sys.gpuOverloadDurationSec = 0.0;
+                    }
                 }
             }
         }
     }
+
+    const char *active_str = "off";
+    const char *reason_str = "none";
+    float peak_val = 0.0f;
+    if (expansionRan) {
+        active_str = maclc_sdr2hdr_quality_name(activeQuality);
+        reason_str = maclc_sdr2hdr_reason_name(activeReason);
+        peak_val = activePeak;
+    } else {
+        if (sys.currentHeadroom <= 1.0001f && sys.sdrToHdr && !source_is_hdr && !sys.sdrToHdrCompare && (hdr_mode == 0 || hdr_mode == 1)) {
+            reason_str = "no-headroom";
+        }
+    }
+
+    vlc_tick_t sdrPubNow = vlc_tick_now();
+    BOOL timeOk = (sys.lastPublishedSdrTime == VLC_TICK_INVALID) ||
+                  (sdrPubNow - sys.lastPublishedSdrTime >= VLC_TICK_FROM_MS(250));
+    BOOL activeChanged = (sys.publishedSdrActive == NULL) ||
+                         (strcmp(sys.publishedSdrActive, active_str) != 0);
+    BOOL reasonChanged = (sys.publishedSdrReason == NULL) ||
+                         (strcmp(sys.publishedSdrReason, reason_str) != 0);
+    BOOL peakChanged = fabsf(peak_val - sys.publishedSdrPeak) > 10.0f ||
+                       (sys.publishedSdrPeak > 0.0f &&
+                        fabsf(peak_val - sys.publishedSdrPeak) / sys.publishedSdrPeak > 0.05f);
+
+    if (timeOk && (activeChanged || reasonChanged || peakChanged)) {
+        vlc_object_t *vout_obj = vlc_object_parent(vd);
+        if (vout_obj != NULL) {
+            if (activeChanged) {
+                var_SetString(vout_obj, MACLC_SDR2HDR_VAR_ACTIVE, active_str);
+                free(sys.publishedSdrActive);
+                sys.publishedSdrActive = strdup(active_str);
+            }
+            if (reasonChanged) {
+                var_SetString(vout_obj, MACLC_SDR2HDR_VAR_REASON, reason_str);
+                free(sys.publishedSdrReason);
+                sys.publishedSdrReason = strdup(reason_str);
+            }
+            if (peakChanged) {
+                var_SetFloat(vout_obj, MACLC_SDR2HDR_VAR_PEAK, peak_val);
+                sys.publishedSdrPeak = peak_val;
+            }
+        }
+        sys.lastPublishedSdrTime = sdrPubNow;
+    }
+    sys.lastPicDate = pic->date;
 
     /* MacLC picture modes. The compositor runs its own video tone curve on
      * every PQ or HLG picture it is given - one that dims mid-tones to keep
@@ -2118,6 +2512,11 @@ static int UpdateFormat(vout_display_t *vd, const video_format_t *fmt,
                         vlc_video_context *vctx)
 {
     VLCSampleBufferDisplay *sys = (__bridge VLCSampleBufferDisplay*)vd->sys;
+    [sys.hdrExpander resetTemporalState];
+    sys.envDirty = YES;
+    sys.gpuSteppedDown = NO;
+    sys.gpuOverloadDurationSec = 0.0;
+    sys.gpuTimeEmaMs = 0.0;
 
     // Display will only work with CVPX video context
     filter_t *converter = NULL;
@@ -2245,9 +2644,27 @@ static int Open (vout_display_t *vd,
 
         sys.sdrToHdr = var_InheritBool(vd, "macosx-sdr-to-hdr");
         sys.sdrToHdrBoost = var_InheritFloat(vd, "macosx-sdr-to-hdr-boost");
+        char *qualityStr = var_InheritString(vd, MACLC_SDR2HDR_VAR_QUALITY);
+        sys.sdrToHdrQuality = maclc_sdr2hdr_quality_parse(qualityStr);
+        free(qualityStr);
+        sys.sdrToHdrMidtones = var_InheritFloat(vd, MACLC_SDR2HDR_VAR_MIDTONES);
+        sys.sdrToHdrSaturation = var_InheritFloat(vd, MACLC_SDR2HDR_VAR_SATURATION);
+        char *debandStr = var_InheritString(vd, MACLC_SDR2HDR_VAR_DEBAND);
+        sys.sdrToHdrDeband = maclc_sdr2hdr_deband_parse(debandStr);
+        free(debandStr);
+        sys.sdrToHdrProtect = var_InheritBool(vd, MACLC_SDR2HDR_VAR_PROTECT);
+        sys.sdrToHdrCompare = NO;
+        sys.lastEnvEvalTime = VLC_TICK_INVALID;
+        sys.envDirty = YES;
+        sys.lastPicDate = VLC_TICK_INVALID;
+        sys.lastPublishedSdrTime = VLC_TICK_INVALID;
+        sys.publishedSdrActive = NULL;
+        sys.publishedSdrReason = NULL;
+        sys.publishedSdrPeak = -1.0f;
+
         if (sys.sdrToHdr) {
-            msg_Dbg(vd, "SDR to HDR expansion enabled, boost %.2f",
-                    sys.sdrToHdrBoost);
+            msg_Dbg(vd, "SDR to HDR expansion enabled, boost %.2f, quality %s",
+                    sys.sdrToHdrBoost, maclc_sdr2hdr_quality_name(sys.sdrToHdrQuality));
         }
 
         var_Create(vd, "macosx-sdr-to-hdr", VLC_VAR_BOOL | VLC_VAR_DOINHERIT);
@@ -2257,8 +2674,18 @@ static int Open (vout_display_t *vd,
                    VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
         var_AddCallback(vd, "macosx-sdr-to-hdr-boost", SdrToHdrBoostCallback,
                         (__bridge void*)sys);
+        var_Create(vd, MACLC_SDR2HDR_VAR_QUALITY, VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, MACLC_SDR2HDR_VAR_QUALITY, SdrToHdrQualityCallback, (__bridge void*)sys);
+        var_Create(vd, MACLC_SDR2HDR_VAR_MIDTONES, VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, MACLC_SDR2HDR_VAR_MIDTONES, SdrToHdrMidtonesCallback, (__bridge void*)sys);
+        var_Create(vd, MACLC_SDR2HDR_VAR_SATURATION, VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, MACLC_SDR2HDR_VAR_SATURATION, SdrToHdrSaturationCallback, (__bridge void*)sys);
+        var_Create(vd, MACLC_SDR2HDR_VAR_DEBAND, VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, MACLC_SDR2HDR_VAR_DEBAND, SdrToHdrDebandCallback, (__bridge void*)sys);
+        var_Create(vd, MACLC_SDR2HDR_VAR_PROTECT, VLC_VAR_BOOL | VLC_VAR_DOINHERIT);
+        var_AddCallback(vd, MACLC_SDR2HDR_VAR_PROTECT, SdrToHdrProtectCallback, (__bridge void*)sys);
 
-        /* The same two variables on the video output thread, which is what an
+        /* The same variables on the video output thread, which is what an
          * interface can reach while a file is playing. Setting them there
          * switches the expansion on or off without restarting playback. */
         vlc_object_t *vout_obj = vlc_object_parent(vd);
@@ -2271,6 +2698,38 @@ static int Open (vout_display_t *vd,
                        VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
             var_AddCallback(vout_obj, "macosx-sdr-to-hdr-boost",
                             SdrToHdrBoostCallback, (__bridge void*)sys);
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_QUALITY,
+                       VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, MACLC_SDR2HDR_VAR_QUALITY,
+                            SdrToHdrQualityCallback, (__bridge void*)sys);
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_MIDTONES,
+                       VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, MACLC_SDR2HDR_VAR_MIDTONES,
+                            SdrToHdrMidtonesCallback, (__bridge void*)sys);
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_SATURATION,
+                       VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, MACLC_SDR2HDR_VAR_SATURATION,
+                            SdrToHdrSaturationCallback, (__bridge void*)sys);
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_DEBAND,
+                       VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, MACLC_SDR2HDR_VAR_DEBAND,
+                            SdrToHdrDebandCallback, (__bridge void*)sys);
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_PROTECT,
+                       VLC_VAR_BOOL | VLC_VAR_DOINHERIT);
+            var_AddCallback(vout_obj, MACLC_SDR2HDR_VAR_PROTECT,
+                            SdrToHdrProtectCallback, (__bridge void*)sys);
+
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_COMPARE, VLC_VAR_BOOL);
+            var_SetBool(vout_obj, MACLC_SDR2HDR_VAR_COMPARE, false);
+            var_AddCallback(vout_obj, MACLC_SDR2HDR_VAR_COMPARE,
+                            SdrToHdrCompareCallback, (__bridge void*)sys);
+
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_ACTIVE, VLC_VAR_STRING);
+            var_SetString(vout_obj, MACLC_SDR2HDR_VAR_ACTIVE, "off");
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_REASON, VLC_VAR_STRING);
+            var_SetString(vout_obj, MACLC_SDR2HDR_VAR_REASON, "none");
+            var_Create(vout_obj, MACLC_SDR2HDR_VAR_PEAK, VLC_VAR_FLOAT);
+            var_SetFloat(vout_obj, MACLC_SDR2HDR_VAR_PEAK, 0.0f);
             var_Create(vout_obj, "macosx-hdr-mode",
                        VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
             var_AddCallback(vout_obj, "macosx-hdr-mode", HdrModeCallback,
@@ -2370,6 +2829,45 @@ static int Open (vout_display_t *vd,
     "become, as a multiple. 1.0 disables the expansion; 4.0 is a natural " \
     "looking default; higher values are more dramatic and less faithful.")
 
+static const char *const quality_values[] = { "auto", "fast", "balanced", "high", "maximum" };
+static const char *const quality_names[] = {
+    N_("Automatic"),
+    N_("Fast"),
+    N_("Balanced"),
+    N_("High"),
+    N_("Maximum"),
+};
+
+static const char *const deband_values[] = { "off", "normal", "strong" };
+static const char *const deband_names[] = {
+    N_("Off"),
+    N_("Normal"),
+    N_("Strong"),
+};
+
+#define SDR_TO_HDR_QUALITY_TEXT N_("SDR to HDR quality level")
+#define SDR_TO_HDR_QUALITY_LONGTEXT N_( \
+    "Quality level for SDR to HDR expansion. Automatic picks the best level " \
+    "the Mac and video can sustain.")
+
+#define SDR_TO_HDR_MIDTONES_TEXT N_("SDR to HDR mid-tone lift")
+#define SDR_TO_HDR_MIDTONES_LONGTEXT N_( \
+    "Lifts SDR white towards HDR reference white (203 cd/m2). 0.0 leaves " \
+    "diffuse white as graded; 1.0 gives a brighter overall presentation.")
+
+#define SDR_TO_HDR_SATURATION_TEXT N_("SDR to HDR highlight saturation")
+#define SDR_TO_HDR_SATURATION_LONGTEXT N_( \
+    "Controls how colourful expanded highlights are (1.0 is standard).")
+
+#define SDR_TO_HDR_DEBAND_TEXT N_("SDR to HDR debanding filter")
+#define SDR_TO_HDR_DEBAND_LONGTEXT N_( \
+    "Smooths 8-bit banding in expanded gradients before highlights are lifted.")
+
+#define SDR_TO_HDR_PROTECT_TEXT N_("Protect subtitles and logos")
+#define SDR_TO_HDR_PROTECT_LONGTEXT N_( \
+    "Detects still, bright subtitles and channel logos and prevents them " \
+    "from being over-expanded.")
+
 static const int hdr_mode_values[] = { 0, 1, 2, 3 };
 static const char *const hdr_mode_names[] = {
     N_("Auto (Native EDR on HDR screens, Tonemap on SDR)"),
@@ -2398,6 +2896,30 @@ vlc_module_begin()
     add_bool("macosx-sdr-to-hdr", false, SDR_TO_HDR_TEXT, SDR_TO_HDR_LONGTEXT)
     add_float_with_range("macosx-sdr-to-hdr-boost", 4.0f, 1.0f, 16.0f,
                          SDR_TO_HDR_BOOST_TEXT, SDR_TO_HDR_BOOST_LONGTEXT)
+    add_string(MACLC_SDR2HDR_VAR_QUALITY, "auto",
+               SDR_TO_HDR_QUALITY_TEXT, SDR_TO_HDR_QUALITY_LONGTEXT)
+        change_string_list(quality_values, quality_names)
+    add_float_with_range(MACLC_SDR2HDR_VAR_MIDTONES, 0.0f, 0.0f, 1.0f,
+                         SDR_TO_HDR_MIDTONES_TEXT, SDR_TO_HDR_MIDTONES_LONGTEXT)
+    add_float_with_range(MACLC_SDR2HDR_VAR_SATURATION, 1.0f, 0.5f, 1.5f,
+                         SDR_TO_HDR_SATURATION_TEXT, SDR_TO_HDR_SATURATION_LONGTEXT)
+    add_string(MACLC_SDR2HDR_VAR_DEBAND, "normal",
+               SDR_TO_HDR_DEBAND_TEXT, SDR_TO_HDR_DEBAND_LONGTEXT)
+        change_string_list(deband_values, deband_names)
+    add_bool(MACLC_SDR2HDR_VAR_PROTECT, true,
+             SDR_TO_HDR_PROTECT_TEXT, SDR_TO_HDR_PROTECT_LONGTEXT)
     set_help(HELP_TEXT)
     set_callback_display(Open, 600)
+
+#if TARGET_OS_OSX
+    /* MacLC's Metal output, in place of the OpenGL engine: after the native
+     * output (600), which declines what it cannot show (Dolby Vision, HDR10+),
+     * and before OpenGL (caopengllayer, 300), kept as a fallback. */
+    add_submodule()
+    set_shortname("Metal")
+    set_description(N_("Metal video output"))
+    set_subcategory(SUBCAT_VIDEO_VOUT)
+    set_callback_display(MacLCMetalOpen, 400)
+    add_shortcut("maclc_metal", "metal")
+#endif
 vlc_module_end()

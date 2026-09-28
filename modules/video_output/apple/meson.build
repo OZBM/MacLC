@@ -35,6 +35,18 @@ vlc_modules += {
     'name' : 'samplebufferdisplay',
     'sources' : files(
         'VLCSampleBufferDisplay.m',
+        'MacLCMetalDisplay.m',
+        'MacLCMetalRenderer.m',
+        'MacLCMetalScaler.m',
+        'MacLCMetal360.m',
+        'MacLCMetalLUT.m',
+        'MacLCMetalDovi.m',
+        'MacLCMetalColorPass.m',
+        'maclc_tonecurves.c',
+        'MacLCSDR2HDRSession.m',
+        'VLCHDRExpander.m',
+        'VLCHDRNetwork.m',
+        'MacLCHDRToneMapper.m',
         '../../codec/vt_utils.c',
         '../../codec/vt_utils.h'
     ),
@@ -50,8 +62,13 @@ vlc_modules += {
         frameworks['CoreGraphics'],
         frameworks['CoreImage'],
         frameworks['VideoToolbox'],
+        frameworks['Metal'],
+        frameworks['MetalPerformanceShaders'],
+        frameworks['MetalPerformanceShadersGraph'],
+        frameworks['IOKit'],
     ],
 }
+
 
 if have_ios or have_tvos
     vlc_modules += {

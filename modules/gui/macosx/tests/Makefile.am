@@ -23,7 +23,10 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/tests/MacLCVolumePathTest.m \
 	gui/macosx/tests/MacLCFrameInterpolationTest.m \
 	gui/macosx/tests/NSMenuVLCAdditionsTest.m \
+	gui/macosx/tests/MacLCSDRToHDRTest.m \
+	gui/macosx/tests/MacLCToneCurvesTest.m \
 	video_filter/maclc_frc_geometry.c \
+	video_output/apple/maclc_tonecurves.c \
 	gui/macosx/extensions/VLCHexNumberFormatter.m \
 	gui/macosx/extensions/VLCPositionFormatter.m \
 	gui/macosx/extensions/NSString+Helpers.m \

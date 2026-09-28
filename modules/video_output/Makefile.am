@@ -91,21 +91,36 @@ endif
 if HAVE_DARWIN
 if !HAVE_WATCHOS
 libsamplebufferdisplay_plugin_la_SOURCES = video_output/apple/VLCSampleBufferDisplay.m \
+	video_output/apple/MacLCSDR2HDRSession.m video_output/apple/MacLCSDR2HDRSession.h \
 	video_output/apple/VLCHDRExpander.m video_output/apple/VLCHDRExpander.h \
+	video_output/apple/VLCHDRNetwork.m video_output/apple/VLCHDRNetwork.h \
+	video_output/apple/maclc_sdr2hdr.h \
 	video_output/apple/MacLCHDRToneMapper.m video_output/apple/MacLCHDRToneMapper.h \
 	video_output/apple/maclc_tonemap.h video_output/apple/maclc_hdr_vars.h \
 	codec/vt_utils.c codec/vt_utils.h
 libsamplebufferdisplay_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-arc
 if HAVE_OSX
+# MacLC's Metal output (AppKit view + CAMetalLayer), a submodule of this plugin
+libsamplebufferdisplay_plugin_la_SOURCES += \
+	video_output/apple/MacLCMetalDisplay.m video_output/apple/MacLCMetalDisplay.h \
+	video_output/apple/MacLCMetalRenderer.m video_output/apple/MacLCMetalRenderer.h \
+	video_output/apple/MacLCMetalScaler.m video_output/apple/MacLCMetalScaler.h \
+	video_output/apple/MacLCMetal360.m video_output/apple/MacLCMetal360.h \
+	video_output/apple/MacLCMetalLUT.m video_output/apple/MacLCMetalLUT.h \
+	video_output/apple/MacLCMetalDovi.m video_output/apple/MacLCMetalDovi.h \
+	video_output/apple/maclc_dovi.h \
+	video_output/apple/MacLCMetalColorPass.m video_output/apple/MacLCMetalColorPass.h \
+	video_output/apple/maclc_tonecurves.c video_output/apple/maclc_tonecurves.h
 libsamplebufferdisplay_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(vout_RPATH) \
-	-Wl,-framework,AVFoundation,-framework,AVKit,-framework,Cocoa,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,IOSurface
+	-Wl,-framework,AVFoundation,-framework,AVKit,-framework,Cocoa,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,MetalPerformanceShaders,-framework,MetalPerformanceShadersGraph,-framework,IOSurface,-framework,IOKit
 else
 libsamplebufferdisplay_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(vout_RPATH) \
-	-Wl,-framework,AVFoundation,-framework,Foundation,-framework,AVKit,-framework,UIKit,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,IOSurface
+	-Wl,-framework,AVFoundation,-framework,Foundation,-framework,AVKit,-framework,UIKit,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,MetalPerformanceShaders,-framework,MetalPerformanceShadersGraph,-framework,IOSurface
 endif
 vout_PLUGINS += libsamplebufferdisplay_plugin.la
 endif
 endif
+
 
 if HAVE_IOS_OR_TVOS
 libpictureinpicturecontroller_plugin_la_SOURCES = video_output/apple/VLCPictureInPictureController.m

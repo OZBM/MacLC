@@ -85,6 +85,8 @@ maclc_hdr_peak_for_headroom(float headroom)
 #define MACLC_HDR_CAP_HDR10PLUS_SEEN   0x2 /* ST 2094-40 metadata reached this vout */
 #define MACLC_HDR_CAP_CAN_DOVI         0x4 /* this vout applies Dolby Vision RPUs */
 #define MACLC_HDR_CAP_CAN_HDR10PLUS    0x8 /* this vout applies HDR10+ dynamic metadata */
+#define MACLC_HDR_CAP_SERVES_ALL      0x10 /* this vout serves every presentation in place
+                                              (the Metal engine): no track restart needed */
 
 enum maclc_hdr_presentation
 {

@@ -31,6 +31,7 @@
 /* kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange, spelled as a literal like
  * VLCHDRExpander.m does. */
 #define MACLC_CVPX_FORMAT_P010 ((OSType)'x420')
+#define MACLC_CVPX_FORMAT_P010_FULL ((OSType)'xf20')
 /* kCVPixelFormatType_64RGBAHalf */
 #define MACLC_CVPX_FORMAT_RGBA_HALF ((OSType)'RGhA')
 
@@ -56,7 +57,7 @@ typedef struct
     uint32_t transfer;   /* MACLC_TONE_SOURCE_PQ or MACLC_TONE_SOURCE_HLG */
     float hlgPeak;
     float hlgGamma;
-    uint32_t padding;
+    uint32_t fullRange;  /* 'xf20': 10-bit full range instead of video range */
 } MacLCToneMapUniforms;
 
 _Static_assert(sizeof(MacLCToneMapUniforms) == 64,
@@ -93,7 +94,7 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"    uint  transfer;\n"
     @"    float hlgPeak;\n"
     @"    float hlgGamma;\n"
-    @"    uint  padding;\n"
+    @"    uint  fullRange;\n"
     @"};\n"
     @"\n"
     @"constant float PQ_M1 = 2610.0f / 16384.0f;\n"
@@ -205,12 +206,12 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"    return clamp(Eout, 0.0f, u.dstPeakPQ);\n"
     @"}\n"
     @"\n"
-    @"/* BT.2020 non-constant-luminance, 10-bit limited range. */\n"
-    @"static inline float3 decode_ycc(float y, float2 c)\n"
+    @"/* BT.2020 non-constant-luminance, 10-bit video (x420) or full (xf20) range. */\n"
+    @"static inline float3 decode_ycc(float y, float2 c, uint fullRange)\n"
     @"{\n"
-    @"    float Y  = (y - 64.0f / 1023.0f) * (1023.0f / 876.0f);\n"
-    @"    float Cb = (c.x - 512.0f / 1023.0f) * (1023.0f / 896.0f);\n"
-    @"    float Cr = (c.y - 512.0f / 1023.0f) * (1023.0f / 896.0f);\n"
+    @"    float Y  = fullRange ? y : (y - 64.0f / 1023.0f) * (1023.0f / 876.0f);\n"
+    @"    float Cb = (c.x - 512.0f / 1023.0f) * (fullRange ? 1.0f : 1023.0f / 896.0f);\n"
+    @"    float Cr = (c.y - 512.0f / 1023.0f) * (fullRange ? 1.0f : 1023.0f / 896.0f);\n"
     @"    float r = Y + 1.4746f * Cr;\n"
     @"    float b = Y + 1.8814f * Cb;\n"
     @"    float g = (Y - 0.2627f * r - 0.0593f * b) / 0.6780f;\n"
@@ -246,7 +247,7 @@ static NSString * const kMacLCToneMapperShaderSource =
     @"                        (float(gid.y) * 0.5f + 0.25f) / float(inChroma.get_height()));\n"
     @"    float2 c = inChroma.sample(bilinear, pos).rg * u.inputScale;\n"
     @"\n"
-    @"    float3 v = decode_ycc(y, c);\n"
+    @"    float3 v = decode_ycc(y, c, u.fullRange);\n"
     @"    float3 nits;\n"
     @"    float m;\n"
     @"    if (u.transfer == 1u) {\n"
@@ -353,7 +354,7 @@ static NSString * const kMacLCToneMapperShaderSource =
 
 - (BOOL)canToneMapPixelFormat:(OSType)pixelFormat
 {
-    return pixelFormat == MACLC_CVPX_FORMAT_P010;
+    return pixelFormat == MACLC_CVPX_FORMAT_P010 || pixelFormat == MACLC_CVPX_FORMAT_P010_FULL;
 }
 
 - (nullable id<MTLTexture>)textureFromBuffer:(CVPixelBufferRef)buffer
@@ -498,6 +499,7 @@ static NSString * const kMacLCToneMapperShaderSource =
                                                         : MACLC_TONE_SOURCE_PQ;
     uniforms.hlgPeak = (hlgPeak > 0.0f) ? hlgPeak : MACLC_HDR_HLG_PEAK;
     uniforms.hlgGamma = maclc_hlg_system_gamma(uniforms.hlgPeak);
+    uniforms.fullRange = CVPixelBufferGetPixelFormatType(pixelBuffer) == MACLC_CVPX_FORMAT_P010_FULL;
 
     commandBuffer = [_queue commandBuffer];
     encoder = [commandBuffer computeCommandEncoder];
