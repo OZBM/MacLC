@@ -71,6 +71,8 @@
 #import "hdr/MacLCHDRController.h"
 #import "coreinteraction/MacLCOSDController.h"
 #import "hdr/MacLCHDRMenuController.h"
+#import "hdr/MacLCHDRPanelViewController.h"
+#import "hdr/MacLCSDRToHDRPanelViewController.h"
 #import "menus/VLCStatusBarIcon.h"
 
 #import "os-integration/VLCClickerManager.h"
@@ -521,6 +523,89 @@ static VLCMain *sharedInstance = nil;
                         item.image != nil ? @"*" : @""]];
                 }
                 NSLog(@"LAYOUTDUMP menu %@: %@", top.submenu.title, [titles componentsJoinedByString:@", "]);
+            }
+        });
+    }
+    /* MACLC_DEBUG_SNAPSHOT=<prefix> draws every visible MacLC window at least
+     * 200 points wide into <prefix>-<window number>.png, 3 s after the panel
+     * hook fires (or 9 s after launch). The app draws its own views, so it
+     * works when the screen is locked or cannot be recorded; materials that
+     * sample what lies behind a window (Liquid Glass) come out plain. */
+    const char * const debugSnapshot = getenv("MACLC_DEBUG_SNAPSHOT");
+    if (debugSnapshot != NULL) {
+        const char * const panelDelay = getenv("MACLC_DEBUG_SHOW_PANEL_DELAY");
+        const double delay = (panelDelay != NULL ? atof(panelDelay) : 6.0) + 3.0;
+        NSString * const prefix = @(debugSnapshot);
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            for (NSWindow * const window in NSApp.windows) {
+                NSView * const view = window.contentView.superview ?: window.contentView;
+                if (!window.isVisible || view == nil || NSWidth(view.bounds) < 200.0)
+                    continue;
+                NSBitmapImageRep * const rep = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
+                [view cacheDisplayInRect:view.bounds toBitmapImageRep:rep];
+                NSData * const png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+                NSString * const path = [NSString stringWithFormat:@"%@-%ld.png", prefix, (long)window.windowNumber];
+                [png writeToFile:path atomically:YES];
+                NSLog(@"SNAPSHOT %@ %@ %@", path, window.title, NSStringFromRect(window.frame));
+            }
+        });
+    }
+    /* MACLC_DEBUG_SHOW_PANEL=sdr2hdr|hdr|settings-hdr[+advanced][:y] opens, after
+     * MACLC_DEBUG_SHOW_PANEL_DELAY seconds (6 by default), the SDR to HDR
+     * popover, the HDR popover or the HDR & Colour settings pane, anchored to
+     * the library window, so headless captures can see them. */
+    const char * const debugPanel = getenv("MACLC_DEBUG_SHOW_PANEL");
+    if (debugPanel != NULL) {
+        const char * const debugPanelDelay = getenv("MACLC_DEBUG_SHOW_PANEL_DELAY");
+        const double delay = debugPanelDelay != NULL ? atof(debugPanelDelay) : 6.0;
+        NSString * const panel = @(debugPanel);
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            NSView * const anchor = self->_libraryWindowController.window.contentView;
+            if (anchor == nil && ![panel hasPrefix:@"settings-hdr"])
+                return;
+            if ([panel isEqualToString:@"sdr2hdr"]) {
+                [MacLCSDRToHDRPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
+            } else if ([panel isEqualToString:@"hdr"]) {
+                [MacLCHDRPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
+            } else if ([panel hasPrefix:@"settings-hdr"]) {
+                [self.settingsWindowController showSettingsWindowWithLevel:NSNormalWindowLevel];
+                [self.settingsWindowController selectPaneWithIdentifier:@"video-hdr"];
+                /* settings-hdr+advanced also opens Advanced Options. */
+                if ([panel containsString:@"+advanced"]) {
+                    NSMutableArray<NSView *> * const views =
+                        [NSMutableArray arrayWithObject:self.settingsWindowController.window.contentView];
+                    while (views.count > 0) {
+                        NSView * const view = views.firstObject;
+                        [views removeObjectAtIndex:0];
+                        if ([view isKindOfClass:[NSButton class]]
+                            && [((NSButton *)view).title isEqualToString:_NS("Advanced Options")]) {
+                            [(NSButton *)view performClick:nil];
+                            break;
+                        }
+                        [views addObjectsFromArray:view.subviews];
+                    }
+                }
+                /* settings-hdr:<y> scrolls the pane down to <y> points. */
+                const NSRange colon = [panel rangeOfString:@":"];
+                if (colon.location != NSNotFound) {
+                    const CGFloat y = [[panel substringFromIndex:colon.location + 1] doubleValue];
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        NSMutableArray<NSView *> * const queue =
+                            [NSMutableArray arrayWithObject:self.settingsWindowController.window.contentView];
+                        while (queue.count > 0) {
+                            NSView * const view = queue.firstObject;
+                            [queue removeObjectAtIndex:0];
+                            if ([view isKindOfClass:[NSScrollView class]]
+                                && ((NSScrollView *)view).documentView.frame.size.height > 1000.0) {
+                                NSScrollView * const scroll = (NSScrollView *)view;
+                                [scroll.documentView scrollPoint:NSMakePoint(0, scroll.documentView.isFlipped
+                                    ? y : NSHeight(scroll.documentView.frame) - y - NSHeight(scroll.contentView.bounds))];
+                                break;
+                            }
+                            [queue addObjectsFromArray:view.subviews];
+                        }
+                    });
+                }
             }
         });
     }

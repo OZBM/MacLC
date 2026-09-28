@@ -457,7 +457,8 @@ static const NSTimeInterval kPollInterval = 1.0;
 }
 
 /* Keeps each presentation on the output built for it: Dolby Vision and HDR10+
- * need the libplacebo output, the others are cheapest on the native one. A
+ * need the libplacebo output or the Metal engine, the others are cheapest on
+ * the native one; the Metal engine serves them all in place. A
  * running output of the wrong kind is replaced by restarting the video track;
  * SDR is served live by both. Until an output has said which kind it is there
  * is nothing to replace: the one being opened reads the request itself. */
@@ -469,6 +470,9 @@ static const NSTimeInterval kPollInterval = 1.0;
 
     const MacLCHDRPresentation presentation = _requestedPresentation;
     if (presentation == MacLCHDRPresentationAuto || presentation == MacLCHDRPresentationSDR)
+        return;
+    /* The Metal engine applies every presentation itself. */
+    if (_caps & MACLC_HDR_CAP_SERVES_ALL)
         return;
 
     const BOOL runningLibplacebo = (_caps & MACLC_HDR_CAP_CAN_DOVI) != 0;

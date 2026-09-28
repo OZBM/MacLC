@@ -503,6 +503,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/shaders/VLCShaderTypes.h \
 	gui/macosx/hdr/MacLCDisplayInfo.h \
 	gui/macosx/hdr/MacLCDisplayInfo.m \
+	gui/macosx/hdr/MacLCExpansionCurveView.h \
+	gui/macosx/hdr/MacLCExpansionCurveView.m \
 	gui/macosx/hdr/MacLCHDRAdvisor.h \
 	gui/macosx/hdr/MacLCHDRAdvisor.m \
 	gui/macosx/hdr/MacLCHDRCardView.h \
@@ -517,6 +519,10 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/hdr/MacLCHDRStreamInfo.m \
 	gui/macosx/hdr/MacLCHDRTypes.h \
 	gui/macosx/hdr/MacLCHDRTypes.m \
+	gui/macosx/hdr/MacLCSDRToHDRPanelViewController.h \
+	gui/macosx/hdr/MacLCSDRToHDRPanelViewController.m \
+	gui/macosx/hdr/MacLCSDRToHDRState.h \
+	gui/macosx/hdr/MacLCSDRToHDRState.m \
 	gui/macosx/hdr/MacLCToneCurveView.h \
 	gui/macosx/hdr/MacLCToneCurveView.m \
 	gui/macosx/hdr/MacLCTradeoffMeterView.h \
@@ -887,11 +893,15 @@ endif
 
 libmacosx_plugin_ladir = $(prefix)/share/macosx/Contents/Resources
 
-# The RIFE network the frame interpolation filter runs on Core ML. A Core ML
-# package is a directory, so its three files are installed one by one rather
-# than through the resource list above.
+# The networks MacLC runs: RIFE for frame interpolation, on Core ML, and the
+# SDR to HDR network, on MPSGraph. A Core ML package is a directory, so its
+# three files are installed one by one rather than through the resource list
+# above.
 maclcmodelsdir = $(prefix)/share/macosx/Contents/Resources/models
-dist_maclcmodels_DATA = gui/macosx/Resources/models/LICENSE.RIFE
+dist_maclcmodels_DATA = gui/macosx/Resources/models/LICENSE.RIFE \
+	gui/macosx/Resources/models/LICENSE.SDR2HDR \
+	gui/macosx/Resources/models/sdr2hdr-high-v1.maclcnn \
+	gui/macosx/Resources/models/sdr2hdr-max-v1.maclcnn
 
 maclcrifedir = $(maclcmodelsdir)/rife.mlpackage
 dist_maclcrife_DATA = gui/macosx/Resources/models/rife.mlpackage/Manifest.json

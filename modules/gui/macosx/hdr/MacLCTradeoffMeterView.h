@@ -38,6 +38,9 @@ NS_ASSUME_NONNULL_BEGIN
        needsToneMapping:(BOOL)needsToneMapping
                animated:(BOOL)animated;
 
+- (void)setTitles:(NSArray<NSString *> *)titles;        // 4 titles
+- (void)showLevels:(NSArray<NSNumber *> *)levels animated:(BOOL)animated; // 4 values 0..3
+
 @end
 
 NS_ASSUME_NONNULL_END

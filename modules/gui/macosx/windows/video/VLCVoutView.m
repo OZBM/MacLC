@@ -72,6 +72,9 @@
 
 - (void)dealloc
 {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+    [_hotkeysController cancelComparing];
+
     vlc_mutex_lock(&_mutex);
     _wnd = NULL;
     vlc_mutex_unlock(&_mutex);
@@ -114,6 +117,17 @@
     vlc_mutex_init(&_mutex);
 }
 
+- (void)viewWillMoveToWindow:(nullable NSWindow *)newWindow
+{
+    [super viewWillMoveToWindow:newWindow];
+    if (self.window) {
+        [NSNotificationCenter.defaultCenter removeObserver:self
+                                                      name:NSWindowDidResignKeyNotification
+                                                    object:self.window];
+    }
+    [_hotkeysController cancelComparing];
+}
+
 - (void)viewDidMoveToWindow
 {
     [super viewDidMoveToWindow];
@@ -123,7 +137,16 @@
             self.window.contentView.wantsLayer = YES;
             self.window.contentView.layer.wantsExtendedDynamicRangeContent = YES;
         }
+        [NSNotificationCenter.defaultCenter addObserver:self
+                                               selector:@selector(windowDidResignKey:)
+                                                   name:NSWindowDidResignKeyNotification
+                                                 object:self.window];
     }
+}
+
+- (void)windowDidResignKey:(NSNotification *)notification
+{
+    [_hotkeysController cancelComparing];
 }
 
 - (void)layout
@@ -154,6 +177,13 @@
 {
     if (![_hotkeysController handleVideoOutputKeyDown:o_event forVideoOutput:p_vout]) {
         [super keyDown: o_event];
+    }
+}
+
+- (void)keyUp:(NSEvent *)o_event
+{
+    if (![_hotkeysController handleVideoOutputKeyUp:o_event]) {
+        [super keyUp:o_event];
     }
 }
 
@@ -393,6 +423,8 @@
 - (BOOL)resignFirstResponder
 {
     /* while we need to be the first responder most of the time, we need to give up that status when toggling the playlist */
+    /* M's key up would then go elsewhere: end a hold-to-compare now. */
+    [_hotkeysController cancelComparing];
     return YES;
 }
 

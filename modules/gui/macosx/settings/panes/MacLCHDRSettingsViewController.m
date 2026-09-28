@@ -29,6 +29,8 @@
 #import "hdr/MacLCHDRTypes.h"
 #import "hdr/MacLCHDRController.h"
 #import "hdr/MacLCDisplayInfo.h"
+#import "hdr/MacLCSDRToHDRState.h"
+#include "../../video_output/apple/maclc_sdr2hdr.h"
 
 #import "main/VLCMain.h"
 #import "playqueue/VLCPlayQueueController.h"
@@ -153,8 +155,15 @@ NSString * const MacLCHDRExpansionChangedNotification =
 
 - (void)setRowEnabled:(BOOL)enabled
 {
-    if ([_controlView isKindOfClass:[NSControl class]]) {
-        ((NSControl *)_controlView).enabled = enabled;
+    /* The control may be a container (slider + value label). */
+    NSMutableArray<NSView *> *views = [NSMutableArray arrayWithObject:_controlView];
+    while (views.count > 0) {
+        NSView *view = views.lastObject;
+        [views removeLastObject];
+        if ([view isKindOfClass:[NSControl class]])
+            ((NSControl *)view).enabled = enabled;
+        else
+            [views addObjectsFromArray:view.subviews];
     }
     _titleLabel.textColor = enabled ? MacLCDesign.primaryLabel : MacLCDesign.tertiaryLabel;
     _explanationLabel.textColor = enabled ? MacLCDesign.secondaryLabel : MacLCDesign.tertiaryLabel;
@@ -245,12 +254,29 @@ NSString * const MacLCHDRExpansionChangedNotification =
     NSPopUpButton *_hlgPopup;
     NSPopUpButton *_cardPolicyPopup;
 
-    // SDR to HDR (macosx-sdr-to-hdr, macosx-sdr-to-hdr-boost)
+    // SDR to HDR
     NSButton *_sdrToHdrCheckbox;
+    MacLCSettingsRowView *_sdrToHdrQualityRow;
+    NSPopUpButton *_sdrToHdrQualityPopup;
+    NSTextField *_sdrToHdrBoostTitle;
     NSSlider *_sdrToHdrBoostSlider;
     NSTextField *_sdrToHdrBoostLabel;
     NSTextField *_sdrToHdrBoostCaption;
-    float _currentSdrToHdrBoost;
+    NSButton *_sdrToHdrAdvancedButton;
+    NSStackView *_sdrToHdrAdvancedStackView;
+    BOOL _sdrToHdrAdvancedExpanded;
+    NSTextField *_sdrToHdrMidtonesTitle;
+    NSTextField *_sdrToHdrMidtonesValueLabel;
+    NSSlider *_sdrToHdrMidtonesSlider;
+    NSTextField *_sdrToHdrMidtonesCaption;
+    NSTextField *_sdrToHdrSaturationTitle;
+    NSTextField *_sdrToHdrSaturationValueLabel;
+    NSSlider *_sdrToHdrSaturationSlider;
+    NSTextField *_sdrToHdrSaturationCaption;
+    MacLCSettingsRowView *_sdrToHdrDebandRow;
+    NSPopUpButton *_sdrToHdrDebandPopup;
+    NSButton *_sdrToHdrProtectCheckbox;
+    NSTextField *_sdrToHdrProtectCaption;
 
     // Brightness Headroom (macosx-edr-headroom)
     NSButton *_headroomAutoCheckbox;
@@ -286,6 +312,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
 
     // All engine-specific row views
     NSMutableArray<MacLCSettingsRowView *> *_openGLEngineRows;
+    NSMutableArray<MacLCSettingsRowView *> *_metalEngineRows;
 }
 
 - (instancetype)initWithIntf:(intf_thread_t *)intf
@@ -296,6 +323,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
         _hasUnsavedChanges = NO;
         _advancedExpanded = NO;
         _openGLEngineRows = [[NSMutableArray alloc] init];
+        _metalEngineRows = [[NSMutableArray alloc] init];
     }
     return self;
 }
@@ -370,10 +398,16 @@ NSString * const MacLCHDRExpansionChangedNotification =
         @"bt.2390", @"hable", @"reinhard", @"upscaler", @"downscaler",
         @"lanczos", @"spline", @"dither", @"videotoolbox", @"hardware decoding",
         @"cvpx", @"p010", @"bgra", @"sdr", @"hlg", @"dolby vision",
-        @"samplebufferdisplay", @"caopengllayer",
+        @"samplebufferdisplay", @"caopengllayer", @"metal", @"maclc_metal", @"opengl",
+        @"video engine", @"lut", @"3d lut", @"360",
         @"inverse tone mapping", @"dynamic range expansion", @"fake hdr",
         @"sdr to hdr", @"convert sdr", @"macosx-sdr-to-hdr",
         @"macosx-sdr-to-hdr-boost",
+        @"quality", @"automatic", @"fast", @"balanced", @"high", @"maximum",
+        @"mid-tones", @"banding", @"subtitles", @"logos", @"compare",
+        @"macosx-sdr-to-hdr-quality", @"macosx-sdr-to-hdr-midtones",
+        @"macosx-sdr-to-hdr-saturation", @"macosx-sdr-to-hdr-deband",
+        @"macosx-sdr-to-hdr-protect",
         @"macosx-hdr-mode", @"macosx-edr-headroom", @"force-darwin-legacy-display",
         @"format", @"hdr10+", @"hdr10", @"accurate", @"balanced", @"bright",
         @"format card", @"maclc-hdr-presentation", @"maclc-hdr-picture", @"maclc-hdr-card",
@@ -429,9 +463,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
     [_cardPolicyPopup selectItemWithTag:[MacLCHDRController sharedController].cardPolicy];
 
     /* SDR to HDR */
-    _sdrToHdrCheckbox.state = MacLCConfigGetInt("macosx-sdr-to-hdr", 0)
-        ? NSControlStateValueOn : NSControlStateValueOff;
-    _currentSdrToHdrBoost = MacLCConfigGetFloat("macosx-sdr-to-hdr-boost", 4.0f);
+    [[MacLCSDRToHDRState sharedState] refresh];
     [self updateSdrToHdrControls];
 
     /* Headroom */
@@ -442,7 +474,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
     [_toneMappingPopup selectItemWithTag:MacLCConfigGetInt("gl-tone-mapping-function", 0)];
     float param = MacLCConfigGetFloat("gl-tone-mapping-param", 0.0f);
     _toneMappingParamSlider.floatValue = param;
-    _toneMappingParamLabel.stringValue = (param == 0.0f) ? _NS("0.0 (Optimal default)") : [NSString stringWithFormat:@"%.2f", param];
+    _toneMappingParamLabel.stringValue = (param == 0.0f) ? _NS("Default") : [NSString stringWithFormat:@"%.2f", param];
     [_gamutMappingPopup selectItemWithTag:MacLCConfigGetInt("gl-gamut-mapping", 0)];
     _inverseToneMappingCheckbox.state = MacLCConfigGetInt("gl-inverse-tone-mapping", 0) ? NSControlStateValueOn : NSControlStateValueOff;
 
@@ -457,7 +489,12 @@ NSString * const MacLCHDRExpansionChangedNotification =
     /* Video engine */
     char *psz_vout = MacLCConfigGetPsz("vout");
     if (psz_vout && strlen(psz_vout) > 0) {
-        [_voutPopup selectItemWithTag:[self tagForVoutString:[NSString stringWithUTF8String:psz_vout]]];
+        const NSInteger tag = [self tagForVoutString:[NSString stringWithUTF8String:psz_vout]];
+        if (tag == 3 && [_voutPopup indexOfItemWithTag:3] < 0) {
+            [_voutPopup addItemWithTitle:_NS("OpenGL (Legacy)")];
+            [_voutPopup lastItem].tag = 3;
+        }
+        [_voutPopup selectItemWithTag:tag];
     } else {
         [_voutPopup selectItemWithTag:0]; /* "any" */
     }
@@ -495,13 +532,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
     [MacLCHDRController sharedController].cardPolicy =
         (MacLCHDRCardPolicy)_cardPolicyPopup.selectedTag;
 
-    /* SDR to HDR */
-    const BOOL sdrToHdr = (_sdrToHdrCheckbox.state == NSControlStateValueOn);
-    MacLCConfigPutInt("macosx-sdr-to-hdr", sdrToHdr ? 1 : 0);
-    MacLCConfigPutFloat("macosx-sdr-to-hdr-boost", _currentSdrToHdrBoost);
-    [self pushSdrToHdrToRunningVideoOutput];
-    [NSNotificationCenter.defaultCenter
-        postNotificationName:MacLCHDRExpansionChangedNotification object:self];
+    /* SDR to HDR options apply live through MacLCSDRToHDRState; nothing to save here. */
 
     /* Headroom */
     MacLCConfigPutFloat("macosx-edr-headroom", _currentHeadroom);
@@ -542,8 +573,14 @@ NSString * const MacLCHDRExpansionChangedNotification =
         btn.state = (btn.tag == 0) ? NSControlStateValueOn : NSControlStateValueOff;
     }
 
-    _sdrToHdrCheckbox.state = NSControlStateValueOff;
-    _currentSdrToHdrBoost = 4.0f;
+    MacLCSDRToHDRState *sdrState = [MacLCSDRToHDRState sharedState];
+    sdrState.enabled = NO;
+    sdrState.quality = MacLCSDRToHDRQualityAuto;
+    sdrState.boost = MACLC_SDR2HDR_BOOST_DEFAULT;
+    sdrState.midtones = MACLC_SDR2HDR_MIDTONES_DEFAULT;
+    sdrState.saturation = MACLC_SDR2HDR_SATURATION_DEFAULT;
+    sdrState.deband = MACLC_SDR2HDR_DEBAND_NORMAL;
+    sdrState.protect = YES;
     [self updateSdrToHdrControls];
 
     _currentHeadroom = 0.0f;
@@ -551,7 +588,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
 
     [_toneMappingPopup selectItemWithTag:0];
     _toneMappingParamSlider.floatValue = 0.0f;
-    _toneMappingParamLabel.stringValue = _NS("0.0 (Optimal default)");
+    _toneMappingParamLabel.stringValue = _NS("Default");
     [_gamutMappingPopup selectItemWithTag:0];
     _inverseToneMappingCheckbox.state = NSControlStateValueOff;
 
@@ -778,55 +815,91 @@ NSString * const MacLCHDRExpansionChangedNotification =
     _sdrToHdrCheckbox.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSTextField *explanationLabel = [NSTextField wrappingLabelWithString:
-        _NS("An ordinary video file carries no HDR signal, so the screen shows "
-            "it at standard brightness however capable it is. Switch this on "
-            "and every such file is re-graded for the display's extended range "
-            "as it plays: shadows and mid-tones come out exactly as they were, "
-            "and only the highlights are lifted, so the picture gains depth "
-            "without looking washed out. It needs a screen with extended "
-            "range — the Liquid Retina XDR display of an Apple silicon MacBook "
-            "Pro, or an external HDR display — and it leaves video that is "
-            "already HDR alone.")];
+        _NS("Brightens the highlights of ordinary video into your display's extra range. "
+            "Shadows and mid-tones stay as graded. Needs an XDR or HDR display; HDR video is left alone.")];
     explanationLabel.font = MacLCDesign.caption;
     explanationLabel.textColor = MacLCDesign.secondaryLabel;
     explanationLabel.translatesAutoresizingMaskIntoConstraints = NO;
     explanationLabel.accessibilityRole = NSAccessibilityStaticTextRole;
 
+    _sdrToHdrQualityPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    _sdrToHdrQualityPopup.target = self;
+    _sdrToHdrQualityPopup.action = @selector(sdrToHdrQualityChanged:);
+    _sdrToHdrQualityPopup.font = MacLCDesign.body;
+    _sdrToHdrQualityPopup.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSArray *qualityItems = @[
+        @[_NS("Automatic (Recommended)"), @(MACLC_SDR2HDR_AUTO)],
+        @[_NS("Fast"), @(MACLC_SDR2HDR_FAST)],
+        @[_NS("Balanced"), @(MACLC_SDR2HDR_BALANCED)],
+        @[_NS("High"), @(MACLC_SDR2HDR_HIGH)],
+        @[_NS("Maximum"), @(MACLC_SDR2HDR_MAXIMUM)],
+    ];
+    for (NSArray *item in qualityItems) {
+        [_sdrToHdrQualityPopup addItemWithTitle:item[0]];
+        _sdrToHdrQualityPopup.lastItem.tag = [item[1] integerValue];
+    }
+
+    _sdrToHdrQualityRow = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Quality")
+                                                          explanation:[MacLCSDRToHDRState summaryForQuality:MacLCSDRToHDRQualityAuto]
+                                                              control:_sdrToHdrQualityPopup
+                                                              isRisky:NO];
+
     NSView *boostRow = [[NSView alloc] init];
     boostRow.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSTextField *boostTitle = [NSTextField labelWithString:_NS("Highlight boost")];
-    boostTitle.font = MacLCDesign.body;
-    boostTitle.textColor = MacLCDesign.primaryLabel;
-    boostTitle.translatesAutoresizingMaskIntoConstraints = NO;
+    _sdrToHdrBoostTitle = [NSTextField labelWithString:_NS("Highlights up to:")];
+    _sdrToHdrBoostTitle.font = MacLCDesign.bodyEmphasized;
+    _sdrToHdrBoostTitle.textColor = MacLCDesign.primaryLabel;
+    _sdrToHdrBoostTitle.translatesAutoresizingMaskIntoConstraints = NO;
 
-    _sdrToHdrBoostLabel = [NSTextField labelWithString:@"4.0x"];
+    _sdrToHdrBoostLabel = [NSTextField labelWithString:@"400 cd/m²"];
     _sdrToHdrBoostLabel.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleBody];
     _sdrToHdrBoostLabel.textColor = MacLCDesign.primaryLabel;
     _sdrToHdrBoostLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    [boostRow addSubview:boostTitle];
+    [boostRow addSubview:_sdrToHdrBoostTitle];
     [boostRow addSubview:_sdrToHdrBoostLabel];
 
     [NSLayoutConstraint activateConstraints:@[
-        [boostTitle.leadingAnchor constraintEqualToAnchor:boostRow.leadingAnchor],
-        [boostTitle.topAnchor constraintEqualToAnchor:boostRow.topAnchor],
-        [boostTitle.bottomAnchor constraintEqualToAnchor:boostRow.bottomAnchor],
+        [_sdrToHdrBoostTitle.leadingAnchor constraintEqualToAnchor:boostRow.leadingAnchor],
+        [_sdrToHdrBoostTitle.topAnchor constraintEqualToAnchor:boostRow.topAnchor],
+        [_sdrToHdrBoostTitle.bottomAnchor constraintEqualToAnchor:boostRow.bottomAnchor],
 
         [_sdrToHdrBoostLabel.trailingAnchor constraintEqualToAnchor:boostRow.trailingAnchor],
-        [_sdrToHdrBoostLabel.centerYAnchor constraintEqualToAnchor:boostTitle.centerYAnchor]
+        [_sdrToHdrBoostLabel.centerYAnchor constraintEqualToAnchor:_sdrToHdrBoostTitle.centerYAnchor]
     ]];
 
+    NSStackView *boostSliderRow = [[NSStackView alloc] init];
+    boostSliderRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    boostSliderRow.alignment = NSLayoutAttributeCenterY;
+    boostSliderRow.spacing = MacLCDesign.spacingS;
+    boostSliderRow.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSImageView *minSun = [[NSImageView alloc] init];
+    minSun.image = [MacLCDesign symbolNamed:@"sun.min" pointSize:12 weight:NSFontWeightRegular accessibilityLabel:nil];
+    minSun.contentTintColor = MacLCDesign.tertiaryLabel;
+    minSun.accessibilityElement = NO;
+
+    NSImageView *maxSun = [[NSImageView alloc] init];
+    maxSun.image = [MacLCDesign symbolNamed:@"sun.max" pointSize:14 weight:NSFontWeightRegular accessibilityLabel:nil];
+    maxSun.contentTintColor = MacLCDesign.secondaryLabel;
+    maxSun.accessibilityElement = NO;
+
     _sdrToHdrBoostSlider = [[NSSlider alloc] init];
-    _sdrToHdrBoostSlider.minValue = 1.0;
-    _sdrToHdrBoostSlider.maxValue = 16.0;
-    _sdrToHdrBoostSlider.numberOfTickMarks = 16;
+    _sdrToHdrBoostSlider.minValue = 0.0;
+    _sdrToHdrBoostSlider.maxValue = 4.0;
+    _sdrToHdrBoostSlider.numberOfTickMarks = 5;
     _sdrToHdrBoostSlider.allowsTickMarkValuesOnly = NO;
     _sdrToHdrBoostSlider.continuous = YES;
     _sdrToHdrBoostSlider.target = self;
-    _sdrToHdrBoostSlider.action = @selector(sdrToHdrBoostChanged:);
+    _sdrToHdrBoostSlider.action = @selector(sdrToHdrBoostSliderChanged:);
     _sdrToHdrBoostSlider.translatesAutoresizingMaskIntoConstraints = NO;
-    [_sdrToHdrBoostSlider setAccessibilityLabel:_NS("SDR to HDR highlight boost")];
+    [_sdrToHdrBoostSlider setAccessibilityLabel:_NS("Highlights up to")];
+
+    [boostSliderRow addArrangedSubview:minSun];
+    [boostSliderRow addArrangedSubview:_sdrToHdrBoostSlider];
+    [boostSliderRow addArrangedSubview:maxSun];
 
     _sdrToHdrBoostCaption = [NSTextField wrappingLabelWithString:@""];
     _sdrToHdrBoostCaption.font = MacLCDesign.caption;
@@ -834,16 +907,250 @@ NSString * const MacLCHDRExpansionChangedNotification =
     _sdrToHdrBoostCaption.translatesAutoresizingMaskIntoConstraints = NO;
     _sdrToHdrBoostCaption.accessibilityRole = NSAccessibilityStaticTextRole;
 
+    _sdrToHdrAdvancedButton = [NSButton buttonWithTitle:_NS("Advanced")
+                                                 target:self
+                                                 action:@selector(toggleSdrToHdrAdvanced:)];
+    _sdrToHdrAdvancedButton.bezelStyle = NSBezelStyleInline;
+    _sdrToHdrAdvancedButton.bordered = NO;
+    _sdrToHdrAdvancedButton.font = MacLCDesign.headline;
+    _sdrToHdrAdvancedButton.image = [MacLCDesign symbolNamed:@"chevron.right"
+                                                   pointSize:11
+                                                      weight:NSFontWeightMedium
+                                          accessibilityLabel:_NS("Expand Advanced")];
+    _sdrToHdrAdvancedButton.imagePosition = NSImageLeading;
+    _sdrToHdrAdvancedButton.contentTintColor = MacLCDesign.secondaryLabel;
+    _sdrToHdrAdvancedButton.translatesAutoresizingMaskIntoConstraints = NO;
+    /* Title next to its chevron, however wide the card stretches the button. */
+    _sdrToHdrAdvancedButton.alignment = NSTextAlignmentLeft;
+    [_sdrToHdrAdvancedButton setContentHuggingPriority:NSLayoutPriorityRequired
+                                        forOrientation:NSLayoutConstraintOrientationHorizontal];
+
+    _sdrToHdrAdvancedStackView = [[NSStackView alloc] init];
+    _sdrToHdrAdvancedStackView.orientation = NSUserInterfaceLayoutOrientationVertical;
+    _sdrToHdrAdvancedStackView.alignment = NSLayoutAttributeLeading;
+    _sdrToHdrAdvancedStackView.spacing = MacLCDesign.groupSpacing;
+    _sdrToHdrAdvancedStackView.translatesAutoresizingMaskIntoConstraints = NO;
+    _sdrToHdrAdvancedStackView.hidden = YES;
+    _sdrToHdrAdvancedExpanded = NO;
+
+    // Advanced - Mid-tones
+    NSView *midtonesTopRow = [[NSView alloc] init];
+    midtonesTopRow.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _sdrToHdrMidtonesTitle = [NSTextField labelWithString:_NS("Mid-tones:")];
+    _sdrToHdrMidtonesTitle.font = MacLCDesign.bodyEmphasized;
+    _sdrToHdrMidtonesTitle.textColor = MacLCDesign.primaryLabel;
+    _sdrToHdrMidtonesTitle.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _sdrToHdrMidtonesValueLabel = [NSTextField labelWithString:@"0 %"];
+    _sdrToHdrMidtonesValueLabel.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleBody];
+    _sdrToHdrMidtonesValueLabel.textColor = MacLCDesign.primaryLabel;
+    _sdrToHdrMidtonesValueLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    [midtonesTopRow addSubview:_sdrToHdrMidtonesTitle];
+    [midtonesTopRow addSubview:_sdrToHdrMidtonesValueLabel];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [_sdrToHdrMidtonesTitle.leadingAnchor constraintEqualToAnchor:midtonesTopRow.leadingAnchor],
+        [_sdrToHdrMidtonesTitle.topAnchor constraintEqualToAnchor:midtonesTopRow.topAnchor],
+        [_sdrToHdrMidtonesTitle.bottomAnchor constraintEqualToAnchor:midtonesTopRow.bottomAnchor],
+
+        [_sdrToHdrMidtonesValueLabel.trailingAnchor constraintEqualToAnchor:midtonesTopRow.trailingAnchor],
+        [_sdrToHdrMidtonesValueLabel.centerYAnchor constraintEqualToAnchor:_sdrToHdrMidtonesTitle.centerYAnchor]
+    ]];
+
+    _sdrToHdrMidtonesSlider = [[NSSlider alloc] init];
+    _sdrToHdrMidtonesSlider.minValue = 0.0;
+    _sdrToHdrMidtonesSlider.maxValue = 1.0;
+    _sdrToHdrMidtonesSlider.continuous = YES;
+    _sdrToHdrMidtonesSlider.target = self;
+    _sdrToHdrMidtonesSlider.action = @selector(sdrToHdrMidtonesChanged:);
+    _sdrToHdrMidtonesSlider.translatesAutoresizingMaskIntoConstraints = NO;
+    [_sdrToHdrMidtonesSlider setAccessibilityLabel:_NS("Mid-tones")];
+
+    NSView *midtonesLabelsRow = [[NSView alloc] init];
+    midtonesLabelsRow.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *midtonesLeftLabel = [NSTextField labelWithString:_NS("As graded")];
+    midtonesLeftLabel.font = MacLCDesign.caption;
+    midtonesLeftLabel.textColor = MacLCDesign.secondaryLabel;
+    midtonesLeftLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *midtonesRightLabel = [NSTextField labelWithString:_NS("Lifted")];
+    midtonesRightLabel.font = MacLCDesign.caption;
+    midtonesRightLabel.textColor = MacLCDesign.secondaryLabel;
+    midtonesRightLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    [midtonesLabelsRow addSubview:midtonesLeftLabel];
+    [midtonesLabelsRow addSubview:midtonesRightLabel];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [midtonesLeftLabel.leadingAnchor constraintEqualToAnchor:midtonesLabelsRow.leadingAnchor],
+        [midtonesLeftLabel.topAnchor constraintEqualToAnchor:midtonesLabelsRow.topAnchor],
+        [midtonesLeftLabel.bottomAnchor constraintEqualToAnchor:midtonesLabelsRow.bottomAnchor],
+
+        [midtonesRightLabel.trailingAnchor constraintEqualToAnchor:midtonesLabelsRow.trailingAnchor],
+        [midtonesRightLabel.topAnchor constraintEqualToAnchor:midtonesLabelsRow.topAnchor],
+        [midtonesRightLabel.bottomAnchor constraintEqualToAnchor:midtonesLabelsRow.bottomAnchor],
+    ]];
+
+    _sdrToHdrMidtonesCaption = [NSTextField wrappingLabelWithString:
+        _NS("Lifting brightens the whole picture the way HDR masters sit above SDR. Uses more power.")];
+    _sdrToHdrMidtonesCaption.font = MacLCDesign.caption;
+    _sdrToHdrMidtonesCaption.textColor = MacLCDesign.secondaryLabel;
+    _sdrToHdrMidtonesCaption.translatesAutoresizingMaskIntoConstraints = NO;
+    _sdrToHdrMidtonesCaption.accessibilityRole = NSAccessibilityStaticTextRole;
+
+    // Advanced - Highlight colour
+    NSView *satTopRow = [[NSView alloc] init];
+    satTopRow.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _sdrToHdrSaturationTitle = [NSTextField labelWithString:_NS("Highlight colour:")];
+    _sdrToHdrSaturationTitle.font = MacLCDesign.bodyEmphasized;
+    _sdrToHdrSaturationTitle.textColor = MacLCDesign.primaryLabel;
+    _sdrToHdrSaturationTitle.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _sdrToHdrSaturationValueLabel = [NSTextField labelWithString:@"100 %"];
+    _sdrToHdrSaturationValueLabel.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleBody];
+    _sdrToHdrSaturationValueLabel.textColor = MacLCDesign.primaryLabel;
+    _sdrToHdrSaturationValueLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    [satTopRow addSubview:_sdrToHdrSaturationTitle];
+    [satTopRow addSubview:_sdrToHdrSaturationValueLabel];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [_sdrToHdrSaturationTitle.leadingAnchor constraintEqualToAnchor:satTopRow.leadingAnchor],
+        [_sdrToHdrSaturationTitle.topAnchor constraintEqualToAnchor:satTopRow.topAnchor],
+        [_sdrToHdrSaturationTitle.bottomAnchor constraintEqualToAnchor:satTopRow.bottomAnchor],
+
+        [_sdrToHdrSaturationValueLabel.trailingAnchor constraintEqualToAnchor:satTopRow.trailingAnchor],
+        [_sdrToHdrSaturationValueLabel.centerYAnchor constraintEqualToAnchor:_sdrToHdrSaturationTitle.centerYAnchor]
+    ]];
+
+    _sdrToHdrSaturationSlider = [[NSSlider alloc] init];
+    _sdrToHdrSaturationSlider.minValue = 0.5;
+    _sdrToHdrSaturationSlider.maxValue = 1.5;
+    _sdrToHdrSaturationSlider.numberOfTickMarks = 11;
+    _sdrToHdrSaturationSlider.allowsTickMarkValuesOnly = NO;
+    _sdrToHdrSaturationSlider.continuous = YES;
+    _sdrToHdrSaturationSlider.target = self;
+    _sdrToHdrSaturationSlider.action = @selector(sdrToHdrSaturationChanged:);
+    _sdrToHdrSaturationSlider.translatesAutoresizingMaskIntoConstraints = NO;
+    [_sdrToHdrSaturationSlider setAccessibilityLabel:_NS("Highlight colour")];
+
+    NSView *satLabelsRow = [[NSView alloc] init];
+    satLabelsRow.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *satLeftLabel = [NSTextField labelWithString:_NS("Softer")];
+    satLeftLabel.font = MacLCDesign.caption;
+    satLeftLabel.textColor = MacLCDesign.secondaryLabel;
+    satLeftLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *satRightLabel = [NSTextField labelWithString:_NS("Richer")];
+    satRightLabel.font = MacLCDesign.caption;
+    satRightLabel.textColor = MacLCDesign.secondaryLabel;
+    satRightLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    [satLabelsRow addSubview:satLeftLabel];
+    [satLabelsRow addSubview:satRightLabel];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [satLeftLabel.leadingAnchor constraintEqualToAnchor:satLabelsRow.leadingAnchor],
+        [satLeftLabel.topAnchor constraintEqualToAnchor:satLabelsRow.topAnchor],
+        [satLeftLabel.bottomAnchor constraintEqualToAnchor:satLabelsRow.bottomAnchor],
+
+        [satRightLabel.trailingAnchor constraintEqualToAnchor:satLabelsRow.trailingAnchor],
+        [satRightLabel.topAnchor constraintEqualToAnchor:satLabelsRow.topAnchor],
+        [satRightLabel.bottomAnchor constraintEqualToAnchor:satLabelsRow.bottomAnchor],
+    ]];
+
+    _sdrToHdrSaturationCaption = [NSTextField wrappingLabelWithString:
+        _NS("How colourful brightened highlights are. The rest of the picture is unchanged.")];
+    _sdrToHdrSaturationCaption.font = MacLCDesign.caption;
+    _sdrToHdrSaturationCaption.textColor = MacLCDesign.secondaryLabel;
+    _sdrToHdrSaturationCaption.translatesAutoresizingMaskIntoConstraints = NO;
+    _sdrToHdrSaturationCaption.accessibilityRole = NSAccessibilityStaticTextRole;
+
+    // Advanced - Smooth banding
+    _sdrToHdrDebandPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    _sdrToHdrDebandPopup.target = self;
+    _sdrToHdrDebandPopup.action = @selector(sdrToHdrDebandChanged:);
+    _sdrToHdrDebandPopup.font = MacLCDesign.body;
+    _sdrToHdrDebandPopup.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSArray *debandItems = @[
+        @[_NS("Off"), @(MACLC_SDR2HDR_DEBAND_OFF)],
+        @[_NS("Normal"), @(MACLC_SDR2HDR_DEBAND_NORMAL)],
+        @[_NS("Strong"), @(MACLC_SDR2HDR_DEBAND_STRONG)],
+    ];
+    for (NSArray *item in debandItems) {
+        [_sdrToHdrDebandPopup addItemWithTitle:item[0]];
+        _sdrToHdrDebandPopup.lastItem.tag = [item[1] integerValue];
+    }
+
+    _sdrToHdrDebandRow = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Smooth banding")
+                                                         explanation:_NS("Hides steps in skies and gradients where highlights are brightened. Balanced and above.")
+                                                             control:_sdrToHdrDebandPopup
+                                                             isRisky:NO];
+
+    // Advanced - Protect subtitles and logos
+    _sdrToHdrProtectCheckbox = [NSButton checkboxWithTitle:_NS("Protect subtitles and logos")
+                                                    target:self
+                                                    action:@selector(sdrToHdrProtectToggled:)];
+    _sdrToHdrProtectCheckbox.font = MacLCDesign.bodyEmphasized;
+    _sdrToHdrProtectCheckbox.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _sdrToHdrProtectCaption = [NSTextField wrappingLabelWithString:
+        _NS("Keeps burnt-in subtitles and channel logos from getting brighter. Balanced and above.")];
+    _sdrToHdrProtectCaption.font = MacLCDesign.caption;
+    _sdrToHdrProtectCaption.textColor = MacLCDesign.secondaryLabel;
+    _sdrToHdrProtectCaption.translatesAutoresizingMaskIntoConstraints = NO;
+    _sdrToHdrProtectCaption.accessibilityRole = NSAccessibilityStaticTextRole;
+
+    // Add arranged subviews to advanced stack view
+    [_sdrToHdrAdvancedStackView addArrangedSubview:midtonesTopRow];
+    [_sdrToHdrAdvancedStackView addArrangedSubview:_sdrToHdrMidtonesSlider];
+    [_sdrToHdrAdvancedStackView addArrangedSubview:midtonesLabelsRow];
+    [_sdrToHdrAdvancedStackView addArrangedSubview:_sdrToHdrMidtonesCaption];
+
+    [_sdrToHdrAdvancedStackView addArrangedSubview:satTopRow];
+    [_sdrToHdrAdvancedStackView addArrangedSubview:_sdrToHdrSaturationSlider];
+    [_sdrToHdrAdvancedStackView addArrangedSubview:satLabelsRow];
+    [_sdrToHdrAdvancedStackView addArrangedSubview:_sdrToHdrSaturationCaption];
+
+    [_sdrToHdrAdvancedStackView addArrangedSubview:_sdrToHdrDebandRow];
+    [_sdrToHdrAdvancedStackView addArrangedSubview:_sdrToHdrProtectCheckbox];
+    [_sdrToHdrAdvancedStackView addArrangedSubview:_sdrToHdrProtectCaption];
+
+    [midtonesTopRow.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+    [_sdrToHdrMidtonesSlider.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+    [midtonesLabelsRow.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+    [_sdrToHdrMidtonesCaption.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+
+    [satTopRow.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+    [_sdrToHdrSaturationSlider.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+    [satLabelsRow.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+    [_sdrToHdrSaturationCaption.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+
+    [_sdrToHdrDebandRow.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+    [_sdrToHdrProtectCaption.widthAnchor constraintEqualToAnchor:_sdrToHdrAdvancedStackView.widthAnchor].active = YES;
+
+    // Add to card contentStackView
     [card.contentStackView addArrangedSubview:_sdrToHdrCheckbox];
     [card.contentStackView addArrangedSubview:explanationLabel];
+    [card.contentStackView addArrangedSubview:_sdrToHdrQualityRow];
     [card.contentStackView addArrangedSubview:boostRow];
-    [card.contentStackView addArrangedSubview:_sdrToHdrBoostSlider];
+    [card.contentStackView addArrangedSubview:boostSliderRow];
     [card.contentStackView addArrangedSubview:_sdrToHdrBoostCaption];
+    [card.contentStackView addArrangedSubview:_sdrToHdrAdvancedButton];
+    [card.contentStackView addArrangedSubview:_sdrToHdrAdvancedStackView];
 
     [explanationLabel.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
+    [_sdrToHdrQualityRow.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
     [boostRow.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
-    [_sdrToHdrBoostSlider.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
+    [boostSliderRow.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
     [_sdrToHdrBoostCaption.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
+    [_sdrToHdrAdvancedStackView.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
 
     [_mainStackView addArrangedSubview:card];
     [card.widthAnchor constraintEqualToAnchor:_mainStackView.widthAnchor constant:-2 * MacLCDesign.windowContentMargin].active = YES;
@@ -977,11 +1284,11 @@ NSString * const MacLCHDRExpansionChangedNotification =
         [_toneMappingPopup lastItem].tag = toneMapModes[i].tag;
     }
     MacLCSettingsRowView *row1 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Tone-mapping curve")
-                                                                 explanation:_NS("Algorithm to use for tone mapping HDR into the display dynamic range. (OpenGL video engine only)")
+                                                                 explanation:_NS("How HDR highlights are fitted to what the display can show. Automatic uses MacLC's picture modes; the other curves are libplacebo's. Applies with the Metal engine.")
                                                                      control:_toneMappingPopup
                                                                      isRisky:NO];
     row1.isEngineSpecific = YES;
-    [_openGLEngineRows addObject:row1];
+    [_metalEngineRows addObject:row1];
     [card.contentStackView addArrangedSubview:row1];
     [row1.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
 
@@ -995,9 +1302,10 @@ NSString * const MacLCHDRExpansionChangedNotification =
     _toneMappingParamSlider.continuous = YES;
     _toneMappingParamSlider.target = self;
     _toneMappingParamSlider.action = @selector(toneParamChanged:);
+    _toneMappingParamSlider.accessibilityLabel = _NS("Tone-mapping parameter");
     _toneMappingParamSlider.translatesAutoresizingMaskIntoConstraints = NO;
 
-    _toneMappingParamLabel = [NSTextField labelWithString:_NS("0.0 (Optimal default)")];
+    _toneMappingParamLabel = [NSTextField labelWithString:_NS("Default")];
     _toneMappingParamLabel.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleCaption1];
     _toneMappingParamLabel.textColor = MacLCDesign.secondaryLabel;
     _toneMappingParamLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -1017,11 +1325,11 @@ NSString * const MacLCHDRExpansionChangedNotification =
     ]];
 
     MacLCSettingsRowView *row2 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Tone-mapping parameter")
-                                                                 explanation:_NS("Fine-tunes the tone curve rolloff. 0.0 uses the algorithm optimal default. (OpenGL video engine only)")
+                                                                 explanation:_NS("Fine-tunes the chosen curve's roll-off; 0 uses the curve's own default. Applies with the Metal engine.")
                                                                      control:paramContainer
                                                                      isRisky:NO];
     row2.isEngineSpecific = YES;
-    [_openGLEngineRows addObject:row2];
+    [_metalEngineRows addObject:row2];
     [card.contentStackView addArrangedSubview:row2];
     [row2.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
 
@@ -1043,11 +1351,11 @@ NSString * const MacLCHDRExpansionChangedNotification =
         [_gamutMappingPopup lastItem].tag = gamutModes[i].tag;
     }
     MacLCSettingsRowView *row3 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Gamut mapping")
-                                                                 explanation:_NS("Algorithm to translate wide BT.2020 cinema colors into the display color space. (OpenGL video engine only)")
+                                                                 explanation:_NS("How BT.2020 colors beyond what the display shows are brought in. Pictures the display already contains are left alone. Applies with the Metal engine.")
                                                                      control:_gamutMappingPopup
                                                                      isRisky:NO];
     row3.isEngineSpecific = YES;
-    [_openGLEngineRows addObject:row3];
+    [_metalEngineRows addObject:row3];
     [card.contentStackView addArrangedSubview:row3];
     [row3.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
 
@@ -1057,7 +1365,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
                                                        action:@selector(controlValueChanged:)];
     _inverseToneMappingCheckbox.font = MacLCDesign.body;
     MacLCSettingsRowView *row4 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("SDR-to-HDR expansion")
-                                                                 explanation:_NS("Artificially expands standard SDR video into HDR highlights. May cause exaggerated colors and distorted skin tones. (OpenGL video engine only)")
+                                                                 explanation:_NS("libplacebo's expansion of SDR video into HDR highlights. MacLC's own SDR to HDR, above, is the better choice. (OpenGL engine only)")
                                                                      control:_inverseToneMappingCheckbox
                                                                      isRisky:NO];
     row4.isEngineSpecific = YES;
@@ -1103,20 +1411,20 @@ NSString * const MacLCHDRExpansionChangedNotification =
     }
 
     MacLCSettingsRowView *row1 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Upscaler filter")
-                                                                 explanation:_NS("Scaling filter applied when upscaling lower-resolution video on high-resolution displays. (OpenGL video engine only)")
+                                                                 explanation:_NS("Filter used to enlarge lower-resolution video on high-resolution displays. Applies with the Metal engine.")
                                                                      control:_upscalerPopup
                                                                      isRisky:NO];
     row1.isEngineSpecific = YES;
-    [_openGLEngineRows addObject:row1];
+    [_metalEngineRows addObject:row1];
     [card.contentStackView addArrangedSubview:row1];
     [row1.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
 
     MacLCSettingsRowView *row2 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Downscaler filter")
-                                                                 explanation:_NS("Filter applied when playing high-resolution video on a smaller display, reducing shimmering lines. (OpenGL video engine only)")
+                                                                 explanation:_NS("Filter used to shrink high-resolution video on a smaller display, reducing shimmering lines. Applies with the Metal engine.")
                                                                      control:_downscalerPopup
                                                                      isRisky:NO];
     row2.isEngineSpecific = YES;
-    [_openGLEngineRows addObject:row2];
+    [_metalEngineRows addObject:row2];
     [card.contentStackView addArrangedSubview:row2];
     [row2.widthAnchor constraintEqualToAnchor:card.contentStackView.widthAnchor].active = YES;
 
@@ -1135,7 +1443,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
         [_ditherPopup lastItem].tag = ditherModes[i].tag;
     }
     MacLCSettingsRowView *row3 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Dithering algorithm")
-                                                                 explanation:_NS("Adds imperceptible pattern noise to eliminate visible color stepping and gradient banding on lower bit-depth panels. (OpenGL video engine only)")
+                                                                 explanation:_NS("Adds imperceptible pattern noise to eliminate visible color stepping and gradient banding on lower bit-depth panels. (OpenGL engine only; Metal renders in 16-bit floating point.)")
                                                                      control:_ditherPopup
                                                                      isRisky:NO];
     row3.isEngineSpecific = YES;
@@ -1156,15 +1464,16 @@ NSString * const MacLCHDRExpansionChangedNotification =
     _voutPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     _voutPopup.target = self;
     _voutPopup.action = @selector(engineControlChanged:);
-    [_voutPopup addItemWithTitle:_NS("Automatic (Apple Native recommended)")];
+    [_voutPopup addItemWithTitle:_NS("Automatic")];
     [_voutPopup lastItem].tag = 0;
-    [_voutPopup addItemWithTitle:_NS("Apple Native CoreMedia (AVSampleBufferDisplay)")];
+    [_voutPopup addItemWithTitle:_NS("Native")];
     [_voutPopup lastItem].tag = 1;
-    [_voutPopup addItemWithTitle:_NS("OpenGL Core Layer (CAOpenGLLayer)")];
+    [_voutPopup addItemWithTitle:_NS("Metal")];
     [_voutPopup lastItem].tag = 2;
+    /* OpenGL (tag 3) is only listed while it is the configured engine. */
 
     MacLCSettingsRowView *row1 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Video output engine")
-                                                                 explanation:_NS("The underlying macOS display engine. Selecting an unsupported module causes video output failure with audio-only playback.")
+                                                                 explanation:_NS("Automatic shows video with the native engine, and with Metal when a file needs Dolby Vision or HDR10+. Metal, MacLC's own renderer, also applies the curves, gamut mapping, scaling filters and LUT set on this page. An engine that cannot open a file leaves it playing without picture.")
                                                                      control:_voutPopup
                                                                      isRisky:YES];
     [card.contentStackView addArrangedSubview:row1];
@@ -1220,6 +1529,9 @@ NSString * const MacLCHDRExpansionChangedNotification =
         [_cvpxChromaPopup addItemWithTitle:chromaModes[i].title];
         [_cvpxChromaPopup lastItem].tag = chromaModes[i].tag;
     }
+    /* The widest item would otherwise push the row title into truncation. */
+    [_cvpxChromaPopup setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
+                                              forOrientation:NSLayoutConstraintOrientationHorizontal];
     MacLCSettingsRowView *row2 = [[MacLCSettingsRowView alloc] initWithTitle:_NS("Decoder pixel format")
                                                                  explanation:_NS("Forces VideoToolbox pixel format. Incompatible formats abort the decoder session, stopping playback immediately. 8-bit formats cause color banding.")
                                                                      control:_cvpxChromaPopup
@@ -1286,13 +1598,17 @@ NSString * const MacLCHDRExpansionChangedNotification =
             NSView *voutView = win.videoViewController.voutView;
             if (voutView) {
                 for (NSView *sub in voutView.subviews) {
-                    if ([sub.layer isKindOfClass:[AVSampleBufferDisplayLayer class]] ||
+                    if ([sub.layer isKindOfClass:[CAMetalLayer class]] ||
+                        [NSStringFromClass(sub.class) containsString:@"MacLCMetal"]) {
+                        activeEngineName = _NS("Metal");
+                        break;
+                    } else if ([sub.layer isKindOfClass:[AVSampleBufferDisplayLayer class]] ||
                         [NSStringFromClass(sub.class) containsString:@"SampleBuffer"]) {
-                        activeEngineName = _NS("Apple Native CoreMedia (AVSampleBufferDisplayLayer)");
+                        activeEngineName = _NS("Native (Core Media)");
                         break;
                     } else if ([sub.layer isKindOfClass:[CAOpenGLLayer class]] ||
                                [NSStringFromClass(sub.class) containsString:@"VideoLayer"]) {
-                        activeEngineName = _NS("OpenGL Core Layer (CAOpenGLLayer)");
+                        activeEngineName = _NS("OpenGL (Legacy)");
                         break;
                     }
                 }
@@ -1303,10 +1619,12 @@ NSString * const MacLCHDRExpansionChangedNotification =
 
     if (!activeEngineName) {
         BOOL forceLegacy = MacLCConfigGetInt("force-darwin-legacy-display", 0) || (_legacyFallbackCheckbox.state == NSControlStateValueOn);
-        if (forceLegacy || _voutPopup.selectedTag == 2) {
-            activeEngineName = _NS("OpenGL Core Layer (caopengllayer, standby)");
+        if (forceLegacy || _voutPopup.selectedTag == 3) {
+            activeEngineName = _NS("OpenGL (Legacy), when a video plays");
+        } else if (_voutPopup.selectedTag == 2) {
+            activeEngineName = _NS("Metal, when a video plays");
         } else {
-            activeEngineName = _NS("Apple Native CoreMedia (samplebufferdisplay, standby)");
+            activeEngineName = _NS("Native, when a video plays");
         }
     }
     [_statusEngineRow setValue:activeEngineName];
@@ -1383,6 +1701,8 @@ NSString * const MacLCHDRExpansionChangedNotification =
                name:VLCPlayerStateChanged object:nil];
     [nc addObserver:self selector:@selector(expansionChangedElsewhere:)
                name:MacLCHDRExpansionChangedNotification object:nil];
+    [nc addObserver:self selector:@selector(sdrToHdrStateChanged:)
+               name:MacLCSDRToHDRStateDidChangeNotification object:nil];
 
     _observingNotifications = YES;
 }
@@ -1409,6 +1729,14 @@ NSString * const MacLCHDRExpansionChangedNotification =
     });
 }
 
+- (void)sdrToHdrStateChanged:(NSNotification *)note
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateSdrToHdrControls];
+        [self refreshLiveStatus];
+    });
+}
+
 /* The video controls bar has its own switch for the expansion. Pick up what it
  * wrote so the checkbox here does not go on showing the previous state. */
 - (void)expansionChangedElsewhere:(NSNotification *)note
@@ -1417,8 +1745,6 @@ NSString * const MacLCHDRExpansionChangedNotification =
         return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        self->_sdrToHdrCheckbox.state = MacLCConfigGetInt("macosx-sdr-to-hdr", 0)
-            ? NSControlStateValueOn : NSControlStateValueOff;
         [self updateSdrToHdrControls];
         [self refreshLiveStatus];
     });
@@ -1438,70 +1764,159 @@ NSString * const MacLCHDRExpansionChangedNotification =
 
 - (void)sdrToHdrToggled:(NSButton *)sender
 {
-    VLC_UNUSED(sender);
+    [MacLCSDRToHDRState sharedState].enabled = (sender.state == NSControlStateValueOn);
     [self updateSdrToHdrControls];
-    _hasUnsavedChanges = YES;
     [self refreshLiveStatus];
 }
 
-- (void)sdrToHdrBoostChanged:(NSSlider *)sender
+- (void)sdrToHdrQualityChanged:(NSPopUpButton *)sender
 {
-    _currentSdrToHdrBoost = sender.floatValue;
+    [MacLCSDRToHDRState sharedState].quality = (MacLCSDRToHDRQuality)sender.selectedTag;
     [self updateSdrToHdrControls];
-    _hasUnsavedChanges = YES;
+    [self refreshLiveStatus];
+}
+
+- (void)sdrToHdrBoostSliderChanged:(NSSlider *)sender
+{
+    float boost = powf(2.0f, sender.floatValue);
+    [MacLCSDRToHDRState sharedState].boost = boost;
+    [self updateSdrToHdrControls];
+}
+
+- (void)toggleSdrToHdrAdvanced:(id)sender
+{
+    VLC_UNUSED(sender);
+    _sdrToHdrAdvancedExpanded = !_sdrToHdrAdvancedExpanded;
+    _sdrToHdrAdvancedButton.image = [MacLCDesign symbolNamed:_sdrToHdrAdvancedExpanded ? @"chevron.down" : @"chevron.right"
+                                                   pointSize:11
+                                                      weight:NSFontWeightMedium
+                                          accessibilityLabel:_sdrToHdrAdvancedExpanded ? _NS("Collapse Advanced") : _NS("Expand Advanced")];
+    _sdrToHdrAdvancedStackView.hidden = !_sdrToHdrAdvancedExpanded;
+}
+
+- (void)sdrToHdrMidtonesChanged:(NSSlider *)sender
+{
+    [MacLCSDRToHDRState sharedState].midtones = sender.floatValue;
+    [self updateSdrToHdrControls];
+}
+
+- (void)sdrToHdrSaturationChanged:(NSSlider *)sender
+{
+    [MacLCSDRToHDRState sharedState].saturation = sender.floatValue;
+    [self updateSdrToHdrControls];
+}
+
+- (void)sdrToHdrDebandChanged:(NSPopUpButton *)sender
+{
+    [MacLCSDRToHDRState sharedState].deband = sender.selectedTag;
+    [self updateSdrToHdrControls];
+}
+
+- (void)sdrToHdrProtectToggled:(NSButton *)sender
+{
+    [MacLCSDRToHDRState sharedState].protect = (sender.state == NSControlStateValueOn);
+    [self updateSdrToHdrControls];
 }
 
 - (void)updateSdrToHdrControls
 {
-    const BOOL enabled = (_sdrToHdrCheckbox.state == NSControlStateValueOn);
+    MacLCSDRToHDRState *state = [MacLCSDRToHDRState sharedState];
+    const BOOL enabled = state.enabled;
+    _sdrToHdrCheckbox.state = enabled ? NSControlStateValueOn : NSControlStateValueOff;
 
-    if (_currentSdrToHdrBoost < 1.0f)
-        _currentSdrToHdrBoost = 1.0f;
-    else if (_currentSdrToHdrBoost > 16.0f)
-        _currentSdrToHdrBoost = 16.0f;
+    [_sdrToHdrQualityPopup selectItemWithTag:state.quality];
+    [_sdrToHdrQualityRow setRowEnabled:enabled];
 
+    if ([state.reason isEqualToString:@"model-missing"]) {
+        NSMenuItem *highItem = [_sdrToHdrQualityPopup.menu itemWithTag:MacLCSDRToHDRQualityHigh];
+        highItem.enabled = NO;
+        highItem.toolTip = [MacLCSDRToHDRState explanationForReason:@"model-missing"];
+        NSMenuItem *maxItem = [_sdrToHdrQualityPopup.menu itemWithTag:MacLCSDRToHDRQualityMaximum];
+        maxItem.enabled = NO;
+        maxItem.toolTip = [MacLCSDRToHDRState explanationForReason:@"model-missing"];
+    } else {
+        NSMenuItem *highItem = [_sdrToHdrQualityPopup.menu itemWithTag:MacLCSDRToHDRQualityHigh];
+        highItem.enabled = enabled;
+        highItem.toolTip = [MacLCSDRToHDRState summaryForQuality:MacLCSDRToHDRQualityHigh];
+        NSMenuItem *maxItem = [_sdrToHdrQualityPopup.menu itemWithTag:MacLCSDRToHDRQualityMaximum];
+        maxItem.enabled = enabled;
+        maxItem.toolTip = [MacLCSDRToHDRState summaryForQuality:MacLCSDRToHDRQualityMaximum];
+    }
+
+    NSString *qualityExplanation = [MacLCSDRToHDRState summaryForQuality:state.quality];
+    if (state.quality == MacLCSDRToHDRQualityAuto && state.activeQualityName != nil && ![state.activeQualityName isEqualToString:@"off"]) {
+        NSString *liveStatus = [NSString stringWithFormat:_NS("Using %@ — %@."),
+            [MacLCSDRToHDRState displayNameForQuality:state.activeQuality],
+            [MacLCSDRToHDRState explanationForReason:state.reason]];
+        qualityExplanation = [qualityExplanation stringByAppendingFormat:@" %@", liveStatus];
+    }
+    _sdrToHdrQualityRow.explanationLabel.stringValue = qualityExplanation;
+
+    float boost = state.boost;
+    if (boost < MACLC_SDR2HDR_BOOST_MIN) boost = MACLC_SDR2HDR_BOOST_MIN;
+    if (boost > MACLC_SDR2HDR_BOOST_MAX) boost = MACLC_SDR2HDR_BOOST_MAX;
+    _sdrToHdrBoostSlider.floatValue = log2f(boost);
     _sdrToHdrBoostSlider.enabled = enabled;
-    _sdrToHdrBoostSlider.floatValue = _currentSdrToHdrBoost;
-    _sdrToHdrBoostLabel.stringValue =
-        [NSString stringWithFormat:@"%.1fx", _currentSdrToHdrBoost];
-    _sdrToHdrBoostLabel.textColor =
-        enabled ? MacLCDesign.primaryLabel : MacLCDesign.secondaryLabel;
+
+    float nits = maclc_sdr2hdr_boost_to_nits(boost);
+    NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
+    formatter.numberStyle = NSNumberFormatterDecimalStyle;
+    formatter.maximumFractionDigits = 0;
+    NSString *formattedNits = [formatter stringFromNumber:@(roundf(nits / 10.0f) * 10.0f)];
+    _sdrToHdrBoostLabel.stringValue = [NSString stringWithFormat:_NS("%@ cd/m²"), formattedNits];
+    _sdrToHdrBoostLabel.textColor = enabled ? MacLCDesign.primaryLabel : MacLCDesign.secondaryLabel;
+    _sdrToHdrBoostTitle.textColor = enabled ? MacLCDesign.primaryLabel : MacLCDesign.secondaryLabel;
 
     NSScreen *screen = self.view.window.screen ?: [NSScreen mainScreen];
-    const CGFloat screenHeadroom =
-        screen.maximumExtendedDynamicRangeColorComponentValue;
-    const float applied = (screenHeadroom > 1.0 && screenHeadroom < _currentSdrToHdrBoost)
-        ? (float)screenHeadroom : _currentSdrToHdrBoost;
+    MacLCDisplayInfo *info = [MacLCDisplayInfo displayInfoForScreen:screen];
+    const CGFloat screenHeadroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+    const float contentPeak = info.contentPeakNits;
 
     NSString *caption;
     if (screenHeadroom <= 1.0) {
-        caption = _NS("This display has no extended range right now, so there "
-                      "would be nothing to expand into and the picture is left "
-                      "alone.");
+        caption = _NS("This display has no extended range right now, so SDR video plays as graded.");
     } else {
-        /* The expansion leaves SDR white where standard video has it and takes
-         * full-scale white to `applied` times that; both in the panel's light
-         * at the current brightness, as the HDR panel describes the display. */
-        const CGFloat whiteNits =
-            [MacLCDisplayInfo displayInfoForScreen:screen].sdrWhiteNits;
-        caption = [NSString stringWithFormat:
-            _NS("Highlights reach about %.0f cd/m2, against the %.0f cd/m2 of "
-                "SDR white. This display currently allows %.1fx, and the lower "
-                "of the two is what is used."),
-            applied * whiteNits, whiteNits, screenHeadroom];
+        NSString *formattedPeak = [formatter stringFromNumber:@(roundf(contentPeak / 10.0f) * 10.0f)];
+        if (nits > contentPeak + 5.0f) {
+            caption = [NSString stringWithFormat:
+                _NS("Like an HDR master graded to %@ cd/m². This display can show up to %@ cd/m² right now, so highlights stop there."),
+                formattedNits, formattedPeak];
+        } else {
+            caption = [NSString stringWithFormat:
+                _NS("Like an HDR master graded to %@ cd/m². This display can show up to %@ cd/m² right now."),
+                formattedNits, formattedPeak];
+        }
     }
 
-    /* The expansion is part of the default Apple video engine. The OpenGL
-     * engine has its own, under Advanced. */
     const BOOL isOpenGL = (_legacyFallbackCheckbox.state == NSControlStateValueOn)
-                       || (_voutPopup.selectedTag == 2);
+                       || (_voutPopup.selectedTag == 3);
     if (isOpenGL) {
         caption = [caption stringByAppendingString:
             _NS(" The OpenGL engine is selected below, which does its own "
                 "expansion: use Inverse tone mapping under Advanced instead.")];
     }
-
     _sdrToHdrBoostCaption.stringValue = caption;
+
+    // Advanced controls
+    _sdrToHdrMidtonesSlider.floatValue = state.midtones;
+    _sdrToHdrMidtonesSlider.enabled = enabled;
+    _sdrToHdrMidtonesValueLabel.stringValue = [NSString stringWithFormat:@"%.0f %%", state.midtones * 100.0f];
+    _sdrToHdrMidtonesValueLabel.textColor = enabled ? MacLCDesign.primaryLabel : MacLCDesign.secondaryLabel;
+    _sdrToHdrMidtonesTitle.textColor = enabled ? MacLCDesign.primaryLabel : MacLCDesign.secondaryLabel;
+
+    _sdrToHdrSaturationSlider.floatValue = state.saturation;
+    _sdrToHdrSaturationSlider.enabled = enabled;
+    _sdrToHdrSaturationValueLabel.stringValue = [NSString stringWithFormat:@"%.0f %%", state.saturation * 100.0f];
+    _sdrToHdrSaturationValueLabel.textColor = enabled ? MacLCDesign.primaryLabel : MacLCDesign.secondaryLabel;
+    _sdrToHdrSaturationTitle.textColor = enabled ? MacLCDesign.primaryLabel : MacLCDesign.secondaryLabel;
+
+    const BOOL isFast = (state.quality == MacLCSDRToHDRQualityFast) || (state.quality == MacLCSDRToHDRQualityAuto && state.activeQuality == MacLCSDRToHDRQualityFast);
+    [_sdrToHdrDebandPopup selectItemWithTag:state.deband];
+    [_sdrToHdrDebandRow setRowEnabled:(enabled && !isFast)];
+
+    _sdrToHdrProtectCheckbox.state = state.protect ? NSControlStateValueOn : NSControlStateValueOff;
+    _sdrToHdrProtectCheckbox.enabled = (enabled && !isFast);
+    _sdrToHdrProtectCaption.textColor = (enabled && !isFast) ? MacLCDesign.secondaryLabel : MacLCDesign.tertiaryLabel;
 }
 
 /* HLG brightness applies to whatever is playing too; outputs that do not
@@ -1516,24 +1931,6 @@ NSString * const MacLCHDRExpansionChangedNotification =
 
     if (var_Type(vout, MACLC_HDR_VAR_HLG) != 0)
         var_SetString(vout, MACLC_HDR_VAR_HLG, hlg);
-    vout_Release(vout);
-}
-
-/* Applies the toggle to whatever is playing, so it can be judged against the
- * picture instead of on the next file. The variables live on the video output
- * thread; when the running display module is not the one that implements the
- * expansion, the sets simply find nothing and do nothing. */
-- (void)pushSdrToHdrToRunningVideoOutput
-{
-    VLCPlayerController *playerController =
-        VLCMain.sharedInstance.playQueueController.playerController;
-    vout_thread_t *vout = [playerController mainVideoOutputThread];
-    if (vout == NULL)
-        return;
-
-    var_SetBool(vout, "macosx-sdr-to-hdr",
-                _sdrToHdrCheckbox.state == NSControlStateValueOn);
-    var_SetFloat(vout, "macosx-sdr-to-hdr-boost", _currentSdrToHdrBoost);
     vout_Release(vout);
 }
 
@@ -1591,7 +1988,7 @@ NSString * const MacLCHDRExpansionChangedNotification =
 - (void)toneParamChanged:(NSSlider *)sender
 {
     float val = sender.floatValue;
-    _toneMappingParamLabel.stringValue = (val == 0.0f) ? _NS("0.0 (Optimal default)") : [NSString stringWithFormat:@"%.2f", val];
+    _toneMappingParamLabel.stringValue = (val == 0.0f) ? _NS("Default") : [NSString stringWithFormat:@"%.2f", val];
     _hasUnsavedChanges = YES;
 }
 
@@ -1610,10 +2007,15 @@ NSString * const MacLCHDRExpansionChangedNotification =
 - (void)updateEngineDependentRowsState
 {
     BOOL isLegacy = (_legacyFallbackCheckbox.state == NSControlStateValueOn);
-    BOOL isOpenGL = isLegacy || (_voutPopup.selectedTag == 2);
+    BOOL isOpenGL = isLegacy || (_voutPopup.selectedTag == 3);
+    BOOL isMetal = (_voutPopup.selectedTag == 2);
 
     for (MacLCSettingsRowView *row in _openGLEngineRows) {
         [row setRowEnabled:isOpenGL];
+    }
+    /* The OpenGL engine has these too (libplacebo). */
+    for (MacLCSettingsRowView *row in _metalEngineRows) {
+        [row setRowEnabled:isMetal || isOpenGL];
     }
 
     [self updateSdrToHdrControls];
@@ -1624,7 +2026,8 @@ NSString * const MacLCHDRExpansionChangedNotification =
 - (NSInteger)tagForVoutString:(NSString *)vout
 {
     if ([vout isEqualToString:@"samplebufferdisplay"]) return 1;
-    if ([vout isEqualToString:@"caopengllayer"]) return 2;
+    if ([vout isEqualToString:@"maclc_metal"] || [vout isEqualToString:@"metal"]) return 2;
+    if ([vout isEqualToString:@"caopengllayer"]) return 3;
     return 0; // "any"
 }
 
@@ -1632,7 +2035,8 @@ NSString * const MacLCHDRExpansionChangedNotification =
 {
     switch (tag) {
         case 1: return @"samplebufferdisplay";
-        case 2: return @"caopengllayer";
+        case 2: return @"maclc_metal";
+        case 3: return @"caopengllayer";
         default: return @"any";
     }
 }

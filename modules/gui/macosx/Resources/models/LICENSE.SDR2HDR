@@ -1,0 +1,17 @@
+The files sdr2hdr-*.maclcnn hold the networks MacLC uses for the High and
+Maximum levels of its SDR to HDR conversion. Each predicts, from a small
+thumbnail of the picture, a bilateral grid of brightness gains that the
+video output applies to the full-resolution picture.
+
+Hazen Studio designed and trained these networks for MacLC. They are part of
+MacLC and are distributed under the same terms as the module that loads them,
+the GNU Lesser General Public License, version 2.1 or later.
+
+Training data: high dynamic range photographs from Poly Haven
+(https://polyhaven.com/hdris), published under CC0 1.0, from which pairs of
+standard and high dynamic range pictures were simulated. Thanks to Poly Haven
+and its contributors.
+
+File format: the magic "MLCNN001", a little-endian 32-bit length, a JSON
+header describing the layers, then the weights as 16-bit floats
+(modules/video_output/apple/VLCHDRNetwork.m reads it).

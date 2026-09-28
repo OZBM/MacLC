@@ -1,11 +1,7 @@
 /*****************************************************************************
- * VLCHotkeysController.h: MacOS X interface module
+ * MacLCSDRToHDRPanelViewController.h: MacLC's SDR to HDR options popover
  *****************************************************************************
- * Copyright (C) 2002-2019 VLC authors and VideoLAN
- *
- * Authors: Felix Paul Kühne <fkuehne # videolan dot org>
- *          David Fuhrmann <dfuhrmann # videolan dot org>
- *          Derk-Jan Hartman <hartman # videolan dot org>
+ * Copyright (C) 2026 Hazen Studio
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,16 +20,21 @@
 
 #import <Cocoa/Cocoa.h>
 
-#import <vlc_vout.h>
-
 NS_ASSUME_NONNULL_BEGIN
 
-@interface VLCHotkeysController : NSObject
+@interface MacLCSDRToHDRPanelViewController : NSViewController
 
-- (BOOL)handleVideoOutputKeyDown:(id)anEvent forVideoOutput:(vout_thread_t *)p_vout;
-- (BOOL)handleVideoOutputKeyUp:(NSEvent *)anEvent;
-- (void)cancelComparing;
-- (BOOL)performKeyEquivalent:(NSEvent *)anEvent;
+/** Shows the panel in a popover anchored to a view (e.g. the HDR badge).
+ *  Toggles it closed when already shown from the same anchor. */
++ (void)showRelativeToView:(NSView *)view preferredEdge:(NSRectEdge)edge;
+
+/** Shows the panel anchored to a specific rectangle of a view. */
++ (void)showRelativeToRect:(NSRect)rect ofView:(NSView *)view preferredEdge:(NSRectEdge)edge;
+
+/** Shows the panel anchored to the key window's content (menu command). */
++ (void)showForKeyWindow;
+
++ (void)closePanel;
 
 @end
 

@@ -190,8 +190,40 @@ vlc_module_begin()
 #define SDR_TO_HDR_BOOST_TEXT N_("SDR to HDR highlight boost")
 #define SDR_TO_HDR_BOOST_LONGTEXT N_( \
     "How much brighter than SDR white the brightest highlights are allowed to " \
-    "become, as a multiple. 1.0 disables the expansion; 4.0 is a natural " \
-    "looking default; higher values are more dramatic and less faithful.")
+    "become, as a multiple of SDR white (×100 = cd/m² in MacLC's HDR reference). " \
+    "4 (400 cd/m²) is the default.")
+
+#define SDR_TO_HDR_QUALITY_TEXT N_("SDR to HDR quality")
+#define SDR_TO_HDR_QUALITY_LONGTEXT N_( \
+    "Quality level for SDR to HDR expansion.")
+static const char *const sdr_to_hdr_quality_list[] = {
+    "auto", "fast", "balanced", "high", "maximum",
+};
+static const char *const sdr_to_hdr_quality_list_text[] = {
+    N_("Automatic"), N_("Fast"), N_("Balanced"), N_("High"), N_("Maximum"),
+};
+
+#define SDR_TO_HDR_MIDTONES_TEXT N_("SDR to HDR mid-tones lift")
+#define SDR_TO_HDR_MIDTONES_LONGTEXT N_( \
+    "Lifting mid-tones brightens the whole picture the way HDR masters sit above SDR.")
+
+#define SDR_TO_HDR_SATURATION_TEXT N_("SDR to HDR highlight colour")
+#define SDR_TO_HDR_SATURATION_LONGTEXT N_( \
+    "How colourful brightened highlights are.")
+
+#define SDR_TO_HDR_DEBAND_TEXT N_("SDR to HDR smooth banding")
+#define SDR_TO_HDR_DEBAND_LONGTEXT N_( \
+    "Smooths banding in skies and gradients where highlights are brightened.")
+static const char *const sdr_to_hdr_deband_list[] = {
+    "off", "normal", "strong",
+};
+static const char *const sdr_to_hdr_deband_list_text[] = {
+    N_("Off"), N_("Normal"), N_("Strong"),
+};
+
+#define SDR_TO_HDR_PROTECT_TEXT N_("Protect subtitles and logos")
+#define SDR_TO_HDR_PROTECT_LONGTEXT N_( \
+    "Keeps burnt-in subtitles and channel logos from getting brighter.")
 
 static const int hdr_mode_list[] = { 0, 1, 2, 3 };
 static const char *const hdr_mode_list_text[] = {
@@ -256,8 +288,20 @@ static const char *const hdr_card_list_text[] = {
             change_integer_list(hdr_mode_list, hdr_mode_list_text)
         add_float("macosx-edr-headroom", 0.0f, EDR_HEADROOM_TEXT, EDR_HEADROOM_LONGTEXT)
         add_bool("macosx-sdr-to-hdr", false, SDR_TO_HDR_TEXT, SDR_TO_HDR_LONGTEXT)
+        add_string("macosx-sdr-to-hdr-quality", "auto",
+                   SDR_TO_HDR_QUALITY_TEXT, SDR_TO_HDR_QUALITY_LONGTEXT)
+            change_string_list(sdr_to_hdr_quality_list, sdr_to_hdr_quality_list_text)
         add_float_with_range("macosx-sdr-to-hdr-boost", 4.0f, 1.0f, 16.0f,
                              SDR_TO_HDR_BOOST_TEXT, SDR_TO_HDR_BOOST_LONGTEXT)
+        add_float_with_range("macosx-sdr-to-hdr-midtones", 0.0f, 0.0f, 1.0f,
+                             SDR_TO_HDR_MIDTONES_TEXT, SDR_TO_HDR_MIDTONES_LONGTEXT)
+        add_float_with_range("macosx-sdr-to-hdr-saturation", 1.0f, 0.5f, 1.5f,
+                             SDR_TO_HDR_SATURATION_TEXT, SDR_TO_HDR_SATURATION_LONGTEXT)
+        add_string("macosx-sdr-to-hdr-deband", "normal",
+                   SDR_TO_HDR_DEBAND_TEXT, SDR_TO_HDR_DEBAND_LONGTEXT)
+            change_string_list(sdr_to_hdr_deband_list, sdr_to_hdr_deband_list_text)
+        add_bool("macosx-sdr-to-hdr-protect", true,
+                 SDR_TO_HDR_PROTECT_TEXT, SDR_TO_HDR_PROTECT_LONGTEXT)
         add_string("maclc-hdr-presentation", "auto",
                    HDR_PRESENTATION_TEXT, HDR_PRESENTATION_LONGTEXT)
             change_string_list(hdr_presentation_list, hdr_presentation_list_text)

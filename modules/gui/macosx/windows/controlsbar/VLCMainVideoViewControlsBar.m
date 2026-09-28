@@ -42,6 +42,9 @@
 #import "settings/panes/MacLCHDRSettingsViewController.h"
 #import "hdr/MacLCHDRController.h"
 #import "hdr/MacLCHDRPanelViewController.h"
+#import "hdr/MacLCSDRToHDRPanelViewController.h"
+#import "hdr/MacLCSDRToHDRState.h"
+#import "coreinteraction/MacLCOSDController.h"
 #import "frameinterp/MacLCFrameInterpolation.h"
 #import "frameinterp/MacLCFrameInterpolationPanelViewController.h"
 
@@ -189,6 +192,10 @@
                                name:MacLCHDRStateDidChangeNotification
                              object:nil];
     [notificationCenter addObserver:self
+                           selector:@selector(hdrExpansionChanged:)
+                               name:MacLCSDRToHDRStateDidChangeNotification
+                             object:nil];
+    [notificationCenter addObserver:self
                            selector:@selector(frameInterpolationChanged:)
                                name:MacLCFrameInterpolationChangedNotification
                              object:nil];
@@ -261,15 +268,19 @@
         (floatOnTopEnabled && !isFullscreen) ? MacLCDesign.accent : MacLCDesign.primaryLabel;
 }
 
-/* The expansion only has somewhere to go when the screen the window is on is
- * currently offering extended range. That is not a fixed property of the
- * display: it moves with the brightness slider and with what else is on
- * screen, which is why the button is re-evaluated on screen changes. */
+/* The expansion only has somewhere to go on a screen that can offer extended
+ * range. How much it offers is not a fixed property of the display: it moves
+ * with the brightness slider and with what else is on screen, which is why the
+ * button is re-evaluated on screen changes (the panel says when there is no
+ * room right now). */
 - (BOOL)hdrExpansionAvailable
 {
     NSWindow * const window = self.hdrButton.window;
     NSScreen * const screen = window.screen ?: NSScreen.mainScreen;
-    return screen.maximumExtendedDynamicRangeColorComponentValue > 1.0;
+    /* The current headroom stays at 1 until something asks for extended
+     * range; the potential one says whether the screen can offer it. */
+    return screen.maximumExtendedDynamicRangeColorComponentValue > 1.0
+        || screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0;
 }
 
 /* The expansion only ever runs on standard range video: a picture that is
@@ -279,6 +290,10 @@
  * the point the bar first draws itself. */
 - (BOOL)currentVideoIsAlreadyHDR
 {
+    /* The HDR controller also knows Dolby Vision found while decoding
+     * (profile 5 does not signal PQ in the stream). */
+    if ([MacLCHDRController sharedController].stream.isHDR)
+        return YES;
     const video_transfer_func_t transfer =
         _playerController.selectedVideoTrack.videoTransferFunction;
     return transfer == TRANSFER_FUNC_SMPTE_ST2084
@@ -345,56 +360,69 @@
         return;
     }
 
-    const BOOL enabled = MacLCConfigGetInt("macosx-sdr-to-hdr", 0) != 0;
+    MacLCSDRToHDRState *state = [MacLCSDRToHDRState sharedState];
+    const BOOL enabled = state.enabled;
     const BOOL available = [self hdrExpansionAvailable];
 
-    self.hdrButton.enabled = available;
+    self.hdrButton.enabled = YES;
     self.hdrButton.state =
-        enabled ? NSControlStateValueOn : NSControlStateValueOff;
+        (enabled && available) ? NSControlStateValueOn : NSControlStateValueOff;
     [self styleHdrBadgeWithTitle:@"HDR" filled:(enabled && available) dimmed:!available];
     self.hdrButton.accessibilityLabel = _NS("Play SDR video in HDR");
 
     if (!available) {
         self.hdrButton.toolTip =
-            _NS("This display has no extended range right now, so there is "
-                "nothing to play SDR video into.");
+            [NSString stringWithFormat:@"%@ %@",
+                _NS("This display has no extended range right now, so there is "
+                    "nothing to play SDR video into."),
+                _NS("Click for details.")];
     } else if (enabled) {
+        NSString *levelDesc;
+        if (state.quality == MacLCSDRToHDRQualityAuto) {
+            levelDesc = [NSString stringWithFormat:_NS("Automatic (%@)"),
+                         [MacLCSDRToHDRState displayNameForQuality:state.activeQuality]];
+        } else {
+            levelDesc = [MacLCSDRToHDRState displayNameForQuality:state.quality];
+        }
         self.hdrButton.toolTip =
-            _NS("SDR video is playing through the display's extended range. "
-                "Click to go back to standard range.");
+            [NSString stringWithFormat:_NS("Playing in HDR with %@. Click for options, Option-click to turn off."), levelDesc];
     } else {
         self.hdrButton.toolTip =
-            _NS("Play SDR video through the display's extended range. "
-                "Highlights get brighter; the picture is no longer the original "
-                "grade and uses more power.");
+            _NS("Click to play this video in HDR. Option-click to turn on at once.");
     }
 }
 
-/* HDR video: open the HDR panel. SDR video: write the same setting the HDR
- * pane writes, and push it to whatever is playing so the picture changes under
- * the click rather than on the next file. */
+/* HDR video: open the HDR panel. SDR video: open SDR to HDR options panel,
+ * or direct toggle on Option-click with OSD message. */
 - (IBAction)toggleHDR:(id)sender
 {
     if ([self currentVideoIsAlreadyHDR]) {
+        [MacLCSDRToHDRPanelViewController closePanel];
         [MacLCHDRPanelViewController showRelativeToView:self.hdrButton
                                           preferredEdge:NSRectEdgeMaxY];
         return;
     }
 
-    const BOOL enabled = MacLCConfigGetInt("macosx-sdr-to-hdr", 0) == 0;
-
-    MacLCConfigPutInt("macosx-sdr-to-hdr", enabled ? 1 : 0);
-    config_SaveConfigFile(getIntf());
-
-    vout_thread_t * const p_vout = [self windowVoutThread];
-    if (p_vout) {
-        var_SetBool(p_vout, "macosx-sdr-to-hdr", enabled);
-        vout_Release(p_vout);
+    const BOOL optionPressed = ([NSEvent modifierFlags] & NSEventModifierFlagOption) != 0;
+    if (optionPressed) {
+        MacLCSDRToHDRState *state = [MacLCSDRToHDRState sharedState];
+        const BOOL newEnabled = !state.enabled;
+        state.enabled = newEnabled;
+        if (newEnabled) {
+            NSString *name = [MacLCSDRToHDRState displayNameForQuality:state.activeQuality];
+            [[MacLCOSDController sharedController]
+                showMessage:[NSString stringWithFormat:_NS("SDR to HDR: %@"), name]
+                 symbolName:@"sun.max"];
+        } else {
+            [[MacLCOSDController sharedController]
+                showMessage:_NS("SDR to HDR Off")
+                 symbolName:@"sun.min"];
+        }
+    } else {
+        [MacLCHDRPanelViewController closePanel];
+        [MacLCSDRToHDRPanelViewController showRelativeToView:self.hdrButton
+                                               preferredEdge:NSRectEdgeMaxY];
     }
-
-    [self updateHdrButton];
-    [NSNotificationCenter.defaultCenter
-        postNotificationName:MacLCHDRExpansionChangedNotification object:self];
 }
 
 - (void)frameInterpolationChanged:(NSNotification *)notification

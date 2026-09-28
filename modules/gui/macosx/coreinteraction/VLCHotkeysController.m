@@ -28,6 +28,8 @@
 #import "extensions/NSString+Helpers.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "playqueue/VLCPlayerController.h"
+#import "hdr/MacLCSDRToHDRState.h"
+#import "coreinteraction/MacLCOSDController.h"
 
 #import <vlc_configuration.h>
 #import <vlc_actions.h>
@@ -37,6 +39,7 @@
 @interface VLCHotkeysController()
 {
     NSArray *_usedHotkeys;
+    BOOL _comparingM;
 }
 @end
 
@@ -79,6 +82,30 @@
 
 - (BOOL)handleVideoOutputKeyDown:(id)anEvent forVideoOutput:(vout_thread_t *)p_vout
 {
+    NSEvent *event = (NSEvent *)anEvent;
+    NSEventModifierFlags cleanModifiers = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask & ~NSEventModifierFlagCapsLock;
+    NSString *characters = [event charactersIgnoringModifiers];
+    /* While M is held to compare, its key repeats belong to the comparison:
+     * passed on, each would toggle VLC's Mute. */
+    if (_comparingM && cleanModifiers == 0 && [characters length] > 0
+        && [[[characters lowercaseString] substringToIndex:1] isEqualToString:@"m"])
+        return YES;
+    if (cleanModifiers == 0 && [characters length] > 0 && [[[characters lowercaseString] substringToIndex:1] isEqualToString:@"m"] && !event.isARepeat) {
+        MacLCSDRToHDRState *state = [MacLCSDRToHDRState sharedState];
+        /* What the video output runs is only polled while a panel shows it:
+         * read it now rather than trust a value from the last panel. */
+        [state refresh];
+        if (state.activeQualityName.length > 0 && ![state.activeQualityName isEqualToString:@"off"]) {
+            _comparingM = YES;
+            [state setComparing:YES];
+            [[MacLCOSDController sharedController] showMessage:_NS("Original") symbolName:@"square.split.2x1"];
+            NSAccessibilityPostNotificationWithUserInfo(NSApp.keyWindow ?: NSApp.mainWindow,
+                NSAccessibilityAnnouncementRequestedNotification,
+                @{ NSAccessibilityAnnouncementKey: _NS("Original") });
+            return YES;
+        }
+    }
+
     VLCPlayerController * const playerController = VLCMain.sharedInstance.playQueueController.playerController;
     unichar key = 0;
     vlc_value_t val;
@@ -96,7 +123,6 @@
     if (i_pressed_modifiers & NSEventModifierFlagCommand)
         val.i_int |= KEY_MODIFIER_COMMAND;
 
-    NSString *characters = [anEvent charactersIgnoringModifiers];
     if ([characters length] > 0) {
         key = [[characters lowercaseString] characterAtIndex: 0];
 
@@ -122,6 +148,28 @@
     }
 
     return NO;
+}
+
+- (BOOL)handleVideoOutputKeyUp:(NSEvent *)anEvent
+{
+    if (_comparingM) {
+        NSString *characters = [anEvent charactersIgnoringModifiers];
+        if ([characters length] > 0 && [[[characters lowercaseString] substringToIndex:1] isEqualToString:@"m"]) {
+            _comparingM = NO;
+            [[MacLCSDRToHDRState sharedState] setComparing:NO];
+            [[MacLCOSDController sharedController] showMessage:_NS("HDR") symbolName:@"sun.max"];
+            return YES;
+        }
+    }
+    return NO;
+}
+
+- (void)cancelComparing
+{
+    if (_comparingM) {
+        _comparingM = NO;
+        [[MacLCSDRToHDRState sharedState] setComparing:NO];
+    }
 }
 
 - (BOOL)performKeyEquivalent:(NSEvent *)anEvent

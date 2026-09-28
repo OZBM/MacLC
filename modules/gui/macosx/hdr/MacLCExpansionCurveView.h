@@ -1,11 +1,7 @@
 /*****************************************************************************
- * VLCHotkeysController.h: MacOS X interface module
+ * MacLCExpansionCurveView.h: live plot of MacLC's SDR to HDR expansion curve
  *****************************************************************************
- * Copyright (C) 2002-2019 VLC authors and VideoLAN
- *
- * Authors: Felix Paul Kühne <fkuehne # videolan dot org>
- *          David Fuhrmann <dfuhrmann # videolan dot org>
- *          Derk-Jan Hartman <hartman # videolan dot org>
+ * Copyright (C) 2026 Hazen Studio
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,16 +20,30 @@
 
 #import <Cocoa/Cocoa.h>
 
-#import <vlc_vout.h>
+#import "hdr/MacLCSDRToHDRState.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface VLCHotkeysController : NSObject
+@interface MacLCExpansionCurveView : NSView
 
-- (BOOL)handleVideoOutputKeyDown:(id)anEvent forVideoOutput:(vout_thread_t *)p_vout;
-- (BOOL)handleVideoOutputKeyUp:(NSEvent *)anEvent;
-- (void)cancelComparing;
-- (BOOL)performKeyEquivalent:(NSEvent *)anEvent;
+@property (nonatomic) MacLCSDRToHDRQuality quality;
+@property (nonatomic) float boost;
+@property (nonatomic) float midtones;
+@property (nonatomic) float headroom;
+@property (nonatomic) BOOL enabled;
+
+- (void)setQuality:(MacLCSDRToHDRQuality)quality
+             boost:(float)boost
+          midtones:(float)midtones
+          headroom:(float)headroom
+          animated:(BOOL)animated;
+
+- (void)setQuality:(MacLCSDRToHDRQuality)quality
+             boost:(float)boost
+          midtones:(float)midtones
+          headroom:(float)headroom
+           enabled:(BOOL)enabled
+          animated:(BOOL)animated;
 
 @end
 

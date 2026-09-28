@@ -31,6 +31,7 @@ static const CGFloat kDotSize = 7.0;
 {
     NSArray<NSTextField *> *_labels;
     NSArray<NSArray<NSView *> *> *_dots;
+    NSArray<NSNumber *> *_currentLevels;
 }
 
 - (instancetype)initWithFrame:(NSRect)frameRect
@@ -104,10 +105,64 @@ static const CGFloat kDotSize = 7.0;
     [self showPictureMode:MacLCHDRPictureModeAccurate needsToneMapping:NO animated:NO];
 }
 
+- (void)setTitles:(NSArray<NSString *> *)titles
+{
+    for (NSUInteger m = 0; m < kMeters; m++) {
+        if (m < titles.count) {
+            _labels[m].stringValue = titles[m];
+        }
+    }
+}
+
+- (void)showLevels:(NSArray<NSNumber *> *)levels animated:(BOOL)animated
+{
+    NSMutableArray<NSNumber *> *savedLevels = [NSMutableArray array];
+    NSMutableArray<NSString *> *spoken = [NSMutableArray array];
+    for (NSUInteger m = 0; m < kMeters; m++) {
+        NSUInteger level = 0;
+        if (m < levels.count) {
+            level = levels[m].unsignedIntegerValue;
+            if (level > kDots) level = kDots;
+        }
+        [savedLevels addObject:@(level)];
+
+        for (NSUInteger d = 0; d < kDots; d++) {
+            NSView *dot = _dots[m][d];
+            const BOOL on = d < level;
+            [self.effectiveAppearance performAsCurrentDrawingAppearance:^{
+                dot.layer.backgroundColor = (on ? MacLCDesign.primaryLabel
+                                                : MacLCDesign.quaternaryLabel).CGColor;
+            }];
+            if (animated && !MacLCDesign.reducedMotion && on) {
+                CABasicAnimation *pop = [CABasicAnimation animationWithKeyPath:@"opacity"];
+                pop.fromValue = @(0.3);
+                pop.toValue = @(1.0);
+                pop.duration = MacLCDesign.motionStandardDuration;
+                pop.beginTime = CACurrentMediaTime() + 0.03 * d;
+                pop.fillMode = kCAFillModeBackwards;
+                [dot.layer addAnimation:pop forKey:@"MacLCMeterPop"];
+            }
+        }
+        [spoken addObject:[NSString stringWithFormat:@"%@ %lu/3",
+                           _labels[m].stringValue, (unsigned long)level]];
+    }
+    _currentLevels = [savedLevels copy];
+    self.accessibilityElement = YES;
+    self.accessibilityRole = NSAccessibilityStaticTextRole;
+    self.accessibilityLabel = [spoken componentsJoinedByString:@", "];
+}
+
 - (void)showPictureMode:(MacLCHDRPictureMode)mode
        needsToneMapping:(BOOL)needsToneMapping
                animated:(BOOL)animated
 {
+    [self setTitles:@[
+        _NS("Brightness"),
+        _NS("Highlight detail"),
+        _NS("Faithful to master"),
+        _NS("Battery"),
+    ]];
+
     /* levels per meter: brightness, highlight detail, faithful, battery */
     NSUInteger levels[kMeters];
     switch (mode) {
@@ -126,38 +181,18 @@ static const CGFloat kDotSize = 7.0;
             break;
     }
 
-    NSMutableArray<NSString *> *spoken = [NSMutableArray array];
-    for (NSUInteger m = 0; m < kMeters; m++) {
-        for (NSUInteger d = 0; d < kDots; d++) {
-            NSView *dot = _dots[m][d];
-            const BOOL on = d < levels[m];
-            [self.effectiveAppearance performAsCurrentDrawingAppearance:^{
-                dot.layer.backgroundColor = (on ? MacLCDesign.primaryLabel
-                                                : MacLCDesign.quaternaryLabel).CGColor;
-            }];
-            if (animated && !MacLCDesign.reducedMotion && on) {
-                CABasicAnimation *pop = [CABasicAnimation animationWithKeyPath:@"opacity"];
-                pop.fromValue = @(0.3);
-                pop.toValue = @(1.0);
-                pop.duration = MacLCDesign.motionStandardDuration;
-                pop.beginTime = CACurrentMediaTime() + 0.03 * d;
-                pop.fillMode = kCAFillModeBackwards;
-                [dot.layer addAnimation:pop forKey:@"MacLCMeterPop"];
-            }
-        }
-        [spoken addObject:[NSString stringWithFormat:@"%@ %lu/3",
-                           _labels[m].stringValue, (unsigned long)levels[m]]];
-    }
-    self.accessibilityElement = YES;
-    self.accessibilityRole = NSAccessibilityStaticTextRole;
-    self.accessibilityLabel = [spoken componentsJoinedByString:@", "];
+    [self showLevels:@[@(levels[0]), @(levels[1]), @(levels[2]), @(levels[3])]
+            animated:animated];
 }
 
 - (void)viewDidChangeEffectiveAppearance
 {
     [super viewDidChangeEffectiveAppearance];
-    /* Colours are resolved per appearance; redraw on the next update. */
-    self.needsDisplay = YES;
+    if (_currentLevels) {
+        [self showLevels:_currentLevels animated:NO];
+    } else {
+        self.needsDisplay = YES;
+    }
 }
 
 @end

@@ -37,6 +37,9 @@ NS_ASSUME_NONNULL_BEGIN
 /** The submenu, for other places that want it (the video context menu). */
 @property (readonly) NSMenu *hdrMenu;
 
+/** The SDR to HDR submenu. */
+@property (readonly) NSMenu *sdrToHdrMenu;
+
 @end
 
 NS_ASSUME_NONNULL_END

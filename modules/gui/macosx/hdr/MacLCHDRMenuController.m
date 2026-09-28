@@ -23,12 +23,16 @@
 #import "extensions/NSString+Helpers.h"
 #import "hdr/MacLCHDRController.h"
 #import "hdr/MacLCHDRPanelViewController.h"
+#import "hdr/MacLCSDRToHDRPanelViewController.h"
+#import "hdr/MacLCSDRToHDRState.h"
 #import "coreinteraction/MacLCOSDController.h"
 
 @implementation MacLCHDRMenuController
 {
     NSMenu *_hdrMenu;
     NSMenuItem *_hdrItem;
+    NSMenu *_sdrToHdrMenu;
+    NSMenuItem *_sdrToHdrItem;
 }
 
 + (instancetype)sharedMenuController
@@ -48,6 +52,10 @@
         _hdrMenu = [[NSMenu alloc] initWithTitle:_NS("HDR")];
         _hdrMenu.delegate = self;
         _hdrMenu.autoenablesItems = NO;
+
+        _sdrToHdrMenu = [[NSMenu alloc] initWithTitle:_NS("SDR to HDR")];
+        _sdrToHdrMenu.delegate = self;
+        _sdrToHdrMenu.autoenablesItems = NO;
     }
     return self;
 }
@@ -57,6 +65,11 @@
     return _hdrMenu;
 }
 
+- (NSMenu *)sdrToHdrMenu
+{
+    return _sdrToHdrMenu;
+}
+
 - (void)installInVideoMenu:(NSMenu *)videoMenu
 {
     if (_hdrItem != nil || videoMenu == nil)
@@ -64,11 +77,20 @@
     _hdrItem = [[NSMenuItem alloc] initWithTitle:_NS("HDR") action:nil keyEquivalent:@""];
     _hdrItem.image = [NSImage imageWithSystemSymbolName:@"sun.max" accessibilityDescription:nil];
     _hdrItem.submenu = _hdrMenu;
+
+    _sdrToHdrItem = [[NSMenuItem alloc] initWithTitle:_NS("SDR to HDR") action:nil keyEquivalent:@""];
+    NSImage *sdrIcon = [NSImage imageWithSystemSymbolName:@"sun.max.circle" accessibilityDescription:nil]
+                    ?: [NSImage imageWithSystemSymbolName:@"wand.and.sparkles" accessibilityDescription:nil];
+    _sdrToHdrItem.image = sdrIcon;
+    _sdrToHdrItem.submenu = _sdrToHdrMenu;
+
     [videoMenu insertItem:_hdrItem atIndex:0];
-    [videoMenu insertItem:[NSMenuItem separatorItem] atIndex:1];
+    [videoMenu insertItem:_sdrToHdrItem atIndex:1];
+    [videoMenu insertItem:[NSMenuItem separatorItem] atIndex:2];
 
     /* ⌥⌘H must work even before the submenu was ever opened. */
     [self menuNeedsUpdate:_hdrMenu];
+    [self menuNeedsUpdate:_sdrToHdrMenu];
 }
 
 - (NSMenuItem *)sectionHeader:(NSString *)title
@@ -82,8 +104,15 @@
 
 - (void)menuNeedsUpdate:(NSMenu *)menu
 {
-    if (menu != _hdrMenu)
-        return;
+    if (menu == _hdrMenu) {
+        [self rebuildHdrMenu:menu];
+    } else if (menu == _sdrToHdrMenu) {
+        [self rebuildSdrToHdrMenu:menu];
+    }
+}
+
+- (void)rebuildHdrMenu:(NSMenu *)menu
+{
     [menu removeAllItems];
 
     MacLCHDRController *controller = [MacLCHDRController sharedController];
@@ -143,9 +172,93 @@
     }
 }
 
+- (void)rebuildSdrToHdrMenu:(NSMenu *)menu
+{
+    [menu removeAllItems];
+
+    MacLCSDRToHDRState *state = [MacLCSDRToHDRState sharedState];
+
+    /* 1. Toggle item */
+    NSMenuItem *toggleItem = [[NSMenuItem alloc] initWithTitle:_NS("Play SDR Video in HDR")
+                                                        action:@selector(toggleSdrToHdr:)
+                                                 keyEquivalent:@""];
+    toggleItem.target = self;
+    toggleItem.state = state.enabled ? NSControlStateValueOn : NSControlStateValueOff;
+    [menu addItem:toggleItem];
+
+    /* Separator */
+    [menu addItem:[NSMenuItem separatorItem]];
+
+    /* Section header: Quality */
+    [menu addItem:[self sectionHeader:_NS("Quality")]];
+
+    /* Quality items: Automatic, Fast, Balanced, High, Maximum */
+    NSArray<NSNumber *> *qualities = @[
+        @(MacLCSDRToHDRQualityAuto),
+        @(MacLCSDRToHDRQualityFast),
+        @(MacLCSDRToHDRQualityBalanced),
+        @(MacLCSDRToHDRQualityHigh),
+        @(MacLCSDRToHDRQualityMaximum)
+    ];
+
+    BOOL modelMissing = [state.reason isEqualToString:@"model-missing"];
+
+    for (NSNumber *qNum in qualities) {
+        MacLCSDRToHDRQuality q = (MacLCSDRToHDRQuality)qNum.integerValue;
+        NSString *title = [MacLCSDRToHDRState displayNameForQuality:q];
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title
+                                                      action:@selector(chooseQuality:)
+                                               keyEquivalent:@""];
+        item.target = self;
+        item.tag = q;
+        item.state = (state.quality == q) ? NSControlStateValueOn : NSControlStateValueOff;
+
+        if (modelMissing && (q == MacLCSDRToHDRQualityHigh || q == MacLCSDRToHDRQualityMaximum)) {
+            item.enabled = NO;
+            item.toolTip = _NS("The model for High isn't installed.");
+        } else {
+            item.enabled = YES;
+            item.toolTip = [MacLCSDRToHDRState summaryForQuality:q];
+        }
+        [menu addItem:item];
+    }
+
+    /* Separator */
+    [menu addItem:[NSMenuItem separatorItem]];
+
+    /* Show Original */
+    NSMenuItem *origItem = [[NSMenuItem alloc] initWithTitle:_NS("Show Original")
+                                                      action:@selector(toggleShowOriginal:)
+                                               keyEquivalent:@""];
+    origItem.target = self;
+    const BOOL isRunning = state.activeQualityName.length > 0 && ![state.activeQualityName isEqualToString:@"off"];
+    origItem.enabled = isRunning;
+    origItem.state = state.comparing ? NSControlStateValueOn : NSControlStateValueOff;
+    origItem.toolTip = _NS("Or hold M while the video plays.");
+    [menu addItem:origItem];
+
+    /* Separator */
+    [menu addItem:[NSMenuItem separatorItem]];
+
+    /* SDR to HDR Options... */
+    NSMenuItem *optionsItem = [[NSMenuItem alloc] initWithTitle:_NS("SDR to HDR Options…")
+                                                         action:@selector(showSdrToHdrOptions:)
+                                                  keyEquivalent:@""];
+    optionsItem.target = self;
+    optionsItem.image = [NSImage imageWithSystemSymbolName:@"slider.horizontal.3" accessibilityDescription:nil];
+    [menu addItem:optionsItem];
+}
+
 - (void)showOptions:(id)sender
 {
+    [MacLCSDRToHDRPanelViewController closePanel];
     [MacLCHDRPanelViewController showForKeyWindow];
+}
+
+- (void)showSdrToHdrOptions:(id)sender
+{
+    [MacLCHDRPanelViewController closePanel];
+    [MacLCSDRToHDRPanelViewController showForKeyWindow];
 }
 
 - (void)choosePresentation:(NSMenuItem *)sender
@@ -162,6 +275,42 @@
     [[MacLCOSDController sharedController]
         showMessage:[NSString stringWithFormat:_NS("Picture: %@"), sender.title]
          symbolName:@"slider.horizontal.3"];
+}
+
+- (void)toggleSdrToHdr:(id)sender
+{
+    MacLCSDRToHDRState *state = [MacLCSDRToHDRState sharedState];
+    const BOOL newEnabled = !state.enabled;
+    state.enabled = newEnabled;
+    if (newEnabled) {
+        NSString *name = [MacLCSDRToHDRState displayNameForQuality:state.activeQuality];
+        [[MacLCOSDController sharedController] showMessage:[NSString stringWithFormat:_NS("SDR to HDR: %@"), name]
+                                                symbolName:@"sun.max"];
+    } else {
+        [[MacLCOSDController sharedController] showMessage:_NS("SDR to HDR Off")
+                                                symbolName:@"sun.min"];
+    }
+}
+
+- (void)chooseQuality:(NSMenuItem *)sender
+{
+    MacLCSDRToHDRQuality q = (MacLCSDRToHDRQuality)sender.tag;
+    [MacLCSDRToHDRState sharedState].quality = q;
+    NSString *name = [MacLCSDRToHDRState displayNameForQuality:q];
+    [[MacLCOSDController sharedController] showMessage:[NSString stringWithFormat:_NS("SDR to HDR: %@"), name]
+                                            symbolName:@"sun.max"];
+}
+
+- (void)toggleShowOriginal:(id)sender
+{
+    MacLCSDRToHDRState *state = [MacLCSDRToHDRState sharedState];
+    const BOOL comparing = !state.comparing;
+    [state setComparing:comparing];
+    if (comparing) {
+        [[MacLCOSDController sharedController] showMessage:_NS("Original") symbolName:@"square.split.2x1"];
+    } else {
+        [[MacLCOSDController sharedController] showMessage:_NS("HDR") symbolName:@"sun.max"];
+    }
 }
 
 @end
