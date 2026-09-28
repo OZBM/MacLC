@@ -26,6 +26,7 @@
 #import "extensions/NSString+Helpers.h"
 #import "main/VLCMain.h"
 #import "panels/dialogs/VLCResumeDialogController.h"
+#import "playqueue/MacLCResumePosition.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "playqueue/VLCPlayerController.h"
 #import "library/VLCInputItem.h"
@@ -33,13 +34,6 @@
 
 #import <vlc_configuration.h>
 
-static const int64_t SecInMillisecs = 1000;
-static const int64_t MinInMillisecs = SecInMillisecs * 60;
-static const int64_t MinimumDuration = 3 * MinInMillisecs;
-static const float MinimumStorePercent = 0.05;
-static const float MaximumStorePercent = 0.95;
-static const int64_t MinimumStoreTime = MinInMillisecs;
-static const int64_t MinimumStoreRemainingTime = MinInMillisecs;
 static NSString *VLCRecentlyPlayedMediaKey = @"recentlyPlayedMedia";
 static NSString *VLCRecentlyPlayedMediaListKey = @"recentlyPlayedMediaList";
 
@@ -202,11 +196,22 @@ static NSString *VLCRecentlyPlayedMediaListKey = @"recentlyPlayedMediaList";
 {
     NSParameterAssert(libraryMediaItem != nil);
 
-    const float lastPlaybackPosition = libraryMediaItem.progress;
-    const int64_t duration = playerController.durationOfCurrentMediaItem;
-    const BOOL isAlbumTrack = libraryMediaItem.mediaSubType == VLC_ML_MEDIA_SUBTYPE_ALBUMTRACK;
+    if (libraryMediaItem.mediaSubType == VLC_ML_MEDIA_SUBTYPE_ALBUMTRACK) {
+        return;
+    }
 
-    if (lastPlaybackPosition < MinimumStorePercent || duration < MinimumDuration || isAlbumTrack) {
+    /* The media library keeps whatever position it was given for a file it
+     * does not know the duration of, the last frame of one played to its end
+     * included: check the position against the duration before offering it. */
+    const float lastPlaybackPosition = libraryMediaItem.progress;
+    const int64_t duration = MacLCMediaDurationInMilliseconds(playerController.durationOfCurrentMediaItem,
+                                                              libraryMediaItem.duration);
+    const int64_t resumeTime = MacLCResumeTimeInSeconds(lastPlaybackPosition, duration);
+    if (resumeTime < 0) {
+        if (lastPlaybackPosition > 0.f) {
+            msg_Dbg(getIntf(), "not continuing playback at %0.4f of %lld ms",
+                    lastPlaybackPosition, duration);
+        }
         return;
     }
 
@@ -227,8 +232,9 @@ static NSString *VLCRecentlyPlayedMediaListKey = @"recentlyPlayedMediaList";
         _resumeDialogController = [[VLCResumeDialogController alloc] init];
     }
 
+    msg_Dbg(getIntf(), "offering to continue playback at %lld s", resumeTime);
     [_resumeDialogController showWindowWithItem:libraryMediaItem.inputItem
-                               withLastPosition:(lastPlaybackPosition * duration) / 1000
+                               withLastPosition:resumeTime
                                 completionBlock:completionBlock];
 }
 
@@ -243,6 +249,17 @@ static NSString *VLCRecentlyPlayedMediaListKey = @"recentlyPlayedMediaList";
     NSNumber *lastPosition = [recentlyPlayedFiles objectForKey:inputItem.MRL];
     if (!lastPosition || lastPosition.intValue <= 0)
         return;
+
+    /* An entry only gets written after passing the same test against the
+     * duration known then; test it again when the duration is already known,
+     * so that one at or past the end is never offered. */
+    const int64_t duration = MacLCMediaDurationInMilliseconds(inputItem.duration, -1);
+    if (duration > 0 &&
+        !MacLCCanResumeAtPosition(lastPosition.doubleValue * 1000. / duration, duration)) {
+        msg_Dbg(getIntf(), "not continuing playback at %d s of %lld ms",
+                lastPosition.intValue, duration);
+        return;
+    }
 
     CompletionBlock completionBlock = ^(enum ResumeResult result) {
         if (result == RESUME_RESTART)
@@ -263,29 +280,10 @@ static NSString *VLCRecentlyPlayedMediaListKey = @"recentlyPlayedMediaList";
         _resumeDialogController = [[VLCResumeDialogController alloc] init];
     }
 
+    msg_Dbg(getIntf(), "offering to continue playback at %d s", lastPosition.intValue);
     [_resumeDialogController showWindowWithItem:inputItem
                                withLastPosition:lastPosition.intValue
                                 completionBlock:completionBlock];
-}
-
-BOOL ShouldStorePlaybackPosition(float position, int64_t duration)
-{
-    int64_t positionTime = position * duration;
-    int64_t remainingTime = duration - positionTime;
-
-    if (duration < MinimumDuration) {
-        return NO;
-    }
-
-    if (position < MinimumStorePercent && positionTime < MinimumStoreTime) {
-        return NO;
-    }
-
-    if (position > MaximumStorePercent && remainingTime < MinimumStoreRemainingTime) {
-        return NO;
-    }
-
-    return YES;
 }
 
 - (void)storePlaybackPositionForItem:(VLCInputItem *)inputItem
@@ -317,16 +315,19 @@ BOOL ShouldStorePlaybackPosition(float position, int64_t duration)
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSMutableDictionary *mutDict = [[NSMutableDictionary alloc] initWithDictionary:[defaults objectForKey:VLCRecentlyPlayedMediaKey]];
 
-    float relativePos = playerController.position;
-    long long pos = SEC_FROM_VLC_TICK(playerController.time);
-    long long dur = SEC_FROM_VLC_TICK(inputItem.duration);
+    /* The time comes from the position inside the media rather than from the
+     * elapsed time, so that it stays inside the media whatever happened
+     * before (repeated passes of the same input, for one). */
+    const double relativePos = playerController.position;
+    const int64_t pos = MacLCResumeTimeInSeconds(relativePos,
+                                                 MacLCMediaDurationInMilliseconds(inputItem.duration, -1));
 
     NSMutableArray *mediaList = [[defaults objectForKey:VLCRecentlyPlayedMediaListKey] mutableCopy];
     NSString *mrl = inputItem.MRL;
 
-    if (ShouldStorePlaybackPosition(relativePos, dur*1000)) {
-        msg_Dbg(getIntf(), "Store current playback position of %f", relativePos);
-        [mutDict setObject:[NSNumber numberWithInteger:pos] forKey:inputItem.MRL];
+    if (pos >= 0) {
+        msg_Dbg(getIntf(), "Store current playback position of %f (%lld s)", relativePos, pos);
+        [mutDict setObject:[NSNumber numberWithLongLong:pos] forKey:inputItem.MRL];
 
         [mediaList removeObject:mrl];
         [mediaList addObject:mrl];
