@@ -22,7 +22,7 @@
 
 #import "VLCPlaybackProgressSliderCell.h"
 
-#import <CoreVideo/CoreVideo.h>
+#import <QuartzCore/QuartzCore.h>
 
 #import "extensions/NSColor+VLCAdditions.h"
 
@@ -34,14 +34,12 @@
 
 #import "views/VLCUIUnits.h"
 
-/* The display link calls back on its own thread, and the tick runs later on
- * the main queue: both can come after the cell is gone. They reach it
- * through this box only, which every pending block keeps alive. */
+/* A display link keeps its target until it is invalidated. It reaches the
+ * cell through this box, which holds the cell weakly, so the link never keeps
+ * the cell alive. */
 @interface VLCPlaybackProgressSliderCellTarget : NSObject
 @property (weak) VLCPlaybackProgressSliderCell *cell;
-@end
-
-@implementation VLCPlaybackProgressSliderCellTarget
+- (void)displayLinkDidFire:(CADisplayLink *)displayLink;
 @end
 
 @interface VLCPlaybackProgressSliderCell ()
@@ -49,9 +47,9 @@
     VLCPlaybackProgressSliderCellTarget *_displayLinkTarget;
     NSInteger _animationWidth;
     NSInteger _animationPosition;
-    double _lastTime;
+    CFTimeInterval _lastTime;
     double _deltaToLastFrame;
-    CVDisplayLinkRef _displayLink;
+    CADisplayLink *_displayLink;
 
     NSColor *_emptySliderBackgroundColor;
 
@@ -60,25 +58,18 @@
     CGFloat _aToBLoopBMarkPosition; // Position of the B loop mark as a fraction of slider width
 }
 
-- (void)displayLink:(CVDisplayLinkRef)displayLink tickWithTime:(const CVTimeStamp *)inNow;
+- (void)displayLinkDidFire:(CADisplayLink *)displayLink;
 
 @end
 
-static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
-                                    const CVTimeStamp *inNow,
-                                    const CVTimeStamp *__unused inOutputTime,
-                                    CVOptionFlags __unused flagsIn,
-                                    CVOptionFlags *__unused flagsOut,
-                                    void *displayLinkContext)
+@implementation VLCPlaybackProgressSliderCellTarget
+
+- (void)displayLinkDidFire:(CADisplayLink *)displayLink
 {
-    const CVTimeStamp inNowCopy = *inNow;
-    VLCPlaybackProgressSliderCellTarget * const target =
-        (__bridge VLCPlaybackProgressSliderCellTarget *)displayLinkContext;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [target.cell displayLink:displayLink tickWithTime:&inNowCopy];
-    });
-    return kCVReturnSuccess;
+    [self.cell displayLinkDidFire:displayLink];
 }
+
+@end
 
 @implementation VLCPlaybackProgressSliderCell
 
@@ -90,7 +81,6 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
 
         [self setSliderStyleLight];
         [self updateAtoBLoopState];
-        [self initDisplayLink];
 
         NSNotificationCenter * const notificationCenter = NSNotificationCenter.defaultCenter;
         [notificationCenter addObserver:self
@@ -103,17 +93,34 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
 
 - (void)dealloc
 {
-    CVDisplayLinkStop(_displayLink);
-    CVDisplayLinkRelease(_displayLink);
+    [_displayLink invalidate];
 }
 
-- (void)initDisplayLink
+/* The link comes from the slider view, and only while the animation runs.
+ * AppKit keeps it in step with the display that shows the slider and stops
+ * calling it while no display does (controls hidden, display asleep, lid
+ * closed, headless Mac), where a link of the active displays cannot even be
+ * created. Without ticks, the cell draws the same state, only still. */
+- (void)startDisplayLink
 {
-    const CVReturn ret = CVDisplayLinkCreateWithActiveCGDisplays(&_displayLink);
-    NSAssert(ret == kCVReturnSuccess && _displayLink != NULL, @"Could not init displaylink");
-    _displayLinkTarget = [[VLCPlaybackProgressSliderCellTarget alloc] init];
-    _displayLinkTarget.cell = self;
-    CVDisplayLinkSetOutputCallback(_displayLink, DisplayLinkCallback, (__bridge void*) _displayLinkTarget);
+    NSView * const controlView = self.controlView;
+    if (_displayLink != nil || controlView == nil) {
+        return;
+    }
+
+    if (_displayLinkTarget == nil) {
+        _displayLinkTarget = [[VLCPlaybackProgressSliderCellTarget alloc] init];
+        _displayLinkTarget.cell = self;
+    }
+    _displayLink = [controlView displayLinkWithTarget:_displayLinkTarget
+                                             selector:@selector(displayLinkDidFire:)];
+    [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
+}
+
+- (void)stopDisplayLink
+{
+    [_displayLink invalidate];
+    _displayLink = nil;
 }
 
 - (void)setSliderStyleLight
@@ -141,14 +148,14 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
     _aToBLoopBMarkPosition = playerController.bLoopPosition;
 }
 
-- (void)displayLink:(CVDisplayLinkRef)displayLink tickWithTime:(const CVTimeStamp *)inNow
+- (void)displayLinkDidFire:(CADisplayLink *)displayLink
 {
     if (_lastTime == 0) {
         _deltaToLastFrame = 0;
     } else {
-        _deltaToLastFrame = (double)(inNow->videoTime - _lastTime) / inNow->videoTimeScale;
+        _deltaToLastFrame = displayLink.timestamp - _lastTime;
     }
-    _lastTime = inNow->videoTime;
+    _lastTime = displayLink.timestamp;
 
     self.controlView.needsDisplay = YES;
 }
@@ -308,17 +315,16 @@ static const CGFloat kKnobDiameter = 14.0;
 
 - (void)beginAnimating
 {
-    const CVReturn err = CVDisplayLinkStart(_displayLink);
-    NSAssert(err == kCVReturnSuccess, @"Display link animation start should not return error!");
     _animationPosition = -(_animationWidth);
+    _lastTime = 0;
+    [self startDisplayLink];
     self.enabled = NO;
 }
 
 - (void)endAnimating
 {
-    CVDisplayLinkStop(_displayLink);
+    [self stopDisplayLink];
     self.enabled = YES;
-
 }
 
 - (void)setIndefinite:(BOOL)indefinite
