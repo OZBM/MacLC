@@ -80,6 +80,19 @@
 	<string>MacLC wants to access a network volume as requested by the user.</string>
 	<key>NSRemovableVolumesUsageDescription</key>
 	<string>MacLC wants to access a removable volume as requested by the user.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MacLC looks for media servers, shared folders and Chromecast devices on your local network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_ftp._tcp</string>
+		<string>_smb._tcp</string>
+		<string>_nfs._tcp</string>
+		<string>_sftp-ssh._tcp</string>
+		<string>_webdav._tcp</string>
+		<string>_webdavs._tcp</string>
+		<string>_googlecast._tcp</string>
+		<string>_ndi._tcp</string>
+	</array>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

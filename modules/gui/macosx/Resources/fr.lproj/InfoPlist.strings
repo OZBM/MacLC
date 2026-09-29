@@ -8,3 +8,4 @@
 "NSDownloadsFolderUsageDescription" = "MacLC souhaite accéder au dossier des téléchargements à la demande de l’utilisateur.";
 "NSNetworkVolumesUsageDescription" = "MacLC souhaite accéder à un volume réseau à la demande de l’utilisateur.";
 "NSRemovableVolumesUsageDescription" = "MacLC souhaite accéder à un volume amovible à la demande de l’utilisateur.";
+"NSLocalNetworkUsageDescription" = "MacLC recherche les serveurs multimédias, les dossiers partagés et les appareils Chromecast de votre réseau local.";

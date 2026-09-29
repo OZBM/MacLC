@@ -173,7 +173,9 @@
         p_extensions_manager->p_module = module_need(p_extensions_manager, "extension", NULL, false);
 
         if (!p_extensions_manager->p_module) {
-            msg_Err(p_intf, "Unable to load extensions module");
+            /* Expected: MacLC is built without Lua, the only provider of
+             * extensions. Not worth an error at every launch. */
+            msg_Dbg(p_intf, "No extensions module");
             vlc_object_delete(p_extensions_manager);
             p_extensions_manager = NULL;
             b_failed = true;
