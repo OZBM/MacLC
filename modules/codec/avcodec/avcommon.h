@@ -189,6 +189,12 @@ static inline void set_video_color_settings( const video_format_t *p_fmt, AVCode
         case TRANSFER_FUNC_BT709:
             p_context->color_trc = AVCOL_TRC_BT709;
             break;
+        /* VP9 and a few other codecs carry no transfer function in the
+         * bitstream: without this case an HLG stream tagged by its container
+         * decodes as SDR. */
+        case TRANSFER_FUNC_ARIB_B67:
+            p_context->color_trc = AVCOL_TRC_ARIB_STD_B67;
+            break;
         case TRANSFER_FUNC_SMPTE_ST2084:
             p_context->color_trc = AVCOL_TRC_SMPTEST2084;
             break;
