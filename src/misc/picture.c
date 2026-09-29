@@ -317,6 +317,22 @@ picture_t *picture_NewFromFormat(const video_format_t *restrict fmt)
             goto error;
     }
 
+    /* Decoders that write straight into these buffers (libavcodec direct
+     * rendering, dav1d) read a little past the end of the last plane from
+     * their SIMD code: dav1d requires 64 bytes of padding, libavcodec pads
+     * its own buffers by 16 + STRIDE_ALIGN - 1 bytes. Without a tail, a
+     * picture whose size is an exact multiple of the page size (2560x1440
+     * 10-bit 4:2:0, any 10-bit dav1d picture, 3840x2176 8-bit...) ends on
+     * an unmapped page and the overread crashes the decoder thread. Keep
+     * two lines of the widest plane, like the extra lines VLC 3 allocated.
+     * Pitches are multiples of 64, so the size stays one too. */
+    size_t tail = 64;
+    for (int i = 0; i < pic->i_planes; i++)
+        tail = __MAX(tail, 2 * (size_t)pic->p[i].i_pitch);
+
+    if (unlikely(ckd_add(&pic_size, pic_size, tail)))
+        goto error;
+
     if (unlikely(pic_size >= PICTURE_SW_SIZE_MAX))
         goto error;
 
