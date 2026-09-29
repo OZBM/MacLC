@@ -25,6 +25,7 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/tests/NSMenuVLCAdditionsTest.m \
 	gui/macosx/tests/MacLCSDRToHDRTest.m \
 	gui/macosx/tests/MacLCToneCurvesTest.m \
+	gui/macosx/tests/MacLCResumePositionTest.m \
 	video_filter/maclc_frc_geometry.c \
 	video_output/apple/maclc_tonecurves.c \
 	gui/macosx/extensions/VLCHexNumberFormatter.m \
@@ -33,6 +34,7 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/extensions/MacLCVolumePath.m \
 	gui/macosx/extensions/NSMenu+VLCAdditions.m \
 	gui/macosx/windows/video/MacLCVideoFitGeometry.m \
+	gui/macosx/playqueue/MacLCResumePosition.m \
 	gui/macosx/library/VLCInputItem.m \
 	gui/macosx/library/VLCInputNode.m \
 	gui/macosx/library/VLCInputNodePathControl.m \

@@ -142,6 +142,41 @@ vlc_player_UpdateMediaType(const struct vlc_player_input* input,
     return true;
 }
 
+/* The media library tells a position near the start or the end of a media
+ * from one in its middle only when it knows the media's duration
+ * (Media::computePositionType() in medialibrary). It never learns it for a
+ * media only ever played from outside the library, and keeps any position
+ * given for one as is: played to its end, such a media stays "in progress" at
+ * its last frame, and gets offered to resume there. When the input knows the
+ * length, apply the same margins here: near the start, the progress is
+ * cleared; near the end, it is cleared and the media counts as played. */
+static void
+vlc_player_UpdateMLProgress(vlc_medialibrary_t *ml, const vlc_ml_media_t *media,
+                            const struct vlc_player_input *input)
+{
+    const double position = input->position;
+
+    if (media->i_duration > 0 || input->live || input->length <= 0)
+    {
+        vlc_ml_media_update_progress(ml, media->i_id, position);
+        return;
+    }
+
+    /* 5 % under an hour, 1 % less for every hour, 1 % from four hours on */
+    const vlc_tick_t hours = input->length / VLC_TICK_FROM_SEC(3600);
+    const double margin = hours >= 4 ? .01 : .05 - .01 * hours;
+
+    if (position < margin)
+        vlc_ml_media_update_progress(ml, media->i_id, -1.);
+    else if (position > 1. - margin)
+    {
+        vlc_ml_media_update_progress(ml, media->i_id, -1.);
+        vlc_ml_media_set_played(ml, media->i_id, true);
+    }
+    else
+        vlc_ml_media_update_progress(ml, media->i_id, position);
+}
+
 static void
 vlc_player_CompareAssignState(char **target_ptr, char **input_ptr)
 {
@@ -203,7 +238,7 @@ vlc_player_UpdateMLStates(vlc_player_t *player, struct vlc_player_input* input)
     assert(media->i_type != VLC_ML_MEDIA_TYPE_UNKNOWN);
 
     if ( var_GetBool( input->thread, "save-recentplay" ) )
-        vlc_ml_media_update_progress( ml, media->i_id, input->position );
+        vlc_player_UpdateMLProgress( ml, media, input );
 
     /* If the value changed during the playback, update it in the medialibrary.
      * If not, set each state to their "unset" values, so that they aren't saved
