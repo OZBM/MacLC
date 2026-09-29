@@ -1,0 +1,18 @@
+MacLC is free software, distributed under the GNU General Public License,
+version 2 or later (MacLC/COPYING); its library, libvlc, under the GNU Lesser
+General Public License, version 2.1 or later (MacLC/COPYING.LIB).
+Source code: https://github.com/OZBM/MacLC
+
+These libraries are linked statically into MacLC's plug-ins. The build
+scripts in extras/package/macosx/ of the source tree fetch and build them.
+
+  TagLib 2.3              LGPL 2.1 or MPL 1.1   taglib/
+                          https://taglib.org/
+  utfcpp 3.2.5            Boost Software License 1.0 (used by TagLib)
+                          utfcpp/   https://github.com/nemtrif/utfcpp
+  libmedialibrary 0.13.2  LGPL 2.1 or later     medialibrary/
+                          https://code.videolan.org/videolan/medialibrary
+  libdvbpsi 1.3.3         LGPL 2.1 or later     libdvbpsi/
+                          https://www.videolan.org/developers/libdvbpsi.html
+
+The libraries MacLC loads dynamically are listed in README.txt.

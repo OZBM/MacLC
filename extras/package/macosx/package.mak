@@ -87,6 +87,11 @@ endif
 	find $@ -type d -exec chmod ugo+rx '{}' \;
 	find $@ -type f -exec chmod ugo+r '{}' \;
 	python3 "$(srcdir)/extras/package/macosx/bundle-dylibs.py" "$@"
+	## MacLC's own licences, and those of the libraries linked statically
+	## (bundle-dylibs.py covers the dynamic ones)
+	mkdir -p $@/Contents/Resources/Licenses/MacLC
+	cp "$(srcdir)/COPYING" "$(srcdir)/COPYING.LIB" $@/Contents/Resources/Licenses/MacLC/
+	cp -R "$(srcdir)/extras/package/macosx/licenses/." $@/Contents/Resources/Licenses/
 	codesign --force --deep --sign - "$@"
 	if test "$(build)" = "$(host)"; then \
 		VLC_LIB_PATH="$@/Contents/Frameworks" bin/vlc-cache-gen $@/Contents/Frameworks/plugins ; \
