@@ -1581,7 +1581,9 @@ AH_BOTTOM([
   AX_APPEND_COMPILE_FLAGS([-funroll-loops], [OBJCFLAGS], [-Werror])
   AC_LANG_POP(Objective C)
 
-  AS_IF([test "$enable_debug" = "no"], [
+  dnl Not on Darwin: Apple's arm64 ABI keeps the frame pointer, and crash
+  dnl reports need it to unwind the stacks users send back.
+  AS_IF([test "$enable_debug" = "no" -a "${SYS}" != "darwin"], [
     dnl Check for -fomit-frame-pointer
     AX_APPEND_COMPILE_FLAGS([-fomit-frame-pointer], [CFLAGS], [-Werror])
     AC_LANG_PUSH(C++)
