@@ -417,21 +417,17 @@ CreateCVPXConverter(vout_display_t *vd, const video_format_t *fmt)
                          fmt->transfer == TRANSFER_FUNC_HLG ||
                          fmt->primaries == COLOR_PRIMARIES_BT2020);
 
+    /* Only buffers the renderer decodes: NV12, P010 and BGRA. 4:2:2
+     * (P216, UYVY) would be read with the 4:2:0 layout. */
     if (is_10bit_hdr)
     {
         converter->fmt_out.video.i_chroma =
-        converter->fmt_out.i_codec = is_422_10b ?
-            VLC_CODEC_CVPX_P216 : VLC_CODEC_CVPX_P010;
+        converter->fmt_out.i_codec = VLC_CODEC_CVPX_P010;
     }
     else if (fmt->i_chroma == VLC_CODEC_NV12)
     {
         converter->fmt_out.video.i_chroma =
         converter->fmt_out.i_codec = VLC_CODEC_CVPX_NV12;
-    }
-    else if (fmt->i_chroma == VLC_CODEC_UYVY)
-    {
-        converter->fmt_out.video.i_chroma =
-        converter->fmt_out.i_codec = VLC_CODEC_CVPX_UYVY;
     }
     else
     {
@@ -1196,6 +1192,22 @@ int MacLCMetalOpen(vout_display_t *vd,
         converter = CreateCVPXConverter(vd, fmt);
         if (!converter)
             return VLC_EGENERIC;
+    } else {
+        /* The renderer decodes NV12, P010 and BGRA buffers. VideoToolbox
+         * also hands out 4:2:2 (UYVY for DV, P216) and planar I420: ask for
+         * a buffer the renderer reads, the core inserts the CVPX
+         * converter. */
+        switch (fmt->i_chroma) {
+            case VLC_CODEC_CVPX_P216:
+                fmt->i_chroma = VLC_CODEC_CVPX_P010;
+                break;
+            case VLC_CODEC_CVPX_UYVY:
+            case VLC_CODEC_CVPX_I420:
+                fmt->i_chroma = VLC_CODEC_CVPX_NV12;
+                break;
+            default:
+                break;
+        }
     }
 
     /* Merge vd->source metadata into fmt as caopengllayer.m Open does */
