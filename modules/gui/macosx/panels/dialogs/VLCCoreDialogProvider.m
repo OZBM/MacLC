@@ -40,6 +40,9 @@
     vlc_dialog_id *_progressDialogID;
     vlc_dialog_id *_modalDialogID; /* login or question alert running */
     NSMutableArray<NSDictionary *> *_pendingProgressDialogs;
+    /* The core holds an unretained pointer to this object while this is
+     * set: see -unregisterFromCore. */
+    BOOL _registeredWithCore;
 }
 
 - (void)cancelDialog:(vlc_dialog_id *)dialogID;
@@ -211,24 +214,50 @@ static void updateProgressCallback(void *p_data,
 
         vlc_dialog_provider_set_error_callback(p_intf, displayErrorCallback, (__bridge void *)self);
         vlc_dialog_provider_set_callbacks(p_intf, &cbs, (__bridge void *)self);
+        _registeredWithCore = YES;
+
+        /* Posted by the interface while it closes, before the player and its
+         * inputs are torn down: an input that stops afterwards (a torrent
+         * still fetching its metadata, say) releases its progress dialog and
+         * would otherwise call back into this object once it is gone. */
+        [NSNotificationCenter.defaultCenter addObserver:self
+                                               selector:@selector(applicationWillTerminate:)
+                                                   name:NSApplicationWillTerminateNotification
+                                                 object:nil];
     }
 
     return self;
 }
 
-- (void)dealloc
+- (void)applicationWillTerminate:(NSNotification *)notification
 {
-    /* This object can outlive the interface, in which case there is no
-     * provider left to unregister from. */
+    [self unregisterFromCore];
+}
+
+- (void)unregisterFromCore
+{
+    if (!_registeredWithCore) {
+        return;
+    }
+    /* Queued blocks can keep this object alive past the interface, in which
+     * case there is no provider left to unregister from: that is why it is
+     * done when the interface closes rather than only here in -dealloc. */
     intf_thread_t * const p_intf = getIntf();
     if (p_intf == NULL) {
         return;
     }
+    _registeredWithCore = NO;
 
     msg_Dbg(p_intf, "Deinitializing dialog provider");
 
     vlc_dialog_provider_set_callbacks(p_intf, NULL, NULL);
     vlc_dialog_provider_set_error_callback(p_intf, NULL, NULL);
+}
+
+- (void)dealloc
+{
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+    [self unregisterFromCore];
 }
 
 -(void)awakeFromNib

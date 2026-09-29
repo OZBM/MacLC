@@ -54,9 +54,12 @@ static void bookmarksLibraryCallback(void *p_data, const vlc_ml_event_t *p_event
         case VLC_ML_EVENT_BOOKMARKS_DELETED:
         case VLC_ML_EVENT_BOOKMARKS_UPDATED:
         {
+            /* Take the reference here: the data source cannot go away while
+             * this callback runs, only once it has unregistered it. */
+            VLCBookmarksTableViewDataSource * const dataSource =
+                (__bridge VLCBookmarksTableViewDataSource *)p_data;
             // Need to reload data on main queue
             dispatch_async(dispatch_get_main_queue(), ^{
-                VLCBookmarksTableViewDataSource *dataSource = (__bridge VLCBookmarksTableViewDataSource *)p_data;
                 [dataSource updateBookmarks];
             });
         }
@@ -106,9 +109,37 @@ static void bookmarksLibraryCallback(void *p_data, const vlc_ml_event_t *p_event
                                                name:VLCPlayerCurrentMediaItemChanged
                                              object:nil];
 
-    _eventCallback = vlc_ml_event_register_callback(_mediaLibrary,
-                                                    bookmarksLibraryCallback,
-                                                    (__bridge void *)self);
+    /* No media library with --no-media-library. */
+    if (_mediaLibrary != NULL) {
+        _eventCallback = vlc_ml_event_register_callback(_mediaLibrary,
+                                                        bookmarksLibraryCallback,
+                                                        (__bridge void *)self);
+        /* The media library asserts that every callback is gone when it is
+         * released, which happens right after the interface closes. */
+        [NSNotificationCenter.defaultCenter addObserver:self
+                                               selector:@selector(applicationWillTerminate:)
+                                                   name:NSApplicationWillTerminateNotification
+                                                 object:nil];
+    }
+}
+
+- (void)unregisterLibraryCallback
+{
+    if (_eventCallback != NULL) {
+        vlc_ml_event_unregister_callback(_mediaLibrary, _eventCallback);
+        _eventCallback = NULL;
+    }
+}
+
+- (void)applicationWillTerminate:(NSNotification *)notification
+{
+    [self unregisterLibraryCallback];
+}
+
+- (void)dealloc
+{
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+    [self unregisterLibraryCallback];
 }
 
 - (void)updateLibraryItemId

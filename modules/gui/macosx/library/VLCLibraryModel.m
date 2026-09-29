@@ -349,12 +349,15 @@ static void libraryCallback(void *p_data, const vlc_ml_event_t *p_event)
 {
     if (_p_eventCallback) {
         vlc_ml_event_unregister_callback(_p_mediaLibrary, _p_eventCallback);
+        _p_eventCallback = NULL;
     }
 }
 
 - (void)dealloc
 {
     [_defaultNotificationCenter removeObserver:self];
+    /* The core holds an unretained pointer to this object. */
+    [self applicationWillTerminate:nil];
 }
 
 - (void)mediaItemThumbnailGenerated:(VLCMediaLibraryMediaItem *)mediaItem

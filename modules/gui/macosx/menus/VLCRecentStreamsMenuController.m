@@ -84,6 +84,8 @@ static void recentStreamsLibraryCallback(void *p_data, const vlc_ml_event_t *p_e
 - (void)dealloc
 {
     [NSNotificationCenter.defaultCenter removeObserver:self];
+    /* The core holds an unretained pointer to this object. */
+    [self applicationWillTerminate:nil];
 }
 
 - (void)rebuild
