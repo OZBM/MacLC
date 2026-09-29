@@ -50,6 +50,7 @@
 #import <sys/types.h>
 #import <sys/sysctl.h>
 #import <mach/machine.h>
+#import <math.h>
 
 #ifndef kCMVideoCodecType_AV1
 #define kCMVideoCodecType_AV1 'av01'
@@ -716,7 +717,12 @@ static inline int64_t rpu_read_se_coef(bs_t *p_bs, uint8_t coef_data_type, uint8
         uint32_t u = bs_read(p_bs, 32);
         float f;
         memcpy(&f, &u, sizeof(f));
-        return (int64_t)(f * (1LL << coef_log2_denom));
+        /* A corrupt RPU can hold NaN or a value out of range, and
+         * converting either to an integer is undefined. */
+        const double scaled = (double)f * (double)(1LL << coef_log2_denom);
+        if (!isfinite(scaled) || fabs(scaled) >= 0x1p62)
+            return 0;
+        return (int64_t)scaled;
     }
     return 0;
 }

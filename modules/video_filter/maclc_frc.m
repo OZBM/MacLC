@@ -1295,7 +1295,18 @@ static bool MetalRun(MacLCFrcContext *ctx, CVPixelBufferRef previous,
     [commands commit];
     [commands waitUntilCompleted];
     CVMetalTextureCacheFlush(ctx->_tex_cache, 0);
-    return commands.error == nil;
+    if (commands.error != nil)
+    {
+        /* The caller only takes the buffers of a pass that succeeded. */
+        for (unsigned i = 0; i < count; i++)
+            if (out[i] != NULL)
+            {
+                CVPixelBufferRelease(out[i]);
+                out[i] = NULL;
+            }
+        return false;
+    }
+    return true;
 }
 
 /*****************************************************************************
