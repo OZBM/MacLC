@@ -348,7 +348,6 @@ static NSString * const k360ShaderSource =
       drawableSize:(CGSize)drawableSize
                sar:(float)sar
 {
-    VLC_UNUSED(drawableSize);
     if (input == nil || encoder == nil)
         return;
 
@@ -412,11 +411,19 @@ static NSString * const k360ShaderSource =
     };
     [encoder setViewport:vp];
 
+    /* The scissor rect must lie within the drawable: a zoomed view starts
+     * left of or above it. */
+    const double x0 = fmax(0.0, floor(CGRectGetMinX(destRect)));
+    const double y0 = fmax(0.0, floor(CGRectGetMinY(destRect)));
+    const double x1 = fmin(drawableSize.width, ceil(CGRectGetMaxX(destRect)));
+    const double y1 = fmin(drawableSize.height, ceil(CGRectGetMaxY(destRect)));
+    if (x1 <= x0 || y1 <= y0)
+        return;
     MTLScissorRect sc = {
-        .x      = (NSUInteger)destRect.origin.x,
-        .y      = (NSUInteger)destRect.origin.y,
-        .width  = (NSUInteger)destRect.size.width,
-        .height = (NSUInteger)destRect.size.height
+        .x      = (NSUInteger)x0,
+        .y      = (NSUInteger)y0,
+        .width  = (NSUInteger)(x1 - x0),
+        .height = (NSUInteger)(y1 - y0)
     };
     [encoder setScissorRect:sc];
 

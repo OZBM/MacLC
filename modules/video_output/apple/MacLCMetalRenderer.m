@@ -1046,6 +1046,11 @@ static NSString * const kMacLCMetalShaderSource =
     if (_projector != nil || (_scaler != nil && orientation == ORIENT_NORMAL)) {
         _composeTexture = [self intermediate:_composeTexture size:drawableSize
                                        usage:MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead];
+    }
+    /* Out of GPU memory: draw the picture unprojected and unscaled rather
+     * than start a render pass without an attachment. */
+    if (_composeTexture != nil
+     && (_projector != nil || (_scaler != nil && orientation == ORIENT_NORMAL))) {
         MTLRenderPassDescriptor *clear = [MTLRenderPassDescriptor renderPassDescriptor];
         clear.colorAttachments[0].texture = _composeTexture;
         clear.colorAttachments[0].loadAction = MTLLoadActionClear;

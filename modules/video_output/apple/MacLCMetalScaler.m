@@ -626,9 +626,16 @@ static MTLScissorRect ScissorInside(CGRect rect, id<MTLTexture> target)
         if (enc == nil)
             return NO;
 
+        /* Nothing of the picture is inside the drawable (panned or zoomed
+         * away): an empty scissor rect is invalid, draw nothing. */
+        const MTLScissorRect sc = ScissorInside(destRect, output);
+        if (sc.width == 0 || sc.height == 0) {
+            [enc endEncoding];
+            return YES;
+        }
         MTLViewport vp = { destRect.origin.x, destRect.origin.y, destRect.size.width, destRect.size.height, 0.0, 1.0 };
         [enc setViewport:vp];
-        [enc setScissorRect:ScissorInside(destRect, output)];
+        [enc setScissorRect:sc];
 
         [enc setRenderPipelineState:_polarPSO];
         [enc setFragmentTexture:input atIndex:0];
@@ -730,9 +737,14 @@ static MTLScissorRect ScissorInside(CGRect rect, id<MTLTexture> target)
         if (vEnc == nil)
             return NO;
 
+        const MTLScissorRect sc = ScissorInside(destRect, output);
+        if (sc.width == 0 || sc.height == 0) {
+            [vEnc endEncoding];
+            return YES;
+        }
         MTLViewport vp = { destRect.origin.x, destRect.origin.y, destRect.size.width, destRect.size.height, 0.0, 1.0 };
         [vEnc setViewport:vp];
-        [vEnc setScissorRect:ScissorInside(destRect, output)];
+        [vEnc setScissorRect:sc];
 
         [vEnc setRenderPipelineState:_vertPSO];
         [vEnc setFragmentTexture:_intermediateTexture atIndex:0];
