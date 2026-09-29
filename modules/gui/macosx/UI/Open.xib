@@ -1807,7 +1807,7 @@ Gw
                         <rect key="frame" x="17" y="56" width="662" height="70"/>
                         <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="center" id="2986">
                             <font key="font" metaFont="message" size="11"/>
-                            <string key="title">If you want to open a multicast stream, enter the respective IP address given by the stream provider. In unicast mode, VLC uses your machine's IP automatically.
+                            <string key="title">If you want to open a multicast stream, enter the respective IP address given by the stream provider. In unicast mode, MacLC uses your machine's IP automatically.
 
 To open a stream using a different protocol, just press Cancel to close this sheet.
 </string>

@@ -293,7 +293,9 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
     NSArray<NSString *> * const bookmarkMrls =
         [NSUserDefaults.standardUserDefaults stringArrayForKey:VLCLibraryBookmarkedLocationsKey];
     for (NSString * const mrl in bookmarkMrls) {
-        if (![NSFileManager.defaultManager fileExistsAtPath:[NSURL URLWithString:mrl].path]) {
+        /* Network locations and unparsable MRLs have no local path. */
+        NSString * const path = [NSURL URLWithString:mrl].path;
+        if (path.length == 0 || ![NSFileManager.defaultManager fileExistsAtPath:path]) {
             continue;
         }
         MacLCSidebarItem * const row = [[MacLCSidebarItem alloc] init];

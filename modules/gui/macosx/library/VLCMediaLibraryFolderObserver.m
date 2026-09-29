@@ -85,18 +85,34 @@ void fsEventCallback(ConstFSEventStreamRef streamRef,
                                       3.0,
                                       createFlags);
 
+        if (_stream == NULL) {
+            NSLog(@"FSEvent stream could not be created for %@", url.path);
+            return self;
+        }
         FSEventStreamSetDispatchQueue(_stream, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0));
-        NSAssert(FSEventStreamStart(_stream), @"FSEvent stream should be started for %@", url.path);
+        /* Not inside NSAssert(): the call must run even where assertions
+         * are compiled out, and a folder that cannot be watched is no reason
+         * to abort. */
+        if (!FSEventStreamStart(_stream)) {
+            NSLog(@"FSEvent stream could not be started for %@", url.path);
+        }
     }
     return self;
 }
 
 - (void)dealloc
 {
-    FSEventStreamStop(_stream);
-    FSEventStreamRelease(_stream);
-    CFRelease(_urlPathRef);
-    CFRelease(_pathsToWatch);
+    if (_stream != NULL) {
+        FSEventStreamStop(_stream);
+        /* A stream scheduled on a dispatch queue must be invalidated before
+         * its last release. */
+        FSEventStreamInvalidate(_stream);
+        FSEventStreamRelease(_stream);
+    }
+    if (_urlPathRef != NULL)
+        CFRelease(_urlPathRef);
+    if (_pathsToWatch != NULL)
+        CFRelease(_pathsToWatch);
 }
 
 @end
