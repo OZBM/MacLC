@@ -212,9 +212,17 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     var_SetFloat(p_aout, "pitch-shift", items.count >= 17 ? [[items objectAtIndex:16] floatValue] : 0.0f);
     var_SetFloat(p_aout, "pan-control", items.count >= 18 ? [[items objectAtIndex:17] floatValue] : 0.5f);
     
-    var_SetString(p_aout, "equalizer-bands", [[[defaults objectForKey:VLCAudioEffectsEqualizerValuesKey] objectAtIndex:presetIndex] UTF8String]);
-    var_SetFloat(p_aout, "equalizer-preamp", [[[defaults objectForKey:VLCAudioEffectsEqualizerPreampValuesKey] objectAtIndex:presetIndex] floatValue]);
-    var_SetString(p_aout, "equalizer-preset", [[[defaults objectForKey:VLCAudioEffectsEqualizerProfileNamesKey] objectAtIndex:presetIndex] UTF8String]);
+    /* The profile may name a preset the user has since removed. */
+    NSArray *eqValues = [defaults objectForKey:VLCAudioEffectsEqualizerValuesKey];
+    NSArray *eqPreamps = [defaults objectForKey:VLCAudioEffectsEqualizerPreampValuesKey];
+    NSArray *eqNames = [defaults objectForKey:VLCAudioEffectsEqualizerProfileNamesKey];
+    if (presetIndex >= 0 && (NSUInteger)presetIndex < eqValues.count
+        && (NSUInteger)presetIndex < eqPreamps.count
+        && (NSUInteger)presetIndex < eqNames.count) {
+        var_SetString(p_aout, "equalizer-bands", [[eqValues objectAtIndex:presetIndex] UTF8String]);
+        var_SetFloat(p_aout, "equalizer-preamp", [[eqPreamps objectAtIndex:presetIndex] floatValue]);
+        var_SetString(p_aout, "equalizer-preset", [[eqNames objectAtIndex:presetIndex] UTF8String]);
+    }
 
     aout_Release(p_aout);
 }

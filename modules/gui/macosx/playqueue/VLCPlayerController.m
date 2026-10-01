@@ -810,6 +810,8 @@ static int BossCallback(vlc_object_t *p_this,
     [_remoteControlService unsubscribeFromRemoteCommands];
     if (_currentTitleList) {
         vlc_player_title_list_Release(_currentTitleList);
+        /* A title list change still queued on the main thread releases it too. */
+        _currentTitleList = NULL;
     }
     if (_p_player) {
         if (_playerListenerID) {

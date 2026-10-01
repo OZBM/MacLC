@@ -76,8 +76,11 @@ static int WindowEnable(vlc_window_t *p_wnd, const vlc_window_cfg_t *cfg)
                              withProposedVideoViewPosition:proposedVideoViewPosition];
         });
 
-        // this method is not supposed to fail
-        assert(videoView != nil);
+        /* Not supposed to fail, but the display would dereference a nil view. */
+        if (videoView == nil) {
+            msg_Err(p_wnd, "no video view for the window");
+            return VLC_EGENERIC;
+        }
 
         msg_Dbg(getIntf(), "returning videoview with proposed position x=%i, y=%i, width=%i, height=%i", cfg->x, cfg->y, cfg->width, cfg->height);
         p_wnd->handle.nsobject = (void *)CFBridgingRetain(videoView);
