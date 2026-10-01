@@ -3199,7 +3199,12 @@ static void DecoderCallback(void *decompressionOutputRefCon,
                  * output frames allocated by waiting for the vout to release them. */
             pic_pacer_AccountAllocation(p_sys->pic_pacer, p_info->b_field);
         }
+        else
+            p_pic = NULL; /* cvpxpic_attach() released it */
+    }
 
+    if (p_pic)
+    {
         struct vt_frame_info_t *p_vt_info = (struct vt_frame_info_t *)p_info;
         if (p_vt_info && p_vt_info->has_hdr10plus)
         {
@@ -3221,7 +3226,10 @@ static void DecoderCallback(void *decompressionOutputRefCon,
     vlc_mutex_lock(&p_sys->lock);
 
     if (p_sys->b_discard_decoder_output)
-        picture_Release(p_pic);
+    {
+        if (p_pic)
+            picture_Release(p_pic);
+    }
     else
         p_info->p_picture = p_pic;
 
