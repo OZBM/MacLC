@@ -420,6 +420,66 @@ static void test_hlg(void)
     assert([rec.reason isEqualToString:@"Broadcast HDR that adapts to your display."]);
 }
 
+/* Dolby Vision 8.4, as iPhones record: an HLG base layer and no HDR10. */
+static void test_dv84_on_xdr(void)
+{
+    MacLCHDRStreamInfo *stream = [[MacLCHDRStreamInfo alloc]
+        initWithTransfer:TRANSFER_FUNC_HLG
+               primaries:COLOR_PRIMARIES_BT2020
+                bitDepth:10
+               pixelSize:NSMakeSize(1920, 1080)
+        masteringPeakNits:0.0f
+         masteringMinNits:0.0f
+                  maxCLL:0
+                 maxFALL:0
+             doviProfile:8
+               doviLevel:4
+              doviHasRPU:YES
+               doviHasEL:NO
+               doviHasBL:YES
+           hdr10PlusSeen:NO];
+    assert([stream.availablePresentations containsObject:@(MacLCHDRPresentationDolbyVision)]);
+    assert([stream.availablePresentations containsObject:@(MacLCHDRPresentationHLG)]);
+    assert(![stream.availablePresentations containsObject:@(MacLCHDRPresentationHDR10)]);
+
+    NSSet<NSNumber *> *processable = [NSSet setWithObjects:
+        @(MacLCHDRPresentationDolbyVision),
+        @(MacLCHDRPresentationHLG),
+        @(MacLCHDRPresentationSDR),
+        nil];
+
+    /* 1,200 cd/m² of headroom: the 1,000-nit HLG master fits, so the base
+     * layer stays on the native output and no track restart is requested. */
+    MacLCDisplayInfo *display = [[MacLCDisplayInfo alloc]
+        initWithLocalizedName:@"Liquid Retina XDR"
+            potentialHeadroom:16.0
+              currentHeadroom:12.0
+            referenceHeadroom:0.0
+                    onBattery:NO
+                 lowPowerMode:NO];
+    MacLCHDRRecommendation *rec = [MacLCHDRAdvisor recommendationForStream:stream
+                                                                   display:display
+                                                               processable:processable];
+    assert(rec.presentation == MacLCHDRPresentationHLG);
+    assert(rec.pictureMode == MacLCHDRPictureModeAuto);
+    assert([rec.headline isEqualToString:@"Playing in HLG"]);
+    assert([rec.reason isEqualToString:@"Broadcast HDR that adapts to your display."]);
+    assert(rec.warning == nil);
+
+    /* 400 cd/m²: the master must be tone-mapped, where the RPU helps. */
+    MacLCDisplayInfo *dimmerDisplay = [[MacLCDisplayInfo alloc]
+        initWithLocalizedName:@"Liquid Retina XDR"
+            potentialHeadroom:16.0
+              currentHeadroom:4.0
+            referenceHeadroom:0.0
+                    onBattery:NO
+                 lowPowerMode:NO];
+    MacLCHDRRecommendation *dimmerRec = [MacLCHDRAdvisor recommendationForStream:stream
+                                                                         display:dimmerDisplay
+                                                                     processable:processable];
+    assert(dimmerRec.presentation == MacLCHDRPresentationDolbyVision);
+}
+
 static void test_hdr10plus(void)
 {
     MacLCHDRStreamInfo *stream = [[MacLCHDRStreamInfo alloc]
@@ -739,6 +799,7 @@ int main(int argc, const char * argv[])
         test_dv5_not_processable();
         test_hdr10_4000nit_on_sdr();
         test_hlg();
+        test_dv84_on_xdr();
         test_hdr10plus();
         test_battery_advice();
         test_sdr_stream_on_edr();

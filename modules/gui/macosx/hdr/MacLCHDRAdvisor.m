@@ -150,11 +150,20 @@
         const BOOL hdr10Usable =
             [stream.availablePresentations containsObject:@(MacLCHDRPresentationHDR10)] &&
             [processablePresentations containsObject:@(MacLCHDRPresentationHDR10)];
+        /* The same holds for an HLG base layer (Dolby Vision profile 8.4, as
+         * iPhones record): the video output keeps it native unless the master
+         * needs tone mapping, so asking for Dolby Vision here would only
+         * restart the track. */
+        const BOOL hlgUsable =
+            [stream.availablePresentations containsObject:@(MacLCHDRPresentationHLG)] &&
+            [processablePresentations containsObject:@(MacLCHDRPresentationHLG)];
         if (fitsDisplay && hdr10Usable) {
             pickedPresentation = MacLCHDRPresentationHDR10;
             preferredNativeOverDynamic =
                 [stream.availablePresentations containsObject:@(MacLCHDRPresentationDolbyVision)] ||
                 [stream.availablePresentations containsObject:@(MacLCHDRPresentationHDR10Plus)];
+        } else if (fitsDisplay && hlgUsable) {
+            pickedPresentation = MacLCHDRPresentationHLG;
         } else {
             for (NSNumber *candidate in order) {
                 if ([stream.availablePresentations containsObject:candidate] &&
