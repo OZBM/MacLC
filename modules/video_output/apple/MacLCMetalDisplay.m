@@ -1277,6 +1277,10 @@ int MacLCMetalOpen(vout_display_t *vd,
     sys->user_headroom = user_headroom;
     videoView.userHeadroom = user_headroom;
 
+    /* The callbacks below can fire from the interface as soon as they are
+     * registered, and they all read vd->sys. */
+    vd->sys = sys;
+
     var_Create(vd, "macosx-edr-headroom", VLC_VAR_FLOAT | VLC_VAR_DOINHERIT);
     var_AddCallback(vd, "macosx-edr-headroom", EdrHeadroomCallback, vd);
 
@@ -1328,7 +1332,6 @@ int MacLCMetalOpen(vout_display_t *vd,
         var_Create(vout_obj, MACLC_HDR_VAR_ACTIVE, VLC_VAR_STRING);
     }
 
-    vd->sys = sys;
     /* Say what this output can do before the first picture: the interface
      * knows at once that no track restart is needed for any presentation. */
     PublishHdrState(vd, sys, MACLC_HDR_CAP_CAN_DOVI | MACLC_HDR_CAP_CAN_HDR10PLUS
