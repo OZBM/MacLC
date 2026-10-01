@@ -139,8 +139,10 @@ typedef NS_ENUM(NSUInteger, VLCSampleBufferPixelFlip) {
 - (CVPixelBufferRef)provideFromBuffer:(CVPixelBufferRef)pixelBuffer
                              rotation:(VLCSampleBufferPixelRotation)rotation
 {
-    if (![self _validateRotationPoolWithBuffer:pixelBuffer rotation:rotation])
+    if (![self _validateRotationPoolWithBuffer:pixelBuffer rotation:rotation]) {
         CVPixelBufferPoolRelease(_rotationPool);
+        _rotationPool = NULL;
+    }
 
     if (!_rotationPool) {
         bool rotated = rotation == kVLCSampleBufferPixelRotation_90CW || rotation == kVLCSampleBufferPixelRotation_90CCW;
@@ -194,9 +196,13 @@ typedef NS_ENUM(NSUInteger, VLCSampleBufferPixelFlip) {
     } else {
         attachments = CVBufferGetAttachments(pixelBuffer, kCVAttachmentMode_ShouldPropagate);
     }
-    CVBufferSetAttachments(rotated, attachments, kCVAttachmentMode_ShouldPropagate);
-    if (@available(iOS 15.0, tvOS 15.0, macOS 12.0, *)) {
-        CFRelease(attachments);
+    /* NULL when the source carries no propagatable attachment (an untagged
+     * software picture), and CFRelease(NULL) aborts. */
+    if (attachments != NULL) {
+        CVBufferSetAttachments(rotated, attachments, kCVAttachmentMode_ShouldPropagate);
+        if (@available(iOS 15.0, tvOS 15.0, macOS 12.0, *)) {
+            CFRelease(attachments);
+        }
     }
     return rotated;
 }
@@ -1360,10 +1366,20 @@ shouldInheritContentsScale:(CGFloat)newScale
         [self.spuView removeFromSuperview];
     };
 
+    /* Main-thread code that checked _invalidated just before it was set may
+     * still be using _vd, which the core frees once Close returns: wait for the
+     * main queue to drain past it, bounded like the display layer creation in
+     * case the main thread is itself waiting on this one. */
     if ([NSThread isMainThread]) {
         cleanupBlock();
     } else {
-        dispatch_async(dispatch_get_main_queue(), cleanupBlock);
+        dispatch_semaphore_t done = dispatch_semaphore_create(0);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            cleanupBlock();
+            dispatch_semaphore_signal(done);
+        });
+        dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW,
+            (int64_t)(DISPLAY_LAYER_INIT_TIMEOUT_SEC * NSEC_PER_SEC)));
     }
 
     DeletePipController(_pipcontroller);
@@ -1863,10 +1879,13 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
     picture_t *dst = pic;
     if (sys->converter) {
         dst = sys->converter->ops->filter_video(sys->converter, pic);
+        if (dst == NULL) /* the converter consumed pic */
+            return;
     }
 
     CVPixelBufferRef pixelBuffer = cvpxpic_get_ref(dst);
-    CVPixelBufferRetain(pixelBuffer);
+    if (pixelBuffer != NULL)
+        CVPixelBufferRetain(pixelBuffer);
     picture_Release(dst);
 
     if (pixelBuffer == NULL) {
