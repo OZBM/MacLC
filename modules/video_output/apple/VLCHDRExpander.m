@@ -1495,6 +1495,8 @@ static NSString * const kVLCHDRExpanderShaderSource =
         _prevYTex[0] == nil || _prevYTex[1] == nil || _stillTex[0] == nil || _stillTex[1] == nil ||
         _persistTex[0] == nil || _persistTex[1] == nil || _protectRaw == nil || _protectMask == nil) {
         msg_Err(_obj, "SDR to HDR: failed to allocate intermediate textures");
+        /* Some textures may now be nil or of the new size: never reuse them. */
+        _texWidth = _texHeight = 0;
         return NO;
     }
 

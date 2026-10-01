@@ -1660,7 +1660,10 @@ static const struct vlc_filter_operations filter_ops = {
 
 static unsigned FactorFor(filter_t *filter, unsigned source_fps, int target)
 {
-    const unsigned limit = var_InheritInteger(filter, CFG_PREFIX "max-factor");
+    /* A per-input option skips the declared 2..8 range, and the passes keep
+     * their frames in arrays of 8. */
+    const int64_t max_factor = var_InheritInteger(filter, CFG_PREFIX "max-factor");
+    const unsigned limit = VLC_CLIP(max_factor, 1, 8);
     unsigned wanted;
     switch (target)
     {
