@@ -289,7 +289,7 @@ This removes the "downloaded from the internet" extended attribute and produces 
 The source code is public at [github.com/OZBM/MacLC](https://github.com/OZBM/MacLC). Each release provides the SHA-256 checksum of the disk image so you can verify its integrity in Terminal:
 
 ```bash
-shasum -a 256 maclc-1.1.1.dmg
+shasum -a 256 maclc-1.2.dmg
 ```
 
 If macOS ever reports that MacLC **"is damaged and can't be opened"**, do not attempt to bypass it: this means the download was incomplete or corrupted in transit. Delete the file, download it again, and check the SHA-256 hash.
@@ -309,10 +309,18 @@ MacLC builds through VLC's own autotools system. The macOS GUI is **autotools on
 `modules/gui/meson.build` does not build `modules/gui/macosx` at all, so new GUI sources go
 in `modules/gui/macosx/Makefile.am` and nowhere else.
 
+MacLC is built on an Apple Silicon Mac against Homebrew's libraries (see the build notes
+below), not with VideoLAN's prebuilt contribs: `extras/package/macosx/build.sh` is VLC's
+original script and does not produce MacLC. Configure a development build in `build/` once,
+then make a release with:
+
 ```bash
-./bootstrap
-./extras/package/macosx/build.sh
+extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
 ```
+
+It reuses `build/`'s configure flags with debugging off, builds from scratch in
+`build-release/`, checks the app's signature and version, plays every file in `--samples`
+(failing on any crash), then writes `maclc-<version>.dmg` and its `.sha256`.
 
 To rebuild just the interface plugin during development:
 
@@ -331,7 +339,7 @@ make -C build/modules libmacosx_plugin.la
   -I$(brew --prefix libpng)/include`).
 - `automake` 1.18 is required — the tree's `aclocal.m4` declares `am__api_version='1.18'`. Without it, `Makefile.in` cannot be regenerated when source files are added.
 - Any file containing `_NS("…")` must also be listed in `po/POTFILES.in`.
-- `make MacLC.app` does not currently assemble a bundle on its own: `extras/package/macosx/package.mak` copies `$(prefix)/bin/vlc`, but this configuration installs neither `bin/vlc` nor `vlc-preparser` into the destdir. This predates the rename. The bundle used for testing was assembled by hand from the build outputs. `pseudo-bundle` also fails here, because `CONTRIB_DIR` is empty and `build/Frameworks` already exists.
+- `make MacLC.app` installs into `macos-install/`, assembles `MacLC.app` and signs it ad hoc; `make package-macosx` wraps it in `maclc-<version>.dmg`. `pseudo-bundle` fails here, because `CONTRIB_DIR` is empty and `build/Frameworks` already exists.
 
 To regenerate the app icon, see the header comment of
 `extras/package/macosx/asset_sources/maclc_app_icon.swift` — it gives the two commands.
