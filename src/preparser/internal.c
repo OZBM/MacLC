@@ -555,6 +555,13 @@ ThumbnailerRun(void *userdata)
             req_owner->preparse_status = VLC_ETIMEOUT;
     }
 
+    /* Tear the input thread down before reading what it produced: it keeps
+     * sending events to on_thumbnailer_input_event() (END_S on its way out),
+     * which uses the request, and the request may be released as soon as it
+     * is handed to the thumbnailer_to_files executor below. */
+    input_Stop(input);
+    input_Close(input);
+
     if (atomic_load(&req_owner->interrupted))
         req_owner->preparse_status = -EINTR;
 
@@ -595,10 +602,10 @@ ThumbnailerRun(void *userdata)
     }
 
     if (pic)
+    {
+        req_owner->pic = NULL;
         picture_Release(pic);
-
-    input_Stop(input);
-    input_Close(input);
+    }
 
 error:
     if (req_owner != NULL)
