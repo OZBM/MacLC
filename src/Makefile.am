@@ -763,11 +763,13 @@ $(srcdir)/revision.txt:
 	$(AM_V_at)$(MAKE) stamp-revision
 	$(AM_V_GEN)touch $@
 
+# MacLC's release tags have two or three parts (1.2, 1.1.1): match both, or
+# a 1.2 build would name itself after 1.1.1.
 stamp-revision:
 	$(AM_V_at)rm -f -- revision.tmp
 	$(AM_V_GEN)if ! git \
 			-C "$(top_srcdir)" describe \
-			--tags --long --match '?.*.*' --always; then \
+			--tags --long --match '[0-9]*.[0-9]*' --always; then \
 		cat $(srcdir)/revision.txt ; \
 	fi > revision.tmp
 	$(AM_V_at)if diff revision.tmp $(srcdir)/revision.txt >/dev/null 2>&1; then \
