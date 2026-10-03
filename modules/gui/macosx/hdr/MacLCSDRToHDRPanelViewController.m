@@ -45,9 +45,10 @@ static const CGFloat kPanelPadding = 16.0;
 @end
 
 @implementation MacLCHoldToCompareButton
-{
-    NSUInteger _keyboardPress; /* identifies the latest keyboard press */
-}
+
+/* Identifies the latest keyboard press. It outlives the button: the panel can
+ * close, and take the button with it, before the original is put away. */
+static NSUInteger keyboardPress;
 
 /* Keyboard (Space) and VoiceOver cannot hold a button: a press shows the
  * original for three seconds instead, and a second press ends it early. */
@@ -57,7 +58,7 @@ static const CGFloat kPanelPadding = 16.0;
     if (state.comparing) {
         [state setComparing:NO];
         [[MacLCOSDController sharedController] showMessage:_NS("HDR") symbolName:@"sun.max"];
-        _keyboardPress++;
+        keyboardPress++;
         return;
     }
     [state setComparing:YES];
@@ -65,11 +66,9 @@ static const CGFloat kPanelPadding = 16.0;
     NSAccessibilityPostNotificationWithUserInfo(self.window ?: NSApp.keyWindow,
         NSAccessibilityAnnouncementRequestedNotification,
         @{ NSAccessibilityAnnouncementKey: _NS("Original") });
-    const NSUInteger press = ++_keyboardPress;
-    __weak typeof(self) weakSelf = self;
+    const NSUInteger press = ++keyboardPress;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        typeof(self) strongSelf = weakSelf;
-        if (strongSelf == nil || strongSelf->_keyboardPress != press || !state.comparing)
+        if (keyboardPress != press || !state.comparing)
             return;
         [state setComparing:NO];
         [[MacLCOSDController sharedController] showMessage:_NS("HDR") symbolName:@"sun.max"];
