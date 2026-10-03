@@ -39,6 +39,21 @@ static const NSTimeInterval kCardDelay = 0.6;
  * read that state this often while a video plays. */
 static const NSTimeInterval kPollInterval = 1.0;
 
+/* The interface can be gone (getIntf() NULL) while queued main-thread work
+ * still runs at quit. */
+static void SaveConfig(void)
+{
+    intf_thread_t *intf = getIntf();
+    if (intf != NULL)
+        config_SaveConfigFile(intf);
+}
+
+static char *InheritString(const char *name)
+{
+    intf_thread_t *intf = getIntf();
+    return intf != NULL ? var_InheritString(intf, name) : NULL;
+}
+
 @implementation MacLCHDRController
 {
     MacLCHDRStreamInfo *_stream;
@@ -163,7 +178,7 @@ static const NSTimeInterval kPollInterval = 1.0;
 - (void)setCardPolicy:(MacLCHDRCardPolicy)cardPolicy
 {
     MacLCConfigPutInt("maclc-hdr-card", cardPolicy);
-    config_SaveConfigFile(getIntf());
+    SaveConfig();
 }
 
 #pragma mark - Defaults
@@ -172,7 +187,7 @@ static const NSTimeInterval kPollInterval = 1.0;
  * the command line wins over the saved preference. */
 - (MacLCHDRPresentation)defaultPresentation
 {
-    char *value = var_InheritString(getIntf(), MACLC_HDR_VAR_PRESENTATION);
+    char *value = InheritString(MACLC_HDR_VAR_PRESENTATION);
     MacLCHDRPresentation p = value ? MacLCHDRPresentationFromString(@(value))
                                    : MacLCHDRPresentationAuto;
     free(value);
@@ -181,7 +196,7 @@ static const NSTimeInterval kPollInterval = 1.0;
 
 - (MacLCHDRPictureMode)defaultPicture
 {
-    char *value = var_InheritString(getIntf(), MACLC_HDR_VAR_PICTURE);
+    char *value = InheritString(MACLC_HDR_VAR_PICTURE);
     MacLCHDRPictureMode m = value ? MacLCHDRPictureModeFromString(@(value))
                                   : MacLCHDRPictureModeAuto;
     free(value);
@@ -190,7 +205,7 @@ static const NSTimeInterval kPollInterval = 1.0;
 
 - (BOOL)hlgFittedToDisplay
 {
-    char *value = var_InheritString(getIntf(), MACLC_HDR_VAR_HLG);
+    char *value = InheritString(MACLC_HDR_VAR_HLG);
     const BOOL fitted = maclc_hdr_hlg_parse(value) == MACLC_HDR_HLG_DISPLAY;
     free(value);
     return fitted;
@@ -519,7 +534,7 @@ static const NSTimeInterval kPollInterval = 1.0;
                       MacLCHDRPresentationToString(self.activePresentation).UTF8String);
     MacLCConfigPutPsz(MACLC_HDR_VAR_PICTURE,
                       MacLCHDRPictureModeToString(self.activePictureMode).UTF8String);
-    config_SaveConfigFile(getIntf());
+    SaveConfig();
 }
 
 @end

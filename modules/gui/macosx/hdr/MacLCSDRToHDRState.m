@@ -52,6 +52,7 @@ NSString * const MacLCSDRToHDRStateDidChangeNotification = @"MacLCSDRToHDRStateD
 
     NSTimer *_pollTimer;
     NSInteger _pollingCount;
+    BOOL _savePending;
 }
 
 + (instancetype)sharedState
@@ -106,6 +107,12 @@ NSString * const MacLCSDRToHDRStateDidChangeNotification = @"MacLCSDRToHDRStateD
                            name:name
                          object:nil];
         }
+        /* The interface posts it before it goes, while getIntf() still
+         * answers: write a change still waiting for its delayed save. */
+        [center addObserver:self
+                   selector:@selector(applicationWillTerminate:)
+                       name:NSApplicationWillTerminateNotification
+                     object:nil];
 
         [self refresh];
     }
@@ -150,11 +157,27 @@ NSString * const MacLCSDRToHDRStateDidChangeNotification = @"MacLCSDRToHDRStateD
                                              selector:@selector(saveNow)
                                                object:nil];
     [self performSelector:@selector(saveNow) withObject:nil afterDelay:0.5];
+    _savePending = YES;
 }
 
 - (void)saveNow
 {
-    config_SaveConfigFile(getIntf());
+    /* The main run loop keeps turning for a moment after the interface is
+     * gone, and a delayed save can still fire then. */
+    _savePending = NO;
+    intf_thread_t *intf = getIntf();
+    if (intf != NULL)
+        config_SaveConfigFile(intf);
+}
+
+- (void)applicationWillTerminate:(NSNotification *)notification
+{
+    if (!_savePending)
+        return;
+    [NSObject cancelPreviousPerformRequestsWithTarget:self
+                                             selector:@selector(saveNow)
+                                               object:nil];
+    [self saveNow];
 }
 
 - (void)pushToVoutWithBlock:(void (^)(vout_thread_t *vout))block
