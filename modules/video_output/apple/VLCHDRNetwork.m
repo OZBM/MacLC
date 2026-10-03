@@ -282,11 +282,18 @@ static NSError *NetworkError(NSString *format, ...)
 
     MPSGraphShapedType *inType =
         [[MPSGraphShapedType alloc] initWithShape:_input.shape dataType:MPSDataTypeFloat16];
+    /* By default the compile returns early and MPSGraph goes on optimising on
+     * its own queue (placement on the Neural Engine). Quitting during that
+     * aborted the app in exit(), whose static destructors pulled MPSGraph's
+     * mutexes from under it ("mutex lock failed"). Finish here, on the vout
+     * thread, which is joined before exit: about 20 ms more, once. */
+    MPSGraphCompilationDescriptor *compilation = [[MPSGraphCompilationDescriptor alloc] init];
+    compilation.waitForCompilationCompletion = YES;
     _executable = [_graph compileWithDevice:[MPSGraphDevice deviceWithMTLDevice:_device]
                                       feeds:@{ _input: inType }
                               targetTensors:@[ _output ]
                            targetOperations:nil
-                      compilationDescriptor:nil];
+                      compilationDescriptor:compilation];
     if (_executable == nil) {
         if (error) *error = NetworkError(@"%@: MPSGraph could not compile the network", _path);
         return NO;
