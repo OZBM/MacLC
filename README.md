@@ -319,8 +319,11 @@ extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
 ```
 
 It reuses `build/`'s configure flags with debugging off, builds from scratch in
-`build-release/`, checks the app's signature and version, plays every file in `--samples`
-(failing on any crash), then writes `maclc-<version>.dmg` and its `.sha256`.
+`build-release/`, makes `maclc-<version>.dmg`, checks the signature and version of the app and
+of the image, plays every file in `--samples` with the app in the image (failing on any crash
+or hang; MacLC must not be running, and its preferences are put back afterwards), then writes
+the image's `.sha256`. A clean build needs bison 3: the script uses the one `extras/tools`
+builds when macOS only has its own 2.3.
 
 To rebuild just the interface plugin during development:
 

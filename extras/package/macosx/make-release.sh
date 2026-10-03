@@ -4,8 +4,9 @@
 #
 # Usage: extras/package/macosx/make-release.sh [--samples DIR] [--build-dir DIR]
 #
-#   --samples DIR    after building, play every file in DIR for a few seconds
-#                    and fail if MacLC crashes on any of them
+#   --samples DIR    play every file in DIR for a few seconds with the app in
+#                    the image, and fail if MacLC crashes or hangs on any of
+#                    them (MacLC must not be running meanwhile)
 #   --build-dir DIR  where to build (default: build-release in the checkout);
 #                    it is wiped first
 #
@@ -24,14 +25,50 @@ SAMPLES=
 while [ $# -gt 0 ]; do
     case $1 in
         --samples) SAMPLES=$(cd "$2" && pwd); shift 2 ;;
-        --build-dir) BUILD=$2; shift 2 ;;
-        -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+        --build-dir) BUILD=$(mkdir -p "$2" && cd "$2" && pwd); shift 2 ;;
+        -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
 
 step() { printf '\n==> %s\n' "$*"; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+# State the exit trap cleans up: an image is only left behind once every
+# check has passed, and MacLC's preferences are put back if the smoke test
+# was interrupted.
+bisonwrap=
+mount=
+DMG=
+finished=
+smoke_home=
+prefs_saved=
+# MacLC keeps its defaults in the real preferences domain whatever HOME says:
+# the smoke test saves them first and this puts back exactly what was there.
+restore_prefs() {
+    defaults delete org.maclc.MacLC >/dev/null 2>&1 || true
+    if [ "$prefs_saved" = yes ]; then
+        defaults import org.maclc.MacLC "$smoke_home/defaults.plist"
+    fi
+    prefs_saved=
+}
+cleanup() {
+    if [ -n "$prefs_saved" ]; then
+        restore_prefs
+    fi
+    if [ -n "$mount" ]; then
+        hdiutil detach -quiet "$mount" 2>/dev/null || true
+        rmdir "$mount" 2>/dev/null || true
+    fi
+    if [ -n "$DMG" ] && [ -z "$finished" ]; then
+        rm -f "$DMG" "$DMG.sha256"
+        echo "the disk image was removed: it did not pass every check" >&2
+    fi
+    if [ -n "$bisonwrap" ]; then
+        rm -rf "$bisonwrap"
+    fi
+}
+trap cleanup EXIT
 
 # ---------------------------------------------------------------- preflight
 step "Checking the build machine"
@@ -42,8 +79,6 @@ xcrun -f metal >/dev/null 2>&1 \
 command -v python3 >/dev/null || die "python3 is required"
 automake --version 2>/dev/null | head -1 | grep -q ' 1\.18' \
     || die "automake 1.18 is required (the tree's aclocal.m4 declares it)"
-command -v dmgbuild >/dev/null \
-    || echo "note: dmgbuild not found, the image will be a plain one (pip3 install dmgbuild)"
 
 VERSION=$(sed -n 's/^AC_INIT(\[vlc\], \[\(.*\)\])/\1/p' "$ROOT/configure.ac")
 [ -n "$VERSION" ] || die "cannot read the version from configure.ac"
@@ -64,11 +99,14 @@ fi
 FLAGS=()
 for flag in "$@"; do
     case $flag in
-        --enable-debug|--enable-debug=*|--disable-debug) ;;
+        --enable-debug|--enable-debug=*|--disable-debug|DMGBUILD=*) ;;
         *) FLAGS+=("$flag") ;;
     esac
 done
 FLAGS+=(--disable-debug)
+# The dmgbuild path of package-macosx leaves out the read-me files that tell
+# users how to get past Gatekeeper; always make the plain image.
+FLAGS+=(DMGBUILD=no)
 echo "configure flags: ${FLAGS[*]}"
 
 export PATH=/opt/homebrew/bin:$PATH
@@ -76,6 +114,20 @@ export PKG_CONFIG_PATH=$ROOT/build-deps/prefix/lib/pkgconfig:$ROOT/build-deps/pk
 jpeg_prefix=$(brew --prefix jpeg-turbo)
 png_prefix=$(brew --prefix libpng)
 export CPPFLAGS="${CPPFLAGS:-} -I$jpeg_prefix/include -I$png_prefix/include"
+
+# A clean build generates parsers from .y files that need bison 3; macOS has
+# 2.3. extras/tools builds one, but with a data directory baked into the
+# binary that may no longer exist, so point it at its own.
+if ! bison --version 2>/dev/null | head -1 | grep -q ' [3-9]\.'; then
+    tools=$ROOT/extras/tools/build
+    [ -x "$tools/bin/bison" ] \
+        || die "bison 3 is required (cd extras/tools && ./bootstrap && make bison)"
+    bisonwrap=$(mktemp -d)
+    printf '#!/bin/sh\nBISON_PKGDATADIR="%s/share/bison" exec "%s/bin/bison" "$@"\n' \
+        "$tools" "$tools" > "$bisonwrap/bison"
+    chmod +x "$bisonwrap/bison"
+    export PATH=$bisonwrap:$PATH
+fi
 
 # ------------------------------------------------------------ dependencies
 if [ ! -d "$ROOT/build-deps/prefix/lib" ]; then
@@ -100,9 +152,15 @@ mkdir -p "$BUILD"
 cd "$BUILD"
 "$ROOT/configure" "${FLAGS[@]}"
 make -j"$(sysctl -n hw.ncpu)"
-make MacLC.app
 
+# package-macosx makes MacLC.app from scratch (bundled libraries, ad hoc
+# signature, plug-in cache) and puts it in the image with the read-me files.
+step "Making MacLC.app and the disk image"
+make package-macosx
 APP=$BUILD/MacLC.app
+DMG=$BUILD/maclc-$VERSION.dmg
+[ -f "$DMG" ] || die "make package-macosx did not produce $DMG"
+
 step "Checking MacLC.app"
 codesign --verify --deep --strict "$APP"
 app_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")
@@ -110,16 +168,42 @@ app_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$A
 lipo -archs "$APP/Contents/MacOS/MacLC" | grep -q arm64 || die "the executable is not arm64"
 echo "MacLC.app $app_version: signature valid"
 
+# ------------------------------------------------------------- disk image
+step "Checking the disk image"
+hdiutil verify "$DMG"
+
+mount=$(mktemp -d)
+hdiutil attach -nobrowse -readonly -mountpoint "$mount" "$DMG" >/dev/null
+IMAGE_APP=$mount/MacLC.app
+codesign --verify --deep --strict "$IMAGE_APP"
+dmg_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$IMAGE_APP/Contents/Info.plist")
+[ "$dmg_version" = "$VERSION" ] || die "the image holds MacLC $dmg_version, expected $VERSION"
+for readme in "Read Me First.rtf" "Lisez-moi en premier.rtf"; do
+    [ -f "$mount/$readme" ] || die "the image has no \"$readme\""
+done
+echo "maclc-$VERSION.dmg: MacLC $dmg_version, signature valid, read-me files present"
+
 # -------------------------------------------------------------- smoke test
+# Plays the samples with the app users get, the one in the image. A throwaway
+# home keeps the media library, vlcrc and thumbnails out of the user's.
 if [ -n "$SAMPLES" ]; then
     step "Playing the samples in $SAMPLES"
+    if pgrep -f '/MacLC.app/Contents/MacOS/MacLC' >/dev/null; then
+        die "MacLC is running: quit it first, the smoke test must not share its preferences"
+    fi
+    smoke_home=$(mktemp -d)
+    if defaults export org.maclc.MacLC "$smoke_home/defaults.plist" 2>/dev/null; then
+        prefs_saved=yes
+    else
+        prefs_saved=none
+    fi
     reports=$HOME/Library/Logs/DiagnosticReports
     marker=$(mktemp)
     failed=0
     for media in "$SAMPLES"/*; do
         [ -f "$media" ] || continue
-        "$APP/Contents/MacOS/MacLC" --play-and-exit --run-time=10 "$media" \
-            >/dev/null 2>&1 &
+        HOME=$smoke_home "$IMAGE_APP/Contents/MacOS/MacLC" --play-and-exit --run-time=10 \
+            --no-macosx-recentitems "$media" >/dev/null 2>&1 &
         pid=$!
         for _ in $(seq 60); do
             kill -0 "$pid" 2>/dev/null || break
@@ -141,6 +225,8 @@ if [ -n "$SAMPLES" ]; then
             echo "ok     $(basename "$media")"
         fi
     done
+    restore_prefs
+    rm -rf "$smoke_home"
     new_reports=$(find "$reports" -name 'MacLC*.ips' -newer "$marker" 2>/dev/null || true)
     rm -f "$marker"
     if [ -n "$new_reports" ]; then
@@ -148,26 +234,14 @@ if [ -n "$SAMPLES" ]; then
         echo "$new_reports"
         failed=1
     fi
-    [ "$failed" -eq 0 ] || die "the smoke test failed; the disk image was not made"
+    [ "$failed" -eq 0 ] || die "the smoke test failed"
 fi
-
-# ------------------------------------------------------------- disk image
-step "Making the disk image"
-make package-macosx
-DMG=$BUILD/maclc-$VERSION.dmg
-[ -f "$DMG" ] || die "make package-macosx did not produce $DMG"
-hdiutil verify "$DMG"
-
-mount=$(mktemp -d)
-hdiutil attach -nobrowse -readonly -mountpoint "$mount" "$DMG" >/dev/null
-trap 'hdiutil detach -quiet "$mount" 2>/dev/null || true' EXIT
-codesign --verify --deep --strict "$mount/MacLC.app"
-dmg_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$mount/MacLC.app/Contents/Info.plist")
-[ "$dmg_version" = "$VERSION" ] || die "the image holds MacLC $dmg_version, expected $VERSION"
 hdiutil detach -quiet "$mount"
-trap - EXIT
+rmdir "$mount" 2>/dev/null || true
+mount=
 
 (cd "$BUILD" && shasum -a 256 "maclc-$VERSION.dmg" > "maclc-$VERSION.dmg.sha256")
+finished=yes
 
 step "Done"
 echo "Image:    $DMG"
