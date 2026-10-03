@@ -176,6 +176,16 @@ const CGFloat VLCVolumeDefault = 1.;
 
 #pragma mark - player callback implementations
 
+/* Player events reach the main queue asynchronously, and some are still
+ * queued when the interface closes; the core destroys the player soon after.
+ * getIntf() is cleared on the main thread before that, so an event that finds
+ * it NULL is dropped (messages to nil do nothing) instead of reaching into a
+ * dead player. References taken for the trip are still released. */
+static VLCPlayerController *PlayerControllerForEvent(void *p_data)
+{
+    return getIntf() != NULL ? (__bridge VLCPlayerController *)p_data : nil;
+}
+
 static void cb_player_current_media_changed(vlc_player_t *p_player, input_item_t *p_newMediaItem, void *p_data)
 {
     VLC_UNUSED(p_player);
@@ -185,7 +195,7 @@ static void cb_player_current_media_changed(vlc_player_t *p_player, input_item_t
         input_item_Hold(p_newMediaItem);
     }
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController currentMediaItemChanged:p_newMediaItem];
         if (p_newMediaItem != NULL) {
             input_item_Release(p_newMediaItem);
@@ -197,7 +207,7 @@ static void cb_player_state_changed(vlc_player_t *p_player, enum vlc_player_stat
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController stateChanged:state];
     });
 }
@@ -206,7 +216,7 @@ static void cb_player_error_changed(vlc_player_t *p_player, enum vlc_player_erro
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController errorChanged:error];
     });
 }
@@ -215,7 +225,7 @@ static void cb_player_buffering(vlc_player_t *p_player, float newBufferValue, vo
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController newBufferingValue:newBufferValue];
     });
 }
@@ -224,7 +234,7 @@ static void cb_player_capabilities_changed(vlc_player_t *p_player, int oldCapabi
 {
     VLC_UNUSED(p_player); VLC_UNUSED(oldCapabilities);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController capabilitiesChanged:newCapabilities];
     });
 }
@@ -238,8 +248,11 @@ static void cb_player_titles_changed(vlc_player_t *p_player,
         vlc_player_title_list_Hold(p_titles);
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
-        [playerController titleListChanged:p_titles];
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
+        if (playerController != nil)
+            [playerController titleListChanged:p_titles];
+        else if (p_titles != NULL)
+            vlc_player_title_list_Release(p_titles);
     });
 }
 
@@ -251,7 +264,7 @@ static void cb_player_title_selection_changed(vlc_player_t *p_player,
     VLC_UNUSED(p_player);
     VLC_UNUSED(p_new_title);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController selectedTitleChanged:selectedIndex];
     });
 }
@@ -266,7 +279,7 @@ static void cb_player_chapter_selection_changed(vlc_player_t *p_player,
     VLC_UNUSED(title_idx);
     VLC_UNUSED(p_new_chapter);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController selectedChapterChanged:new_chapter_idx];
     });
 }
@@ -275,7 +288,7 @@ static void cb_player_teletext_menu_availability_changed(vlc_player_t *p_player,
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController teletextAvailibilityChanged:hasTeletextMenu];
     });
 }
@@ -284,7 +297,7 @@ static void cb_player_teletext_enabled_changed(vlc_player_t *p_player, bool tele
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController teletextEnabledChanged:teletextEnabled];
     });
 }
@@ -293,7 +306,7 @@ static void cb_player_teletext_page_changed(vlc_player_t *p_player, unsigned pag
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController teletextPageChanged:page];
     });
 }
@@ -302,7 +315,7 @@ static void cb_player_teletext_transparency_changed(vlc_player_t *p_player, bool
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController teletextTransparencyChanged:isTransparent];
     });
 }
@@ -312,7 +325,7 @@ static void cb_player_category_delay_changed(vlc_player_t *p_player, enum es_for
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         switch (cat)
         {
             case AUDIO_ES:
@@ -331,7 +344,7 @@ static void cb_player_associated_subs_fps_changed(vlc_player_t *p_player, float 
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController subtitlesFPSChanged:subs_fps];
     });
 }
@@ -342,7 +355,7 @@ static void cb_player_renderer_changed(vlc_player_t *p_player,
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController rendererChanged:p_new_renderer];
     });
 }
@@ -351,7 +364,7 @@ static void cb_player_record_changed(vlc_player_t *p_player, bool recording, voi
 {
     VLC_UNUSED(p_player);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController recordingChanged:recording];
     });
 }
@@ -366,7 +379,7 @@ static void cb_player_stats_changed(vlc_player_t *p_player,
     VLCInputStats *inputStats = [[VLCInputStats alloc] initWithStatsStructure:p_stats];
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController inputStatsUpdated:inputStats];
     });
 }
@@ -378,7 +391,7 @@ static void cb_player_track_list_changed(vlc_player_t *p_player,
 {
     VLC_UNUSED(p_player); VLC_UNUSED(action); VLC_UNUSED(track);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController trackListChanged];
     });
 }
@@ -390,7 +403,7 @@ static void cb_player_track_selection_changed(vlc_player_t *p_player,
 {
     VLC_UNUSED(p_player); VLC_UNUSED(unselected_id); VLC_UNUSED(selected_id);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController trackSelectionChanged];
     });
 }
@@ -407,7 +420,7 @@ static void cb_player_track_delay_changed(vlc_player_t *p_player,
         vlc_es_id_Hold(es_id);
     }
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController delayChanged:delay forTrack:es_id];
         if (es_id != NULL) {
             vlc_es_id_Release(es_id);
@@ -422,7 +435,7 @@ static void cb_player_program_list_changed(vlc_player_t *p_player,
 {
     VLC_UNUSED(p_player); VLC_UNUSED(action); VLC_UNUSED(prgm);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController programListChanged];
     });
 }
@@ -434,7 +447,7 @@ static void cb_player_program_selection_changed(vlc_player_t *p_player,
 {
     VLC_UNUSED(p_player); VLC_UNUSED(unselected_id);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController programSelectionChanged:selected_id];
     });
 }
@@ -446,7 +459,7 @@ static void cb_player_atobloop_changed(vlc_player_t * __unused p_player,
                                        void *p_data)
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController ABLoopStateChanged:new_state];
     });
 }
@@ -457,7 +470,7 @@ static void cb_player_item_meta_changed(vlc_player_t * __unused p_player,
 {
     input_item_Hold(p_mediaItem);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController metaDataChangedForInput:p_mediaItem];
         input_item_Release(p_mediaItem);
     });
@@ -474,7 +487,7 @@ static void cb_player_vout_changed(vlc_player_t * __unused p_player,
         return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController voutListUpdated];
     });
 }
@@ -485,6 +498,8 @@ static void cb_player_timer_updated(const struct vlc_player_timer_point * const 
     const struct vlc_player_timer_point value_copy = *p_value;
 
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (getIntf() == NULL) /* see PlayerControllerForEvent() */
+            return;
         playerController.playerTime = value_copy;
 
         BOOL lengthOrRateChanged = NO;
@@ -525,7 +540,10 @@ static void cb_player_timer_paused(const vlc_tick_t system_date, void * const p_
 {
     VLCPlayerController * const playerController = (__bridge VLCPlayerController *)p_data;
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (system_date != VLC_TICK_INVALID && [playerController interpolateTime:system_date] == VLC_SUCCESS) {
+        /* Once the interface is gone (see PlayerControllerForEvent()), only
+         * stop the timers. */
+        if (getIntf() != NULL && system_date != VLC_TICK_INVALID
+         && [playerController interpolateTime:system_date] == VLC_SUCCESS) {
             // The discontinuity event got a valid system date, update the time properties.
             [playerController updatePosition];
             [playerController updateTime:system_date forceUpdate:NO];
@@ -545,6 +563,8 @@ static void cb_player_timer_seeked(const struct vlc_player_timer_point * const p
     VLCPlayerController * const playerController = (__bridge VLCPlayerController *)p_data;
     const struct vlc_player_timer_point value_copy = *p_value;
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (getIntf() == NULL) /* see PlayerControllerForEvent() */
+            return;
         playerController.playerTime = value_copy;
         const vlc_tick_t system_now = vlc_tick_now();
         if ([playerController interpolateTime:system_now] == VLC_SUCCESS) {
@@ -601,7 +621,7 @@ static void cb_player_vout_fullscreen_changed(vout_thread_t *p_vout, bool isFull
 {
     VLC_UNUSED(p_vout);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController fullscreenChanged:isFullscreen];
     });
 }
@@ -610,7 +630,7 @@ static void cb_player_vout_wallpaper_mode_changed(vout_thread_t *p_vout,  bool w
 {
     VLC_UNUSED(p_vout);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController wallpaperModeChanged:wallpaperModeEnabled];
     });
 }
@@ -626,7 +646,7 @@ static void cb_player_aout_volume_changed(audio_output_t *aout, float volume, vo
 {
     VLC_UNUSED(aout);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController volumeChanged:volume];
     });
 }
@@ -635,7 +655,7 @@ static void cb_player_aout_mute_changed(audio_output_t *aout, bool muted, void *
 {
     VLC_UNUSED(aout);
     dispatch_async(dispatch_get_main_queue(), ^{
-        VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+        VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
         [playerController muteChanged:muted];
     });
 }
@@ -681,7 +701,7 @@ static int BossCallback(vlc_object_t *p_this,
     VLC_UNUSED(p_this); VLC_UNUSED(psz_var); VLC_UNUSED(oldval); VLC_UNUSED(new_val);
     @autoreleasepool {
         dispatch_async(dispatch_get_main_queue(), ^{
-            VLCPlayerController *playerController = (__bridge VLCPlayerController *)p_data;
+            VLCPlayerController *playerController = PlayerControllerForEvent(p_data);
             [playerController pause];
             [NSApplication.sharedApplication hide:nil];
         });
@@ -807,6 +827,9 @@ static int BossCallback(vlc_object_t *p_this,
     }
 
     [self onPlaybackHasTruelyEnded:nil];
+    /* Their handlers post notifications whose observers query the player. */
+    [self.positionTimer invalidate];
+    [self.timeTimer invalidate];
     [_remoteControlService unsubscribeFromRemoteCommands];
     if (_currentTitleList) {
         vlc_player_title_list_Release(_currentTitleList);

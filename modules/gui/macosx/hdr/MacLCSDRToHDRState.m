@@ -182,6 +182,8 @@ NSString * const MacLCSDRToHDRStateDidChangeNotification = @"MacLCSDRToHDRStateD
 
 - (void)pushToVoutWithBlock:(void (^)(vout_thread_t *vout))block
 {
+    if (getIntf() == NULL) /* the player may be gone too */
+        return;
     VLCPlayerController *playerController = VLCMain.sharedInstance.playQueueController.playerController;
     vout_thread_t *vout = [playerController mainVideoOutputThread];
     if (vout != NULL) {
@@ -367,6 +369,12 @@ NSString * const MacLCSDRToHDRStateDidChangeNotification = @"MacLCSDRToHDRStateD
 
 - (void)refresh
 {
+    /* Notifications and the poll timer can still fire after the interface,
+     * and the player with it, are gone (getIntf() is cleared first, on this
+     * thread). */
+    if (getIntf() == NULL)
+        return;
+
     BOOL changed = NO;
 
     const BOOL newEnabled = MacLCConfigGetInt(MACLC_SDR2HDR_VAR_ENABLED, 0) != 0;

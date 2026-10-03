@@ -302,6 +302,10 @@
 
 - (void)hdrExpansionChanged:(NSNotification *)notification
 {
+    /* Posted from work queued on the main thread, which can run after the
+     * interface and the player are gone. */
+    if (getIntf() == NULL)
+        return;
     [self updateHdrButton];
 }
 

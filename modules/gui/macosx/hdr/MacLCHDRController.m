@@ -247,6 +247,10 @@ static char *InheritString(const char *name)
 
 - (void)mediaDidChange
 {
+    /* Work queued on the main thread can run after the interface and the
+     * player are gone (getIntf() is cleared first, on this thread). */
+    if (getIntf() == NULL)
+        return;
     VLCInputItem *media = self.playerController.currentMedia;
     NSString *key = media.MRL;
     if (key != nil && [key isEqualToString:_mediaKey])
@@ -293,6 +297,8 @@ static char *InheritString(const char *name)
 
 - (void)refresh
 {
+    if (getIntf() == NULL)
+        return;
     VLCPlayerController *player = self.playerController;
 
     MacLCDisplayInfo *display = [MacLCDisplayInfo displayInfoForScreen:[self videoScreen]];
