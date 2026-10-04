@@ -208,3 +208,17 @@ subdir('chromecast')
 
 # HLS module
 subdir('hls')
+
+# AirPlay module
+vlc_modules += {
+    'name' : 'stream_out_airplay',
+    'sources' : files('airplay.m'),
+    'objc_args' : ['-fobjc-arc'],
+    'dependencies' : [
+        frameworks['Foundation'],
+        frameworks['AVFoundation'],
+        frameworks['CoreMedia'],
+    ],
+    'enabled' : have_osx,
+    'shortname' : 's_o_airplay',
+}

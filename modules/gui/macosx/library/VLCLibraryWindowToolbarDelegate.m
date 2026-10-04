@@ -33,6 +33,7 @@
 
 #import "menus/VLCMainMenu.h"
 #import "menus/renderers/VLCRendererMenuController.h"
+#import "cast/MacLCCastController.h"
 
 #import "theme/MacLCDesign.h"
 
@@ -83,6 +84,10 @@ NSString * const VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier =
     [notificationCenter addObserver:self
                            selector:@selector(renderersChanged:)
                                name:VLCRendererRemovedNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(renderersChanged:)
+                               name:MacLCCastStateDidChangeNotification
                              object:nil];
 
     // Navigation sidebar toggle
@@ -181,24 +186,23 @@ NSString * const VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier =
         }
     }
 
-    // Renderers / AirPlay item
-    self.renderersToolbarItem.label = _NS("AirPlay");
-    self.renderersToolbarItem.paletteLabel = _NS("Playback Destinations");
-    self.renderersToolbarItem.toolTip = _NS("Choose playback destination");
+    // Renderers / Play On item
+    self.renderersToolbarItem.label = _NS("Play On");
+    self.renderersToolbarItem.paletteLabel = _NS("Play On");
+    self.renderersToolbarItem.toolTip = _NS("Choose where to play");
     if (@available(macOS 11.0, *)) {
-        NSImage *airplayIcon = [MacLCDesign symbolNamed:@"airplayvideo"
-                                     accessibilityLabel:_NS("Playback Destinations")];
-        if (!airplayIcon) {
-            airplayIcon = [MacLCDesign symbolNamed:@"antenna.radiowaves.left.and.right"
-                                accessibilityLabel:_NS("Playback Destinations")];
-        }
-        if (airplayIcon) {
-            self.renderersToolbarItem.image = airplayIcon;
+        NSImage *castIcon = [MacLCDesign symbolNamed:@"tv.badge.wifi"
+                                  accessibilityLabel:_NS("Play On")];
+        if (castIcon) {
+            self.renderersToolbarItem.image = castIcon;
         }
     }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     self.vlcIconToolbarItem.minSize = NSMakeSize(18, 18);
     self.vlcIconToolbarItem.maxSize = NSMakeSize(18, 18);
+#pragma clang diagnostic pop
     self.vlcIconToolbarItem.label = _NS("MacLC");
     self.vlcIconToolbarItem.paletteLabel = _NS("MacLC");
 
@@ -322,11 +326,21 @@ NSString * const VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier =
 - (void)renderersChanged:(NSNotification *)notification
 {
     const NSUInteger rendererCount =
-        VLCMain.sharedInstance.mainMenu.rendererMenuController.rendererItems.count;
+        MacLCCastController.sharedController.rendererItems.count;
+    const BOOL isCasting = MacLCCastController.sharedController.isCasting;
+    const BOOL shouldShow = (rendererCount > 0 || isCasting);
     const BOOL rendererToolbarItemVisible =
         [self.toolbar.items containsObject:self.renderersToolbarItem];
 
-    if (rendererCount > 0 && !rendererToolbarItemVisible) {
+    if (@available(macOS 11.0, *)) {
+        NSString * const symbolName = isCasting ? @"tv.badge.wifi.fill" : @"tv.badge.wifi";
+        NSImage * const castIcon = [MacLCDesign symbolNamed:symbolName accessibilityLabel:_NS("Play On")];
+        if (castIcon) {
+            self.renderersToolbarItem.image = castIcon;
+        }
+    }
+
+    if (shouldShow && !rendererToolbarItemVisible) {
         [self insertToolbarItem:self.renderersToolbarItem
                       inFrontOf:@[self.sortOrderToolbarItem,
                                   self.libraryViewModeToolbarItem,
@@ -335,7 +349,7 @@ NSString * const VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier =
                                   self.trackingSeparatorToolbarItem,
                                   self.toggleNavSidebarToolbarItem,
                                   self.vlcIconToolbarItem]];
-    } else if (rendererCount == 0 && rendererToolbarItemVisible) {
+    } else if (!shouldShow && rendererToolbarItemVisible) {
         [self hideToolbarItem:self.renderersToolbarItem];
     }
 }

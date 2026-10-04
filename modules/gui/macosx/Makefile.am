@@ -84,9 +84,11 @@ libmacosx_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(gui_RPATH) \
 	-Wl,-framework,Cocoa \
 	-Wl,-framework,CoreAudio \
 	-Wl,-framework,CoreGraphics \
+	-Wl,-framework,CoreMedia \
 	-Wl,-framework,CoreVideo \
 	-Wl,-framework,IOKit \
 	-Wl,-framework,QuartzCore \
+	-Wl,-framework,SystemConfiguration \
 	-Wl,-framework,ScriptingBridge \
 	-Wl,-framework,WebKit \
 	-Wl,-framework,QuickLook \
@@ -533,6 +535,20 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/frameinterp/MacLCFrameInterpolation.m \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.h \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.m \
+	gui/macosx/cast/MacLCCastController.h \
+	gui/macosx/cast/MacLCCastController.m \
+	gui/macosx/cast/MacLCCastStatusView.h \
+	gui/macosx/cast/MacLCCastStatusView.m \
+	gui/macosx/cast/MacLCNetworkAddress.h \
+	gui/macosx/cast/MacLCNetworkAddress.m \
+	gui/macosx/sound/MacLCEqualizerBandsView.h \
+	gui/macosx/sound/MacLCEqualizerBandsView.m \
+	gui/macosx/sound/MacLCSoundMode.h \
+	gui/macosx/sound/MacLCSoundMode.m \
+	gui/macosx/sound/MacLCSoundPanelViewController.h \
+	gui/macosx/sound/MacLCSoundPanelViewController.m \
+	gui/macosx/sound/MacLCSoundPresets.h \
+	gui/macosx/sound/MacLCSoundPresets.m \
 	gui/macosx/medialib/components/MacLCArtworkView.h \
 	gui/macosx/medialib/components/MacLCArtworkView.m \
 	gui/macosx/medialib/components/MacLCCollectionLayout.h \
@@ -805,6 +821,7 @@ endif
 
 libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/App-Icons/MacLC.icns \
+	gui/macosx/Resources/airplay-probe.mp4 \
 	gui/macosx/Resources/browsewindow/bw-Music.png \
 	gui/macosx/Resources/browsewindow/bw-Music@2x.png \
 	gui/macosx/Resources/browsewindow/bw-Music@3x.png \

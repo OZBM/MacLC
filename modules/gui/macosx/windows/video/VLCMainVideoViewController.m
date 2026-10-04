@@ -62,6 +62,7 @@
 #import "theme/MacLCOSDView.h"
 #import "hdr/MacLCHDRController.h"
 #import "coreinteraction/MacLCOSDController.h"
+#import "cast/MacLCCastStatusView.h"
 
 NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerLayoutKey";
 
@@ -120,6 +121,7 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     PIPVoutViewController *_voutViewController;
     MacLCOSDView *_osdView;
     NSLayoutConstraint *_osdTopConstraint;
+    MacLCCastStatusView *_castStatusView;
 
     BOOL _isFadingIn;
 }
@@ -269,6 +271,12 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
 - (void)viewDidLoad
 {
     self.loadingIndicator.hidden = YES;
+
+    /* While the media plays on a TV there is no local picture: say where it
+     * plays, over the (black) video area. The view hides itself otherwise. */
+    _castStatusView = [[MacLCCastStatusView alloc] initWithFrame:NSZeroRect];
+    [self.voutContainingView addSubview:_castStatusView positioned:NSWindowAbove relativeTo:nil];
+    [_castStatusView applyConstraintsToFillSuperview];
 
     BOOL floatOnTopActive = NO;
     VLCVideoWindowCommon * const window = (VLCVideoWindowCommon *)self.view.window;

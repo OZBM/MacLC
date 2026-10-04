@@ -167,3 +167,14 @@ sout_PLUGINS += libstream_out_chromecast_plugin.la
 demux_PLUGINS += libdemux_chromecast_plugin.la
 endif
 endif
+
+libstream_out_airplay_plugin_la_SOURCES = stream_out/airplay.m
+libstream_out_airplay_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-arc
+libstream_out_airplay_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(sout_RPATH) \
+	-Wl,-framework,Foundation,-framework,AVFoundation,-framework,CoreMedia
+libstream_out_airplay_plugin_la_LIBADD = $(SOCKET_LIBS)
+if HAVE_DARWIN
+if !HAVE_WATCHOS
+sout_PLUGINS += libstream_out_airplay_plugin.la
+endif
+endif

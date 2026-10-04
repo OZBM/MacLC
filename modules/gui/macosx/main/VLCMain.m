@@ -69,6 +69,9 @@
 
 #import "menus/VLCMainMenu.h"
 #import "hdr/MacLCHDRController.h"
+#import "cast/MacLCCastController.h"
+#import "sound/MacLCSoundMode.h"
+#import "sound/MacLCSoundPanelViewController.h"
 #import "coreinteraction/MacLCOSDController.h"
 #import "hdr/MacLCHDRMenuController.h"
 #import "hdr/MacLCHDRPanelViewController.h"
@@ -416,6 +419,11 @@ static VLCMain *sharedInstance = nil;
 
     [_libraryWindowController.window makeKeyAndOrderFront:nil];
 
+    /* Play on TV (Chromecast discovery, AirPlay route) and the Sound modes,
+     * whose filters live on the player's audio output. */
+    [MacLCCastController.sharedController start];
+    [MacLCSoundMode.sharedMode applyToAudioOutput];
+
     /* Developer hook for headless UI checks: MACLC_DEBUG_OPEN_BROWSE=home opens
      * the Browse section at launch, MACLC_DEBUG_OPEN_BROWSE=file:///dir/ opens
      * that folder in it. Unset, it does nothing. */
@@ -550,7 +558,7 @@ static VLCMain *sharedInstance = nil;
             }
         });
     }
-    /* MACLC_DEBUG_SHOW_PANEL=sdr2hdr|hdr|settings-hdr[+advanced][:y] opens, after
+    /* MACLC_DEBUG_SHOW_PANEL=sound|sound-panel|sdr2hdr|hdr|settings-hdr[+advanced][:y] opens, after
      * MACLC_DEBUG_SHOW_PANEL_DELAY seconds (6 by default), the SDR to HDR
      * popover, the HDR popover or the HDR & Colour settings pane, anchored to
      * the library window, so headless captures can see them. */
@@ -563,7 +571,11 @@ static VLCMain *sharedInstance = nil;
             NSView * const anchor = self->_libraryWindowController.window.contentView;
             if (anchor == nil && ![panel hasPrefix:@"settings-hdr"])
                 return;
-            if ([panel isEqualToString:@"sdr2hdr"]) {
+            if ([panel isEqualToString:@"sound"]) {
+                [MacLCSoundPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
+            } else if ([panel isEqualToString:@"sound-panel"]) {
+                [MacLCSoundPanelViewController showPanel];
+            } else if ([panel isEqualToString:@"sdr2hdr"]) {
                 [MacLCSDRToHDRPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
             } else if ([panel isEqualToString:@"hdr"]) {
                 [MacLCHDRPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];

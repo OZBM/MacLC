@@ -1,9 +1,7 @@
 /*****************************************************************************
- * VLCRendererMenuController.h: Controller class for the renderer menu
+ * MacLCCastStatusView.h: Casting video surface status view
  *****************************************************************************
- * Copyright (C) 2016-2026 VLC authors and VideoLAN
- *
- * Authors: Marvin Scholz <epirat07 at gmail dot com>
+ * Copyright (C) 2026 Hazen Studio
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,20 +20,10 @@
 
 #import <Cocoa/Cocoa.h>
 
-#import "menus/renderers/VLCRendererItem.h"
-#import "menus/renderers/VLCRendererDiscovery.h"
+NS_ASSUME_NONNULL_BEGIN
 
-@interface VLCRendererMenuController : NSObject
-
-@property (nonatomic, readwrite, weak) IBOutlet NSMenu *rendererMenu;
-@property (nonatomic, readwrite, weak) IBOutlet NSMenuItem *rendererMenuItem;
-@property (nonatomic, readwrite, weak) IBOutlet NSMenuItem *rendererNoneItem;
-@property (nonatomic, readonly, strong) NSArray<VLCRendererItem *> *rendererItems;
-
-- (void)startRendererDiscoveries;
-- (void)stopRendererDiscoveries;
-- (void)updateRendererMenuItemEnablement;
-- (IBAction)selectRenderer:(id)sender;
-- (IBAction)toggleRendererDiscovery:(id)sender;
+@interface MacLCCastStatusView : NSView
 
 @end
+
+NS_ASSUME_NONNULL_END

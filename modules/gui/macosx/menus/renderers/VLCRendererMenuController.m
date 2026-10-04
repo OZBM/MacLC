@@ -1,7 +1,7 @@
 /*****************************************************************************
  * VLCRendererMenuController.m: Controller class for the renderer menu
  *****************************************************************************
- * Copyright (C) 2016-2018 VLC authors and VideoLAN
+ * Copyright (C) 2016-2026 VLC authors and VideoLAN
  *
  * Authors: Marvin Scholz <epirat07 at gmail dot com>
  *          Felix Paul Kühne <fkuehne -at- videolan -dot- org>
@@ -23,26 +23,47 @@
 
 #import "VLCRendererMenuController.h"
 
-#import "extensions/NSImage+VLCAdditions.h"
+#include <vlc_common.h>
+#include <vlc_renderer_discovery.h>
+
+#import "cast/MacLCCastController.h"
+#import "extensions/NSString+Helpers.h"
 #import "main/VLCMain.h"
 #import "menus/renderers/VLCRendererItem.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "playqueue/VLCPlayerController.h"
-
-#include <vlc_renderer_discovery.h>
+#import "theme/MacLCDesign.h"
 
 @interface VLCRendererMenuController ()
-{
-    NSMutableArray              *_rendererDiscoveries;
-    BOOL                         _isDiscoveryEnabled;
-    NSMenuItem                  *_selectedItem;
 
-    intf_thread_t               *p_intf;
-    vlc_renderer_discovery_t    *p_rd;
-}
+- (void)rebuildMenu;
+
 @end
 
 @implementation VLCRendererMenuController
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [NSNotificationCenter.defaultCenter addObserver:self
+                                               selector:@selector(castStateDidChange:)
+                                                   name:MacLCCastStateDidChangeNotification
+                                                 object:nil];
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+}
+
+- (void)setRendererMenu:(NSMenu *)rendererMenu
+{
+    _rendererMenu = rendererMenu;
+    [self rebuildMenu];
+}
 
 - (void)setRendererMenuItem:(NSMenuItem *)rendererMenuItem
 {
@@ -50,178 +71,105 @@
     [self updateRendererMenuItemEnablement];
 }
 
-- (instancetype)init
+- (void)setRendererNoneItem:(NSMenuItem *)rendererNoneItem
 {
-    self = [super init];
-    if (self) {
-        _rendererDiscoveries = [NSMutableArray array];
-        _rendererItems = @[];
-        _isDiscoveryEnabled = NO;
-        p_intf = getIntf();
-
-        [self loadRendererDiscoveries];
-    }
-    return self;
+    _rendererNoneItem = rendererNoneItem;
+    [self rebuildMenu];
 }
 
-- (void)awakeFromNib
+- (void)castStateDidChange:(NSNotification *)notification
 {
-    _selectedItem = _rendererNoneItem;
+    [self rebuildMenu];
 }
 
-- (void)dealloc
+- (void)rebuildMenu
 {
-    [self stopRendererDiscoveries];
-}
-
-- (void)loadRendererDiscoveries
-{
-    // Service Discovery subnodes
-    char **ppsz_longnames;
-    char **ppsz_names;
-
-    if (vlc_rd_get_names(VLC_OBJECT(p_intf), &ppsz_names, &ppsz_longnames) != VLC_SUCCESS) {
+    if (!_rendererMenu) {
         return;
     }
-    char **ppsz_name = ppsz_names;
-    char **ppsz_longname = ppsz_longnames;
 
-    for( ; *ppsz_name; ppsz_name++, ppsz_longname++) {
-        VLCRendererDiscovery *dc = [[VLCRendererDiscovery alloc] initWithName:*ppsz_name andLongname:*ppsz_longname];
-        [dc setDelegate:self];
-        [_rendererDiscoveries addObject:dc];
-        free(*ppsz_name);
-        free(*ppsz_longname);
-    }
-    free(ppsz_names);
-    free(ppsz_longnames);
-}
+    MacLCCastController * const castController = MacLCCastController.sharedController;
+    VLCPlayerController * const pc = VLCMain.sharedInstance.playQueueController.playerController;
+    vlc_renderer_item_t * const currentRenderer = pc.rendererItem;
+    const BOOL isCasting = castController.isCasting;
 
-#pragma mark - Renderer item management
+    if (_rendererNoneItem) {
+        _rendererNoneItem.title = _NS("This Mac");
+        _rendererNoneItem.target = self;
+        _rendererNoneItem.action = @selector(selectRenderer:);
+        _rendererNoneItem.representedObject = nil;
+        _rendererNoneItem.image = [MacLCDesign symbolNamed:@"laptopcomputer" accessibilityLabel:_NS("This Mac")];
+        _rendererNoneItem.state = isCasting ? NSControlStateValueOff : NSControlStateValueOn;
 
-- (void)addRendererItem:(VLCRendererItem *)item
-{
-    NSParameterAssert(item != nil);
-
-    NSMutableArray * const mutableRenderers = _rendererItems.mutableCopy;
-    [mutableRenderers addObject:item];
-    _rendererItems = mutableRenderers.copy;
-    [self updateRendererMenuItemEnablement];
-
-    // Check if the item is already selected
-    if (_selectedItem.representedObject != nil) {
-        VLCRendererItem *selected_rd_item = _selectedItem.representedObject;
-        if ([selected_rd_item.identifier isEqualToString:item.identifier]) {
-            [_selectedItem setRepresentedObject:item];
-            return;
+        if (![_rendererMenu.itemArray containsObject:_rendererNoneItem]) {
+            [_rendererMenu insertItem:_rendererNoneItem atIndex:0];
         }
-    }
 
-    NSMenuItem *menuItem = [[NSMenuItem alloc] init];
-    menuItem.target = self;
-    menuItem.action = @selector(selectRenderer:);
-    menuItem.keyEquivalent = @"";
-    if (item.capabilityFlags & VLC_RENDERER_CAN_VIDEO)
-        menuItem.image = NSImage.VLCSidebarMovieImage;
-    else
-        menuItem.image = NSImage.VLCSidebarMusicImage;
-    menuItem.representedObject = item;
-
-    NSString *unformattedTitle = [NSString stringWithFormat:@"%@ %@", item.name, item.userReadableType];
-    NSMutableAttributedString *title = [[NSMutableAttributedString alloc] initWithString:unformattedTitle
-                                                                              attributes:nil];
-    [title addAttributes:@{NSBaselineOffsetAttributeName : @(2),
-                           NSFontAttributeName : [NSFont boldSystemFontOfSize:8]}
-                   range:[unformattedTitle rangeOfString:item.userReadableType options:NSBackwardsSearch]];
-    menuItem.attributedTitle = title;
-
-    [_rendererMenu insertItem:menuItem atIndex:[_rendererMenu indexOfItem:_rendererNoneItem] + 1];
-}
-
-- (void)removeRendererItem:(VLCRendererItem *)item
-{
-    NSParameterAssert(item != nil);
-
-    NSMutableArray * const mutableRenderers = _rendererItems.mutableCopy;
-    [mutableRenderers removeObject:item];
-    _rendererItems = mutableRenderers.copy;
-    [self updateRendererMenuItemEnablement];
-
-    const NSInteger index = [_rendererMenu indexOfItemWithRepresentedObject:item];
-    if (index >= 0) {
-        NSMenuItem * const menuItem = [_rendererMenu itemAtIndex:index];
-        // Don't remove selected item
-        if (menuItem != _selectedItem) {
-            [_rendererMenu removeItemAtIndex:index];
+        while (_rendererMenu.numberOfItems > 1) {
+            [_rendererMenu removeItemAtIndex:1];
         }
+    } else {
+        [_rendererMenu removeAllItems];
+        NSMenuItem * const noneItem = [[NSMenuItem alloc] initWithTitle:_NS("This Mac")
+                                                                 action:@selector(selectRenderer:)
+                                                          keyEquivalent:@""];
+        noneItem.target = self;
+        noneItem.representedObject = nil;
+        noneItem.image = [MacLCDesign symbolNamed:@"laptopcomputer" accessibilityLabel:_NS("This Mac")];
+        noneItem.state = isCasting ? NSControlStateValueOff : NSControlStateValueOn;
+        [_rendererMenu addItem:noneItem];
     }
-}
 
-- (void)startRendererDiscoveries
-{
-    _isDiscoveryEnabled = YES;
-    for (VLCRendererDiscovery *dc in _rendererDiscoveries) {
-        [dc startDiscovery];
-    }
-}
+    for (VLCRendererItem *item in castController.rendererItems) {
+        NSMenuItem * const menuItem = [[NSMenuItem alloc] initWithTitle:item.name
+                                                                 action:@selector(selectRenderer:)
+                                                          keyEquivalent:@""];
+        menuItem.target = self;
+        menuItem.representedObject = item;
+        NSString * const symbolName = (item.capabilityFlags & VLC_RENDERER_CAN_VIDEO) ? @"tv" : @"hifispeaker";
+        menuItem.image = [MacLCDesign symbolNamed:symbolName accessibilityLabel:item.name];
 
-- (void)stopRendererDiscoveries
-{
-    _isDiscoveryEnabled = NO;
-    for (VLCRendererDiscovery *dc in _rendererDiscoveries) {
-        [dc stopDiscovery];
+        if (currentRenderer != NULL && item.rendererItem == currentRenderer) {
+            menuItem.state = NSControlStateValueOn;
+        } else {
+            menuItem.state = NSControlStateValueOff;
+        }
+        [_rendererMenu addItem:menuItem];
     }
+
+    [self updateRendererMenuItemEnablement];
 }
 
 - (void)updateRendererMenuItemEnablement
 {
-    _rendererMenuItem.enabled = _rendererItems.count > 0;
+    MacLCCastController * const castController = MacLCCastController.sharedController;
+    _rendererMenuItem.enabled = (castController.hasCastDevices || castController.isCasting);
 }
 
-- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
-    if (menuItem == _rendererNoneItem ||
-        [[menuItem representedObject] isKindOfClass:[VLCRendererItem class]]) {
-        return _isDiscoveryEnabled;
-    }
-    return [menuItem isEnabled];
-}
-
-- (void)selectRenderer:(NSMenuItem *)sender
+- (IBAction)selectRenderer:(id)sender
 {
-    [_rendererNoneItem setState:NSOffState];
-
-    [_selectedItem setState:NSOffState];
-    [sender setState:NSOnState];
-    _selectedItem = sender;
-
-    VLCRendererItem *item = [sender representedObject];
-    VLCPlayerController *playerController = VLCMain.sharedInstance.playQueueController.playerController;
-
-    if (item) {
-        [item setRendererForPlayerController:playerController];
-    } else {
-        [playerController setRendererItem:NULL];
-    }
+    VLCRendererItem * const item = [sender representedObject];
+    [MacLCCastController.sharedController playOnRendererItem:item];
 }
 
-#pragma mark VLCRendererDiscovery delegate methods
-- (void)addedRendererItem:(VLCRendererItem *)item from:(VLCRendererDiscovery *)sender
+- (void)startRendererDiscoveries
 {
-    [self addRendererItem:item];
+    [MacLCCastController.sharedController start];
 }
 
-- (void)removedRendererItem:(VLCRendererItem *)item from:(VLCRendererDiscovery *)sender
+- (void)stopRendererDiscoveries
 {
-    [self removeRendererItem:item];
+    // Discoveries are managed by MacLCCastController
 }
 
-#pragma mark Menu actions
-- (IBAction)toggleRendererDiscovery:(id)sender {
-    if (_isDiscoveryEnabled) {
-        [self stopRendererDiscoveries];
-    } else {
-        [self startRendererDiscoveries];
-    }
+- (IBAction)toggleRendererDiscovery:(id)sender
+{
+    // No-op: discoveries are managed by MacLCCastController
+}
+
+- (NSArray<VLCRendererItem *> *)rendererItems
+{
+    return MacLCCastController.sharedController.rendererItems;
 }
 
 @end

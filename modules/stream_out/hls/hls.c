@@ -21,6 +21,7 @@
 #include "config.h"
 #endif
 
+#include <time.h>
 #include <vlc_common.h>
 
 #include <vlc_block.h>
@@ -44,6 +45,13 @@
 #include "variant_maps.h"
 
 #include "mux/mp4/libmp4mux.h"
+
+struct hls_segment_offset
+{
+    unsigned int id;
+    vlc_tick_t offset;
+    struct vlc_list node;
+};
 
 typedef struct
 {
@@ -114,6 +122,9 @@ typedef struct hls_playlist
      */
     vlc_tick_t muxed_duration;
 
+    bool program_date_time;
+    struct vlc_list segment_offsets;
+
     struct vlc_list node;
 } hls_playlist_t;
 
@@ -171,6 +182,7 @@ typedef struct
     vlc_tick_t first_pcr;
 
     size_t current_memory_cached;
+    bool program_date_time;
 } sout_stream_sys_t;
 
 #define hls_playlists_foreach(it)                                              \
@@ -303,6 +315,35 @@ static bool HasMediaRendition(const sout_stream_sys_t *sys,
     return false;
 }
 
+/* Peak bandwidth estimate for EXT-X-STREAM-INF: 1.5 x the average bitrate of
+ * every segment still stored, 20 Mb/s while nothing has been produced yet. */
+static unsigned int EstimateBandwidth(const sout_stream_sys_t *sys)
+{
+    uint64_t bytes = 0;
+    vlc_tick_t longest = 0;
+    const struct vlc_list *lists[] = { &sys->variant_playlists, &sys->media_playlists };
+    for (size_t i = 0; i < ARRAY_SIZE(lists); ++i)
+    {
+    const hls_playlist_t *playlist;
+    vlc_list_foreach_const (playlist, lists[i], node)
+    {
+        vlc_tick_t length = 0;
+        const hls_segment_t *segment;
+        hls_segment_queue_Foreach_const(&playlist->segments, segment)
+        {
+            bytes += hls_storage_GetSize(segment->storage);
+            length += segment->length;
+        }
+        if (length > longest)
+            longest = length;
+    }
+    }
+    if (bytes == 0 || longest <= 0)
+        return 20000000;
+    const double bps = 8.0 * (double)bytes / secf_from_vlc_tick(longest) * 1.5;
+    return bps > 4e9 ? 4000000000u : (unsigned int)bps;
+}
+
 static int GenerateMainManifest(const sout_stream_sys_t *sys,
                                 struct hls_storage **storage_out)
 {
@@ -411,6 +452,11 @@ static int GenerateMainManifest(const sout_stream_sys_t *sys,
             const hls_track_t *track;
             vlc_list_foreach_const (track, &playlist->tracks, node)
                 bandwidth += track->input->fmt.i_bitrate;
+            if (bandwidth == 0)
+                /* Demuxers often leave the bitrate unknown, and players
+                 * (AVFoundation) reject BANDWIDTH=0: estimate the peak from
+                 * the segments produced so far, or assume a high one. */
+                bandwidth = EstimateBandwidth(sys);
             MANIFEST_ADD_ATTRIBUTE("BANDWIDTH=%u", bandwidth);
 
             char *codecs =
@@ -488,6 +534,28 @@ GeneratePlaylistManifest(const hls_playlist_t *playlist,
     const hls_segment_t *segment;
     hls_segment_queue_Foreach_const(&playlist->segments, segment)
     {
+        if (playlist->program_date_time)
+        {
+            vlc_tick_t seg_offset = 0;
+            const struct hls_segment_offset *so;
+            vlc_list_foreach_const(so, &playlist->segment_offsets, node)
+            {
+                if (so->id == segment->id)
+                {
+                    seg_offset = so->offset;
+                    break;
+                }
+            }
+            time_t sec = 946684800 + (time_t)(seg_offset / CLOCK_FREQ);
+            int msec = (int)((seg_offset % CLOCK_FREQ) / 1000);
+            struct tm tm;
+            gmtime_r(&sec, &tm);
+            char date_buf[64];
+            snprintf(date_buf, sizeof(date_buf), "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+                     tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                     tm.tm_hour, tm.tm_min, tm.tm_sec, msec);
+            MANIFEST_ADD_TAG("#EXT-X-PROGRAM-DATE-TIME:%s", date_buf);
+        }
         MANIFEST_ADD_TAG("#EXTINF:%.2f,", secf_from_vlc_tick(segment->length));
         MANIFEST_ADD_TAG("%s", segment->url);
     }
@@ -811,6 +879,7 @@ static int ExtractAndAddSegment(hls_playlist_t *playlist,
 
     const bool self_decodable = IsSegmentSelfDecodable(&segment, playlist);
     const vlc_tick_t length = segment.length;
+    const vlc_tick_t start_offset = playlist->muxed_duration;
     const int status = hls_segment_queue_NewSegment(
         &playlist->segments, segment.begin, segment.length);
     if (unlikely(status != VLC_SUCCESS))
@@ -820,6 +889,32 @@ static int ExtractAndAddSegment(hls_playlist_t *playlist,
                   playlist->segments.total_segments + 1,
                   vlc_strerror(-status));
         return status;
+    }
+    if (playlist->program_date_time)
+    {
+        struct hls_segment_offset *so = malloc(sizeof(*so));
+        if (so != NULL)
+        {
+            so->id = playlist->segments.total_segments - 1;
+            so->offset = start_offset;
+            vlc_list_append(&so->node, &playlist->segment_offsets);
+        }
+
+        const hls_segment_t *first_seg = hls_segment_GetFirst(&playlist->segments);
+        if (first_seg != NULL)
+        {
+            struct hls_segment_offset *cur;
+            vlc_list_foreach(cur, &playlist->segment_offsets, node)
+            {
+                if (cur->id < first_seg->id)
+                {
+                    vlc_list_remove(&cur->node);
+                    free(cur);
+                }
+                else
+                    break;
+            }
+        }
     }
     playlist->muxed_duration += length;
 
@@ -1102,6 +1197,8 @@ static hls_playlist_t *CreatePlaylist(sout_stream_t *stream,
     playlist->id = sys->playlist_created_count;
     playlist->type = type;
     playlist->config = &sys->config;
+    playlist->program_date_time = sys->program_date_time;
+    vlc_list_init(&playlist->segment_offsets);
     playlist->ended = false;
     playlist->muxed_duration = 0;
     playlist->video_track_count = 0;
@@ -1202,6 +1299,13 @@ static void DeletePlaylist(hls_playlist_t *playlist)
     if (playlist->init_buff != NULL)
         block_ChainRelease(playlist->init_buff);
     hls_segment_queue_Clear(&playlist->segments);
+
+    struct hls_segment_offset *so;
+    vlc_list_foreach(so, &playlist->segment_offsets, node)
+    {
+        vlc_list_remove(&so->node);
+        free(so);
+    }
 
     vlc_list_remove(&playlist->node);
 
@@ -1326,10 +1430,15 @@ static void Del(sout_stream_t *stream, void *id)
             map->playlist_ref = NULL;
 
         track->playlist_ref->ended = true;
-        ExtractAndAddSegment(track->playlist_ref, sys);
+        /* One call cuts one segment at most: publish everything still muxed,
+         * or the last seconds of the stream never reach the playlist. */
+        while (track->playlist_ref->muxed_output.begin != NULL)
+            if (ExtractAndAddSegment(track->playlist_ref, sys) != VLC_SUCCESS)
+                break;
         UpdatePlaylistManifest(track->playlist_ref);
 
-        DeletePlaylist(track->playlist_ref);
+        if (sys->http_host == NULL)
+            DeletePlaylist(track->playlist_ref);
     }
 
     free(track);
@@ -1406,6 +1515,12 @@ static void Close(sout_stream_t *stream)
 {
     sout_stream_sys_t *sys = stream->p_sys;
 
+    hls_playlist_t *p_play;
+    vlc_list_foreach(p_play, &sys->variant_playlists, node)
+        DeletePlaylist(p_play);
+    vlc_list_foreach(p_play, &sys->media_playlists, node)
+        DeletePlaylist(p_play);
+
     if (sys->http_host != NULL)
     {
         httpd_UrlDelete(sys->http_manifest);
@@ -1444,9 +1559,13 @@ static int Open(vlc_object_t *this)
         "max-seg-len",
         "variants",
         "seg-type",
+        "program-date-time",
         NULL,
     };
     config_ChainParse(stream, SOUT_CFG_PREFIX, options, stream->p_cfg);
+
+    sys->program_date_time =
+        var_GetBool(stream, SOUT_CFG_PREFIX "program-date-time");
 
     sys->config.base_url = var_GetString(stream, SOUT_CFG_PREFIX "base-url");
     sys->config.outdir =
@@ -1626,6 +1745,9 @@ vlc_module_begin()
         change_integer_range(1, 60)
     add_integer(SOUT_CFG_PREFIX "max-seg-len", 0, MAXSEGLEN_TEXT, MAXSEGLEN_LONGTEXT)
         change_integer_range(0, 60)
+    add_bool(SOUT_CFG_PREFIX "program-date-time", false,
+             N_("Emit EXT-X-PROGRAM-DATE-TIME tags"),
+             N_("Emit EXT-X-PROGRAM-DATE-TIME tag before every EXTINF tag"))
 
     set_callback(Open)
 vlc_module_end()

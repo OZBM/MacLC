@@ -238,6 +238,9 @@
         if ([actionString isEqualToString:@"showAudioEffects:"]) {
             return @"slider.horizontal.3";
         }
+        if ([actionString isEqualToString:@"showSoundPanel:"]) {
+            return @"slider.vertical.3";
+        }
         if ([actionString isEqualToString:@"showVideoEffects:"]) {
             return @"camera.filters";
         }

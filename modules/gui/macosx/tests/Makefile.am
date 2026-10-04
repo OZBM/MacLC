@@ -26,6 +26,8 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/tests/MacLCSDRToHDRTest.m \
 	gui/macosx/tests/MacLCToneCurvesTest.m \
 	gui/macosx/tests/MacLCResumePositionTest.m \
+	gui/macosx/tests/MacLCSoundPresetsTest.m \
+	gui/macosx/tests/MacLCNetworkAddressTest.m \
 	video_filter/maclc_frc_geometry.c \
 	video_output/apple/maclc_tonecurves.c \
 	gui/macosx/extensions/VLCHexNumberFormatter.m \
@@ -35,6 +37,8 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/extensions/NSMenu+VLCAdditions.m \
 	gui/macosx/windows/video/MacLCVideoFitGeometry.m \
 	gui/macosx/playqueue/MacLCResumePosition.m \
+	gui/macosx/sound/MacLCSoundPresets.m \
+	gui/macosx/cast/MacLCNetworkAddress.m \
 	gui/macosx/library/VLCInputItem.m \
 	gui/macosx/library/VLCInputNode.m \
 	gui/macosx/library/VLCInputNodePathControl.m \
@@ -64,7 +68,8 @@ VLCMacOSXTests_LDFLAGS = \
 	-Wl,-framework,XCTest \
 	-Wl,-framework,Foundation \
 	-Wl,-framework,Cocoa \
-	-Wl,-framework,IOKit
+	-Wl,-framework,IOKit \
+	-Wl,-framework,SystemConfiguration
 
 VLCMacOSXTests_LDADD = $(top_builddir)/src/libvlccore.la
 

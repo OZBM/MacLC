@@ -142,6 +142,13 @@ vlc_modules += {
     'dependencies' : [m_lib]
 }
 
+# MacLC Dialogue boost module
+vlc_modules += {
+    'name' : 'maclc_dialogue',
+    'sources' : files('maclc_dialogue.c'),
+    'dependencies' : [m_lib, frameworks['Accelerate']]
+}
+
 
 ## Channel mixer
 

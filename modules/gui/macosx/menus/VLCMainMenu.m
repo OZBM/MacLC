@@ -38,6 +38,8 @@
 #import "menus/VLCRecentStreamsMenuController.h"
 #import "menus/renderers/VLCRendererMenuController.h"
 #import "menus/MacLCMenuSymbols.h"
+#import "sound/MacLCSoundMode.h"
+#import "sound/MacLCSoundPanelViewController.h"
 #import "menus/MacLCLibraryMenus.h"
 
 #import "panels/VLCAudioEffectsWindowController.h"
@@ -184,6 +186,21 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
         webVideoItem.keyEquivalentModifierMask = NSEventModifierFlagCommand;
         webVideoItem.target = self;
         [_fileMenu insertItem:webVideoItem atIndex:netIndex + 1];
+    }
+
+    /* Audio > Sound Mode (the easy equalizer's modes) and Audio > Equalizer…,
+     * the menu bar way to the Sound controls of the playback bars. */
+    NSInteger channelsIndex = [_audioMenu indexOfItem:_channels];
+    if (channelsIndex != -1) {
+        NSMenu * const soundModeMenu = [[NSMenu alloc] initWithTitle:_NS("Sound Mode")];
+        [MacLCSoundMode.sharedMode populateMenu:soundModeMenu];
+        NSMenuItem * const soundModeItem = [[NSMenuItem alloc] initWithTitle:_NS("Sound Mode") action:nil keyEquivalent:@""];
+        soundModeItem.submenu = soundModeMenu;
+        NSMenuItem * const equalizerItem = [[NSMenuItem alloc] initWithTitle:_NS("Equalizer…") action:@selector(showSoundPanel:) keyEquivalent:@"e"];
+        equalizerItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagOption;
+        equalizerItem.target = self;
+        [_audioMenu insertItem:soundModeItem atIndex:channelsIndex + 1];
+        [_audioMenu insertItem:equalizerItem atIndex:channelsIndex + 2];
     }
 
     /* configure playback / controls menu */
@@ -1563,6 +1580,11 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 - (IBAction)showTrackSynchronization:(id)sender
 {
     [[VLCMain.sharedInstance trackSyncPanel] toggleWindow:sender];
+}
+
+- (IBAction)showSoundPanel:(id)sender
+{
+    [MacLCSoundPanelViewController showFromMenu];
 }
 
 - (IBAction)showAudioEffects:(id)sender

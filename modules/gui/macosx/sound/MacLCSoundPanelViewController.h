@@ -1,9 +1,7 @@
 /*****************************************************************************
- * VLCRendererMenuController.h: Controller class for the renderer menu
+ * MacLCSoundPanelViewController.h
  *****************************************************************************
- * Copyright (C) 2016-2026 VLC authors and VideoLAN
- *
- * Authors: Marvin Scholz <epirat07 at gmail dot com>
+ * Copyright (C) 2026 Hazen Studio
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,20 +20,19 @@
 
 #import <Cocoa/Cocoa.h>
 
-#import "menus/renderers/VLCRendererItem.h"
-#import "menus/renderers/VLCRendererDiscovery.h"
+NS_ASSUME_NONNULL_BEGIN
 
-@interface VLCRendererMenuController : NSObject
+@interface MacLCSoundPanelViewController : NSViewController
 
-@property (nonatomic, readwrite, weak) IBOutlet NSMenu *rendererMenu;
-@property (nonatomic, readwrite, weak) IBOutlet NSMenuItem *rendererMenuItem;
-@property (nonatomic, readwrite, weak) IBOutlet NSMenuItem *rendererNoneItem;
-@property (nonatomic, readonly, strong) NSArray<VLCRendererItem *> *rendererItems;
-
-- (void)startRendererDiscoveries;
-- (void)stopRendererDiscoveries;
-- (void)updateRendererMenuItemEnablement;
-- (IBAction)selectRenderer:(id)sender;
-- (IBAction)toggleRendererDiscovery:(id)sender;
+/* Toggles the popover under (or above) the given Sound button. */
++ (void)showRelativeToView:(NSView *)view preferredEdge:(NSRectEdge)edge;
+/* The same controls in a floating panel titled "Sound" (frame autosaved). */
++ (void)showPanel;
+/* Sound buttons of the control bars register here (weakly) so that the menu
+ * command can open the popover from the visible one, or the panel otherwise. */
++ (void)registerAnchorView:(NSView *)view;
++ (void)showFromMenu;
 
 @end
+
+NS_ASSUME_NONNULL_END

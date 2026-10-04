@@ -47,6 +47,10 @@
 #import "coreinteraction/MacLCOSDController.h"
 #import "frameinterp/MacLCFrameInterpolation.h"
 #import "frameinterp/MacLCFrameInterpolationPanelViewController.h"
+#import "cast/MacLCCastController.h"
+#import "sound/MacLCSoundMode.h"
+#import "sound/MacLCSoundPanelViewController.h"
+#import "views/VLCImageButton.h"
 
 #import <vlc_configuration.h>
 
@@ -58,6 +62,9 @@
 {
     VLCPlayQueueController *_playQueueController;
     VLCPlayerController *_playerController;
+    NSButton *_soundButton;
+    NSView *_airPlayButton;
+    NSButton *_castButton;
 }
 
 @end
@@ -208,12 +215,102 @@
                                name:NSApplicationDidChangeScreenParametersNotification
                              object:nil];
 
+    [self setupSoundAndCastButtons];
     [self update];
+}
+
+/* Sound sits with the other enhancements (HDR, FPS); AirPlay and Play On sit
+ * before Picture in Picture, in the lower-right corner the HIG asks for. They
+ * are added in code so both control bar layouts get them. */
+- (void)setupSoundAndCastButtons
+{
+    NSStackView * const stack = (NSStackView *)self.frameRateButton.superview;
+    if (![stack isKindOfClass:NSStackView.class])
+        return;
+
+    VLCImageButton * const sound = [[VLCImageButton alloc] initWithFrame:NSMakeRect(0, 0, 44, 28)];
+    sound.bezelStyle = NSBezelStyleRecessed;
+    sound.controlSize = NSControlSizeLarge;
+    sound.imagePosition = NSImageOnly;
+    sound.imageScaling = NSImageScaleProportionallyDown;
+    sound.image = [MacLCDesign symbolNamed:@"slider.vertical.3" pointSize:14. weight:NSFontWeightMedium accessibilityLabel:_NS("Sound")];
+    sound.toolTip = _NS("Sound");
+    sound.accessibilityLabel = _NS("Sound");
+    sound.target = self;
+    sound.action = @selector(openSound:);
+    sound.translatesAutoresizingMaskIntoConstraints = NO;
+    [sound setContentHuggingPriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+    _soundButton = sound;
+    NSUInteger index = [stack.arrangedSubviews indexOfObject:self.frameRateButton];
+    [stack insertArrangedSubview:sound atIndex:index == NSNotFound ? stack.arrangedSubviews.count : index + 1];
+    [MacLCSoundPanelViewController registerAnchorView:sound];
+
+    MacLCCastController * const cast = MacLCCastController.sharedController;
+    _airPlayButton = [cast makeAirPlayButtonWithTint:MacLCDesign.primaryLabel];
+    _airPlayButton.translatesAutoresizingMaskIntoConstraints = NO;
+    _castButton = [cast makeCastButton];
+    _castButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [NSLayoutConstraint activateConstraints:@[
+        [_airPlayButton.widthAnchor constraintEqualToConstant:28.0],
+        [_airPlayButton.heightAnchor constraintEqualToConstant:28.0],
+        [_castButton.widthAnchor constraintEqualToConstant:28.0],
+        [_castButton.heightAnchor constraintEqualToConstant:28.0],
+    ]];
+    index = self.pipButton != nil ? [stack.arrangedSubviews indexOfObject:self.pipButton] : NSNotFound;
+    if (index == NSNotFound)
+        index = stack.arrangedSubviews.count;
+    [stack insertArrangedSubview:_castButton atIndex:index];
+    [stack insertArrangedSubview:_airPlayButton atIndex:index];
+
+    NSNotificationCenter * const notificationCenter = NSNotificationCenter.defaultCenter;
+    [notificationCenter addObserver:self
+                           selector:@selector(soundModeChanged:)
+                               name:MacLCSoundModeDidChangeNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(castStateChanged:)
+                               name:MacLCCastStateDidChangeNotification
+                             object:nil];
+}
+
+- (IBAction)openSound:(id)sender
+{
+    /* Option-click turns the current Sound mode on or off. */
+    if ((NSApp.currentEvent.modifierFlags & NSEventModifierFlagOption) != 0) {
+        MacLCSoundMode.sharedMode.enabled = !MacLCSoundMode.sharedMode.isEnabled;
+        return;
+    }
+    [MacLCSoundPanelViewController showRelativeToView:_soundButton preferredEdge:NSRectEdgeMaxY];
+}
+
+- (void)soundModeChanged:(NSNotification *)notification
+{
+    [self updateSoundButton];
+}
+
+- (void)updateSoundButton
+{
+    MacLCSoundMode * const mode = MacLCSoundMode.sharedMode;
+    _soundButton.contentTintColor = mode.isEnabled ? MacLCDesign.accent : MacLCDesign.primaryLabel;
+    _soundButton.toolTip = mode.isEnabled ? _NS("Sound: on") : _NS("Sound");
+}
+
+- (void)castStateChanged:(NSNotification *)notification
+{
+    [self updateAirPlayButton];
+}
+
+- (void)updateAirPlayButton
+{
+    MacLCCastController * const cast = MacLCCastController.sharedController;
+    _airPlayButton.hidden = !cast.hasAirPlayRoutes && !cast.destinationIsAirPlay;
 }
 
 - (void)update
 {
     [super update];
+    [self updateSoundButton];
+    [self updateAirPlayButton];
     [self updateFloatOnTopButton];
     [self updatePlaybackRateButton];
     [self updateLyricsButton:nil];

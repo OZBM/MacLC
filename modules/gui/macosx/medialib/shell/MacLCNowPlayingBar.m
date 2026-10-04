@@ -33,6 +33,9 @@
 #import "main/VLCMain.h"
 #import "extensions/NSString+Helpers.h"
 #import "windows/VLCDetachedAudioWindow.h"
+#import "cast/MacLCCastController.h"
+#import "sound/MacLCSoundMode.h"
+#import "sound/MacLCSoundPanelViewController.h"
 
 #import <vlc_common.h>
 
@@ -51,6 +54,10 @@
     NSSlider *_slider;
     NSTextField *_remainingLabel;
     MacLCSymbolButton *_volumeButton;
+    MacLCSymbolButton *_soundButton;
+    NSView *_airPlayButton;
+    NSButton *_castButton;
+    NSStackView *_trailingStack;
     NSPopover *_volumePopover;
     NSSlider *_volumeSlider;
     BOOL _isDraggingSlider;
@@ -88,6 +95,7 @@
         [self updatePlaybackState];
         [self updateTimeAndPosition];
         [self updateVolumeState];
+        [self updateSoundAndCastState];
         [self updateVisibilityAnimated:NO];
     }
     return self;
@@ -327,7 +335,32 @@
                                                      target:self
                                                      action:@selector(volumeClicked:)];
     _volumeButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [contentView addSubview:_volumeButton];
+
+    _soundButton = [MacLCSymbolButton buttonWithSymbolName:@"slider.vertical.3"
+                                                     label:_NS("Sound")
+                                                 pointSize:15.0
+                                                    target:self
+                                                    action:@selector(soundClicked:)];
+    _soundButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [MacLCSoundPanelViewController registerAnchorView:_soundButton];
+
+    MacLCCastController * const cast = MacLCCastController.sharedController;
+    _airPlayButton = [cast makeAirPlayButtonWithTint:MacLCDesign.primaryLabel];
+    _airPlayButton.translatesAutoresizingMaskIntoConstraints = NO;
+    _castButton = [cast makeCastButton];
+    _castButton.translatesAutoresizingMaskIntoConstraints = NO;
+
+    /* Sound, then the destinations (AirPlay, Play On), then the volume: the
+     * output-related controls stay together at the trailing edge. */
+    _trailingStack = [NSStackView stackViewWithViews:@[_soundButton, _airPlayButton, _castButton, _volumeButton]];
+    _trailingStack.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    _trailingStack.alignment = NSLayoutAttributeCenterY;
+    _trailingStack.spacing = 4.0;
+    _trailingStack.detachesHiddenViews = YES;
+    _trailingStack.translatesAutoresizingMaskIntoConstraints = NO;
+    [_trailingStack setContentHuggingPriority:NSLayoutPriorityRequired
+                               forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [contentView addSubview:_trailingStack];
 
     NSLayoutConstraint * const sliderMinimumWidth = [_slider.widthAnchor constraintGreaterThanOrEqualToConstant:160.0];
     sliderMinimumWidth.priority = NSLayoutPriorityDragThatCannotResizeWindow - 2;
@@ -367,15 +400,30 @@
 
         [_volumeButton.widthAnchor constraintGreaterThanOrEqualToConstant:28.0],
         [_volumeButton.heightAnchor constraintGreaterThanOrEqualToConstant:28.0],
-        [_volumeButton.leadingAnchor constraintEqualToAnchor:_remainingLabel.trailingAnchor constant:12.0],
-        [_volumeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-12.0],
-        [_volumeButton.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+        [_soundButton.widthAnchor constraintGreaterThanOrEqualToConstant:28.0],
+        [_soundButton.heightAnchor constraintGreaterThanOrEqualToConstant:28.0],
+        [_airPlayButton.widthAnchor constraintEqualToConstant:28.0],
+        [_airPlayButton.heightAnchor constraintEqualToConstant:28.0],
+        [_castButton.widthAnchor constraintEqualToConstant:28.0],
+        [_castButton.heightAnchor constraintEqualToConstant:28.0],
+        [_trailingStack.leadingAnchor constraintEqualToAnchor:_remainingLabel.trailingAnchor constant:12.0],
+        [_trailingStack.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-12.0],
+        [_trailingStack.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
     ]];
 }
 
 - (void)registerNotifications
 {
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
+
+    [nc addObserver:self
+           selector:@selector(handleSoundModeChange:)
+               name:MacLCSoundModeDidChangeNotification
+             object:nil];
+    [nc addObserver:self
+           selector:@selector(handleCastStateChange:)
+               name:MacLCCastStateDidChangeNotification
+             object:nil];
 
     [nc addObserver:self
            selector:@selector(handlePlayQueueChange:)
@@ -583,7 +631,21 @@
         _artworkButton.toolTip = label;
     }
 
-    if (_liveVideoView != nil) {
+    /* While casting, say where the media plays. */
+    MacLCCastController * const cast = MacLCCastController.sharedController;
+    if (cast.isCasting) {
+        _subtitleLabel.stringValue = cast.destinationIsAirPlay
+            ? _NS("Playing on AirPlay")
+            : [NSString stringWithFormat:_NS("Playing on %@"), cast.destinationName ?: _NS("TV")];
+    }
+
+    if (cast.isCasting && _liveVideoView == nil) {
+        /* Nothing plays here: show where it plays instead of stale artwork. */
+        _artworkButton.image = [MacLCDesign symbolNamed:cast.destinationIsAirPlay ? @"airplay.video" : @"tv"
+                                             pointSize:18.0
+                                                weight:NSFontWeightMedium
+                                    accessibilityLabel:nil];
+    } else if (_liveVideoView != nil) {
         /* The live video stands in for the artwork. */
     } else if (currentItem != nil) {
         [VLCLibraryImageCache thumbnailForPlayQueueItem:currentItem
@@ -813,6 +875,34 @@
             break;
         }
     }
+}
+
+- (void)soundClicked:(id)sender
+{
+    /* Option-click turns the current Sound mode on or off. */
+    if ((NSApp.currentEvent.modifierFlags & NSEventModifierFlagOption) != 0) {
+        MacLCSoundMode.sharedMode.enabled = !MacLCSoundMode.sharedMode.isEnabled;
+        return;
+    }
+    [MacLCSoundPanelViewController showRelativeToView:_soundButton preferredEdge:NSRectEdgeMaxY];
+}
+
+- (void)handleSoundModeChange:(NSNotification *)notification
+{
+    [self updateSoundAndCastState];
+}
+
+- (void)handleCastStateChange:(NSNotification *)notification
+{
+    [self updateSoundAndCastState];
+    [self updateMetadata];
+}
+
+- (void)updateSoundAndCastState
+{
+    _soundButton.contentTintColor = MacLCSoundMode.sharedMode.isEnabled ? MacLCDesign.accent : MacLCDesign.primaryLabel;
+    MacLCCastController * const cast = MacLCCastController.sharedController;
+    _airPlayButton.hidden = !cast.hasAirPlayRoutes && !cast.destinationIsAirPlay;
 }
 
 - (void)volumeClicked:(id)sender

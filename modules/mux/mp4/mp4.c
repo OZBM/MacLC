@@ -97,6 +97,8 @@ static int AddStream(sout_mux_t *, sout_input_t *);
 static void DelStream(sout_mux_t *, sout_input_t *);
 static int Mux      (sout_mux_t *);
 static int MuxFrag  (sout_mux_t *);
+static int MuxFragInput(sout_mux_t *, sout_input_t *);
+static void FlushFragmentedInput(sout_mux_t *, sout_input_t *);
 
 /*****************************************************************************
  * Local prototypes
@@ -584,6 +586,8 @@ static void DelStream(sout_mux_t *p_mux, sout_input_t *p_input)
         if(CreateCurrentEdit(p_stream, p_sys->i_start_dts, false))
             mp4mux_track_DebugEdits(VLC_OBJECT(p_mux), p_stream->tinfo);
     }
+    else
+        FlushFragmentedInput(p_mux, p_input);
 
     msg_Dbg(p_mux, "removing input");
 }
@@ -1454,6 +1458,33 @@ static void LengthLocalFixup(sout_mux_t *p_mux, const mp4_stream_t *p_stream, bl
     }
 }
 
+/* Write out what a fragmented track still holds when it is deleted. Its muxer
+ * can outlive it (an HLS playlist keeps the muxer until the end) and nothing
+ * else would ever write those last samples: the stream would end early. */
+static void FlushFragmentedInput(sout_mux_t *p_mux, sout_input_t *p_input)
+{
+    mp4_stream_t *p_stream = (mp4_stream_t*)p_input->p_sys;
+
+    /* sout_MuxDeleteStream() has already taken the input out of the list
+     * MuxFrag() picks from: drain its queue directly. */
+    for (;;)
+    {
+        vlc_fifo_Lock(p_input->p_fifo);
+        const bool empty = vlc_fifo_IsEmpty(p_input->p_fifo);
+        vlc_fifo_Unlock(p_input->p_fifo);
+        if (empty || MuxFragInput(p_mux, p_input) != VLC_SUCCESS)
+            break;
+    }
+    if (p_stream->p_held_entry)
+    {
+        if (p_stream->p_held_entry->p_block->i_length < 1)
+            LengthLocalFixup(p_mux, p_stream, p_stream->p_held_entry->p_block);
+        ENQUEUE_ENTRY(p_stream->read, p_stream->p_held_entry);
+        p_stream->p_held_entry = NULL;
+    }
+    WriteFragments(p_mux, true);
+}
+
 static void CloseFrag(vlc_object_t *p_this)
 {
     sout_mux_t *p_mux = (sout_mux_t *) p_this;
@@ -1503,15 +1534,20 @@ static void CloseFrag(vlc_object_t *p_this)
     free(p_sys);
 }
 
+static int MuxFragInput(sout_mux_t *, sout_input_t *);
+
 static int MuxFrag(sout_mux_t *p_mux)
 {
-    sout_mux_sys_t *p_sys = (sout_mux_sys_t*) p_mux->p_sys;
-
     int i_stream = sout_MuxGetStream(p_mux, 1, NULL);
     if (i_stream < 0)
         return VLC_SUCCESS;
 
-    sout_input_t *p_input  = p_mux->pp_inputs[i_stream];
+    return MuxFragInput(p_mux, p_mux->pp_inputs[i_stream]);
+}
+
+static int MuxFragInput(sout_mux_t *p_mux, sout_input_t *p_input)
+{
+    sout_mux_sys_t *p_sys = (sout_mux_sys_t*) p_mux->p_sys;
     mp4_stream_t *p_stream = (mp4_stream_t*) p_input->p_sys;
 
     block_t *p_currentblock = block_FifoGet(p_input->p_fifo);
