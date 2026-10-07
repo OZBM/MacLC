@@ -227,6 +227,40 @@ statically into its plugin — and puts a new AppKit interface on top of it
 - **Tags come from TagLib**, linked statically as well, so genres, track numbers, years and
   embedded artwork need nothing installed.
 
+### 11. Watch and add-ons
+
+MacLC hosts add-ons that speak the [Stremio add-on protocol](https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/protocol.md)
+(`modules/gui/macosx/addons/`). MacLC itself ships no films, shows or streams: add-ons are
+third-party services, to be used only for content you have the right to watch.
+
+- **Cinemeta** is built in and cannot be removed: title search, posters and details, and the
+  lists of Official and Community add-ons. **Settings ▸ Add-ons** installs from those lists in
+  one click (Stremio's Community list no longer carries Torrentio, so MacLC lists it first
+  there), or from an address or a `stremio://` link, with Configure… for add-ons that have
+  settings.
+- **Watch** (Home, Movies, TV Shows in the sidebar) browses the add-ons' catalogs in the style
+  of the Apple TV app: a carousel of featured titles, shelves, a Top 10, genres, See All grids,
+  title pages with cast, seasons and episodes, and a stream picker with quality badges.
+- **File ▸ Search Add-ons…** finds a title and plays a stream. Streams become MRLs: magnet
+  links go through the BitTorrent module (with the file name the add-on gives), web links play
+  as they are, YouTube ids go through yt-dlp.
+
+### 12. Sound modes, equalizer and Play on TV
+
+- **Sound modes** (Audio ▸ Sound Mode, and a Sound button in the playback controls): Voice
+  Boost, Night, Cinema, Music, Bass Boost, Spoken Word, Headphones, Small Speakers and Custom,
+  each with an Intensity slider, plus a **10-band equalizer** (Audio ▸ Equalizer…, ⌥⌘E). The
+  chain is equalizer (ISO bands) → optional compressor → `maclc_dialogue` → limiter (−1.5 dB).
+- **`maclc_dialogue`** (`modules/audio_filter/maclc_dialogue.c`) rebalances 5.1 towards the
+  centre channel (+7.4 dB of dialogue advantage measured) and extracts the centre of a stereo
+  mix with an STFT on vDSP (1024 points, 16 ms latency; +4.8 dB in the 1–4 kHz band measured on
+  a real mix).
+- **Play on TV (beta)**: the Play On button sends playback to a Chromecast (VLC's renderer) or
+  to an AirPlay receiver through a new `airplay` stream output (HLS in fragmented MP4, handed to
+  AVPlayer). Fixed upstream on the way: the Chromecast demuxer stopped before the end of a file,
+  HLS published only one final segment and advertised `BANDWIDTH=0`, the fragmented MP4 muxer
+  never flushed a removed track, and stream outputs did not forward the clock.
+
 ---
 
 ## Options added
@@ -289,7 +323,7 @@ This removes the "downloaded from the internet" extended attribute and produces 
 The source code is public at [github.com/OZBM/MacLC](https://github.com/OZBM/MacLC). Each release provides the SHA-256 checksum of the disk image so you can verify its integrity in Terminal:
 
 ```bash
-shasum -a 256 maclc-1.2.dmg
+shasum -a 256 maclc-1.3.dmg
 ```
 
 If macOS ever reports that MacLC **"is damaged and can't be opened"**, do not attempt to bypass it: this means the download was incomplete or corrupted in transit. Delete the file, download it again, and check the SHA-256 hash.
@@ -370,9 +404,17 @@ worse than no README.
   and the Now Playing capsule render as designed on screenshots (light mode; Home also in
   dark mode); playing a video embedded and going back to the library keeps the live
   picture; the app quits cleanly.
+- Release 1.3, on the app inside the disk image: Torrentio installed from Settings ▸ Add-ons ▸
+  Community, a public-domain film found with Search Add-ons and its Torrentio stream handed to
+  the BitTorrent module; a local torrent streamed and seeked; Watch with the real Cinemeta
+  catalogs; 26 sample files played without a crash.
 
 **Known debt**
 
+- Play on TV has not been tried with a real AirPlay receiver or Chromecast: only its whole
+  renderer path without a receiver. It is labelled beta in the app's release notes and site.
+- Watch and the add-on windows have been driven with real clicks but not with VoiceOver or
+  Reduce Motion.
 - The media library has only been driven headlessly: dragging and dropping, context menus
   and resizing with the mouse, VoiceOver and a large real library are still untested.
 - The Edit menu lists AppKit's *Start Dictation…* and *Emoji & Symbols* more than once.
