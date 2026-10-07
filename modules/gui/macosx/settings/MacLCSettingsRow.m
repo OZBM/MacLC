@@ -213,6 +213,12 @@
     _explanationLabel.textColor = enabled ? [MacLCDesign secondaryLabel] : [MacLCDesign tertiaryLabel];
     if ([_controlView isKindOfClass:[NSControl class]]) {
         ((NSControl *)_controlView).enabled = enabled;
+    } else if ([_controlView isKindOfClass:[NSStackView class]]) {
+        /* A field and its button (path pickers): both follow the row. */
+        for (NSView *view in ((NSStackView *)_controlView).arrangedSubviews) {
+            if ([view isKindOfClass:[NSControl class]])
+                ((NSControl *)view).enabled = enabled;
+        }
     }
     if (_checkboxButton) _checkboxButton.enabled = enabled;
     if (_popUpButton) _popUpButton.enabled = enabled;

@@ -202,13 +202,32 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
     BOOL const hasLibrary =
         VLCMain.sharedInstance.libraryController.shouldUseMediaLibrary;
 
+    /* Watch: what the installed add-ons list (no media library needed). */
+    MacLCSidebarItem * const watchHeader = [[MacLCSidebarItem alloc] init];
+    watchHeader.title = _NS("Watch");
+    watchHeader.isHeader = YES;
+    watchHeader.segmentType = VLCLibraryWatchHomeSegmentType;
+    const struct { NSInteger type; NSString *title; NSString *symbol; } watchRows[] = {
+        { VLCLibraryWatchHomeSegmentType, _NS("Home"), @"play.tv" },
+        { VLCLibraryWatchMoviesSegmentType, _NS("Movies"), @"film.stack" },
+        { VLCLibraryWatchShowsSegmentType, _NS("TV Shows"), @"tv" },
+    };
+    for (size_t i = 0; i < ARRAY_SIZE(watchRows); i++) {
+        MacLCSidebarItem * const row = [[MacLCSidebarItem alloc] init];
+        row.title = watchRows[i].title;
+        row.image = [MacLCDesign symbolNamed:watchRows[i].symbol accessibilityLabel:row.title];
+        row.segmentType = watchRows[i].type;
+        [watchHeader.children addObject:row];
+    }
+    [items addObject:watchHeader];
+
     if (hasLibrary) {
-        // Home (top-level, not under a header)
+        /* The library's own home, first of the Library group: "Home" is
+         * Watch's. */
         MacLCSidebarItem * const home = [[MacLCSidebarItem alloc] init];
-        home.title = _NS("Home");
-        home.image = [MacLCDesign symbolNamed:@"house" accessibilityLabel:_NS("Home")];
+        home.title = _NS("Overview");
+        home.image = [MacLCDesign symbolNamed:@"square.grid.2x2" accessibilityLabel:_NS("Overview")];
         home.segmentType = VLCLibraryHomeSegmentType;
-        [items addObject:home];
 
         // Library header
         MacLCSidebarItem * const libHeader = [[MacLCSidebarItem alloc] init];
@@ -252,7 +271,7 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
         favorites.segmentType = VLCLibraryFavoritesSegmentType;
 
         [libHeader.children addObjectsFromArray:@[
-            videos, shows, artists, albums, songs, genres, favorites
+            home, videos, shows, artists, albums, songs, genres, favorites
         ]];
         [items addObject:libHeader];
 

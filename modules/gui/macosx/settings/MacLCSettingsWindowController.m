@@ -28,6 +28,7 @@
 #import "settings/panes/MacLCSubtitlesSettingsViewController.h"
 #import "settings/panes/MacLCInterfaceSettingsViewController.h"
 #import "settings/panes/MacLCShortcutsSettingsViewController.h"
+#import "settings/panes/MacLCAddonsSettingsViewController.h"
 #import "theme/MacLCDesign.h"
 #import "main/VLCMain.h"
 
@@ -116,6 +117,7 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
     [panes addObject:[[MacLCSubtitlesSettingsViewController alloc] initWithIntf:_p_intf]];
     [panes addObject:[[MacLCInterfaceSettingsViewController alloc] initWithIntf:_p_intf]];
     [panes addObject:[[MacLCShortcutsSettingsViewController alloc] initWithIntf:_p_intf]];
+    [panes addObject:[[MacLCAddonsSettingsViewController alloc] initWithIntf:_p_intf]];
 
     _allPanes = [panes copy];
     [_filteredPanes setArray:_allPanes];
@@ -258,7 +260,9 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
 
 - (void)showSettingsWindowWithLevel:(NSInteger)windowLevel
 {
-    [self.window setLevel:windowLevel];
+    /* Settings is a standard window: it floats only to stay above a video window
+     * that floats, or it would cover the windows it opens (Search Add-ons). */
+    [self.window setLevel:windowLevel > NSFloatingWindowLevel ? windowLevel : NSNormalWindowLevel];
     [self.window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
 

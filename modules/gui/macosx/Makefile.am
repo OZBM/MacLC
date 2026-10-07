@@ -488,6 +488,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/settings/MacLCSettingsSelfTest.m \
 	gui/macosx/settings/MacLCSettingsWindowController.h \
 	gui/macosx/settings/MacLCSettingsWindowController.m \
+	gui/macosx/settings/panes/MacLCAddonsSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCAddonsSettingsViewController.m \
 	gui/macosx/settings/panes/MacLCAudioSettingsViewController.h \
 	gui/macosx/settings/panes/MacLCAudioSettingsViewController.m \
 	gui/macosx/settings/panes/MacLCGeneralSettingsViewController.h \
@@ -535,6 +537,15 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/frameinterp/MacLCFrameInterpolation.m \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.h \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.m \
+	gui/macosx/addons/MacLCAddons.h \
+	gui/macosx/addons/MacLCAddons.m \
+	gui/macosx/addons/MacLCAddonSearchWindowController.h \
+	gui/macosx/addons/MacLCAddonSearchWindowController.m \
+	gui/macosx/addons/watch/MacLCWatchBrowse.m \
+	gui/macosx/addons/watch/MacLCWatchComponents.h \
+	gui/macosx/addons/watch/MacLCWatchComponents.m \
+	gui/macosx/addons/watch/MacLCWatchDetail.m \
+	gui/macosx/addons/watch/MacLCWatchSections.h \
 	gui/macosx/cast/MacLCCastController.h \
 	gui/macosx/cast/MacLCCastController.m \
 	gui/macosx/cast/MacLCCastStatusView.h \

@@ -171,8 +171,13 @@
 
 - (void)updateCardColors
 {
-    self.cardContainerView.layer.backgroundColor = MacLCDesign.cardBackground.CGColor;
-    self.cardContainerView.layer.borderColor = MacLCDesign.separator.CGColor;
+    /* A CGColor is resolved for the current drawing appearance, which is the
+     * system's here, not the view's: with MacLC set to Dark on a light system
+     * the cards came out white under white text. */
+    [self.effectiveAppearance performAsCurrentDrawingAppearance:^{
+        self.cardContainerView.layer.backgroundColor = MacLCDesign.cardBackground.CGColor;
+        self.cardContainerView.layer.borderColor = MacLCDesign.separator.CGColor;
+    }];
 }
 
 @end

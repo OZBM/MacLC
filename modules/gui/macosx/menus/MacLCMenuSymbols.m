@@ -70,6 +70,9 @@
             [actionString isEqualToString:@"intfOpenWebVideo:"]) {
             return @"link";
         }
+        if ([actionString isEqualToString:@"intfOpenAddonSearch:"]) {
+            return @"magnifyingglass";
+        }
         if ([actionString isEqualToString:@"intfOpenCapture:"]) {
             return @"web.camera";
         }
@@ -369,9 +372,13 @@
             NSMutableArray *resolvedImages = [NSMutableArray arrayWithCapacity:group.count];
 
             for (NSMenuItem *item in group) {
-                // Hidden items and custom view items are excluded from group icon requirement
+                // Hidden items and custom view items are excluded from group icon requirement.
+                // A hidden item still gets its symbol, if it has one: it may be shown later
+                // (Search Add-ons… appears once an add-on provides streams).
                 if (item.isHidden || item.view != nil) {
-                    [resolvedImages addObject:[NSNull null]];
+                    NSString * const hiddenSymbol = item.view == nil && item.image == nil ? [self symbolNameForMenuItem:item] : nil;
+                    NSImage * const hiddenImage = hiddenSymbol != nil ? [NSImage imageWithSystemSymbolName:hiddenSymbol accessibilityDescription:nil] : nil;
+                    [resolvedImages addObject:hiddenImage ?: (id)[NSNull null]];
                     continue;
                 }
 

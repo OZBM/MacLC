@@ -764,6 +764,46 @@ NSArray<NSString *> *defaultBookmarkedLocations()
 @end
 
 
+// MARK: - Watch segments
+
+/* Shown by the native library router (MacLCWatchSections.h); only their
+ * names and symbols live here. */
+@interface VLCLibraryWatchSegment : VLCLibrarySegment
+@end
+
+@implementation VLCLibraryWatchSegment
+
+- (instancetype)initWithSegmentType:(VLCLibrarySegmentType)segmentType
+                              title:(NSString *)title
+                         symbolName:(NSString *)symbolName
+{
+    self = [super initWithSegmentType:segmentType];
+    if (self) {
+        self.internalDisplayString = title;
+        self.internalSearchFieldPlaceholder = _NS("Search Movies and TV Shows");
+        self.internalDisplayImage = [MacLCDesign symbolNamed:symbolName
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:title];
+    }
+    return self;
+}
+
++ (instancetype)segmentWithWatchSegmentType:(VLCLibrarySegmentType)segmentType
+{
+    switch (segmentType) {
+        case VLCLibraryWatchMoviesSegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("Movies") symbolName:@"film.stack"];
+        case VLCLibraryWatchShowsSegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("TV Shows") symbolName:@"tv"];
+        default:
+            return [[self alloc] initWithSegmentType:VLCLibraryWatchHomeSegmentType title:_NS("Home") symbolName:@"play.tv"];
+    }
+}
+
+@end
+
+
 @interface VLCLibraryBrowseSegment : VLCLibrarySegment
 @end
 
@@ -839,7 +879,12 @@ NSArray<NSString *> *defaultBookmarkedLocations()
 
 + (NSArray<VLCLibrarySegment *> *)librarySegments
 {
-    NSMutableArray *segments = [NSMutableArray array];
+    NSMutableArray *segments = [NSMutableArray arrayWithArray:@[
+        [[VLCLibraryHeaderSegment alloc] initWithDisplayString:_NS("Watch")],
+        [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchHomeSegmentType],
+        [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchMoviesSegmentType],
+        [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchShowsSegmentType],
+    ]];
 
     if (VLCMain.sharedInstance.libraryController.shouldUseMediaLibrary) {
         [segments addObjectsFromArray:@[
@@ -894,6 +939,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
             return [[VLCLibraryGroupSegment alloc] init];
         case VLCLibraryBrowseSegmentType:
             return [[VLCLibraryBrowseSegment alloc] init];
+        case VLCLibraryWatchHomeSegmentType:
+        case VLCLibraryWatchMoviesSegmentType:
+        case VLCLibraryWatchShowsSegmentType:
+            return [VLCLibraryWatchSegment segmentWithWatchSegmentType:segmentType];
         default:
             return nil;
     }

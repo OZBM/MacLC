@@ -51,6 +51,9 @@
 #import "library/VLCLibraryController.h"
 #import "library/VLCLibraryWindow.h"
 #import "webvideo/MacLCWebVideoPanelController.h"
+#import "addons/MacLCAddons.h"
+#import "addons/MacLCAddonSearchWindowController.h"
+#import "addons/watch/MacLCWatchSections.h"
 #import "library/VLCLibraryWindowController.h"
 #import "library/VLCLibraryWindowNavigationSidebarViewController.h"
 #import "medialib/shell/MacLCLibrarySidebarViewController.h"
@@ -470,6 +473,28 @@ static VLCMain *sharedInstance = nil;
             [window.splitViewController.navSidebarViewController selectSegment:segmentType];
         });
     }
+    /* MACLC_DEBUG_WATCH=home|movies|shows selects that Watch section;
+     * ":detail" then opens the first featured title's page, ":play" its page
+     * and stream picker. */
+    const char * const debugWatch = getenv("MACLC_DEBUG_WATCH");
+    if (debugWatch != NULL) {
+        NSArray<NSString *> * const parts = [@(debugWatch) componentsSeparatedByString:@":"];
+        NSInteger segmentType = VLCLibraryWatchHomeSegmentType;
+        if ([parts.firstObject isEqualToString:@"movies"])
+            segmentType = VLCLibraryWatchMoviesSegmentType;
+        else if ([parts.firstObject isEqualToString:@"shows"])
+            segmentType = VLCLibraryWatchShowsSegmentType;
+        NSString * const then = parts.count > 1 ? parts[1] : @"";
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;
+            [window.splitViewController.navSidebarViewController selectSegment:segmentType];
+            MacLCLibrarySectionViewController * const section =
+                [MacLCLibraryRouter routerForLibraryWindow:window].currentSection;
+            if (then.length > 0 && [section isKindOfClass:MacLCWatchSectionViewController.class])
+                [(MacLCWatchSectionViewController *)section
+                    debugOpenFirstFeaturedShowingStreams:[then isEqualToString:@"play"]];
+        });
+    }
 
     /* Developer hooks for headless screenshots:
      * MACLC_DEBUG_APPEARANCE=dark|light forces the appearance,
@@ -558,7 +583,7 @@ static VLCMain *sharedInstance = nil;
             }
         });
     }
-    /* MACLC_DEBUG_SHOW_PANEL=sound|sound-panel|sdr2hdr|hdr|settings-hdr[+advanced][:y] opens, after
+    /* MACLC_DEBUG_SHOW_PANEL=sound|sound-panel|sdr2hdr|hdr|settings-<pane>[+advanced][:y] opens, after
      * MACLC_DEBUG_SHOW_PANEL_DELAY seconds (6 by default), the SDR to HDR
      * popover, the HDR popover or the HDR & Colour settings pane, anchored to
      * the library window, so headless captures can see them. */
@@ -569,7 +594,7 @@ static VLCMain *sharedInstance = nil;
         NSString * const panel = @(debugPanel);
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             NSView * const anchor = self->_libraryWindowController.window.contentView;
-            if (anchor == nil && ![panel hasPrefix:@"settings-hdr"])
+            if (anchor == nil && ![panel hasPrefix:@"settings-"])
                 return;
             if ([panel isEqualToString:@"sound"]) {
                 [MacLCSoundPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
@@ -579,9 +604,14 @@ static VLCMain *sharedInstance = nil;
                 [MacLCSDRToHDRPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
             } else if ([panel isEqualToString:@"hdr"]) {
                 [MacLCHDRPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
-            } else if ([panel hasPrefix:@"settings-hdr"]) {
+            } else if ([panel hasPrefix:@"settings-"]) {
+                /* settings-<pane identifier>; settings-hdr is the HDR & Colour pane. */
+                NSString *pane = [[panel substringFromIndex:9] componentsSeparatedByCharactersInSet:
+                    [NSCharacterSet characterSetWithCharactersInString:@"+:"]].firstObject;
+                if ([pane isEqualToString:@"hdr"])
+                    pane = @"video-hdr";
                 [self.settingsWindowController showSettingsWindowWithLevel:NSNormalWindowLevel];
-                [self.settingsWindowController selectPaneWithIdentifier:@"video-hdr"];
+                [self.settingsWindowController selectPaneWithIdentifier:pane];
                 /* settings-hdr+advanced also opens Advanced Options. */
                 if ([panel containsString:@"+advanced"]) {
                     NSMutableArray<NSView *> * const views =
@@ -608,7 +638,8 @@ static VLCMain *sharedInstance = nil;
                             NSView * const view = queue.firstObject;
                             [queue removeObjectAtIndex:0];
                             if ([view isKindOfClass:[NSScrollView class]]
-                                && ((NSScrollView *)view).documentView.frame.size.height > 1000.0) {
+                                && NSHeight(((NSScrollView *)view).documentView.frame)
+                                   > NSHeight(((NSScrollView *)view).contentView.bounds) + 1.0) {
                                 NSScrollView * const scroll = (NSScrollView *)view;
                                 [scroll.documentView scrollPoint:NSMakePoint(0, scroll.documentView.isFlipped
                                     ? y : NSHeight(scroll.documentView.frame) - y - NSHeight(scroll.contentView.bounds))];
@@ -689,6 +720,50 @@ static VLCMain *sharedInstance = nil;
             [MacLCWebVideoPanelController.sharedController
                 showPanelWithAddress:address.length > 0 ? address : nil
                     playWhenResolved:playWhenResolved];
+        });
+    }
+
+    /* Developer hooks for headless checks: MACLC_DEBUG_ADDONS_INSTALL=<address>
+     * installs that add-on at launch (several: separated by spaces), then
+     * MACLC_DEBUG_ADDONS_SEARCH opens Search Add-ons on the query it holds
+     * (prefix "play-movie:" or "play-series:" picks and plays the first
+     * result, "select-movie:" or "select-series:" only picks it). Unset, they
+     * do nothing. */
+    const char * const debugAddonsInstall = getenv("MACLC_DEBUG_ADDONS_INSTALL");
+    const char * const debugAddonsSearch = getenv("MACLC_DEBUG_ADDONS_SEARCH");
+    if (debugAddonsInstall != NULL || debugAddonsSearch != NULL) {
+        NSArray<NSString *> * const addresses = [@(debugAddonsInstall ?: "")
+            componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+        NSString * const search = debugAddonsSearch != NULL ? @(debugAddonsSearch) : nil;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            dispatch_group_t const installs = dispatch_group_create();
+            for (NSString * const address in addresses) {
+                if (address.length == 0)
+                    continue;
+                dispatch_group_enter(installs);
+                [MacLCAddonStore.sharedStore installFromAddress:address
+                                                     completion:^(MacLCAddon *addon, BOOL replaced, NSError *error) {
+                    if (addon != nil)
+                        msg_Dbg(getIntf(), "addons: debug hook installed \"%s\"", addon.name.UTF8String);
+                    else
+                        msg_Warn(getIntf(), "addons: debug hook could not install %s: %s",
+                                 address.UTF8String, error.localizedDescription.UTF8String);
+                    dispatch_group_leave(installs);
+                }];
+            }
+            dispatch_group_notify(installs, dispatch_get_main_queue(), ^{
+                if (search == nil)
+                    return;
+                NSString *query = search, *type = nil;
+                for (NSString * const prefix in @[@"play-movie", @"play-series", @"select-movie", @"select-series"]) {
+                    if ([query hasPrefix:[prefix stringByAppendingString:@":"]]) {
+                        type = [prefix hasPrefix:@"play-"] ? [prefix substringFromIndex:5] : prefix;
+                        query = [query substringFromIndex:prefix.length + 1];
+                        break;
+                    }
+                }
+                [MacLCAddonSearchWindowController.sharedController showWindowWithQuery:query autoplayType:type];
+            });
         });
     }
 

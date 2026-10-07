@@ -164,6 +164,8 @@ NSUserInterfaceItemIdentifier const MacLCSectionHeaderViewIdentifier = @"MacLCSe
 
             [_actionButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
             [_actionButton.centerYAnchor constraintEqualToAnchor:_titleLabel.centerYAnchor],
+            /* accessibility.md: 20 pt minimum hit target on the Mac. */
+            [_actionButton.heightAnchor constraintGreaterThanOrEqualToConstant:MacLCDesign.minimumHitTarget],
         ]];
     }
     return self;

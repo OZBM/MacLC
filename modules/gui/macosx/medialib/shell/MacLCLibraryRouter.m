@@ -31,6 +31,8 @@
 #import "medialib/sections/MacLCLibrarySections.h"
 #import "medialib/sections/MacLCLibrarySectionViewController.h"
 
+#import "addons/watch/MacLCWatchSections.h"
+
 NSNotificationName const MacLCLibraryRouterSectionDidChangeNotification =
     @"MacLCLibraryRouterSectionDidChangeNotification";
 
@@ -86,6 +88,9 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
         case VLCLibraryPlaylistsVideoOnlyPlaylistsSubSegmentType:
         case VLCLibraryGroupsSegmentType:
         case VLCLibraryGroupsGroupSubSegmentType:
+        case VLCLibraryWatchHomeSegmentType:
+        case VLCLibraryWatchMoviesSegmentType:
+        case VLCLibraryWatchShowsSegmentType:
             return YES;
         default:
             return NO;
@@ -121,6 +126,12 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
             return MacLCLibraryPlaylistsViewController.class;
         case VLCLibraryFavoritesSegmentType:
             return MacLCLibraryFavoritesViewController.class;
+        case VLCLibraryWatchHomeSegmentType:
+            return MacLCWatchHomeSectionViewController.class;
+        case VLCLibraryWatchMoviesSegmentType:
+            return MacLCWatchMoviesSectionViewController.class;
+        case VLCLibraryWatchShowsSegmentType:
+            return MacLCWatchShowsSectionViewController.class;
         default:
             return nil;
     }
@@ -207,6 +218,9 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
         return;
     }
     self.libraryWindow.title = section.sectionTitle ?: @"";
+    const BOOL pictureUnderToolbar = [section isKindOfClass:MacLCWatchSectionViewController.class]
+        && ((MacLCWatchSectionViewController *)section).showsPictureUnderToolbar;
+    self.libraryWindow.titleVisibility = pictureUnderToolbar ? NSWindowTitleHidden : NSWindowTitleVisible;
     self.libraryWindow.subtitle = section.sectionSubtitle ?: @"";
 }
 

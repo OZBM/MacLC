@@ -647,7 +647,7 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
     if (self.topViewController && self.topViewController != self.rootViewController && self.topViewController.title.length > 0) {
         return self.topViewController.title;
     }
-    return _NS("Home");
+    return _NS("Overview");
 }
 
 - (NSString *)makeSearchPlaceholder

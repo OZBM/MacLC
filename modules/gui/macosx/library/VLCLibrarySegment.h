@@ -50,6 +50,11 @@ typedef NS_ENUM(NSInteger, VLCLibrarySegmentType) {
     VLCLibraryGroupsGroupSubSegmentType,
     VLCLibraryBrowseSegmentType,
     VLCLibraryBrowseBookmarkedLocationSubSegmentType,
+    /* Watch: what the installed add-ons list (addons/watch). Appended, so the
+     * values windows saved before them keep their meaning. */
+    VLCLibraryWatchHomeSegmentType,
+    VLCLibraryWatchMoviesSegmentType,
+    VLCLibraryWatchShowsSegmentType,
     VLCLibraryHighSentinelSegment,
 };
 

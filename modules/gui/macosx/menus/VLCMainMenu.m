@@ -67,6 +67,8 @@
 #import "windows/controlsbar/VLCMainWindowControlsBar.h"
 #import "windows/extensions/VLCExtensionsManager.h"
 #import "webvideo/MacLCWebVideoPanelController.h"
+#import "addons/MacLCAddons.h"
+#import "addons/MacLCAddonSearchWindowController.h"
 #import "windows/convertandsave/VLCConvertAndSaveWindowController.h"
 #import "windows/logging/VLCLogWindowController.h"
 #import "windows/addons/VLCAddonsWindowController.h"
@@ -134,6 +136,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 
     __strong VLCTimeSelectionPanelController *_timeSelectionPanel;
     __strong VLCCustomCropArWindowController *_customARController;
+    NSMenuItem *_addonSearchMenuItem;
 }
 
 @end
@@ -186,6 +189,17 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
         webVideoItem.keyEquivalentModifierMask = NSEventModifierFlagCommand;
         webVideoItem.target = self;
         [_fileMenu insertItem:webVideoItem atIndex:netIndex + 1];
+
+        /* Shown once an installed add-on provides streams. */
+        _addonSearchMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Search Add-ons…") action:@selector(intfOpenAddonSearch:) keyEquivalent:@""];
+        _addonSearchMenuItem.target = self;
+        _addonSearchMenuItem.hidden = !MacLCAddonStore.sharedStore.hasStreamAddon;
+        [_fileMenu insertItem:_addonSearchMenuItem atIndex:netIndex + 2];
+
+        [NSNotificationCenter.defaultCenter addObserver:self
+                                               selector:@selector(addonsDidChange:)
+                                                   name:MacLCAddonsDidChangeNotification
+                                                 object:nil];
     }
 
     /* Audio > Sound Mode (the easy equalizer's modes) and Audio > Equalizer…,
@@ -1492,6 +1506,16 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 - (IBAction)intfOpenWebVideo:(id)sender
 {
     [MacLCWebVideoPanelController.sharedController showPanel];
+}
+
+- (IBAction)intfOpenAddonSearch:(id)sender
+{
+    [MacLCAddonSearchWindowController.sharedController showWindow:nil];
+}
+
+- (void)addonsDidChange:(NSNotification *)aNotification
+{
+    _addonSearchMenuItem.hidden = !MacLCAddonStore.sharedStore.hasStreamAddon;
 }
 
 

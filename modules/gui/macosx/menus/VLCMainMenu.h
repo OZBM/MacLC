@@ -237,6 +237,7 @@
 - (IBAction)intfOpenDisc:(id)sender;
 - (IBAction)intfOpenNet:(id)sender;
 - (IBAction)intfOpenWebVideo:(id)sender;
+- (IBAction)intfOpenAddonSearch:(id)sender;
 - (IBAction)intfOpenCapture:(id)sender;
 - (IBAction)intfConnectToServer:(id)sender;
 - (IBAction)savePlaylist:(id)sender;

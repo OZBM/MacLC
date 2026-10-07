@@ -133,6 +133,11 @@ static const NSTimeInterval MacLCSearchDebounce = 0.12;
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
+    /* Watch hides the title over its pictures (MacLCLibraryRouter); Browse,
+     * which the router does not show, gets it back. */
+    if (![MacLCLibraryRouter handlesSegmentType:_libraryWindow.librarySegmentType]) {
+        _libraryWindow.titleVisibility = NSWindowTitleVisible;
+    }
     [self updateItems];
 }
 
