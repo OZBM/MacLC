@@ -419,6 +419,26 @@
     XCTAssertEqualObjects(addons[0].identifier, @"com.linvo.cinemeta");
 }
 
+- (void)testCommunityCatalogListsTorrentio
+{
+    NSString *catalogJSON = @"{\"addons\":[{\"transportUrl\":\"https://anime-kitsu.strem.fun/manifest.json\",\"manifest\":{\"id\":\"community.anime.kitsu\",\"name\":\"Anime Kitsu\",\"version\":\"0.0.10\",\"resources\":[\"catalog\",\"meta\"],\"types\":[\"anime\",\"movie\",\"series\"]}}]}";
+    NSArray<MacLCAddon *> *listed = [MacLCAddonStore addonsFromCatalogData:[catalogJSON dataUsingEncoding:NSUTF8StringEncoding]
+                                                                     error:nil];
+    NSArray<MacLCAddon *> *addons = [MacLCAddonStore communityAddons:listed forType:@"all"];
+    XCTAssertEqual(addons.count, 2);
+    XCTAssertEqualObjects(addons[0].identifier, @"com.stremio.torrentio.addon");
+    XCTAssertEqualObjects(addons[0].transportURL, @"https://torrentio.strem.fun/manifest.json");
+    XCTAssertTrue(addons[0].providesStreams);
+    XCTAssertTrue(addons[0].isRemovable);
+    XCTAssertEqualObjects(addons[0].configureURL.absoluteString, @"https://torrentio.strem.fun/configure");
+    XCTAssertEqualObjects(addons[1].identifier, @"community.anime.kitsu");
+
+    /* Once when Stremio lists it again; not in a list of a type it does not serve. */
+    XCTAssertEqual([MacLCAddonStore communityAddons:addons forType:@"all"].count, 2);
+    XCTAssertEqual([MacLCAddonStore communityAddons:listed forType:@"series"].count, 2);
+    XCTAssertEqual([MacLCAddonStore communityAddons:listed forType:@"channel"].count, 1);
+}
+
 - (void)testMetaParsing
 {
     // Two seasons out of order, episode without episode but with number, behaviorHints.defaultVideoId

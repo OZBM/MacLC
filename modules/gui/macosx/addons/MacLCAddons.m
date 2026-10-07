@@ -1693,6 +1693,10 @@ static void ExecuteRequest(NSURL * _Nullable url,
         }
         NSError *parseError = nil;
         NSArray<MacLCAddon *> *addons = [MacLCAddonStore addonsFromCatalogData:data error:&parseError];
+        if (addons && [catalog.identifier isEqualToString:@"community"] &&
+            [catalog.addon.identifier isEqualToString:@"com.linvo.cinemeta"]) {
+            addons = [MacLCAddonStore communityAddons:addons forType:catalog.type];
+        }
         completion(addons, parseError);
     });
 
@@ -2719,6 +2723,25 @@ static void ExecuteRequest(NSURL * _Nullable url,
     }
 
     return result;
+}
+
++ (NSArray<MacLCAddon *> *)communityAddons:(NSArray<MacLCAddon *> *)addons forType:(NSString *)type
+{
+    /* Torrentio 0.0.15 as served on 2026-10-07; refreshManifests keeps an
+     * installed copy current. */
+    NSString *torrentio = @"{\"id\":\"com.stremio.torrentio.addon\",\"version\":\"0.0.15\",\"name\":\"Torrentio\",\"description\":\"Provides torrent streams from scraped torrent providers. Currently supports YTS(+), EZTV(+), RARBG(+), 1337x(+), EXT(+), ThePirateBay(+), KickassTorrents(+), TorrentGalaxy(+), MagnetDL(+), HorribleSubs(+), NyaaSi(+), TokyoTosho(+), AniDex(+), nekoBT(+), Rutor(+), Rutracker(+), Comando(+), BluDV(+), MicoLeaoDublado(+), Torrent9(+), ilCorSaRoNeRo(+), MejorTorrent(+), Wolfmax4k(+), Cinecalidad(+), BestTorrents(+). To configure providers, RealDebrid/Premiumize/AllDebrid/DebridLink/EasyDebrid/Offcloud/TorBox/Put.io/HighWay support and other settings visit https://torrentio.strem.fun\",\"catalogs\":[],\"resources\":[{\"name\":\"stream\",\"types\":[\"movie\",\"series\",\"anime\"],\"idPrefixes\":[\"tt\",\"kitsu\"]}],\"types\":[\"movie\",\"series\",\"anime\",\"other\"],\"background\":\"https://torrentio.strem.fun/images/background_v1.jpg\",\"logo\":\"https://torrentio.strem.fun/images/logo_v1.png\",\"behaviorHints\":{\"configurable\":true,\"configurationRequired\":false}}";
+    MacLCAddon *extra = [MacLCAddon addonWithTransportURL:@"https://torrentio.strem.fun/manifest.json"
+                                             manifestData:[torrentio dataUsingEncoding:NSUTF8StringEncoding]
+                                                    error:nil];
+    if (!extra || !([type isEqualToString:@"all"] || [extra.types containsObject:type])) {
+        return addons;
+    }
+    for (MacLCAddon *addon in addons) {
+        if ([addon.identifier isEqualToString:extra.identifier]) {
+            return addons;
+        }
+    }
+    return [@[extra] arrayByAddingObjectsFromArray:addons];
 }
 
 + (NSString *)itemNameForItem:(MacLCAddonItem *)item video:(nullable MacLCAddonVideo *)video

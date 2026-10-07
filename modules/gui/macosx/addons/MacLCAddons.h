@@ -297,6 +297,10 @@ NSString * _Nullable MacLCAddonsUnresolvedHost(NSError * _Nullable error);
                                        skip:(NSUInteger)skip;
 + (nullable NSArray<MacLCAddonStream *> *)streamsFromData:(NSData *)data addon:(MacLCAddon *)addon error:(NSError **)error;
 + (nullable NSArray<MacLCAddon *> *)addonsFromCatalogData:(NSData *)data error:(NSError **)error;
+/// The add-ons of Cinemeta's "community" add-on catalog, after the community
+/// add-ons Stremio's list leaves out (Torrentio) that serve type ("all": any);
+/// one the list already has is not added again.
++ (NSArray<MacLCAddon *> *)communityAddons:(NSArray<MacLCAddon *> *)addons forType:(NSString *)type;
 /// "His Girl Friday (1940)", "Dragnet — S1E2 · The Big Ruckus",
 /// "A Channel — A Video".
 + (NSString *)itemNameForItem:(MacLCAddonItem *)item video:(nullable MacLCAddonVideo *)video;
