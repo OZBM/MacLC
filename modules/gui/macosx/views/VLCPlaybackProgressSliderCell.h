@@ -29,6 +29,16 @@
 /// Pointer over the scrubber: the track thickens and the knob appears.
 @property (readwrite, nonatomic) BOOL hovered;
 
+/// A torrent being played: the parts of the file already on disk, as
+/// flattened fractions [s0, e0, s1, e1, ...] of the whole (0...1), drawn
+/// between the empty track and the played fill.
+@property (readwrite, nonatomic, copy, nullable) NSArray<NSNumber *> *downloadedRanges;
+/// Where the download has reached in front of the playhead, 0...1; < 0 for none.
+@property (readwrite, nonatomic) double downloadHead;
+/// YES while data is still coming in: the head glows and pulses (a still
+/// head under Reduce Motion). Done (head >= 0.999) or NO: the ranges only.
+@property (readwrite, nonatomic) BOOL downloading;
+
 - (void)setSliderStyleLight;
 - (void)setSliderStyleDark;
 

@@ -32,6 +32,8 @@
 #import "playqueue/VLCPlayerController.h"
 #import "playqueue/VLCPlayQueueController.h"
 
+#import "theme/MacLCDesign.h"
+
 #import "views/VLCUIUnits.h"
 
 /* A display link keeps its target until it is invalidated. It reaches the
@@ -123,6 +125,45 @@
     _displayLink = nil;
 }
 
+/* One display link serves the indefinite animation and the download head's
+ * pulse and shimmer: it runs only while one of them is on screen. */
+- (BOOL)downloadAnimationWanted
+{
+    return _downloading && _downloadHead >= 0.0 && _downloadHead < 0.999 && !MacLCDesign.reducedMotion;
+}
+
+- (void)updateDisplayLink
+{
+    if (_indefinite || [self downloadAnimationWanted]) {
+        [self startDisplayLink];
+    } else {
+        [self stopDisplayLink];
+    }
+}
+
+- (void)setDownloadedRanges:(NSArray<NSNumber *> *)downloadedRanges
+{
+    if (_downloadedRanges == downloadedRanges || [_downloadedRanges isEqualToArray:downloadedRanges]) {
+        return;
+    }
+    _downloadedRanges = [downloadedRanges copy];
+    self.controlView.needsDisplay = YES;
+}
+
+- (void)setDownloadHead:(double)downloadHead
+{
+    _downloadHead = downloadHead;
+    [self updateDisplayLink];
+    self.controlView.needsDisplay = YES;
+}
+
+- (void)setDownloading:(BOOL)downloading
+{
+    _downloading = downloading;
+    [self updateDisplayLink];
+    self.controlView.needsDisplay = YES;
+}
+
 - (void)setSliderStyleLight
 {
     _emptySliderBackgroundColor = NSColor.VLCSliderLightBackgroundColor;
@@ -208,20 +249,104 @@ static const CGFloat kKnobDiameter = 14.0;
     [_emptySliderBackgroundColor setFill];
     [emptyTrackPath fill];
 
-    if (self.knobHidden) {
+    // What a torrent has already downloaded, between the empty track and the played fill
+    [self drawDownloadedRangesInTrack:track radius:radius];
+
+    if (!self.knobHidden) {
+        // Filled track, up to the knob centre
+        NSRect filledTrackRect = track;
+        const NSRect knobRect = [self knobRectFlipped:NO];
+        filledTrackRect.size.width = MAX(NSMidX(knobRect) - NSMinX(track), 0.0);
+
+        NSBezierPath * const filledTrackPath =
+            [NSBezierPath bezierPathWithRoundedRect:filledTrackRect xRadius:radius yRadius:radius];
+        [NSColor.labelColor setFill];
+        [filledTrackPath fill];
+    }
+
+    [self drawDownloadHeadInTrack:track];
+}
+
+#pragma mark -
+#pragma mark Download drawing
+
+/* labelColor at 45 % over the empty track (about 20 %) and under the played
+ * fill (100 %): three states that read at a glance, as on a streaming player. Colours are set here, at draw time, so they follow the appearance. */
+- (void)drawDownloadedRangesInTrack:(NSRect)track radius:(CGFloat)radius
+{
+    NSArray<NSNumber *> * const ranges = _downloadedRanges;
+    if (ranges.count < 2 || NSWidth(track) <= 0.0) {
         return;
     }
 
-    // Filled track, up to the knob centre
-    NSRect filledTrackRect = track;
-    const NSRect knobRect = [self knobRectFlipped:NO];
-    filledTrackRect.size.width = MAX(NSMidX(knobRect) - NSMinX(track), 0.0);
-
-    NSBezierPath * const filledTrackPath =
-        [NSBezierPath bezierPathWithRoundedRect:filledTrackRect xRadius:radius yRadius:radius];
-    [NSColor.labelColor setFill];
-    [filledTrackPath fill];
+    [[NSColor.labelColor colorWithAlphaComponent:0.45] setFill];
+    for (NSUInteger i = 0; i + 1 < ranges.count; i += 2) {
+        const double start = MIN(MAX(ranges[i].doubleValue, 0.0), 1.0);
+        const double end = MIN(MAX(ranges[i + 1].doubleValue, 0.0), 1.0);
+        if (end <= start) {
+            continue;
+        }
+        NSRect piece = NSMakeRect(NSMinX(track) + start * NSWidth(track), NSMinY(track),
+                                  MAX((end - start) * NSWidth(track), 1.0), NSHeight(track));
+        const CGFloat pieceRadius = MIN(radius, NSWidth(piece) / 2.0);
+        [[NSBezierPath bezierPathWithRoundedRect:piece xRadius:pieceRadius yRadius:pieceRadius] fill];
+    }
 }
+
+/* A 4 pt capsule of the accent colour that glows and pulses (opacity 0.5 to 1
+ * in 1.2 s), and every 2 s a soft sweep that travels from the playhead to it
+ * inside the downloaded range. Reduce Motion: still, no sweep. */
+- (void)drawDownloadHeadInTrack:(NSRect)track
+{
+    if (!_downloading || _downloadHead < 0.0 || _downloadHead >= 0.999 || NSWidth(track) <= 0.0) {
+        return;
+    }
+
+    const BOOL animated = !MacLCDesign.reducedMotion && !_indefinite;
+    const CFTimeInterval now = CACurrentMediaTime();
+    const CGFloat headX = NSMinX(track) + MIN(_downloadHead, 1.0) * NSWidth(track);
+    NSColor * const accent = NSColor.controlAccentColor;
+
+    if (animated) {
+        const CGFloat playX = self.knobHidden ? NSMinX(track) : NSMidX([self knobRectFlipped:NO]);
+        const CGFloat span = headX - playX;
+        const double phase = fmod(now, 2.0) / 0.9;
+        if (span > 8.0 && phase < 1.0) {
+            const double eased = phase * phase * (3.0 - 2.0 * phase);
+            const CGFloat bandWidth = MIN(48.0, span);
+            const CGFloat bandX = playX + (span + bandWidth) * (CGFloat)eased - bandWidth;
+            const CGFloat radius = NSHeight(track) / 2.0;
+
+            [NSGraphicsContext saveGraphicsState];
+            [[NSBezierPath bezierPathWithRoundedRect:track xRadius:radius yRadius:radius] addClip];
+            NSRectClip(NSMakeRect(playX, NSMinY(track), span, NSHeight(track)));
+            NSGradient * const sweep = [[NSGradient alloc] initWithColors:@[
+                [accent colorWithAlphaComponent:0.0],
+                [accent colorWithAlphaComponent:0.55],
+                [accent colorWithAlphaComponent:0.0],
+            ]];
+            [sweep drawInRect:NSMakeRect(bandX, NSMinY(track), bandWidth, NSHeight(track)) angle:0.0];
+            [NSGraphicsContext restoreGraphicsState];
+        }
+    }
+
+    const CGFloat opacity = animated ? 0.75 + 0.25 * cos(2.0 * M_PI * now / 1.2) : 1.0;
+    const CGFloat headHeight = NSHeight(track) + 6.0;
+    const NSRect head = NSMakeRect(headX - 2.0, NSMidY(track) - headHeight / 2.0, 4.0, headHeight);
+
+    [NSGraphicsContext saveGraphicsState];
+    NSShadow * const glow = [[NSShadow alloc] init];
+    glow.shadowBlurRadius = 5.0;
+    glow.shadowOffset = NSZeroSize;
+    glow.shadowColor = [accent colorWithAlphaComponent:0.8 * opacity];
+    [glow set];
+    [[accent colorWithAlphaComponent:opacity] setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:head xRadius:2.0 yRadius:2.0] fill];
+    [NSGraphicsContext restoreGraphicsState];
+}
+
+#pragma mark -
+#pragma mark Hover
 
 - (void)setHovered:(BOOL)hovered
 {
@@ -317,13 +442,13 @@ static const CGFloat kKnobDiameter = 14.0;
 {
     _animationPosition = -(_animationWidth);
     _lastTime = 0;
-    [self startDisplayLink];
+    [self updateDisplayLink];
     self.enabled = NO;
 }
 
 - (void)endAnimating
 {
-    [self stopDisplayLink];
+    [self updateDisplayLink];
     self.enabled = YES;
 }
 

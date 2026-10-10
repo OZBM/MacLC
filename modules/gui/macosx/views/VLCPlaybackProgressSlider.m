@@ -25,6 +25,7 @@
 #import "extensions/NSString+Helpers.h"
 #import "extensions/NSView+VLCAdditions.h"
 #import "main/CompatibilityFixes.h"
+#import "torrent/MacLCTorrentBufferViews.h"
 #import "views/VLCPlaybackProgressSliderCell.h"
 
 @implementation VLCPlaybackProgressSlider {
@@ -113,6 +114,56 @@
     [(VLCPlaybackProgressSliderCell*)self.cell setKnobHidden:knobHidden];
 }
 
+- (NSArray<NSNumber *> *)downloadedRanges
+{
+    return [(VLCPlaybackProgressSliderCell*)self.cell downloadedRanges];
+}
+
+- (void)setDownloadedRanges:(NSArray<NSNumber *> *)downloadedRanges
+{
+    [(VLCPlaybackProgressSliderCell*)self.cell setDownloadedRanges:downloadedRanges];
+}
+
+- (double)downloadHead
+{
+    return [(VLCPlaybackProgressSliderCell*)self.cell downloadHead];
+}
+
+- (void)setDownloadHead:(double)downloadHead
+{
+    [(VLCPlaybackProgressSliderCell*)self.cell setDownloadHead:downloadHead];
+}
+
+- (BOOL)downloading
+{
+    return [(VLCPlaybackProgressSliderCell*)self.cell downloading];
+}
+
+- (void)setDownloading:(BOOL)downloading
+{
+    [(VLCPlaybackProgressSliderCell*)self.cell setDownloading:downloading];
+}
+
+/* Played position, then how far the download has reached, then its speed. */
+- (NSString *)accessibilityValueDescription
+{
+    const double head = self.downloadHead;
+    if (head < 0.0) {
+        return [super accessibilityValueDescription];
+    }
+
+    const double range = self.maxValue - self.minValue;
+    const int played = range > 0.0 ? (int)lround(100.0 * (self.doubleValue - self.minValue) / range) : 0;
+    const int downloaded = (int)lround(100.0 * MIN(head, 1.0));
+    NSString * const position = [NSString stringWithFormat:_NS("%d %%"), played];
+    NSString * const progress = [NSString stringWithFormat:_NS("downloaded to %d %%"), downloaded];
+    if (!self.downloading || self.downloadRate <= 0) {
+        return [NSString stringWithFormat:@"%@, %@", position, progress];
+    }
+    return [NSString stringWithFormat:@"%@, %@, %@", position, progress,
+            [MacLCTorrentHeadMarker spokenRateString:self.downloadRate]];
+}
+
 - (BOOL)isFlipped
 {
     return NO;
@@ -152,6 +203,7 @@
 - (void)viewDidMoveToWindow
 {
     [super viewDidMoveToWindow];
+    [_headMarker sliderDidMoveToWindow];
     if (self.window == nil) {
         [self hideHoverWindow];
         return;
@@ -278,6 +330,7 @@
 
 - (void)reportHoverAtPoint:(NSPoint)locationInSelf
 {
+    [_headMarker sliderPointerMovedToX:locationInSelf.x hoverVisible:[self hoverIsAvailable]];
     if (![self hoverIsAvailable]) {
         [self hideHoverWindow];
         return;
@@ -315,6 +368,7 @@
 {
     [(VLCPlaybackProgressSliderCell *)self.cell setHovered:NO];
     [self hideHoverWindow];
+    [_headMarker sliderPointerExited];
 }
 
 - (void)mouseDown:(NSEvent *)event
@@ -322,6 +376,7 @@
     // NSSlider runs its own tracking loop here; mouseMoved is not delivered
     // during the drag, so the hover would otherwise show a stale time.
     [self hideHoverWindow];
+    [_headMarker sliderPointerExited];
     [super mouseDown:event];
 }
 

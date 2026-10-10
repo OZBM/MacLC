@@ -24,6 +24,8 @@
 
 #import <vlc_tick.h>
 
+@class MacLCTorrentHeadMarker;
+
 @interface VLCPlaybackProgressSlider : NSSlider
 
 @property (readwrite, nonatomic) BOOL indefinite;
@@ -34,5 +36,19 @@
 
 /* Duration of the current item, used to compute the time shown on hover. */
 @property (readwrite, nonatomic) vlc_tick_t mediaDuration;
+
+/* A torrent being played (fed by the controls bar from MacLCTorrentMonitor).
+ * downloadedRanges: flattened fractions [s0, e0, s1, e1, ...] of the file on
+ * disk; downloadHead: where the download has reached in front of the playhead
+ * (0...1, < 0 for none); downloading: data still arriving; downloadRate:
+ * bytes per second, for VoiceOver. */
+@property (readwrite, nonatomic, copy, nullable) NSArray<NSNumber *> *downloadedRanges;
+@property (readwrite, nonatomic) double downloadHead;
+@property (readwrite, nonatomic) BOOL downloading;
+@property (readwrite, nonatomic) int64_t downloadRate;
+
+/* The marker that floats over the download head. The slider tells it where
+ * the pointer is; the owner keeps it alive. */
+@property (readwrite, nonatomic, weak, nullable) MacLCTorrentHeadMarker *headMarker;
 
 @end

@@ -47,6 +47,9 @@
 
 #import "theme/MacLCDesign.h"
 
+#import "torrent/MacLCTorrentBufferViews.h"
+#import "torrent/MacLCTorrentMonitor.h"
+
 /*****************************************************************************
  * VLCControlsBarCommon
  *
@@ -74,6 +77,9 @@
 
     VLCPlayQueueController *_playQueueController;
     VLCPlayerController *_playerController;
+
+    /* The download head floating over the seek bar while a torrent plays. */
+    MacLCTorrentHeadMarker *_torrentMarker;
 
     BOOL _jumpButtonsHidden;
     CGFloat _jumpBackwardButtonOriginalWidth;
@@ -124,6 +130,11 @@
     [notificationCenter addObserver:self
                            selector:@selector(fullscreenStateUpdated:)
                                name:VLCPlayerFullscreenChanged
+                             object:nil];
+
+    [notificationCenter addObserver:self
+                           selector:@selector(torrentMonitorDidUpdate:)
+                               name:MacLCTorrentMonitorDidUpdateNotification
                              object:nil];
 
     _nativeFullscreenMode = var_InheritBool(getIntf(), "macosx-nativefullscreenmode");
@@ -222,6 +233,22 @@
 
     self.timeSlider.hidden = NO;
 
+    if (self.timeSlider != nil) {
+        _torrentMarker = [[MacLCTorrentHeadMarker alloc] initWithSlider:self.timeSlider];
+        self.timeSlider.headMarker = _torrentMarker;
+        NSMutableArray<NSView *> * const timeLabels = [NSMutableArray array];
+        if (self.timeField != nil) {
+            [timeLabels addObject:self.timeField];
+        }
+        if (self.trailingTimeField != nil) {
+            [timeLabels addObject:self.trailingTimeField];
+        }
+        _torrentMarker.avoidViews = timeLabels;
+        self.timeSlider.downloadHead = -1.0;
+    }
+    [MacLCTorrentMonitor.sharedMonitor start];
+    [self torrentMonitorDidUpdate:nil];
+
     self.volumeSlider.toolTip = [NSString stringWithFormat:_NS("Volume: %i %%"), 100];
     self.volumeSlider.accessibilityLabel = _NS("Volume");
 
@@ -293,6 +320,31 @@
 - (void)dealloc
 {
     [NSNotificationCenter.defaultCenter removeObserver:self];
+    [_torrentMarker invalidate];
+}
+
+/* The torrent being played: what is on disk and where the download has
+ * reached go to the seek bar, the rest to the marker. Everything is cleared
+ * when the monitor goes inactive. */
+- (void)torrentMonitorDidUpdate:(NSNotification *)notification
+{
+    MacLCTorrentMonitor * const monitor = MacLCTorrentMonitor.sharedMonitor;
+    VLCPlaybackProgressSlider * const slider = self.timeSlider;
+    MacLCTorrentReaderInfo * const reader = monitor.reader;
+
+    if (monitor.active && reader != nil && reader.size > 0) {
+        const double head = reader.headFraction;
+        slider.downloadedRanges = reader.rangeFractions;
+        slider.downloadHead = head;
+        slider.downloadRate = monitor.torrent.downloadRate;
+        slider.downloading = head < 0.999 && monitor.stage != MacLCTorrentStageFailed;
+    } else {
+        slider.downloading = NO;
+        slider.downloadHead = -1.0;
+        slider.downloadedRanges = nil;
+        slider.downloadRate = 0;
+    }
+    [_torrentMarker updateWithMonitor:monitor];
 }
 
 - (void)bottomBarViewFrameChanged:(NSNotification *)notification

@@ -34,6 +34,8 @@
 #import "extensions/NSString+Helpers.h"
 #import "windows/VLCDetachedAudioWindow.h"
 #import "cast/MacLCCastController.h"
+#import "torrent/MacLCTorrentBufferViews.h"
+#import "torrent/MacLCTorrentMonitor.h"
 #import "sound/MacLCSoundMode.h"
 #import "sound/MacLCSoundPanelViewController.h"
 
@@ -52,6 +54,8 @@
     MacLCSymbolButton *_forwardButton;
     NSTextField *_elapsedLabel;
     NSSlider *_slider;
+    /* Downloaded ranges and the download head of a torrent, over the slider. */
+    MacLCTorrentTrackOverlay *_downloadOverlay;
     NSTextField *_remainingLabel;
     MacLCSymbolButton *_volumeButton;
     MacLCSymbolButton *_soundButton;
@@ -316,6 +320,17 @@
                         forOrientation:NSLayoutConstraintOrientationHorizontal];
     [contentView addSubview:_slider];
 
+    _downloadOverlay = [[MacLCTorrentTrackOverlay alloc] initWithFrame:NSZeroRect];
+    _downloadOverlay.translatesAutoresizingMaskIntoConstraints = NO;
+    _downloadOverlay.slider = _slider;
+    [contentView addSubview:_downloadOverlay positioned:NSWindowAbove relativeTo:_slider];
+    [NSLayoutConstraint activateConstraints:@[
+        [_downloadOverlay.leadingAnchor constraintEqualToAnchor:_slider.leadingAnchor],
+        [_downloadOverlay.trailingAnchor constraintEqualToAnchor:_slider.trailingAnchor],
+        [_downloadOverlay.topAnchor constraintEqualToAnchor:_slider.topAnchor],
+        [_downloadOverlay.bottomAnchor constraintEqualToAnchor:_slider.bottomAnchor],
+    ]];
+
     _remainingLabel = [NSTextField labelWithString:@"--:--"];
     _remainingLabel.font = [MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleFootnote];
     _remainingLabel.textColor = MacLCDesign.secondaryLabel;
@@ -415,6 +430,12 @@
 - (void)registerNotifications
 {
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
+
+    [nc addObserver:self
+           selector:@selector(handleTorrentUpdate:)
+               name:MacLCTorrentMonitorDidUpdateNotification
+             object:nil];
+    [MacLCTorrentMonitor.sharedMonitor start];
 
     [nc addObserver:self
            selector:@selector(handleSoundModeChange:)
@@ -701,6 +722,31 @@
     _forwardButton.enabled = playQueue.hasNextPlayQueueItem;
 }
 
+/* A torrent is playing: the part already downloaded shows on the slider and
+ * the tooltip says how it goes. No marker here, the bar stays quiet. */
+- (void)handleTorrentUpdate:(NSNotification *)notification
+{
+    MacLCTorrentMonitor * const monitor = MacLCTorrentMonitor.sharedMonitor;
+    MacLCTorrentReaderInfo * const reader = monitor.reader;
+    MacLCTorrentInfo * const torrent = monitor.torrent;
+    NSString * const defaultTip = _NS("Playback Position");
+
+    if (monitor.active && reader != nil && torrent != nil && reader.size > 0) {
+        _downloadOverlay.ranges = reader.rangeFractions;
+        _downloadOverlay.headFraction = reader.headFraction;
+        NSString * const tip = reader.headFraction < 0.999
+            ? [MacLCTorrentHeadMarker summaryForTorrent:torrent]
+            : defaultTip;
+        self.toolTip = tip;
+        _slider.toolTip = tip;
+    } else {
+        _downloadOverlay.ranges = nil;
+        _downloadOverlay.headFraction = -1.0;
+        self.toolTip = nil;
+        _slider.toolTip = defaultTip;
+    }
+}
+
 - (void)updateTimeAndPosition
 {
     if (_isDraggingSlider) {
@@ -713,6 +759,7 @@
     }
 
     _slider.doubleValue = player.position;
+    _downloadOverlay.needsDisplay = YES;
 
     vlc_tick_t time = player.time;
     vlc_tick_t length = player.length;

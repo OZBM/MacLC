@@ -63,6 +63,7 @@
 #import "hdr/MacLCHDRController.h"
 #import "coreinteraction/MacLCOSDController.h"
 #import "cast/MacLCCastStatusView.h"
+#import "torrent/MacLCTorrentLoadingView.h"
 
 NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerLayoutKey";
 
@@ -122,6 +123,7 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     MacLCOSDView *_osdView;
     NSLayoutConstraint *_osdTopConstraint;
     MacLCCastStatusView *_castStatusView;
+    MacLCTorrentLoadingController *_torrentLoading;
 
     BOOL _isFadingIn;
 }
@@ -277,6 +279,12 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     _castStatusView = [[MacLCCastStatusView alloc] initWithFrame:NSZeroRect];
     [self.voutContainingView addSubview:_castStatusView positioned:NSWindowAbove relativeTo:nil];
     [_castStatusView applyConstraintsToFillSuperview];
+
+    /* The animated "torrent is opening" screen: above the video, below the
+     * controls (the controller follows the torrent monitor by itself). */
+    _torrentLoading = [[MacLCTorrentLoadingController alloc] initWithHostView:self.view
+                                                                 controlsView:self.mainControlsView
+                                                                  avoidedView:self.bottomBarView];
 
     BOOL floatOnTopActive = NO;
     VLCVideoWindowCommon * const window = (VLCVideoWindowCommon *)self.view.window;
