@@ -33,6 +33,11 @@
 #include <locale.h>
 #include <signal.h>
 #include <string.h>
+#include <spawn.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
 #import <CoreFoundation/CoreFoundation.h>
 #import <Cocoa/Cocoa.h>
@@ -50,6 +55,51 @@ struct vlc_context {
 
     bool quitting;
 };
+
+/**
+ * Quitting must never leave a frozen app behind (seen with large torrents:
+ * the window gone, the process stuck ~40 s until force-quit). If the process
+ * is still alive this long after quitting started, sample its threads into
+ * ~/Library/Logs/MacLC/ so the cause can be found, then end it.
+ */
+static const int64_t kQuitWatchdogSeconds = 12;
+
+static void quit_watchdog_fire(void)
+{
+    char dir[1024], path[1200], pid[16];
+    const char *home = getenv("HOME");
+    snprintf(dir, sizeof(dir), "%s/Library/Logs/MacLC", home ? home : "/tmp");
+    for (char *slash = strchr(dir + 1, '/'); slash; slash = strchr(slash + 1, '/')) {
+        *slash = '\0';
+        mkdir(dir, 0755);
+        *slash = '/';
+    }
+    mkdir(dir, 0755);
+    snprintf(path, sizeof(path), "%s/quit-hang-%ld.txt", dir, (long)time(NULL));
+    snprintf(pid, sizeof(pid), "%d", getpid());
+    fprintf(stderr, "MacLC: still quitting after %lld s, sampling to %s and exiting\n",
+            (long long)kQuitWatchdogSeconds, path);
+
+    char *argv[] = { "/usr/bin/sample", pid, "1", "-mayDie", "-file", path, NULL };
+    pid_t child;
+    if (posix_spawn(&child, argv[0], NULL, NULL, argv, NULL) == 0) {
+        for (int i = 0; i < 80; i++) { /* at most 8 s */
+            if (waitpid(child, NULL, WNOHANG) != 0)
+                break;
+            usleep(100000);
+        }
+    }
+    fflush(stderr); /* not NULL: it would wait for stdin's lock, which a reader may hold forever */
+    _exit(EXIT_SUCCESS);
+}
+
+static void quit_watchdog_start(void)
+{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, kQuitWatchdogSeconds * NSEC_PER_SEC),
+                   dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        quit_watchdog_fire();
+    });
+}
 
 /**
  * Handler called when VLC asks to terminate the program.
@@ -72,6 +122,8 @@ static void vlc_terminate(void *data)
 
     if (!quitting)
         return;
+
+    quit_watchdog_start();
 
     /* Release the libvlc instance to clean up the interfaces. */
     dispatch_async(context->intf_queue, ^{
