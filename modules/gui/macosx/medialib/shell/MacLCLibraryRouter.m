@@ -32,6 +32,7 @@
 #import "medialib/sections/MacLCLibrarySectionViewController.h"
 
 #import "addons/watch/MacLCWatchSections.h"
+#import "addons/watch/MacLCWatchLibrarySections.h"
 
 NSNotificationName const MacLCLibraryRouterSectionDidChangeNotification =
     @"MacLCLibraryRouterSectionDidChangeNotification";
@@ -91,6 +92,8 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
         case VLCLibraryWatchHomeSegmentType:
         case VLCLibraryWatchMoviesSegmentType:
         case VLCLibraryWatchShowsSegmentType:
+        case VLCLibraryWatchFavoritesSegmentType:
+        case VLCLibraryWatchHistorySegmentType:
             return YES;
         default:
             return NO;
@@ -132,6 +135,10 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
             return MacLCWatchMoviesSectionViewController.class;
         case VLCLibraryWatchShowsSegmentType:
             return MacLCWatchShowsSectionViewController.class;
+        case VLCLibraryWatchFavoritesSegmentType:
+            return MacLCWatchFavoritesSectionViewController.class;
+        case VLCLibraryWatchHistorySegmentType:
+            return MacLCWatchHistorySectionViewController.class;
         default:
             return nil;
     }

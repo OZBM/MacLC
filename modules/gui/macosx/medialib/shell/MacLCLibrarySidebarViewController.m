@@ -211,6 +211,8 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
         { VLCLibraryWatchHomeSegmentType, _NS("Home"), @"play.tv" },
         { VLCLibraryWatchMoviesSegmentType, _NS("Movies"), @"film.stack" },
         { VLCLibraryWatchShowsSegmentType, _NS("TV Shows"), @"tv" },
+        { VLCLibraryWatchFavoritesSegmentType, _NS("Favorites"), @"heart" },
+        { VLCLibraryWatchHistorySegmentType, _NS("History"), @"clock" },
     };
     for (size_t i = 0; i < ARRAY_SIZE(watchRows); i++) {
         MacLCSidebarItem * const row = [[MacLCSidebarItem alloc] init];

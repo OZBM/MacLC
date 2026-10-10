@@ -32,6 +32,7 @@
 
 @class MacLCAddonItem;
 @class MacLCAddonTitleCatalog;
+@class MacLCWatchCollection;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -40,6 +41,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// no view modes, no sort menu; search placeholder "Search Movies and TV
 /// Shows" (Home), "Search Movies", "Search TV Shows".
 @interface MacLCWatchSectionViewController : MacLCLibrarySectionViewController
+/// For subclasses in other files (Favorites and History,
+/// MacLCWatchLibrarySections.h).
+- (instancetype)initWithMediaType:(nullable NSString *)mediaType segmentType:(NSInteger)segmentType;
 /// nil (every type), @"movie" or @"series".
 @property (readonly, copy, nullable) NSString *mediaType;
 /// Pushes the title page. showStreams: open the stream picker as soon as the
@@ -72,23 +76,63 @@ NS_ASSUME_NONNULL_BEGIN
 /// MacLCWatchLayout) in a scroll view filling the view, top content inset 0
 /// so the carousel goes under the toolbar.
 ///
-/// Sections, top to bottom:
+/// Sections, top to bottom (Home, Movies, TV Shows; Watch is about finding
+/// tonight's film, so the page reads: what's hot → narrow it down → be
+/// inspired → browse):
 /// 1. The carousel (MacLCWatchHeroView): 6 titles taken in turn from the
 ///    catalogs whose identifier is "top" among the section's catalogs
 ///    (Home: popular movies and popular shows alternating);
 ///    eyebrows "POPULAR MOVIE" / "POPULAR TV SHOW" (catalog name + type,
-///    uppercased).
-/// 2. One shelf per title catalog of the section's type
-///    (MacLCAddonStore.titleCatalogs), in order. A catalog whose identifier
-///    is "top" is shown ranked as "Top 10 Movies" / "Top 10 TV Shows" (its
-///    first 10 titles); others are "<name> <type plural>": "New Movies",
-///    "Featured TV Shows". Catalogs of other add-ons than the first add title
-///    "<name> <type plural>" and subtitle the add-on's name. Each shelf
-///    header has "See All" pushing MacLCWatchCatalogViewController.
-/// 3. Movies and TV Shows only: genre shelves, "Popular in <Genre>" for each
+///    uppercased). With a service selected: the first 6 titles of that
+///    service's catalog(s), eyebrow "POPULAR ON NETFLIX". The carousel gets
+///    -setScrollOffset: on every clip view bounds change (parallax and
+///    stretch).
+/// 2. The services bar (MacLCWatchServiceBar, MacLCWatchLayout
+///    insetBarSectionWithHeight:), always shown. Selecting a service
+///    re-scopes the WHOLE page to it, in place, without pushing: the
+///    carousel, then "Top on <Service>" (its catalog for the section's
+///    type(s), first 20, ranked as Top 10 for the first 10), then one shelf
+///    per genre present in that catalog ("<Service> · Comedy", client-side,
+///    MacLCWatchDiscovery items:matchingGenre:, genres with at least 4
+///    titles, in the genre order), The Edit and the genre tiles are hidden
+///    while scoped. "All" restores the normal page and its scroll position.
+///    The selection is remembered per section in NSUserDefaults
+///    "MacLCWatchService.<section title>". The page fades (0.2 s) between
+///    scopes; no motion under Reduce Motion. "Choose Services…" opens
+///    MacLCWatchServicesSheetController on the window.
+/// 3. The Edit (Home: 3 collections of any type; Movies: 3 "movie"; TV
+///    Shows: 3 "series"; MacLCWatchDiscovery editForDate:now): a shelf
+///    "The Edit" with subtitle "New collections every two weeks · Next on
+///    Oct 20" (date: nextEditDateAfter:, NSDateFormatter "MMM d" template)
+///    and info button (topic Collections), items MacLCWatchCollectionCard,
+///    layout collectionShelfSectionWithEnvironment:. Each card resolves its
+///    collection when it is about to be shown (resolveCollection:) and
+///    updates its posters. Activating a card pushes
+///    MacLCWatchCollectionViewController.
+/// 4. Top 10 (the "top" catalog, ranked, as before).
+/// 5. "Browse by Genre": genre tiles (MacLCWatchGenreTile,
+///    genreShelfSectionWithEnvironment:) for the section's genres
+///    (genresForMediaType:; Home: movie genres), each with 2 posters taken
+///    from shelves already loaded (titles whose genres contain it), else
+///    none. Activating a tile pushes MacLCWatchCatalogViewController for the
+///    "top" catalog and that genre, titled "<Genre> Movies" / "<Genre>
+///    Shows" (Home: movies).
+/// 6. One shelf per title catalog of the section's type
+///    (MacLCAddonStore.titleCatalogs), in order, except the "top" one
+///    already shown: "<name> <type plural>": "New Movies", "Featured TV
+///    Shows". Catalogs of other add-ons than the first add title "<name>
+///    <type plural>" and subtitle the add-on's name. Catalogs of the
+///    services add-on are NOT shown here (they are what the services bar
+///    scopes to). Each shelf header has "See All" pushing
+///    MacLCWatchCatalogViewController.
+/// 7. Movies and TV Shows only: genre shelves, "Popular in <Genre>" for each
 ///    genre option of the section's "top" catalog (Cinemeta: Action,
 ///    Adventure... 19), loaded lazily when about to scroll into view (prefetch
 ///    two shelves ahead), each with See All.
+/// Every horizontal shelf uses MacLCWatchShelfHeaderView (paging chevrons,
+/// state updated when its embedded scroll view's clip bounds change) and
+/// MacLCWatchShelfScrolling: no scrollers, configured in
+/// collectionView:willDisplayItem:forRepresentedObjectAtIndexPath:.
 /// Loading: every shelf shows 8 placeholder posters (quaternarySystemFill,
 /// no text) until its page arrives; a failed shelf disappears, unless all
 /// fail: then the empty state (medialib/components/MacLCEmptyStateView)
@@ -96,7 +140,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// MacLCAddonSearchWindowController's getErrorTitle:) and "Try Again". No
 /// browsable catalog at all: "No Catalogs" / "Install an add-on with catalogs
 /// to see movies and shows here." / "Browse Add-ons…" (opens Settings ▸
-/// Add-ons). Reloads on MacLCAddonsDidChangeNotification.
+/// Add-ons). Reloads on MacLCAddonsDidChangeNotification and
+/// MacLCWatchDiscoveryDidChangeNotification.
 /// Search (the section's search field): two or more characters replace the
 /// shelves with a poster grid of MacLCAddonStore searchTitles: results of the
 /// section's type, headed per catalog ("Movies", "TV Shows"), 300 ms debounce;
@@ -128,6 +173,18 @@ NS_ASSUME_NONNULL_BEGIN
                           title:(NSString *)title;
 @end
 
+/// A collection of The Edit, pushed on the section: a vertical scroll of the
+/// MacLCWatchCollectionHeaderView (eyebrow "THE EDIT · UNTIL <last day of
+/// its period, MMM d>") then a poster grid (posterGridSectionWithEnvironment:
+/// hasHeader:NO) of the resolved items in the pool's order. Loading: the header shows at once with placeholder
+/// posters; the grid fills when resolveCollection: completes; nothing
+/// matched: MacLCEmptyStateView "Nothing to Show Yet" / "None of these
+/// titles were found in your catalog add-ons.".
+@interface MacLCWatchCollectionViewController : NSViewController
+- (instancetype)initWithSection:(MacLCWatchSectionViewController *)section
+                     collection:(MacLCWatchCollection *)collection;
+@end
+
 /// The title page (the Apple TV app's movie and show pages), pushed on the
 /// section; Back pops it.
 ///
@@ -156,21 +213,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// error keeps the page with a "Can't load episodes" inline message and Try
 /// Again for shows.
 ///
-/// Stream picker: an NSPopover (transient, preferred edge max-Y) anchored to
-/// the Play button or the activated episode card, 420 × up to 480 pt:
-/// header "<Title>" / "S1, E2 · <episode>" for an episode; then the streams of
-/// every add-on providing streams (MacLCAddonStore fetchStreamsForType:...),
-/// grouped by add-on name, each row: quality badges (stream.qualityTokens,
-/// capsules as in the search window), headline (1 line), details (secondary,
-/// 2 lines); rows arrive as add-ons answer, a spinner row while any is
-/// pending. The first row is selected; Return, a double-click or "Play"
-/// (prominent, bottom-trailing) plays it, "Add to Queue" queues it; Escape
-/// closes. No add-on provides streams: "No Streams Add-on" / "Install an
-/// add-on that provides streams to play titles." / "Browse Add-ons…" (opens
-/// Settings ▸ Add-ons). None found: "No Streams Found". Playing: an
-/// VLCOpenInputMetadata with MRLString = stream.MRL and itemName =
-/// MacLCAddonStore itemNameForItem:video:, added to the play queue with
-/// startPlayback YES (as -[MacLCAddonSearchWindowController playAction:]).
+/// Streams: Play (or an episode card) opens "Choose a Version", the sheet
+/// MacLCStreamPickerController (addons/watch/MacLCStreamPicker.h) on the
+/// window, for the item and the episode. The old popover is gone.
 @interface MacLCWatchDetailViewController : NSViewController
 - (instancetype)initWithItem:(MacLCAddonItem *)item showStreams:(BOOL)showStreams;
 @property (readonly) MacLCAddonItem *item;

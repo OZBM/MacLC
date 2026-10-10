@@ -539,6 +539,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.m \
 	gui/macosx/addons/MacLCAddons.h \
 	gui/macosx/addons/MacLCAddons.m \
+	gui/macosx/addons/MacLCStreamFacts.h \
+	gui/macosx/addons/MacLCStreamFacts.m \
 	gui/macosx/addons/MacLCAddonSearchWindowController.h \
 	gui/macosx/addons/MacLCAddonSearchWindowController.m \
 	gui/macosx/addons/watch/MacLCWatchBrowse.m \
@@ -546,6 +548,23 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/addons/watch/MacLCWatchComponents.m \
 	gui/macosx/addons/watch/MacLCWatchDetail.m \
 	gui/macosx/addons/watch/MacLCWatchSections.h \
+	gui/macosx/addons/watch/MacLCExplainer.h \
+	gui/macosx/addons/watch/MacLCExplainer.m \
+	gui/macosx/addons/watch/MacLCStreamPicker.h \
+	gui/macosx/addons/watch/MacLCStreamPicker.m \
+	gui/macosx/addons/watch/MacLCWatchCollectionsPool.m \
+	gui/macosx/addons/watch/MacLCWatchDiscovery.h \
+	gui/macosx/addons/watch/MacLCWatchDiscovery.m \
+	gui/macosx/addons/watch/MacLCWatchDiscoveryViews.h \
+	gui/macosx/addons/watch/MacLCWatchDiscoveryViews.m \
+	gui/macosx/addons/watch/MacLCWatchLibrary.h \
+	gui/macosx/addons/watch/MacLCWatchLibrary.m \
+	gui/macosx/addons/watch/MacLCWatchPlayback.h \
+	gui/macosx/addons/watch/MacLCWatchPlayback.m \
+	gui/macosx/addons/watch/MacLCWatchLibraryViews.h \
+	gui/macosx/addons/watch/MacLCWatchLibraryViews.m \
+	gui/macosx/addons/watch/MacLCWatchLibrarySections.h \
+	gui/macosx/addons/watch/MacLCWatchLibrarySections.m \
 	gui/macosx/cast/MacLCCastController.h \
 	gui/macosx/cast/MacLCCastController.m \
 	gui/macosx/cast/MacLCCastStatusView.h \

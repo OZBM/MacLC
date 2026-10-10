@@ -55,6 +55,8 @@ typedef NS_ENUM(NSInteger, VLCLibrarySegmentType) {
     VLCLibraryWatchHomeSegmentType,
     VLCLibraryWatchMoviesSegmentType,
     VLCLibraryWatchShowsSegmentType,
+    VLCLibraryWatchFavoritesSegmentType,
+    VLCLibraryWatchHistorySegmentType,
     VLCLibraryHighSentinelSegment,
 };
 

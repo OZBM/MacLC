@@ -397,6 +397,7 @@ static NSString * _Nullable ParseTrailer(NSDictionary *dict)
 @property (copy) NSArray<NSString *> *genres;
 @property (copy, nullable) NSString *imdbRating;
 @property (copy, nullable) NSString *runtime;
+@property (copy, nullable) NSDictionary *rawMeta;
 - (instancetype)initWithAddon:(MacLCAddon *)addon
                    identifier:(NSString *)identifier
                          type:(NSString *)type
@@ -982,6 +983,15 @@ static NSString * _Nullable ParseTrailer(NSDictionary *dict)
 
 #pragma mark - MacLCAddonItem Implementation
 
+/* Defined further down with the rest of the store. */
+@interface MacLCAddonStore ()
+- (NSArray<MacLCAddon *> *)defaultAddons;
++ (nullable NSArray<MacLCAddonItem *> *)itemsFromCatalogData:(NSData *)data
+                                                       addon:(MacLCAddon *)addon
+                                                 defaultType:(NSString *)defaultType
+                                                       error:(NSError **)error;
+@end
+
 @implementation MacLCAddonItem
 
 - (instancetype)initWithAddon:(MacLCAddon *)addon
@@ -1034,6 +1044,28 @@ static NSString * _Nullable ParseTrailer(NSDictionary *dict)
                         genres:@[]
                     imdbRating:nil
                        runtime:nil];
+}
+
++ (nullable MacLCAddonItem *)itemFromRawMeta:(NSDictionary *)meta addonTransportURL:(NSString *)transportURL
+{
+    if (![meta isKindOfClass:[NSDictionary class]] || ![NSJSONSerialization isValidJSONObject:meta]) {
+        return nil;
+    }
+    MacLCAddonStore *store = [MacLCAddonStore sharedStore];
+    MacLCAddon *addon = nil;
+    for (MacLCAddon *candidate in store.installedAddons) {
+        if ([candidate.transportURL isEqualToString:transportURL]) {
+            addon = candidate;
+            break;
+        }
+    }
+    addon = addon ?: [store defaultAddons].firstObject;
+    if (!addon) {
+        return nil;
+    }
+    /* The catalog parser takes a catalog document, so wrap the entry in one. */
+    NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"metas": @[meta]} options:0 error:nil];
+    return [[MacLCAddonStore itemsFromCatalogData:data addon:addon defaultType:@"" error:nil] firstObject];
 }
 
 @end
@@ -2121,6 +2153,7 @@ static void ExecuteRequest(NSURL * _Nullable url,
                                                                    genres:genres
                                                                imdbRating:imdbRating
                                                                   runtime:runtime];
+        addonItem.rawMeta = dict;
         [results addObject:addonItem];
     }
 

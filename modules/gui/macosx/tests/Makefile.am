@@ -28,6 +28,9 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/tests/MacLCResumePositionTest.m \
 	gui/macosx/tests/MacLCSoundPresetsTest.m \
 	gui/macosx/tests/MacLCAddonsTest.m \
+	gui/macosx/tests/MacLCStreamFactsTest.m \
+	gui/macosx/tests/MacLCWatchDiscoveryTest.m \
+	gui/macosx/tests/MacLCWatchLibraryTest.m \
 	gui/macosx/tests/MacLCNetworkAddressTest.m \
 	video_filter/maclc_frc_geometry.c \
 	video_output/apple/maclc_tonecurves.c \
@@ -40,6 +43,10 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/playqueue/MacLCResumePosition.m \
 	gui/macosx/sound/MacLCSoundPresets.m \
 	gui/macosx/addons/MacLCAddons.m \
+	gui/macosx/addons/MacLCStreamFacts.m \
+	gui/macosx/addons/watch/MacLCWatchDiscovery.m \
+	gui/macosx/addons/watch/MacLCWatchLibrary.m \
+	gui/macosx/addons/watch/MacLCWatchCollectionsPool.m \
 	gui/macosx/cast/MacLCNetworkAddress.m \
 	gui/macosx/library/VLCInputItem.m \
 	gui/macosx/library/VLCInputNode.m \

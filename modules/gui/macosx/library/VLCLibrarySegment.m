@@ -796,6 +796,10 @@ NSArray<NSString *> *defaultBookmarkedLocations()
             return [[self alloc] initWithSegmentType:segmentType title:_NS("Movies") symbolName:@"film.stack"];
         case VLCLibraryWatchShowsSegmentType:
             return [[self alloc] initWithSegmentType:segmentType title:_NS("TV Shows") symbolName:@"tv"];
+        case VLCLibraryWatchFavoritesSegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("Favorites") symbolName:@"heart"];
+        case VLCLibraryWatchHistorySegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("History") symbolName:@"clock"];
         default:
             return [[self alloc] initWithSegmentType:VLCLibraryWatchHomeSegmentType title:_NS("Home") symbolName:@"play.tv"];
     }
@@ -884,6 +888,8 @@ NSArray<NSString *> *defaultBookmarkedLocations()
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchHomeSegmentType],
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchMoviesSegmentType],
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchShowsSegmentType],
+        [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchFavoritesSegmentType],
+        [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchHistorySegmentType],
     ]];
 
     if (VLCMain.sharedInstance.libraryController.shouldUseMediaLibrary) {
@@ -942,6 +948,8 @@ NSArray<NSString *> *defaultBookmarkedLocations()
         case VLCLibraryWatchHomeSegmentType:
         case VLCLibraryWatchMoviesSegmentType:
         case VLCLibraryWatchShowsSegmentType:
+        case VLCLibraryWatchFavoritesSegmentType:
+        case VLCLibraryWatchHistorySegmentType:
             return [VLCLibraryWatchSegment segmentWithWatchSegmentType:segmentType];
         default:
             return nil;

@@ -64,8 +64,12 @@ extern NSString * const MacLCWatchHeaderElementKind;
 /// 20 between items, 36 between sections.
 @interface MacLCWatchLayout : NSObject
 /// One row of 2:3 posters scrolling horizontally (orthogonal scrolling,
-/// NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuous), poster
-/// width 168 (ranked: 168 too, the rank sits inside the poster), header on top.
+/// NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary:
+/// a flick settles on a poster's leading edge, never between two), poster
+/// width 168 (ranked: 168 too, the rank sits inside the poster), header on top
+/// (MacLCWatchShelfHeaderView, kind MacLCWatchHeaderElementKind). No room
+/// is reserved under the items for a scroller any more: shelves show none
+/// (MacLCWatchShelfScrolling).
 + (NSCollectionLayoutSection *)posterShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment;
 /// The Top 10 row: the same posters, each item 52 pt wider for its rank,
 /// drawn beside the poster as in the Apple TV app.
@@ -78,8 +82,21 @@ extern NSString * const MacLCWatchHeaderElementKind;
 + (NSCollectionLayoutSection *)episodeShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment;
 /// One full-width item of the given height, no insets (the carousel).
 + (NSCollectionLayoutSection *)fullWidthSectionWithHeight:(CGFloat)height;
+/// One row of collection cards (MacLCWatchCollectionCard, 340 × 216),
+/// 20 apart, same leading inset and scrolling as the poster shelf, header
+/// with subtitle on top.
++ (NSCollectionLayoutSection *)collectionShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment;
+/// One row of genre tiles (MacLCWatchGenreTile, 196 × 110), 16 apart,
+/// scrolling as the poster shelf, header on top.
++ (NSCollectionLayoutSection *)genreShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment;
+/// One full-width item of the given height with the Watch leading/trailing
+/// insets (the services bar), no header.
++ (NSCollectionLayoutSection *)insetBarSectionWithHeight:(CGFloat)height;
 /// The item height of a poster cell for a width: width * 1.5 + 8 + text.
 + (CGFloat)posterItemHeightForWidth:(CGFloat)width;
+/// Supplementary header item for Watch sections.
++ (NSCollectionLayoutBoundarySupplementaryItem *)headerSupplementaryItem;
++ (NSCollectionLayoutBoundarySupplementaryItem *)headerSupplementaryItemWithSubtitle:(BOOL)hasSubtitle;
 @end
 
 #pragma mark - Poster
@@ -96,8 +113,11 @@ extern NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier;
 /// it (it would cover the poster's own title): heavy rounded digits, 80 pt,
 /// labelColor, bottom-aligned with the poster, which overlaps it slightly; the
 /// poster and its titles start 52 pt in (item 220 wide in the ranked shelf).
-/// Hover: the poster scales to 1.04 over MacLCDesign.motionStandardDuration
-/// (no scaling under Reduce Motion) and the pointing hand shows. Selection
+/// Hover: the poster lifts — scale 1.05 and a soft shadow (radius 14, 30 %,
+/// y −6) — with a spring (CASpringAnimation damping 15, stiffness 260,
+/// mass 1, initial velocity from the current value so a quick in/out does
+/// not jump), and settles back the same way on exit (no motion under Reduce
+/// Motion: the shadow alone appears); the pointing hand shows. Selection
 /// (keyboard focus): a 3 pt accent ring 3 pt outside the poster.
 /// Double-click, Return or a single click (Apple TV opens on click) call
 /// activationHandler. VoiceOver: one element, "<rank>, <title>, <subtitle>",
@@ -123,6 +143,7 @@ extern NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier;
 @interface MacLCWatchEpisodeItem : NSCollectionViewItem
 - (void)configureWithVideo:(MacLCAddonVideo *)video;
 @property (readonly, nullable) MacLCAddonVideo *video;
+@property (readonly, copy, nullable) NSString *titleIdentifier;
 @property (nonatomic, copy, nullable) void (^activationHandler)(MacLCAddonVideo *video);
 /// Item height for a width.
 + (CGFloat)heightForWidth:(CGFloat)width;
@@ -169,6 +190,16 @@ extern NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier;
 @property (nonatomic, copy, nullable) void (^detailsHandler)(MacLCAddonItem *item);
 /// Height for a content height: 62 % of it, clamped to 360-620 pt.
 + (CGFloat)heightForAvailableHeight:(CGFloat)height;
+/// How far the page is scrolled, in points, negative while the scroll view
+/// rubber-bands above the top (clip view bounds origin y, flipped). The
+/// carousel answers like a photo pinned under glass: scrolled up (offset
+/// > 0), the picture moves at half speed (parallax) and the text block fades
+/// out over the first 60 % of the carousel's height; rubber-banding
+/// (offset < 0), the picture grows from its top edge so it always fills the
+/// gap (scale 1 + |offset| / height, anchored at the bottom centre) — the
+/// stretch people know from iOS headers. Layer transforms only, no layout,
+/// called on every bounds change. Ignored under Reduce Motion (offset 0).
+- (void)setScrollOffset:(CGFloat)offset;
 @end
 
 /// "Movie · Drama · Crime · 2026 · ★ 7.8": type ("Movie", "TV Show", else the

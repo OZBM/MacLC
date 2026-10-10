@@ -473,9 +473,9 @@ static VLCMain *sharedInstance = nil;
             [window.splitViewController.navSidebarViewController selectSegment:segmentType];
         });
     }
-    /* MACLC_DEBUG_WATCH=home|movies|shows selects that Watch section;
-     * ":detail" then opens the first featured title's page, ":play" its page
-     * and stream picker. */
+    /* MACLC_DEBUG_WATCH=home|movies|shows|favorites|history selects that Watch
+     * section; ":detail" then opens the first featured title's page, ":play"
+     * its page and stream picker (favorites and history: nothing after it). */
     const char * const debugWatch = getenv("MACLC_DEBUG_WATCH");
     if (debugWatch != NULL) {
         NSArray<NSString *> * const parts = [@(debugWatch) componentsSeparatedByString:@":"];
@@ -484,6 +484,10 @@ static VLCMain *sharedInstance = nil;
             segmentType = VLCLibraryWatchMoviesSegmentType;
         else if ([parts.firstObject isEqualToString:@"shows"])
             segmentType = VLCLibraryWatchShowsSegmentType;
+        else if ([parts.firstObject isEqualToString:@"favorites"])
+            segmentType = VLCLibraryWatchFavoritesSegmentType;
+        else if ([parts.firstObject isEqualToString:@"history"])
+            segmentType = VLCLibraryWatchHistorySegmentType;
         NSString * const then = parts.count > 1 ? parts[1] : @"";
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;

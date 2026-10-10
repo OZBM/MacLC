@@ -115,6 +115,14 @@ NSString * _Nullable MacLCAddonsUnresolvedHost(NSError * _Nullable error);
 @property (readonly, copy, nullable) NSString *imdbRating;
 /// "runtime" as given ("101 min", "1h 41min").
 @property (readonly, copy, nullable) NSString *runtime;
+/// The catalog entry as the add-on sent it (every key); nil for an item not
+/// built from a catalog. Feed it to +itemFromRawMeta:addonTransportURL: to
+/// rebuild the item later (watch history stores it).
+@property (readonly, copy, nullable) NSDictionary *rawMeta;
+/// Rebuilds an item from a stored rawMeta through the catalog parser. The
+/// add-on is the installed one with this transport URL, else the default
+/// catalog add-on (Cinemeta). nil when meta is not a title (no id or name).
++ (nullable MacLCAddonItem *)itemFromRawMeta:(NSDictionary *)meta addonTransportURL:(NSString *)transportURL;
 @end
 
 /// The results of one searchable catalog of one add-on.

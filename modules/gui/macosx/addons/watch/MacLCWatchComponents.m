@@ -26,6 +26,8 @@
 #import <vlc_common.h>
 
 #import "addons/MacLCAddons.h"
+#import "addons/watch/MacLCWatchLibrary.h"
+#import "addons/watch/MacLCWatchLibraryViews.h"
 #import "extensions/NSString+Helpers.h"
 #import "main/VLCMain.h"
 #import "medialib/components/MacLCMediaCardItem.h"
@@ -273,21 +275,17 @@ static const CGFloat MacLCWatchItemSpacing = 20.0;
 static const CGFloat MacLCWatchSectionSpacing = 36.0;
 static const CGFloat MacLCWatchRankColumnWidth = 52.0;
 
-/* Room under a shelf for its scroll bar when the system shows scroll bars
- * always (legacy style): it would otherwise cover the titles. */
-static CGFloat MacLCWatchShelfScrollerAllowance(void)
+/* Shelves hide their scroll bar even with "Show scroll bars: Always" — justified by scroll-views.md (page controls present: chevrons). */
+static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
 {
-    if (NSScroller.preferredScrollerStyle != NSScrollerStyleLegacy)
-        return 0.0;
-    return [NSScroller scrollerWidthForControlSize:NSControlSizeRegular
-                                     scrollerStyle:NSScrollerStyleLegacy] + 4.0;
+    return 0.0;
 }
 
 @implementation MacLCWatchLayout
 
-+ (NSCollectionLayoutBoundarySupplementaryItem *)headerSupplementaryItem
++ (NSCollectionLayoutBoundarySupplementaryItem *)headerSupplementaryItemWithSubtitle:(BOOL)hasSubtitle
 {
-    const CGFloat headerHeight = [MacLCSectionHeaderView heightWithSubtitle:NO];
+    const CGFloat headerHeight = hasSubtitle ? 58.0 : 44.0;
     NSCollectionLayoutSize * const size =
         [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension fractionalWidthDimension:1.0]
                                        heightDimension:[NSCollectionLayoutDimension absoluteDimension:headerHeight]];
@@ -295,6 +293,11 @@ static CGFloat MacLCWatchShelfScrollerAllowance(void)
         boundarySupplementaryItemWithLayoutSize:size
                                     elementKind:MacLCWatchHeaderElementKind
                                       alignment:NSRectAlignmentTop];
+}
+
++ (NSCollectionLayoutBoundarySupplementaryItem *)headerSupplementaryItem
+{
+    return [self headerSupplementaryItemWithSubtitle:NO];
 }
 
 + (CGFloat)posterItemHeightForWidth:(CGFloat)width
@@ -331,12 +334,12 @@ static CGFloat MacLCWatchShelfScrollerAllowance(void)
 
     NSCollectionLayoutSize * const groupSize =
         [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight + MacLCWatchShelfScrollerAllowance()]];
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
     NSCollectionLayoutGroup * const group =
         [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
 
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
-    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuous;
+    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
     section.interGroupSpacing = MacLCWatchItemSpacing;
     section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
                                                         MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
@@ -396,12 +399,12 @@ static CGFloat MacLCWatchShelfScrollerAllowance(void)
 
     NSCollectionLayoutSize * const groupSize =
         [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight + MacLCWatchShelfScrollerAllowance()]];
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
     NSCollectionLayoutGroup * const group =
         [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
 
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
-    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuous;
+    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
     section.interGroupSpacing = MacLCWatchItemSpacing;
     section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
                                                         MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
@@ -420,6 +423,71 @@ static CGFloat MacLCWatchShelfScrollerAllowance(void)
 
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
     section.contentInsets = NSDirectionalEdgeInsetsZero;
+    return section;
+}
+
++ (NSCollectionLayoutSection *)collectionShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment
+{
+    const CGFloat itemWidth = 340.0;
+    const CGFloat itemHeight = 216.0;
+
+    NSCollectionLayoutSize * const itemSize =
+        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
+    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
+
+    NSCollectionLayoutSize * const groupSize =
+        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
+    NSCollectionLayoutGroup * const group =
+        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
+
+    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
+    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
+    section.interGroupSpacing = MacLCWatchItemSpacing;
+    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+                                                        MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
+    section.boundarySupplementaryItems = @[[self headerSupplementaryItemWithSubtitle:YES]];
+    return section;
+}
+
++ (NSCollectionLayoutSection *)genreShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment
+{
+    const CGFloat itemWidth = 196.0;
+    const CGFloat itemHeight = 110.0;
+
+    NSCollectionLayoutSize * const itemSize =
+        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
+    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
+
+    NSCollectionLayoutSize * const groupSize =
+        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
+    NSCollectionLayoutGroup * const group =
+        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
+
+    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
+    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
+    section.interGroupSpacing = 16.0;
+    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+                                                        MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
+    section.boundarySupplementaryItems = @[[self headerSupplementaryItemWithSubtitle:NO]];
+    return section;
+}
+
++ (NSCollectionLayoutSection *)insetBarSectionWithHeight:(CGFloat)height
+{
+    NSCollectionLayoutSize * const size =
+        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension fractionalWidthDimension:1.0]
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:height]];
+    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:size];
+    NSCollectionLayoutGroup * const group =
+        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:size subitems:@[item]];
+
+    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
+    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+                                                        MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
     return section;
 }
 
@@ -442,6 +510,9 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
 @property (nonatomic, readonly) NSView *posterContainerView;
 @property (nonatomic, readonly) NSImageView *placeholderImageView;
 @property (nonatomic, readonly) NSView *posterImageView;
+@property (nonatomic, readonly) MacLCWatchProgressBar *progressBar;
+@property (nonatomic, readonly) MacLCWatchedBadge *watchedBadge;
+@property (nonatomic, readonly) MacLCWatchFavoriteButton *favoriteButton;
 @property (nonatomic, readonly) NSTextField *rankLabel;
 @property (nonatomic, readonly) NSTextField *titleLabel;
 @property (nonatomic, readonly) NSTextField *subtitleLabel;
@@ -505,6 +576,22 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
         _posterImageView.hidden = YES;
         [_posterContainerView addSubview:_posterImageView];
 
+        _progressBar = [[MacLCWatchProgressBar alloc] initWithFrame:NSZeroRect];
+        _progressBar.translatesAutoresizingMaskIntoConstraints = NO;
+        [_posterContainerView addSubview:_progressBar];
+
+        _watchedBadge = [[MacLCWatchedBadge alloc] initWithFrame:NSZeroRect];
+        _watchedBadge.translatesAutoresizingMaskIntoConstraints = NO;
+        _watchedBadge.hidden = YES;
+        [_posterContainerView addSubview:_watchedBadge];
+
+        _favoriteButton = [[MacLCWatchFavoriteButton alloc] initWithFrame:NSZeroRect];
+        _favoriteButton.translatesAutoresizingMaskIntoConstraints = NO;
+        _favoriteButton.onPicture = YES;
+        _favoriteButton.alphaValue = 0.0;
+        _favoriteButton.hidden = YES;
+        [_posterContainerView addSubview:_favoriteButton];
+
         _rankLabel = [NSTextField labelWithString:@""];
         _rankLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _rankLabel.textColor = NSColor.labelColor;
@@ -564,6 +651,21 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
             [_posterImageView.bottomAnchor constraintEqualToAnchor:_posterContainerView.bottomAnchor],
             [_posterImageView.leadingAnchor constraintEqualToAnchor:_posterContainerView.leadingAnchor],
             [_posterImageView.trailingAnchor constraintEqualToAnchor:_posterContainerView.trailingAnchor],
+
+            [_progressBar.leadingAnchor constraintEqualToAnchor:_posterContainerView.leadingAnchor],
+            [_progressBar.trailingAnchor constraintEqualToAnchor:_posterContainerView.trailingAnchor],
+            [_progressBar.bottomAnchor constraintEqualToAnchor:_posterContainerView.bottomAnchor],
+            [_progressBar.heightAnchor constraintEqualToConstant:4.0],
+
+            [_watchedBadge.trailingAnchor constraintEqualToAnchor:_posterContainerView.trailingAnchor constant:-8.0],
+            [_watchedBadge.bottomAnchor constraintEqualToAnchor:_posterContainerView.bottomAnchor constant:-8.0],
+            [_watchedBadge.widthAnchor constraintEqualToConstant:24.0],
+            [_watchedBadge.heightAnchor constraintEqualToConstant:24.0],
+
+            [_favoriteButton.trailingAnchor constraintEqualToAnchor:_posterContainerView.trailingAnchor constant:-6.0],
+            [_favoriteButton.topAnchor constraintEqualToAnchor:_posterContainerView.topAnchor constant:6.0],
+            [_favoriteButton.widthAnchor constraintEqualToConstant:28.0],
+            [_favoriteButton.heightAnchor constraintEqualToConstant:28.0],
 
             [_rankLabel.trailingAnchor constraintEqualToAnchor:_posterWrapperView.leadingAnchor constant:10.0],
             [_rankLabel.lastBaselineAnchor constraintEqualToAnchor:_posterWrapperView.bottomAnchor],
@@ -661,19 +763,89 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
 
 - (void)updateHoverState:(BOOL)hovered animated:(BOOL)animated
 {
-    if (!animated || MacLCDesign.reducedMotion) {
-        _posterWrapperView.layer.transform = (hovered && !MacLCDesign.reducedMotion)
-            ? CATransform3DMakeScale(1.04, 1.04, 1.0)
-            : CATransform3DIdentity;
+    const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
+        ? CATransform3DMakeScale(1.05, 1.05, 1.0)
+        : CATransform3DIdentity;
+    const float targetOpacity = hovered ? 0.30f : 0.0f;
+
+    CALayer * const layer = _posterWrapperView.layer;
+    if (layer == nil) {
         return;
     }
 
-    [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
-        context.duration = MacLCDesign.motionStandardDuration;
-        self->_posterWrapperView.animator.layer.transform = hovered
-            ? CATransform3DMakeScale(1.04, 1.04, 1.0)
-            : CATransform3DIdentity;
-    }];
+    if (!animated || MacLCDesign.reducedMotion) {
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        [layer removeAnimationForKey:@"hoverTransform"];
+        [layer removeAnimationForKey:@"hoverShadow"];
+        layer.transform = targetTransform;
+        layer.shadowColor = NSColor.blackColor.CGColor;
+        layer.shadowRadius = 14.0;
+        layer.shadowOffset = CGSizeMake(0.0, -6.0);
+        layer.shadowOpacity = targetOpacity;
+        [CATransaction commit];
+        return;
+    }
+
+    CALayer * const presentation = layer.presentationLayer ?: layer;
+    CATransform3D const fromTransform = presentation.transform;
+    const float fromOpacity = presentation.shadowOpacity;
+
+    layer.transform = targetTransform;
+    layer.shadowColor = NSColor.blackColor.CGColor;
+    layer.shadowRadius = 14.0;
+    layer.shadowOffset = CGSizeMake(0.0, -6.0);
+    layer.shadowOpacity = targetOpacity;
+
+    CASpringAnimation * const transformAnim = [CASpringAnimation animationWithKeyPath:@"transform"];
+    transformAnim.damping = 15.0;
+    transformAnim.stiffness = 260.0;
+    transformAnim.mass = 1.0;
+    transformAnim.duration = transformAnim.settlingDuration;
+    transformAnim.fromValue = [NSValue valueWithCATransform3D:fromTransform];
+    transformAnim.toValue = [NSValue valueWithCATransform3D:targetTransform];
+
+    CASpringAnimation * const shadowAnim = [CASpringAnimation animationWithKeyPath:@"shadowOpacity"];
+    shadowAnim.damping = 15.0;
+    shadowAnim.stiffness = 260.0;
+    shadowAnim.mass = 1.0;
+    shadowAnim.duration = shadowAnim.settlingDuration;
+    shadowAnim.fromValue = @(fromOpacity);
+    shadowAnim.toValue = @(targetOpacity);
+
+    [layer addAnimation:transformAnim forKey:@"hoverTransform"];
+    [layer addAnimation:shadowAnim forKey:@"hoverShadow"];
+
+    const BOOL isFav = (self.item.addonItem != nil)
+        ? [MacLCWatchLibrary.sharedLibrary isFavorite:self.item.addonItem.identifier]
+        : NO;
+    const CGFloat favTargetAlpha = (isFav || hovered) ? 1.0f : 0.0f;
+    if (isFav || hovered) {
+        _favoriteButton.hidden = NO;
+    }
+    if (!animated || MacLCDesign.reducedMotion) {
+        _favoriteButton.alphaValue = favTargetAlpha;
+        if (favTargetAlpha == 0.0f) {
+            _favoriteButton.hidden = YES;
+        }
+    } else {
+        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *ctx) {
+            ctx.duration = MacLCDesign.motionQuickDuration;
+            self->_favoriteButton.animator.alphaValue = favTargetAlpha;
+        } completionHandler:^{
+            if (!hovered && !isFav) {
+                self->_favoriteButton.hidden = YES;
+            }
+        }];
+    }
+}
+
+- (NSMenu *)menuForEvent:(NSEvent *)event
+{
+    if (self.item.addonItem != nil) {
+        return [MacLCWatchActions menuForItem:self.item.addonItem video:nil inHistory:NO];
+    }
+    return [super menuForEvent:event];
 }
 
 - (void)mouseUp:(NSEvent *)event
@@ -710,6 +882,32 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
 - (nullable NSArray *)accessibilityChildren
 {
     return @[];
+}
+
+- (nullable id)accessibilityValue
+{
+    if (self.item.addonItem == nil) {
+        return nil;
+    }
+    MacLCWatchLibrary * const lib = MacLCWatchLibrary.sharedLibrary;
+    MacLCWatchEntry * const entry = [lib entryForTitle:self.item.addonItem.identifier];
+    const BOOL isWatched = entry != nil && entry.isWatched;
+    const BOOL isFav = [lib isFavorite:self.item.addonItem.identifier];
+    double frac = entry != nil ? entry.fraction : 0.0;
+    if (frac <= 0.0 && entry.resumeTarget.progress != nil) {
+        frac = entry.resumeTarget.progress.fraction;
+    }
+
+    NSMutableArray<NSString *> * const states = [NSMutableArray array];
+    if (isWatched) {
+        [states addObject:_NS("Watched")];
+    } else if (frac > 0.0 && frac < 1.0) {
+        [states addObject:[NSString stringWithFormat:_NS("In progress, %ld %%"), (long)round(frac * 100)]];
+    }
+    if (isFav) {
+        [states addObject:_NS("Favorite")];
+    }
+    return states.count > 0 ? [states componentsJoinedByString:@", "] : nil;
 }
 
 - (nullable NSString *)accessibilityLabel
@@ -749,6 +947,11 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
     MacLCWatchPosterView * const view = [[MacLCWatchPosterView alloc] initWithFrame:NSZeroRect];
     view.item = self;
     self.view = view;
+
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(libraryDidChange:)
+                                               name:MacLCWatchLibraryDidChangeNotification
+                                             object:nil];
 }
 
 - (MacLCWatchPosterView *)posterView
@@ -758,6 +961,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
 
 - (void)dealloc
 {
+    [NSNotificationCenter.defaultCenter removeObserver:self name:MacLCWatchLibraryDidChangeNotification object:nil];
     [_imageRequest cancel];
 }
 
@@ -775,6 +979,14 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
     v.image = nil;
     v.titleLabel.stringValue = @"";
     v.subtitleLabel.stringValue = @"";
+    v.progressBar.fraction = 0.0;
+    v.progressBar.hidden = YES;
+    v.watchedBadge.hidden = YES;
+    v.posterImageView.alphaValue = 1.0;
+    v.placeholderImageView.alphaValue = 1.0;
+    v.favoriteButton.alphaValue = 0.0;
+    v.favoriteButton.hidden = YES;
+    [v.favoriteButton configureWithItem:nil];
     v.selectionRingLayer.hidden = YES;
     [v updateHoverState:NO animated:NO];
 }
@@ -801,6 +1013,70 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
         [parts addObject:_addonItem.type.capitalizedString];
     }
     return [parts componentsJoinedByString:@" · "];
+}
+
+- (void)updateWatchStates
+{
+    MacLCWatchPosterView * const v = self.posterView;
+    if (_addonItem == nil || _addonItem.identifier.length == 0) {
+        v.progressBar.fraction = 0.0;
+        v.progressBar.hidden = YES;
+        v.watchedBadge.hidden = YES;
+        v.posterImageView.alphaValue = 1.0;
+        v.placeholderImageView.alphaValue = 1.0;
+        [v.favoriteButton configureWithItem:nil];
+        v.favoriteButton.hidden = YES;
+        return;
+    }
+
+    MacLCWatchLibrary * const lib = MacLCWatchLibrary.sharedLibrary;
+    MacLCWatchEntry * const entry = [lib entryForTitle:_addonItem.identifier];
+    const BOOL isWatched = entry != nil && entry.isWatched;
+    const BOOL isFav = [lib isFavorite:_addonItem.identifier];
+
+    v.watchedBadge.hidden = !isWatched;
+    v.posterImageView.alphaValue = isWatched ? 0.6 : 1.0;
+    v.placeholderImageView.alphaValue = isWatched ? 0.6 : 1.0;
+
+    double frac = 0.0;
+    if (!isWatched && entry != nil) {
+        frac = entry.fraction;
+        if (frac <= 0.0 && entry.resumeTarget.progress != nil) {
+            frac = entry.resumeTarget.progress.fraction;
+        }
+    }
+    if (frac > 0.0 && frac < 1.0) {
+        v.progressBar.fraction = frac;
+        v.progressBar.hidden = NO;
+    } else {
+        v.progressBar.fraction = 0.0;
+        v.progressBar.hidden = YES;
+    }
+
+    [v.favoriteButton configureWithItem:_addonItem];
+    if (isFav) {
+        v.favoriteButton.alphaValue = 1.0;
+        v.favoriteButton.hidden = NO;
+    } else if (v.isHovered) {
+        v.favoriteButton.alphaValue = 1.0;
+        v.favoriteButton.hidden = NO;
+    } else {
+        v.favoriteButton.alphaValue = 0.0;
+        v.favoriteButton.hidden = YES;
+    }
+}
+
+- (void)libraryDidChange:(NSNotification *)note
+{
+    if (_addonItem == nil) {
+        return;
+    }
+    NSSet<NSString *> * const changed = note.userInfo[MacLCWatchLibraryChangedTitlesKey];
+    if (changed == nil || [changed containsObject:_addonItem.identifier]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self updateWatchStates];
+        });
+    }
 }
 
 - (void)configureWithItem:(MacLCAddonItem *)item rank:(NSInteger)rank
@@ -835,6 +1111,8 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
     } else {
         v.image = nil;
     }
+
+    [self updateWatchStates];
 }
 
 @end
@@ -850,6 +1128,8 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
 @property (nonatomic, readonly) NSView *stillContainerView;
 @property (nonatomic, readonly) NSImageView *placeholderImageView;
 @property (nonatomic, readonly) NSView *stillImageView;
+@property (nonatomic, readonly) MacLCWatchProgressBar *progressBar;
+@property (nonatomic, readonly) MacLCWatchedBadge *watchedBadge;
 @property (nonatomic, readonly) CAShapeLayer *selectionRingLayer;
 @property (nonatomic, readonly) NSTextField *eyebrowLabel;
 @property (nonatomic, readonly) NSTextField *titleLabel;
@@ -912,6 +1192,15 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
         _stillImageView.hidden = YES;
         [_stillContainerView addSubview:_stillImageView];
 
+        _progressBar = [[MacLCWatchProgressBar alloc] initWithFrame:NSZeroRect];
+        _progressBar.translatesAutoresizingMaskIntoConstraints = NO;
+        [_stillContainerView addSubview:_progressBar];
+
+        _watchedBadge = [[MacLCWatchedBadge alloc] initWithFrame:NSZeroRect];
+        _watchedBadge.translatesAutoresizingMaskIntoConstraints = NO;
+        _watchedBadge.hidden = YES;
+        [_stillContainerView addSubview:_watchedBadge];
+
         _selectionRingLayer = [CAShapeLayer layer];
         _selectionRingLayer.fillColor = nil;
         _selectionRingLayer.strokeColor = MacLCDesign.accent.CGColor;
@@ -973,6 +1262,16 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
             [_stillImageView.bottomAnchor constraintEqualToAnchor:_stillContainerView.bottomAnchor],
             [_stillImageView.leadingAnchor constraintEqualToAnchor:_stillContainerView.leadingAnchor],
             [_stillImageView.trailingAnchor constraintEqualToAnchor:_stillContainerView.trailingAnchor],
+
+            [_progressBar.leadingAnchor constraintEqualToAnchor:_stillContainerView.leadingAnchor],
+            [_progressBar.trailingAnchor constraintEqualToAnchor:_stillContainerView.trailingAnchor],
+            [_progressBar.bottomAnchor constraintEqualToAnchor:_stillContainerView.bottomAnchor],
+            [_progressBar.heightAnchor constraintEqualToConstant:4.0],
+
+            [_watchedBadge.trailingAnchor constraintEqualToAnchor:_stillContainerView.trailingAnchor constant:-8.0],
+            [_watchedBadge.bottomAnchor constraintEqualToAnchor:_stillContainerView.bottomAnchor constant:-8.0],
+            [_watchedBadge.widthAnchor constraintEqualToConstant:24.0],
+            [_watchedBadge.heightAnchor constraintEqualToConstant:24.0],
 
             [_eyebrowLabel.topAnchor constraintEqualToAnchor:_stillWrapperView.bottomAnchor constant:8.0],
             [_eyebrowLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
@@ -1066,19 +1365,70 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
 
 - (void)updateHoverState:(BOOL)hovered animated:(BOOL)animated
 {
-    if (!animated || MacLCDesign.reducedMotion) {
-        _stillWrapperView.layer.transform = (hovered && !MacLCDesign.reducedMotion)
-            ? CATransform3DMakeScale(1.04, 1.04, 1.0)
-            : CATransform3DIdentity;
+    const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
+        ? CATransform3DMakeScale(1.05, 1.05, 1.0)
+        : CATransform3DIdentity;
+    const float targetOpacity = hovered ? 0.30f : 0.0f;
+
+    CALayer * const layer = _stillWrapperView.layer;
+    if (layer == nil) {
         return;
     }
 
-    [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
-        context.duration = MacLCDesign.motionStandardDuration;
-        self->_stillWrapperView.animator.layer.transform = hovered
-            ? CATransform3DMakeScale(1.04, 1.04, 1.0)
-            : CATransform3DIdentity;
-    }];
+    if (!animated || MacLCDesign.reducedMotion) {
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        [layer removeAnimationForKey:@"hoverTransform"];
+        [layer removeAnimationForKey:@"hoverShadow"];
+        layer.transform = targetTransform;
+        layer.shadowColor = NSColor.blackColor.CGColor;
+        layer.shadowRadius = 14.0;
+        layer.shadowOffset = CGSizeMake(0.0, -6.0);
+        layer.shadowOpacity = targetOpacity;
+        [CATransaction commit];
+        return;
+    }
+
+    CALayer * const presentation = layer.presentationLayer ?: layer;
+    CATransform3D const fromTransform = presentation.transform;
+    const float fromOpacity = presentation.shadowOpacity;
+
+    layer.transform = targetTransform;
+    layer.shadowColor = NSColor.blackColor.CGColor;
+    layer.shadowRadius = 14.0;
+    layer.shadowOffset = CGSizeMake(0.0, -6.0);
+    layer.shadowOpacity = targetOpacity;
+
+    CASpringAnimation * const transformAnim = [CASpringAnimation animationWithKeyPath:@"transform"];
+    transformAnim.damping = 15.0;
+    transformAnim.stiffness = 260.0;
+    transformAnim.mass = 1.0;
+    transformAnim.duration = transformAnim.settlingDuration;
+    transformAnim.fromValue = [NSValue valueWithCATransform3D:fromTransform];
+    transformAnim.toValue = [NSValue valueWithCATransform3D:targetTransform];
+
+    CASpringAnimation * const shadowAnim = [CASpringAnimation animationWithKeyPath:@"shadowOpacity"];
+    shadowAnim.damping = 15.0;
+    shadowAnim.stiffness = 260.0;
+    shadowAnim.mass = 1.0;
+    shadowAnim.duration = shadowAnim.settlingDuration;
+    shadowAnim.fromValue = @(fromOpacity);
+    shadowAnim.toValue = @(targetOpacity);
+
+    [layer addAnimation:transformAnim forKey:@"hoverTransform"];
+    [layer addAnimation:shadowAnim forKey:@"hoverShadow"];
+}
+
+- (NSMenu *)menuForEvent:(NSEvent *)event
+{
+    if (self.item.video != nil && self.item.titleIdentifier.length > 0) {
+        MacLCWatchEntry * const entry = [MacLCWatchLibrary.sharedLibrary entryForTitle:self.item.titleIdentifier];
+        MacLCAddonItem * const item = entry.item;
+        if (item != nil) {
+            return [MacLCWatchActions menuForItem:item video:self.item.video inHistory:NO];
+        }
+    }
+    return [super menuForEvent:event];
 }
 
 - (void)mouseUp:(NSEvent *)event
@@ -1117,6 +1467,22 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
     return @[];
 }
 
+- (nullable id)accessibilityValue
+{
+    if (self.item.video == nil || self.item.titleIdentifier.length == 0) {
+        return nil;
+    }
+    MacLCWatchProgress * const p =
+        [MacLCWatchLibrary.sharedLibrary progressForTitle:self.item.titleIdentifier video:self.item.video.identifier];
+    if (p.isWatched) {
+        return _NS("Watched");
+    }
+    if (p != nil && p.canResume && p.fraction > 0.0 && p.fraction < 1.0) {
+        return [NSString stringWithFormat:_NS("In progress, %ld %%"), (long)round(p.fraction * 100)];
+    }
+    return nil;
+}
+
 - (nullable NSString *)accessibilityLabel
 {
     NSMutableArray<NSString *> * const parts = [NSMutableArray array];
@@ -1148,6 +1514,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
 
 @interface MacLCWatchEpisodeItem ()
 @property (nonatomic, readwrite, nullable) MacLCAddonVideo *video;
+@property (nonatomic, copy, readwrite, nullable) NSString *titleIdentifier;
 @property (nonatomic, readonly) MacLCWatchEpisodeView *episodeView;
 @end
 
@@ -1181,6 +1548,11 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
     MacLCWatchEpisodeView * const view = [[MacLCWatchEpisodeView alloc] initWithFrame:NSZeroRect];
     view.item = self;
     self.view = view;
+
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(libraryDidChange:)
+                                               name:MacLCWatchLibraryDidChangeNotification
+                                             object:nil];
 }
 
 - (MacLCWatchEpisodeView *)episodeView
@@ -1190,6 +1562,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
 
 - (void)dealloc
 {
+    [NSNotificationCenter.defaultCenter removeObserver:self name:MacLCWatchLibraryDidChangeNotification object:nil];
     [_imageRequest cancel];
 }
 
@@ -1199,6 +1572,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
     [_imageRequest cancel];
     _imageRequest = nil;
     _video = nil;
+    _titleIdentifier = nil;
     self.selected = NO;
 
     MacLCWatchEpisodeView * const v = self.episodeView;
@@ -1207,6 +1581,11 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
     v.titleLabel.stringValue = @"";
     v.overviewLabel.stringValue = @"";
     v.airDateLabel.stringValue = @"";
+    v.progressBar.fraction = 0.0;
+    v.progressBar.hidden = YES;
+    v.watchedBadge.hidden = YES;
+    v.stillImageView.alphaValue = 1.0;
+    v.placeholderImageView.alphaValue = 1.0;
     v.selectionRingLayer.hidden = YES;
     [v updateHoverState:NO animated:NO];
 }
@@ -1217,9 +1596,64 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
     self.episodeView.selectionRingLayer.hidden = !selected;
 }
 
+- (void)updateWatchStates
+{
+    MacLCWatchEpisodeView * const v = self.episodeView;
+    if (_video == nil || _titleIdentifier.length == 0) {
+        v.progressBar.fraction = 0.0;
+        v.progressBar.hidden = YES;
+        v.watchedBadge.hidden = YES;
+        v.stillImageView.alphaValue = 1.0;
+        v.placeholderImageView.alphaValue = 1.0;
+        return;
+    }
+
+    MacLCWatchProgress * const p =
+        [MacLCWatchLibrary.sharedLibrary progressForTitle:_titleIdentifier video:_video.identifier];
+    const BOOL isWatched = p != nil && p.isWatched;
+
+    v.watchedBadge.hidden = !isWatched;
+    v.stillImageView.alphaValue = isWatched ? 0.6 : 1.0;
+    v.placeholderImageView.alphaValue = isWatched ? 0.6 : 1.0;
+
+    if (!isWatched && p != nil && p.canResume && p.fraction > 0.0 && p.fraction < 1.0) {
+        v.progressBar.fraction = p.fraction;
+        v.progressBar.hidden = NO;
+    } else {
+        v.progressBar.fraction = 0.0;
+        v.progressBar.hidden = YES;
+    }
+}
+
+- (void)libraryDidChange:(NSNotification *)note
+{
+    if (_titleIdentifier == nil) {
+        return;
+    }
+    NSSet<NSString *> * const changed = note.userInfo[MacLCWatchLibraryChangedTitlesKey];
+    if (changed == nil || [changed containsObject:_titleIdentifier]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self updateWatchStates];
+        });
+    }
+}
+
 - (void)configureWithVideo:(MacLCAddonVideo *)video
 {
+    NSString *titleId = nil;
+    NSRange const colonRange = [video.identifier rangeOfString:@":"];
+    if (colonRange.location != NSNotFound) {
+        titleId = [video.identifier substringToIndex:colonRange.location];
+    } else {
+        titleId = video.identifier;
+    }
+    [self configureWithVideo:video titleIdentifier:titleId];
+}
+
+- (void)configureWithVideo:(MacLCAddonVideo *)video titleIdentifier:(NSString *)titleIdentifier
+{
     _video = video;
+    _titleIdentifier = [titleIdentifier copy];
     [_imageRequest cancel];
     _imageRequest = nil;
 
@@ -1288,6 +1722,8 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
     } else {
         v.image = nil;
     }
+
+    [self updateWatchStates];
 }
 
 @end
@@ -1629,6 +2065,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
 
     _pictureContainerView = [[NSView alloc] initWithFrame:self.bounds];
     _pictureContainerView.translatesAutoresizingMaskIntoConstraints = NO;
+    _pictureContainerView.wantsLayer = YES;
 
     _pictureViewA = [[MacLCWatchHeroPictureView alloc] initWithFrame:self.bounds];
     _pictureViewA.translatesAutoresizingMaskIntoConstraints = NO;
@@ -1748,6 +2185,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
     [_textStackView setCustomSpacing:6.0 afterView:_titleField];
     [_textStackView setCustomSpacing:16.0 afterView:_descriptionField];
     _textStackView.translatesAutoresizingMaskIntoConstraints = NO;
+    _textStackView.wantsLayer = YES;
     [self addSubview:_textStackView];
 
     _dotsStackView = [[NSStackView alloc] initWithFrame:NSZeroRect];
@@ -2322,6 +2760,54 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
     NSString * const desc = item.itemDescription ?: @"";
     return [NSString stringWithFormat:_NS("Featured, %@, %@, %@, page %ld of %lu"),
             title, facts, desc, (long)(_currentIndex + 1), (unsigned long)_items.count];
+}
+
+- (void)setScrollOffset:(CGFloat)offset
+{
+    if (MacLCDesign.reducedMotion) {
+        offset = 0.0;
+    }
+
+    const CGFloat height = self.bounds.size.height;
+    const CGFloat width = self.bounds.size.width;
+
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+
+    /* The picture lags behind while scrolling, so it must be cut at the
+     * carousel's bottom edge (the shelves below would be covered); only that
+     * edge: it still extends under the sidebar and the toolbar. */
+    if (self.layer.mask == nil)
+        self.layer.mask = [CALayer layer];
+    self.layer.mask.backgroundColor = NSColor.blackColor.CGColor;
+    const CGFloat far = 10000.0;
+    self.layer.mask.frame = self.isFlipped ? CGRectMake(-far, -far, width + 2 * far, height + far)
+                                           : CGRectMake(-far, 0.0, width + 2 * far, height + far);
+
+    if (offset < 0.0 && height > 0.0) {
+        /* Rubber-banding: picture grows from top edge, anchored at bottom centre. */
+        const CGFloat scale = 1.0 + fabs(offset) / height;
+        const CGFloat anchorY = self.isFlipped ? height : 0.0;
+        CGAffineTransform t = CGAffineTransformMakeTranslation(width / 2.0, anchorY);
+        t = CGAffineTransformScale(t, scale, scale);
+        t = CGAffineTransformTranslate(t, -width / 2.0, -anchorY);
+        _pictureContainerView.layer.transform = CATransform3DMakeAffineTransform(t);
+        _textStackView.alphaValue = 1.0;
+    } else if (offset > 0.0 && height > 0.0) {
+        /* Scrolled up: parallax at half speed. */
+        const CGFloat translateY = self.isFlipped ? (offset * 0.5) : (-offset * 0.5);
+        _pictureContainerView.layer.transform = CATransform3DMakeTranslation(0.0, translateY, 0.0);
+
+        /* Text block fades out over the first 60 % of carousel height. */
+        const CGFloat fadeLimit = height * 0.60;
+        const CGFloat alpha = (fadeLimit > 0.0) ? (1.0 - (offset / fadeLimit)) : 0.0;
+        _textStackView.alphaValue = MAX(0.0, MIN(1.0, alpha));
+    } else {
+        _pictureContainerView.layer.transform = CATransform3DIdentity;
+        _textStackView.alphaValue = 1.0;
+    }
+
+    [CATransaction commit];
 }
 
 @end

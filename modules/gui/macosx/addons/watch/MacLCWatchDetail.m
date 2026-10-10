@@ -20,6 +20,10 @@
 
 #import "addons/watch/MacLCWatchSections.h"
 #import "addons/watch/MacLCWatchComponents.h"
+#import "addons/watch/MacLCWatchLibrary.h"
+#import "addons/watch/MacLCWatchPlayback.h"
+#import "addons/watch/MacLCWatchLibraryViews.h"
+#import "addons/watch/MacLCStreamPicker.h"
 #import "addons/MacLCAddons.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCFormatBadgeView.h"
@@ -271,931 +275,103 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
 
 @end
 
-#pragma mark - Stream Table View and Cell
+#pragma mark - Watched Pill View
 
-@interface MacLCWatchStreamTableView : NSTableView
-@property (nonatomic, copy, nullable) void (^returnKeyHandler)(void);
-@property (nonatomic, copy, nullable) void (^escapeKeyHandler)(void);
+@interface MacLCWatchedPillView : NSView
 @end
 
-@implementation MacLCWatchStreamTableView
-
-- (void)keyDown:(NSEvent *)event
+@implementation MacLCWatchedPillView
 {
-    if (event.keyCode == 36 && self.returnKeyHandler) {
-        self.returnKeyHandler();
-        return;
-    }
-    if (event.keyCode == 53 && self.escapeKeyHandler) {
-        self.escapeKeyHandler();
-        return;
-    }
-    [super keyDown:event];
+    NSImageView *_iconView;
+    NSTextField *_label;
 }
-
-@end
-
-@interface MacLCWatchStreamCellView : NSTableCellView
-@property (nonatomic, strong) NSTextField *headlineLabel;
-@property (nonatomic, strong) NSStackView *badgesStackView;
-@property (nonatomic, strong) NSTextField *detailsLabel;
-- (void)configureWithBadges:(NSArray<NSString *> *)badges;
-@end
-
-@implementation MacLCWatchStreamCellView
 
 - (instancetype)initWithFrame:(NSRect)frameRect
 {
     self = [super initWithFrame:frameRect];
     if (self) {
-        _headlineLabel = [NSTextField wrappingLabelWithString:@""];
-        _headlineLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        _headlineLabel.font = MacLCDesign.body;
-        _headlineLabel.textColor = MacLCDesign.primaryLabel;
-        _headlineLabel.maximumNumberOfLines = 2;
-        /* Truncating line break modes turn wrapping off: wrap, and cut the last line. */
-        _headlineLabel.lineBreakMode = NSLineBreakByWordWrapping;
-        _headlineLabel.cell.truncatesLastVisibleLine = YES;
-        [_headlineLabel setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
+        self.wantsLayer = YES;
 
-        _badgesStackView = [[NSStackView alloc] initWithFrame:NSZeroRect];
-        _badgesStackView.translatesAutoresizingMaskIntoConstraints = NO;
-        _badgesStackView.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-        _badgesStackView.alignment = NSLayoutAttributeCenterY;
-        _badgesStackView.spacing = MacLCDesign.spacingXS;
-        [_badgesStackView setContentCompressionResistancePriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+        _iconView = [[NSImageView alloc] initWithFrame:NSZeroRect];
+        _iconView.translatesAutoresizingMaskIntoConstraints = NO;
+        _iconView.imageScaling = NSImageScaleProportionallyUpOrDown;
+        _iconView.image = [MacLCDesign symbolNamed:@"checkmark.circle.fill" accessibilityLabel:nil];
+        _iconView.contentTintColor = NSColor.whiteColor;
+        [self addSubview:_iconView];
 
-        _detailsLabel = [NSTextField wrappingLabelWithString:@""];
-        _detailsLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        _detailsLabel.font = MacLCDesign.subheadline;
-        _detailsLabel.textColor = MacLCDesign.secondaryLabel;
-        _detailsLabel.maximumNumberOfLines = 2;
-        /* Truncating line break modes turn wrapping off: wrap, and cut the last line. */
-        _detailsLabel.lineBreakMode = NSLineBreakByWordWrapping;
-        _detailsLabel.cell.truncatesLastVisibleLine = YES;
-        [_detailsLabel setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
-
-        NSStackView *detailRow = [NSStackView stackViewWithViews:@[_badgesStackView, _detailsLabel]];
-        detailRow.translatesAutoresizingMaskIntoConstraints = NO;
-        detailRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-        detailRow.alignment = NSLayoutAttributeCenterY;
-        detailRow.spacing = MacLCDesign.spacingS;
-
-        NSStackView *textStack = [NSStackView stackViewWithViews:@[_headlineLabel, detailRow]];
-        textStack.translatesAutoresizingMaskIntoConstraints = NO;
-        textStack.orientation = NSUserInterfaceLayoutOrientationVertical;
-        textStack.alignment = NSLayoutAttributeLeading;
-        textStack.spacing = 3.0;
-        [self addSubview:textStack];
+        _label = [NSTextField labelWithString:_NS("Watched")];
+        _label.translatesAutoresizingMaskIntoConstraints = NO;
+        _label.font = MacLCDesign.callout;
+        _label.textColor = NSColor.whiteColor;
+        [self addSubview:_label];
 
         [NSLayoutConstraint activateConstraints:@[
-            [textStack.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:MacLCDesign.spacingM],
-            [textStack.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-MacLCDesign.spacingM],
-            [textStack.topAnchor constraintEqualToAnchor:self.topAnchor constant:8.0],
-            [textStack.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-8.0],
-            [_headlineLabel.widthAnchor constraintLessThanOrEqualToAnchor:textStack.widthAnchor],
-            [detailRow.widthAnchor constraintLessThanOrEqualToAnchor:textStack.widthAnchor],
+            [_iconView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:8.0],
+            [_iconView.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+            [_iconView.widthAnchor constraintEqualToConstant:14.0],
+            [_iconView.heightAnchor constraintEqualToConstant:14.0],
+
+            [_label.leadingAnchor constraintEqualToAnchor:_iconView.trailingAnchor constant:4.0],
+            [_label.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-8.0],
+            [_label.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+
+            [self.heightAnchor constraintEqualToConstant:24.0],
         ]];
     }
     return self;
 }
 
-- (void)configureWithBadges:(NSArray<NSString *> *)badges
+- (BOOL)wantsUpdateLayer
 {
-    for (NSView *v in [_badgesStackView.arrangedSubviews copy]) {
-        [_badgesStackView removeView:v];
-        [v removeFromSuperview];
-    }
-    for (NSString *title in badges) {
-        MacLCFormatBadgeView *badge = [MacLCFormatBadgeView badgeWithTitle:title active:YES];
-        [_badgesStackView addArrangedSubview:badge];
-    }
-    _badgesStackView.hidden = (badges.count == 0);
+    return YES;
+}
+
+- (void)updateLayer
+{
+    self.layer.backgroundColor = [NSColor colorWithWhite:0.0 alpha:0.35].CGColor;
+    self.layer.cornerRadius = 12.0;
+    self.layer.masksToBounds = YES;
+}
+
+- (BOOL)isAccessibilityElement
+{
+    return YES;
+}
+
+- (NSAccessibilityRole)accessibilityRole
+{
+    return NSAccessibilityStaticTextRole;
+}
+
+- (NSString *)accessibilityLabel
+{
+    return _NS("Watched");
 }
 
 @end
 
-#pragma mark - Stream Spinner Sentinel
+#pragma mark - Episodes Collection View
 
-@interface MacLCWatchSpinnerSentinel : NSObject
-+ (instancetype)sharedSentinel;
+@interface MacLCWatchEpisodesCollectionView : NSCollectionView
+@property (nonatomic, copy, nullable) NSMenu * _Nullable (^contextMenuProvider)(NSIndexPath *indexPath);
 @end
 
-@implementation MacLCWatchSpinnerSentinel
-+ (instancetype)sharedSentinel
+@implementation MacLCWatchEpisodesCollectionView
+
+- (NSMenu *)menuForEvent:(NSEvent *)event
 {
-    static MacLCWatchSpinnerSentinel *s;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        s = [[MacLCWatchSpinnerSentinel alloc] init];
-    });
-    return s;
-}
-@end
-
-#pragma mark - Stream Picker View Controller
-
-@interface MacLCWatchStreamPickerViewController : NSViewController <NSTableViewDataSource, NSTableViewDelegate>
-
-@property (nonatomic, readonly) MacLCAddonItem *item;
-@property (nonatomic, readonly, nullable) MacLCAddonVideo *video;
-@property (nonatomic, readonly, nullable) MacLCAddonMeta *meta;
-@property (nonatomic, weak) NSPopover *popover;
-
-@property (nonatomic, strong) NSMutableArray<MacLCAddonStreamGroup *> *streamGroups;
-@property (nonatomic, strong) NSArray *displayItems;
-@property (nonatomic, nullable, strong) MacLCAddonStream *selectedStream;
-@property (nonatomic, assign) BOOL isPending;
-@property (nonatomic, nullable, strong) MacLCAddonRequest *request;
-
-@property (nonatomic, strong) NSTextField *headerTitleLabel;
-@property (nonatomic, strong) NSTextField *headerSubtitleLabel;
-@property (nonatomic, strong) NSLayoutConstraint *rootHeightConstraint;
-@property (nonatomic, strong) NSScrollView *scrollView;
-@property (nonatomic, strong) MacLCWatchStreamTableView *tableView;
-
-@property (nonatomic, strong) NSView *emptyStateView;
-@property (nonatomic, strong) NSImageView *emptyIconView;
-@property (nonatomic, strong) NSTextField *emptyTitleLabel;
-@property (nonatomic, strong) NSTextField *emptyMessageLabel;
-@property (nonatomic, strong) NSButton *emptyActionButton;
-@property (nonatomic, strong) NSProgressIndicator *emptySpinner;
-
-@property (nonatomic, strong) NSButton *queueButton;
-@property (nonatomic, strong) NSButton *playButton;
-
-- (instancetype)initWithItem:(MacLCAddonItem *)item
-                       video:(nullable MacLCAddonVideo *)video
-                        meta:(nullable MacLCAddonMeta *)meta;
-
-- (CGFloat)preferredPickerHeight;
-- (void)updatePopoverHeight;
-
-@end
-
-@implementation MacLCWatchStreamPickerViewController
-
-- (instancetype)initWithItem:(MacLCAddonItem *)item
-                       video:(nullable MacLCAddonVideo *)video
-                        meta:(nullable MacLCAddonMeta *)meta
-{
-    self = [super initWithNibName:nil bundle:nil];
-    if (self) {
-        _item = item;
-        _video = video;
-        _meta = meta;
-        _streamGroups = [NSMutableArray array];
-        _displayItems = @[];
-    }
-    return self;
-}
-
-- (void)dealloc
-{
-    [_request cancel];
-}
-
-- (void)loadView
-{
-    NSView *root = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 420.0, 360.0)];
-    root.wantsLayer = YES;
-    [root.widthAnchor constraintEqualToConstant:420.0].active = YES;
-
-    _rootHeightConstraint = [root.heightAnchor constraintEqualToConstant:320.0];
-    _rootHeightConstraint.priority = 900;
-    _rootHeightConstraint.active = YES;
-
-    // Header labels
-    _headerTitleLabel = [NSTextField labelWithString:@""];
-    _headerTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    _headerTitleLabel.font = MacLCDesign.headline;
-    _headerTitleLabel.textColor = MacLCDesign.primaryLabel;
-    _headerTitleLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
-
-    _headerSubtitleLabel = [NSTextField labelWithString:@""];
-    _headerSubtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    _headerSubtitleLabel.font = MacLCDesign.subheadline;
-    _headerSubtitleLabel.textColor = MacLCDesign.secondaryLabel;
-    _headerSubtitleLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
-
-    NSStackView *headerStack = [NSStackView stackViewWithViews:@[_headerTitleLabel, _headerSubtitleLabel]];
-    headerStack.translatesAutoresizingMaskIntoConstraints = NO;
-    headerStack.orientation = NSUserInterfaceLayoutOrientationVertical;
-    headerStack.alignment = NSLayoutAttributeLeading;
-    headerStack.spacing = 2.0;
-    [root addSubview:headerStack];
-
-    _headerTitleLabel.stringValue = _meta.name ?: _item.name ?: @"";
-
-    if (_video != nil && (_video.season > 0 || _video.episode > 0)) {
-        NSString *epStr = [NSString stringWithFormat:@"S%ld, E%ld", (long)_video.season, (long)_video.episode];
-        if (_video.name.length > 0) {
-            _headerSubtitleLabel.stringValue = [NSString stringWithFormat:@"%@ · %@", epStr, _video.name];
-        } else {
-            _headerSubtitleLabel.stringValue = epStr;
-        }
-        _headerSubtitleLabel.hidden = NO;
-    } else {
-        _headerSubtitleLabel.stringValue = @"";
-        _headerSubtitleLabel.hidden = YES;
-    }
-
-    // Top separator
-    NSBox *topSep = [[NSBox alloc] initWithFrame:NSZeroRect];
-    topSep.translatesAutoresizingMaskIntoConstraints = NO;
-    topSep.boxType = NSBoxSeparator;
-    [root addSubview:topSep];
-
-    // Table view
-    _tableView = [[MacLCWatchStreamTableView alloc] initWithFrame:NSZeroRect];
-    _tableView.autoresizingMask = NSViewWidthSizable;
-    _tableView.headerView = nil;
-    _tableView.dataSource = self;
-    _tableView.delegate = self;
-    _tableView.target = self;
-    _tableView.doubleAction = @selector(tableDoubleClicked:);
-    _tableView.usesAutomaticRowHeights = YES;
-    _tableView.rowHeight = 56.0;
-
-    __weak typeof(self) weakSelf = self;
-    _tableView.returnKeyHandler = ^{
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (strongSelf && strongSelf.selectedStream) {
-            [strongSelf playStream:strongSelf.selectedStream];
-        }
-    };
-    _tableView.escapeKeyHandler = ^{
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (strongSelf && strongSelf.popover) {
-            [strongSelf.popover performClose:nil];
-        }
-    };
-
-    NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier:@"StreamColumn"];
-    column.resizingMask = NSTableColumnAutoresizingMask;
-    [_tableView addTableColumn:column];
-
-    _scrollView = [[NSScrollView alloc] initWithFrame:NSZeroRect];
-    _scrollView.translatesAutoresizingMaskIntoConstraints = NO;
-    _scrollView.documentView = _tableView;
-    _scrollView.drawsBackground = NO;
-    _scrollView.hasVerticalScroller = YES;
-    _scrollView.autohidesScrollers = YES;
-    _scrollView.hasHorizontalScroller = NO;
-    [root addSubview:_scrollView];
-
-    // Empty state container
-    _emptyStateView = [[NSView alloc] initWithFrame:NSZeroRect];
-    _emptyStateView.translatesAutoresizingMaskIntoConstraints = NO;
-    _emptyStateView.hidden = YES;
-    [root addSubview:_emptyStateView];
-
-    _emptySpinner = [[NSProgressIndicator alloc] initWithFrame:NSZeroRect];
-    _emptySpinner.translatesAutoresizingMaskIntoConstraints = NO;
-    _emptySpinner.style = NSProgressIndicatorStyleSpinning;
-    _emptySpinner.controlSize = NSControlSizeRegular;
-    _emptySpinner.displayedWhenStopped = NO;
-    [_emptyStateView addSubview:_emptySpinner];
-
-    _emptyIconView = [[NSImageView alloc] initWithFrame:NSZeroRect];
-    _emptyIconView.translatesAutoresizingMaskIntoConstraints = NO;
-    _emptyIconView.imageScaling = NSImageScaleProportionallyUpOrDown;
-    [_emptyStateView addSubview:_emptyIconView];
-
-    _emptyTitleLabel = [NSTextField labelWithString:@""];
-    _emptyTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    _emptyTitleLabel.alignment = NSTextAlignmentCenter;
-    _emptyTitleLabel.font = MacLCDesign.headline;
-    _emptyTitleLabel.textColor = MacLCDesign.primaryLabel;
-    _emptyTitleLabel.maximumNumberOfLines = 2;
-    [_emptyStateView addSubview:_emptyTitleLabel];
-
-    _emptyMessageLabel = [NSTextField labelWithString:@""];
-    _emptyMessageLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    _emptyMessageLabel.alignment = NSTextAlignmentCenter;
-    _emptyMessageLabel.font = MacLCDesign.subheadline;
-    _emptyMessageLabel.textColor = MacLCDesign.secondaryLabel;
-    _emptyMessageLabel.maximumNumberOfLines = 3;
-    _emptyMessageLabel.lineBreakMode = NSLineBreakByWordWrapping;
-    [_emptyStateView addSubview:_emptyMessageLabel];
-
-    _emptyActionButton = [NSButton buttonWithTitle:@"" target:nil action:nil];
-    _emptyActionButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _emptyActionButton.bezelStyle = NSBezelStylePush;
-    _emptyActionButton.hidden = YES;
-    [_emptyStateView addSubview:_emptyActionButton];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [_emptySpinner.centerXAnchor constraintEqualToAnchor:_emptyStateView.centerXAnchor],
-        [_emptySpinner.centerYAnchor constraintEqualToAnchor:_emptyStateView.centerYAnchor],
-        [_emptyIconView.centerXAnchor constraintEqualToAnchor:_emptyStateView.centerXAnchor],
-        [_emptyIconView.centerYAnchor constraintEqualToAnchor:_emptyStateView.centerYAnchor constant:-32.0],
-        [_emptyIconView.widthAnchor constraintEqualToConstant:36.0],
-        [_emptyIconView.heightAnchor constraintEqualToConstant:36.0],
-        [_emptyTitleLabel.topAnchor constraintEqualToAnchor:_emptyIconView.bottomAnchor constant:MacLCDesign.spacingS],
-        [_emptyTitleLabel.leadingAnchor constraintEqualToAnchor:_emptyStateView.leadingAnchor constant:MacLCDesign.spacingL],
-        [_emptyTitleLabel.trailingAnchor constraintEqualToAnchor:_emptyStateView.trailingAnchor constant:-MacLCDesign.spacingL],
-        [_emptyMessageLabel.topAnchor constraintEqualToAnchor:_emptyTitleLabel.bottomAnchor constant:MacLCDesign.spacingXS],
-        [_emptyMessageLabel.leadingAnchor constraintEqualToAnchor:_emptyStateView.leadingAnchor constant:MacLCDesign.spacingL],
-        [_emptyMessageLabel.trailingAnchor constraintEqualToAnchor:_emptyStateView.trailingAnchor constant:-MacLCDesign.spacingL],
-        [_emptyActionButton.topAnchor constraintEqualToAnchor:_emptyMessageLabel.bottomAnchor constant:MacLCDesign.spacingM],
-        [_emptyActionButton.centerXAnchor constraintEqualToAnchor:_emptyStateView.centerXAnchor],
-    ]];
-
-    // Bottom separator
-    NSBox *bottomSep = [[NSBox alloc] initWithFrame:NSZeroRect];
-    bottomSep.translatesAutoresizingMaskIntoConstraints = NO;
-    bottomSep.boxType = NSBoxSeparator;
-    [root addSubview:bottomSep];
-
-    // Bottom actions
-    _queueButton = [NSButton buttonWithTitle:_NS("Add to Queue") target:self action:@selector(queueSelectedStream:)];
-    _queueButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _queueButton.bezelStyle = NSBezelStylePush;
-    _queueButton.enabled = NO;
-    _queueButton.accessibilityLabel = _NS("Add to Queue");
-    _queueButton.toolTip = _NS("Add to Queue");
-    [root addSubview:_queueButton];
-
-    _playButton = [NSButton buttonWithTitle:_NS("Play") target:self action:@selector(playSelectedStream:)];
-    _playButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _playButton.image = [NSImage imageWithSystemSymbolName:@"play.fill" accessibilityDescription:nil];
-    _playButton.imagePosition = NSImageLeading;
-    /* Same push style as Add to Queue; Return makes it the default (accent)
-     * button. The popover is the glass: no glass inside it (liquid-glass.md). */
-    _playButton.bezelStyle = NSBezelStylePush;
-    _playButton.keyEquivalent = @"\r";
-    _playButton.enabled = NO;
-    _playButton.accessibilityLabel = _NS("Play");
-    _playButton.toolTip = _NS("Play");
-    [root addSubview:_playButton];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [headerStack.topAnchor constraintEqualToAnchor:root.topAnchor constant:MacLCDesign.spacingM],
-        [headerStack.leadingAnchor constraintEqualToAnchor:root.leadingAnchor constant:MacLCDesign.spacingM],
-        [headerStack.trailingAnchor constraintEqualToAnchor:root.trailingAnchor constant:-MacLCDesign.spacingM],
-        [_headerTitleLabel.widthAnchor constraintLessThanOrEqualToAnchor:headerStack.widthAnchor],
-        [_headerSubtitleLabel.widthAnchor constraintLessThanOrEqualToAnchor:headerStack.widthAnchor],
-
-        [topSep.topAnchor constraintEqualToAnchor:headerStack.bottomAnchor constant:MacLCDesign.spacingS],
-        [topSep.leadingAnchor constraintEqualToAnchor:root.leadingAnchor],
-        [topSep.trailingAnchor constraintEqualToAnchor:root.trailingAnchor],
-
-        [_scrollView.topAnchor constraintEqualToAnchor:topSep.bottomAnchor],
-        [_scrollView.leadingAnchor constraintEqualToAnchor:root.leadingAnchor],
-        [_scrollView.trailingAnchor constraintEqualToAnchor:root.trailingAnchor],
-        [_scrollView.bottomAnchor constraintEqualToAnchor:bottomSep.topAnchor],
-
-        [_emptyStateView.topAnchor constraintEqualToAnchor:topSep.bottomAnchor],
-        [_emptyStateView.leadingAnchor constraintEqualToAnchor:root.leadingAnchor],
-        [_emptyStateView.trailingAnchor constraintEqualToAnchor:root.trailingAnchor],
-        [_emptyStateView.bottomAnchor constraintEqualToAnchor:bottomSep.topAnchor],
-
-        [bottomSep.leadingAnchor constraintEqualToAnchor:root.leadingAnchor],
-        [bottomSep.trailingAnchor constraintEqualToAnchor:root.trailingAnchor],
-        [bottomSep.bottomAnchor constraintEqualToAnchor:root.bottomAnchor constant:-50.0],
-
-        [_queueButton.leadingAnchor constraintEqualToAnchor:root.leadingAnchor constant:MacLCDesign.spacingM],
-        [_queueButton.centerYAnchor constraintEqualToAnchor:root.bottomAnchor constant:-25.0],
-
-        [_playButton.trailingAnchor constraintEqualToAnchor:root.trailingAnchor constant:-MacLCDesign.spacingM],
-        [_playButton.centerYAnchor constraintEqualToAnchor:root.bottomAnchor constant:-25.0],
-    ]];
-
-    self.view = root;
-}
-
-- (void)viewDidLoad
-{
-    [super viewDidLoad];
-    [self fetchStreams];
-}
-
-- (void)fetchStreams
-{
-    [_request cancel];
-    _request = nil;
-    [_streamGroups removeAllObjects];
-    _displayItems = @[];
-    _selectedStream = nil;
-    _playButton.enabled = NO;
-    _queueButton.enabled = NO;
-
-    if (!MacLCAddonStore.sharedStore.hasStreamAddon) {
-        [self showNoStreamAddonState];
-        return;
-    }
-
-    _isPending = YES;
-    [self updateDisplayItems];
-    [self showLoadingState];
-
-    NSString *type = _item.type ?: @"movie";
-    NSString *videoID = _video ? _video.identifier : (_meta.defaultVideoIdentifier.length > 0 ? _meta.defaultVideoIdentifier : _item.identifier);
-
-    __weak typeof(self) weakSelf = self;
-    _request = [MacLCAddonStore.sharedStore fetchStreamsForType:type
-                                                videoIdentifier:videoID
-                                                      eachGroup:^(MacLCAddonStreamGroup * _Nonnull group) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        [strongSelf.streamGroups addObject:group];
-        [strongSelf updateDisplayItems];
-    } completion:^{
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        strongSelf.isPending = NO;
-        strongSelf.request = nil;
-        [strongSelf handleFetchCompletion];
-    }];
-}
-
-- (void)updateDisplayItems
-{
-    NSMutableArray *items = [NSMutableArray array];
-    NSUInteger totalStreams = 0;
-
-    for (MacLCAddonStreamGroup *g in _streamGroups) {
-        if (g.streams.count > 0) {
-            [items addObject:g.addon.name ?: _NS("Add-on")];
-            [items addObjectsFromArray:g.streams];
-            totalStreams += g.streams.count;
-        } else if (g.error) {
-            [items addObject:[NSString stringWithFormat:@"%@ — %@", g.addon.name ?: _NS("Add-on"), _NS("Not Responding")]];
-        }
-    }
-
-    if (_isPending) {
-        [items addObject:[MacLCWatchSpinnerSentinel sharedSentinel]];
-    }
-
-    /* Rows shift when a slower add-on answers: keep the stream, not the row. */
-    MacLCAddonStream * const keptStream = _selectedStream;
-    _displayItems = [items copy];
-    [_tableView reloadData];
-    _selectedStream = keptStream;
-
-    if (totalStreams > 0) {
-        _emptyStateView.hidden = YES;
-        _scrollView.hidden = NO;
-    }
-
-    if (_selectedStream == nil) {
-        for (NSUInteger i = 0; i < _displayItems.count; i++) {
-            if ([_displayItems[i] isKindOfClass:[MacLCAddonStream class]]) {
-                _selectedStream = (MacLCAddonStream *)_displayItems[i];
-                [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:i] byExtendingSelection:NO];
-                [_tableView scrollRowToVisible:i];
-                _playButton.enabled = YES;
-                _queueButton.enabled = YES;
-                break;
+    if (event.type == NSEventTypeRightMouseDown ||
+        (event.type == NSEventTypeLeftMouseDown && (event.modifierFlags & NSEventModifierFlagControl))) {
+        NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+        NSIndexPath *indexPath = [self indexPathForItemAtPoint:point];
+        if (indexPath != nil && self.contextMenuProvider != nil) {
+            NSMenu *menu = self.contextMenuProvider(indexPath);
+            if (menu != nil) {
+                return menu;
             }
         }
-    } else {
-        NSUInteger idx = [_displayItems indexOfObject:_selectedStream];
-        if (idx != NSNotFound && _tableView.selectedRow != (NSInteger)idx) {
-            [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:idx] byExtendingSelection:NO];
-        }
     }
-
-    [self updatePopoverHeight];
-}
-
-- (void)handleFetchCompletion
-{
-    [self updateDisplayItems];
-
-    NSUInteger totalStreams = 0;
-    NSUInteger failedGroups = 0;
-    for (MacLCAddonStreamGroup *g in _streamGroups) {
-        totalStreams += g.streams.count;
-        if (g.error) {
-            failedGroups++;
-        }
-    }
-
-    if (totalStreams == 0) {
-        _scrollView.hidden = YES;
-        if (_streamGroups.count > 0 && failedGroups == _streamGroups.count) {
-            NSError *firstError = _streamGroups.firstObject.error;
-            NSString *serviceName = _streamGroups.firstObject.addon.name ?: _NS("Add-on");
-            NSString *title = nil;
-            NSString *message = nil;
-            [self getErrorTitle:&title message:&message forError:firstError service:serviceName];
-            [self showErrorStateWithTitle:title message:message buttonTitle:_NS("Try Again") target:self action:@selector(fetchStreams)];
-        } else {
-            [self showEmptyStateWithTitle:_NS("No Streams Found") message:_NS("No streams available for this title.")];
-        }
-    } else {
-        _scrollView.hidden = NO;
-        _emptyStateView.hidden = YES;
-    }
-    [self updatePopoverHeight];
-}
-
-- (void)showLoadingState
-{
-    _emptyStateView.hidden = NO;
-    _scrollView.hidden = YES;
-    _emptyIconView.hidden = YES;
-    _emptyTitleLabel.hidden = YES;
-    _emptyMessageLabel.hidden = YES;
-    _emptyActionButton.hidden = YES;
-    _emptySpinner.hidden = NO;
-    [_emptySpinner startAnimation:nil];
-    [self updatePopoverHeight];
-}
-
-- (void)showNoStreamAddonState
-{
-    _emptyStateView.hidden = NO;
-    _scrollView.hidden = YES;
-    [_emptySpinner stopAnimation:nil];
-    _emptySpinner.hidden = YES;
-
-    _emptyIconView.image = [NSImage imageWithSystemSymbolName:@"play.slash" accessibilityDescription:nil];
-    _emptyIconView.contentTintColor = MacLCDesign.secondaryLabel;
-    _emptyIconView.hidden = NO;
-
-    _emptyTitleLabel.stringValue = _NS("No Streams Add-on");
-    _emptyTitleLabel.hidden = NO;
-
-    _emptyMessageLabel.stringValue = _NS("Install an add-on that provides streams to play titles.");
-    _emptyMessageLabel.hidden = NO;
-
-    _emptyActionButton.title = _NS("Browse Add-ons…");
-    _emptyActionButton.target = self;
-    _emptyActionButton.action = @selector(openAddonsSettings:);
-    _emptyActionButton.hidden = NO;
-    [self updatePopoverHeight];
-}
-
-- (void)showEmptyStateWithTitle:(NSString *)title message:(NSString *)message
-{
-    _emptyStateView.hidden = NO;
-    _scrollView.hidden = YES;
-    [_emptySpinner stopAnimation:nil];
-    _emptySpinner.hidden = YES;
-
-    _emptyIconView.image = [NSImage imageWithSystemSymbolName:@"magnifyingglass" accessibilityDescription:nil];
-    _emptyIconView.contentTintColor = MacLCDesign.secondaryLabel;
-    _emptyIconView.hidden = NO;
-
-    _emptyTitleLabel.stringValue = title ?: @"";
-    _emptyTitleLabel.hidden = NO;
-
-    _emptyMessageLabel.stringValue = message ?: @"";
-    _emptyMessageLabel.hidden = NO;
-
-    _emptyActionButton.hidden = YES;
-    [self updatePopoverHeight];
-}
-
-- (void)showErrorStateWithTitle:(NSString *)title
-                        message:(NSString *)message
-                    buttonTitle:(NSString *)buttonTitle
-                          target:(id)target
-                          action:(SEL)action
-{
-    _emptyStateView.hidden = NO;
-    _scrollView.hidden = YES;
-    [_emptySpinner stopAnimation:nil];
-    _emptySpinner.hidden = YES;
-
-    _emptyIconView.image = [NSImage imageWithSystemSymbolName:@"network.slash" accessibilityDescription:nil];
-    _emptyIconView.contentTintColor = MacLCDesign.destructive;
-    _emptyIconView.hidden = NO;
-
-    _emptyTitleLabel.stringValue = title ?: @"";
-    _emptyTitleLabel.hidden = NO;
-
-    _emptyMessageLabel.stringValue = message ?: @"";
-    _emptyMessageLabel.hidden = NO;
-
-    _emptyActionButton.title = buttonTitle;
-    _emptyActionButton.target = target;
-    _emptyActionButton.action = action;
-    _emptyActionButton.hidden = NO;
-    [self updatePopoverHeight];
-}
-
-- (CGFloat)preferredPickerHeight
-{
-    CGFloat chrome = 94.0;
-    if (_headerSubtitleLabel && !_headerSubtitleLabel.hidden) {
-        chrome += 18.0;
-    }
-
-    if (_emptyStateView && !_emptyStateView.hidden && _displayItems.count == 0) {
-        return 260.0;
-    }
-
-    CGFloat tableContentHeight = 0.0;
-    for (NSInteger i = 0; i < (NSInteger)_displayItems.count; i++) {
-        tableContentHeight += [self tableView:_tableView heightOfRow:i];
-    }
-    if (tableContentHeight <= 0.0) {
-        return 220.0;
-    }
-
-    CGFloat total = chrome + tableContentHeight;
-    if (total < 220.0) total = 220.0;
-    if (total > 480.0) total = 480.0;
-    return ceil(total);
-}
-
-- (void)updatePopoverHeight
-{
-    CGFloat h = [self preferredPickerHeight];
-    if (_rootHeightConstraint) {
-        _rootHeightConstraint.constant = h;
-    }
-    self.preferredContentSize = NSMakeSize(420.0, h);
-    if (self.popover) {
-        self.popover.contentSize = NSMakeSize(420.0, h);
-    }
-}
-
-- (void)openAddonsSettings:(nullable id)sender
-{
-    [self.popover performClose:nil];
-    MacLCSettingsWindowController *swc = VLCMain.sharedInstance.settingsWindowController;
-    [swc showSettingsWindowWithLevel:NSNormalWindowLevel];
-    [swc selectPaneWithIdentifier:@"addons"];
-}
-
-- (void)getErrorTitle:(NSString **)outTitle
-              message:(NSString **)outMessage
-             forError:(nullable NSError *)error
-              service:(NSString *)serviceName
-{
-    NSString *title = nil;
-    NSString *message = nil;
-
-    NSString * const unresolvedHost = MacLCAddonsUnresolvedHost(error);
-    if (unresolvedHost) {
-        title = [NSString stringWithFormat:_NS("Can't Reach %@"), serviceName];
-        message = [NSString stringWithFormat:_NS("MacLC can't find the server “%@”. Check your network settings, then try again."), unresolvedHost];
-    } else if (error && [error.domain isEqualToString:NSURLErrorDomain]) {
-        title = [NSString stringWithFormat:_NS("Can't Reach %@"), serviceName];
-        message = _NS("Check your internet connection, then try again.");
-    } else if (error && [error.domain isEqualToString:MacLCAddonsErrorDomain]) {
-        if (error.code == MacLCAddonsErrorHTTPStatus) {
-            title = [NSString stringWithFormat:_NS("%@ Isn't Responding"), serviceName];
-            NSNumber *status = error.userInfo[@"status"];
-            long code = status ? status.longValue : 0;
-            message = [NSString stringWithFormat:_NS("The service answered with error %ld. Try again in a moment."), code];
-        } else if (error.code == MacLCAddonsErrorBadResponse ||
-                   error.code == MacLCAddonsErrorNotAnAddon ||
-                   error.code == MacLCAddonsErrorBadAddress) {
-            title = [NSString stringWithFormat:_NS("Unexpected Answer from %@"), serviceName];
-            message = _NS("If you changed the add-on address in Settings, check it.");
-        }
-    }
-
-    if (!title) {
-        title = [NSString stringWithFormat:_NS("Can't Reach %@"), serviceName];
-        message = _NS("Check your internet connection, then try again.");
-    }
-
-    if (outTitle) *outTitle = title;
-    if (outMessage) *outMessage = message;
-}
-
-#pragma mark - Table View Data Source & Delegate
-
-- (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
-{
-    return _displayItems.count;
-}
-
-- (BOOL)tableView:(NSTableView *)tableView isGroupRow:(NSInteger)row
-{
-    if (row >= 0 && row < (NSInteger)_displayItems.count) {
-        return [_displayItems[row] isKindOfClass:[NSString class]];
-    }
-    return NO;
-}
-
-- (BOOL)tableView:(NSTableView *)tableView shouldSelectRow:(NSInteger)row
-{
-    if (row >= 0 && row < (NSInteger)_displayItems.count) {
-        return [_displayItems[row] isKindOfClass:[MacLCAddonStream class]];
-    }
-    return NO;
-}
-
-- (CGFloat)tableView:(NSTableView *)tableView heightOfRow:(NSInteger)row
-{
-    if (row >= 0 && row < (NSInteger)_displayItems.count) {
-        id item = _displayItems[row];
-        if ([item isKindOfClass:[NSString class]]) {
-            return 28.0;
-        } else if ([item isKindOfClass:[MacLCWatchSpinnerSentinel class]]) {
-            return 32.0;
-        } else if ([item isKindOfClass:[MacLCAddonStream class]]) {
-            MacLCAddonStream *stream = (MacLCAddonStream *)item;
-            const CGFloat textWidth = 420.0 - (MacLCDesign.spacingM * 2.0);
-
-            NSDictionary *headAttrs = @{NSFontAttributeName: MacLCDesign.body};
-            NSRect headRect = [stream.headline boundingRectWithSize:NSMakeSize(textWidth, CGFLOAT_MAX)
-                                                            options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
-                                                         attributes:headAttrs];
-            CGFloat headLineH = MacLCDesign.body.pointSize * 1.35;
-            CGFloat headH = MIN(headRect.size.height, headLineH * 2.2);
-            if (headH < headLineH) {
-                headH = headLineH;
-            }
-
-            CGFloat detH = 0.0;
-            if (stream.details.length > 0) {
-                CGFloat detWidth = textWidth;
-                if (stream.qualityTokens.count > 0) {
-                    detWidth = MAX(120.0, textWidth - 80.0);
-                }
-                NSDictionary *detAttrs = @{NSFontAttributeName: MacLCDesign.subheadline};
-                NSRect detRect = [stream.details boundingRectWithSize:NSMakeSize(detWidth, CGFLOAT_MAX)
-                                                              options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
-                                                           attributes:detAttrs];
-                CGFloat detLineH = MacLCDesign.subheadline.pointSize * 1.35;
-                detH = MIN(detRect.size.height, detLineH * 2.2);
-                if (detH < detLineH) {
-                    detH = detLineH;
-                }
-            } else if (stream.qualityTokens.count > 0) {
-                detH = 18.0;
-            }
-
-            CGFloat total = 8.0 + headH + 3.0 + detH + 8.0;
-            if (total < 52.0) {
-                total = 52.0;
-            }
-            return ceil(total);
-        }
-    }
-    return 32.0;
-}
-
-
-- (nullable NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(nullable NSTableColumn *)tableColumn row:(NSInteger)row
-{
-    if (row < 0 || row >= (NSInteger)_displayItems.count) return nil;
-
-    id item = _displayItems[row];
-    if ([item isKindOfClass:[NSString class]]) {
-        static NSString * const kGroupCellId = @"MacLCWatchStreamGroupCell";
-        NSTableCellView *groupView = [tableView makeViewWithIdentifier:kGroupCellId owner:self];
-        if (!groupView) {
-            groupView = [[NSTableCellView alloc] initWithFrame:NSMakeRect(0, 0, 200, 28)];
-            groupView.identifier = kGroupCellId;
-            NSTextField *label = [NSTextField labelWithString:@""];
-            label.translatesAutoresizingMaskIntoConstraints = NO;
-            label.font = MacLCDesign.headline;
-            label.textColor = MacLCDesign.secondaryLabel;
-            [groupView addSubview:label];
-            groupView.textField = label;
-
-            [NSLayoutConstraint activateConstraints:@[
-                [label.leadingAnchor constraintEqualToAnchor:groupView.leadingAnchor constant:MacLCDesign.spacingM],
-                [label.centerYAnchor constraintEqualToAnchor:groupView.centerYAnchor],
-            ]];
-        }
-        groupView.textField.stringValue = (NSString *)item;
-        return groupView;
-    }
-
-    if ([item isKindOfClass:[MacLCWatchSpinnerSentinel class]]) {
-        static NSString * const kSpinnerCellId = @"MacLCWatchStreamSpinnerCell";
-        NSTableCellView *spinnerCell = [tableView makeViewWithIdentifier:kSpinnerCellId owner:self];
-        if (!spinnerCell) {
-            spinnerCell = [[NSTableCellView alloc] initWithFrame:NSMakeRect(0, 0, 200, 32)];
-            spinnerCell.identifier = kSpinnerCellId;
-
-            NSProgressIndicator *spin = [[NSProgressIndicator alloc] initWithFrame:NSZeroRect];
-            spin.translatesAutoresizingMaskIntoConstraints = NO;
-            spin.style = NSProgressIndicatorStyleSpinning;
-            spin.controlSize = NSControlSizeSmall;
-            [spin startAnimation:nil];
-            [spinnerCell addSubview:spin];
-
-            NSTextField *lbl = [NSTextField labelWithString:_NS("Searching for streams…")];
-            lbl.translatesAutoresizingMaskIntoConstraints = NO;
-            lbl.font = MacLCDesign.subheadline;
-            lbl.textColor = MacLCDesign.secondaryLabel;
-            [spinnerCell addSubview:lbl];
-
-            [NSLayoutConstraint activateConstraints:@[
-                [spin.leadingAnchor constraintEqualToAnchor:spinnerCell.leadingAnchor constant:MacLCDesign.spacingM],
-                [spin.centerYAnchor constraintEqualToAnchor:spinnerCell.centerYAnchor],
-                [lbl.leadingAnchor constraintEqualToAnchor:spin.trailingAnchor constant:MacLCDesign.spacingS],
-                [lbl.centerYAnchor constraintEqualToAnchor:spinnerCell.centerYAnchor],
-            ]];
-        }
-        return spinnerCell;
-    }
-
-    if ([item isKindOfClass:[MacLCAddonStream class]]) {
-        static NSString * const kStreamCellId = @"MacLCWatchStreamCell";
-        MacLCAddonStream *stream = (MacLCAddonStream *)item;
-        MacLCWatchStreamCellView *cell = [tableView makeViewWithIdentifier:kStreamCellId owner:self];
-        if (!cell) {
-            cell = [[MacLCWatchStreamCellView alloc] initWithFrame:NSMakeRect(0, 0, 200, 52)];
-            cell.identifier = kStreamCellId;
-        }
-
-        NSMutableArray<NSString *> *badgeTitles = [NSMutableArray array];
-        for (NSString *tok in stream.qualityTokens) {
-            NSString *trimmed = [tok stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-            if (trimmed.length > 0) {
-                if ([trimmed caseInsensitiveCompare:@"4k"] == NSOrderedSame) {
-                    [badgeTitles addObject:@"4K"];
-                } else if ([trimmed caseInsensitiveCompare:@"dv"] == NSOrderedSame) {
-                    [badgeTitles addObject:@"Dolby Vision"];
-                } else {
-                    [badgeTitles addObject:trimmed];
-                }
-            }
-        }
-        [cell configureWithBadges:badgeTitles];
-
-        cell.headlineLabel.stringValue = stream.headline ?: @"";
-        cell.detailsLabel.stringValue = stream.details ?: @"";
-
-        if (stream.details.length > 0) {
-            cell.toolTip = [NSString stringWithFormat:@"%@\n%@", stream.headline, stream.details];
-            cell.accessibilityLabel = [NSString stringWithFormat:@"%@, %@", stream.headline, stream.details];
-        } else {
-            cell.toolTip = stream.headline ?: @"";
-            cell.accessibilityLabel = stream.headline ?: @"";
-        }
-        return cell;
-    }
-
-    return nil;
-}
-
-- (void)tableViewSelectionDidChange:(NSNotification *)notification
-{
-    NSInteger row = _tableView.selectedRow;
-    if (row >= 0 && row < (NSInteger)_displayItems.count) {
-        id item = _displayItems[row];
-        if ([item isKindOfClass:[MacLCAddonStream class]]) {
-            _selectedStream = (MacLCAddonStream *)item;
-            _playButton.enabled = YES;
-            _queueButton.enabled = YES;
-            return;
-        }
-    }
-    _selectedStream = nil;
-    _playButton.enabled = NO;
-    _queueButton.enabled = NO;
-}
-
-- (void)tableDoubleClicked:(id)sender
-{
-    NSInteger row = _tableView.clickedRow;
-    if (row >= 0 && row < (NSInteger)_displayItems.count) {
-        id item = _displayItems[row];
-        if ([item isKindOfClass:[MacLCAddonStream class]]) {
-            [self playStream:(MacLCAddonStream *)item];
-        }
-    }
-}
-
-- (void)playSelectedStream:(id)sender
-{
-    if (_selectedStream) {
-        [self playStream:_selectedStream];
-    }
-}
-
-- (void)queueSelectedStream:(id)sender
-{
-    if (_selectedStream) {
-        [self queueStream:_selectedStream];
-    }
-}
-
-- (void)playStream:(MacLCAddonStream *)stream
-{
-    if (!stream) return;
-    NSString *itemName = [MacLCAddonStore itemNameForItem:_item video:_video];
-    VLCOpenInputMetadata *meta = [[VLCOpenInputMetadata alloc] init];
-    meta.MRLString = stream.MRL;
-    meta.itemName = itemName;
-    [VLCMain.sharedInstance.playQueueController addPlayQueueItems:@[meta] atPosition:(size_t)-1 startPlayback:YES];
-    [_popover performClose:nil];
-}
-
-- (void)queueStream:(MacLCAddonStream *)stream
-{
-    if (!stream) return;
-    NSString *itemName = [MacLCAddonStore itemNameForItem:_item video:_video];
-    VLCOpenInputMetadata *meta = [[VLCOpenInputMetadata alloc] init];
-    meta.MRLString = stream.MRL;
-    meta.itemName = itemName;
-    [VLCMain.sharedInstance.playQueueController addPlayQueueItems:@[meta]];
-    [_popover performClose:nil];
+    return [super menuForEvent:event];
 }
 
 @end
@@ -1212,7 +388,7 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     MacLCWatchImageRequest *_pictureRequest;
     MacLCWatchImageRequest *_logoRequest;
 
-    NSPopover *_currentStreamPopover;
+    MacLCStreamPickerController *_streamPickerController;
     NSPopover *_descriptionPopover;
 
     NSScrollView *_scrollView;
@@ -1230,14 +406,22 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     NSStackView *_headerLeadingStack;
     NSImageView *_logoImageView;
     NSTextField *_titleLabel;
+    NSStackView *_factsStack;
+    NSStackView *_factsRowStack;
     NSTextField *_factsLabel;
+    MacLCWatchedPillView *_watchedPill;
+    NSTextField *_factsSubtitleLabel;
     NSStackView *_descStack;
     NSTextField *_descLabel;
     NSButton *_moreButton;
     NSTextField *_detailsLabel;
+    MacLCWatchProgressBar *_progressBar;
     NSStackView *_buttonsStack;
     NSButton *_playButton;
+    NSButton *_startOverButton;
     NSButton *_trailerButton;
+    NSButton *_favoriteButton;
+    NSButton *_actionsButton;
 
     NSStackView *_creditsStack;
     NSTextField *_starringLabel;
@@ -1290,12 +474,10 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
 - (void)dealloc
 {
     [NSNotificationCenter.defaultCenter removeObserver:self name:NSPreferredScrollerStyleDidChangeNotification object:nil];
+    [NSNotificationCenter.defaultCenter removeObserver:self name:MacLCWatchLibraryDidChangeNotification object:nil];
     [_metaRequest cancel];
     [_pictureRequest cancel];
     [_logoRequest cancel];
-    if (_currentStreamPopover) {
-        [_currentStreamPopover performClose:nil];
-    }
     if (_descriptionPopover) {
         [_descriptionPopover performClose:nil];
     }
@@ -1451,6 +633,30 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     _factsLabel.font = MacLCDesign.callout;
     _factsLabel.textColor = [NSColor colorWithWhite:1.0 alpha:0.85];
 
+    _watchedPill = [[MacLCWatchedPillView alloc] initWithFrame:NSZeroRect];
+    _watchedPill.translatesAutoresizingMaskIntoConstraints = NO;
+    _watchedPill.hidden = YES;
+    [_watchedPill setContentHuggingPriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [_watchedPill setContentCompressionResistancePriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+
+    _factsRowStack = [NSStackView stackViewWithViews:@[_factsLabel, _watchedPill]];
+    _factsRowStack.translatesAutoresizingMaskIntoConstraints = NO;
+    _factsRowStack.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    _factsRowStack.alignment = NSLayoutAttributeCenterY;
+    _factsRowStack.spacing = 8.0;
+
+    _factsSubtitleLabel = [NSTextField labelWithString:@""];
+    _factsSubtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    _factsSubtitleLabel.font = MacLCDesign.callout;
+    _factsSubtitleLabel.textColor = [NSColor colorWithWhite:1.0 alpha:0.85];
+    _factsSubtitleLabel.hidden = YES;
+
+    _factsStack = [NSStackView stackViewWithViews:@[_factsRowStack, _factsSubtitleLabel]];
+    _factsStack.translatesAutoresizingMaskIntoConstraints = NO;
+    _factsStack.orientation = NSUserInterfaceLayoutOrientationVertical;
+    _factsStack.alignment = NSLayoutAttributeLeading;
+    _factsStack.spacing = 4.0;
+
     _descLabel = [NSTextField wrappingLabelWithString:_item.itemDescription ?: @""];
     _descLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _descLabel.font = MacLCDesign.body;
@@ -1482,9 +688,13 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     _detailsLabel.font = MacLCDesign.callout;
     _detailsLabel.textColor = [NSColor colorWithWhite:1.0 alpha:0.75];
 
+    _progressBar = [[MacLCWatchProgressBar alloc] initWithFrame:NSMakeRect(0, 0, 200.0, 4.0)];
+    _progressBar.translatesAutoresizingMaskIntoConstraints = NO;
+    _progressBar.hidden = YES;
+
     _playButton = [NSButton buttonWithTitle:_NS("Play") target:self action:@selector(playButtonAction:)];
     _playButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _playButton.image = [NSImage imageWithSystemSymbolName:@"play.fill" accessibilityDescription:nil];
+    _playButton.image = [MacLCDesign symbolNamed:@"play.fill" accessibilityLabel:nil];
     _playButton.imagePosition = NSImageLeading;
     _playButton.controlSize = NSControlSizeLarge;
     if (@available(macOS 26.0, *)) {
@@ -1497,9 +707,23 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     _playButton.accessibilityLabel = _playButton.title;
     _playButton.toolTip = _playButton.title;
 
+    _startOverButton = [NSButton buttonWithTitle:_NS("Start Over") target:self action:@selector(startOverButtonAction:)];
+    _startOverButton.translatesAutoresizingMaskIntoConstraints = NO;
+    _startOverButton.image = [MacLCDesign symbolNamed:@"arrow.counterclockwise" accessibilityLabel:nil];
+    _startOverButton.imagePosition = NSImageLeading;
+    _startOverButton.controlSize = NSControlSizeLarge;
+    if (@available(macOS 26.0, *)) {
+        _startOverButton.bezelStyle = NSBezelStyleGlass;
+    } else {
+        _startOverButton.bezelStyle = NSBezelStylePush;
+    }
+    _startOverButton.accessibilityLabel = _NS("Start Over");
+    _startOverButton.toolTip = _NS("Start Over");
+    _startOverButton.hidden = YES;
+
     _trailerButton = [NSButton buttonWithTitle:_NS("Trailer") target:self action:@selector(trailerButtonAction:)];
     _trailerButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _trailerButton.image = [NSImage imageWithSystemSymbolName:@"film" accessibilityDescription:nil];
+    _trailerButton.image = [MacLCDesign symbolNamed:@"film" accessibilityLabel:nil];
     _trailerButton.imagePosition = NSImageLeading;
     _trailerButton.controlSize = NSControlSizeLarge;
     if (@available(macOS 26.0, *)) {
@@ -1511,19 +735,48 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     _trailerButton.toolTip = _NS("Play Trailer");
     _trailerButton.hidden = YES;
 
-    _buttonsStack = [NSStackView stackViewWithViews:@[_playButton, _trailerButton]];
+    _favoriteButton = [NSButton buttonWithTitle:@"" target:self action:@selector(favoriteButtonAction:)];
+    _favoriteButton.translatesAutoresizingMaskIntoConstraints = NO;
+    _favoriteButton.imagePosition = NSImageOnly;
+    _favoriteButton.controlSize = NSControlSizeLarge;
+    if (@available(macOS 26.0, *)) {
+        _favoriteButton.bezelStyle = NSBezelStyleGlass;
+    } else {
+        _favoriteButton.bezelStyle = NSBezelStylePush;
+    }
+    _favoriteButton.image = [MacLCDesign symbolNamed:@"heart" accessibilityLabel:_NS("Add to Favorites")];
+    _favoriteButton.accessibilityLabel = _NS("Add to Favorites");
+    _favoriteButton.toolTip = _NS("Add to Favorites");
+    [_favoriteButton.widthAnchor constraintEqualToAnchor:_favoriteButton.heightAnchor].active = YES;
+
+    _actionsButton = [NSButton buttonWithTitle:@"" target:self action:@selector(actionsButtonAction:)];
+    _actionsButton.translatesAutoresizingMaskIntoConstraints = NO;
+    _actionsButton.imagePosition = NSImageOnly;
+    _actionsButton.controlSize = NSControlSizeLarge;
+    if (@available(macOS 26.0, *)) {
+        _actionsButton.bezelStyle = NSBezelStyleGlass;
+    } else {
+        _actionsButton.bezelStyle = NSBezelStylePush;
+    }
+    _actionsButton.image = [MacLCDesign symbolNamed:@"ellipsis" accessibilityLabel:_NS("More Options")];
+    _actionsButton.accessibilityLabel = _NS("More Options");
+    _actionsButton.toolTip = _NS("More Options");
+    [_actionsButton.widthAnchor constraintEqualToAnchor:_actionsButton.heightAnchor].active = YES;
+
+    _buttonsStack = [NSStackView stackViewWithViews:@[_playButton, _startOverButton, _trailerButton, _favoriteButton, _actionsButton]];
     _buttonsStack.translatesAutoresizingMaskIntoConstraints = NO;
     _buttonsStack.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     _buttonsStack.spacing = 12.0;
 
-    _headerLeadingStack = [NSStackView stackViewWithViews:@[_logoImageView, _titleLabel, _factsLabel, _descStack, _detailsLabel, _buttonsStack]];
+    _headerLeadingStack = [NSStackView stackViewWithViews:@[_logoImageView, _titleLabel, _factsStack, _descStack, _detailsLabel, _progressBar, _buttonsStack]];
     _headerLeadingStack.translatesAutoresizingMaskIntoConstraints = NO;
     _headerLeadingStack.orientation = NSUserInterfaceLayoutOrientationVertical;
     _headerLeadingStack.alignment = NSLayoutAttributeLeading;
     _headerLeadingStack.spacing = 6.0;
-    [_headerLeadingStack setCustomSpacing:12.0 afterView:_factsLabel];
+    [_headerLeadingStack setCustomSpacing:12.0 afterView:_factsStack];
     [_headerLeadingStack setCustomSpacing:12.0 afterView:_descStack];
     [_headerLeadingStack setCustomSpacing:16.0 afterView:_detailsLabel];
+    [_headerLeadingStack setCustomSpacing:16.0 afterView:_progressBar];
     [_headerView addSubview:_headerLeadingStack];
 
     // Header trailing credits (Cast & Director)
@@ -1573,6 +826,8 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
         [_logoImageView.widthAnchor constraintLessThanOrEqualToConstant:360.0],
         [_logoImageView.heightAnchor constraintLessThanOrEqualToConstant:120.0],
         [_titleLabel.widthAnchor constraintLessThanOrEqualToAnchor:_headerLeadingStack.widthAnchor],
+        [_progressBar.widthAnchor constraintEqualToConstant:200.0],
+        [_progressBar.heightAnchor constraintEqualToConstant:4.0],
         [_descLabel.widthAnchor constraintLessThanOrEqualToConstant:560.0],
         descWidthEqual,
         [_descLabel.trailingAnchor constraintLessThanOrEqualToAnchor:_creditsStack.leadingAnchor constant:-24.0],
@@ -1615,14 +870,26 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     };
     NSCollectionViewCompositionalLayout *layout = [[NSCollectionViewCompositionalLayout alloc] initWithSectionProvider:provider];
 
-    _episodesCollectionView = [[NSCollectionView alloc] initWithFrame:NSZeroRect];
-    _episodesCollectionView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    _episodesCollectionView.collectionViewLayout = layout;
-    _episodesCollectionView.dataSource = self;
-    _episodesCollectionView.delegate = self;
-    _episodesCollectionView.selectable = YES;
-    _episodesCollectionView.backgroundColors = @[NSColor.clearColor];
-    [_episodesCollectionView registerClass:[MacLCWatchEpisodeItem class] forItemWithIdentifier:MacLCWatchEpisodeItemIdentifier];
+    MacLCWatchEpisodesCollectionView * const epCV = [[MacLCWatchEpisodesCollectionView alloc] initWithFrame:NSZeroRect];
+    epCV.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    epCV.collectionViewLayout = layout;
+    epCV.dataSource = self;
+    epCV.delegate = self;
+    epCV.selectable = YES;
+    epCV.backgroundColors = @[NSColor.clearColor];
+    [epCV registerClass:[MacLCWatchEpisodeItem class] forItemWithIdentifier:MacLCWatchEpisodeItemIdentifier];
+
+    __weak typeof(self) weakSelf = self;
+    epCV.contextMenuProvider = ^NSMenu * _Nullable(NSIndexPath * _Nonnull indexPath) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return nil;
+        if (indexPath.item < (NSInteger)strongSelf->_episodesForCurrentSeason.count) {
+            MacLCAddonVideo *video = strongSelf->_episodesForCurrentSeason[indexPath.item];
+            return [MacLCWatchActions menuForItem:strongSelf->_item video:video inHistory:NO];
+        }
+        return nil;
+    };
+    _episodesCollectionView = epCV;
 
     _episodesScrollView = [[NSScrollView alloc] initWithFrame:NSZeroRect];
     _episodesScrollView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -1850,6 +1117,10 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(watchLibraryDidChange:)
+                                               name:MacLCWatchLibraryDidChangeNotification
+                                             object:nil];
     [self updateViewsWithItem];
     [self loadMeta];
 }
@@ -1900,6 +1171,7 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
 
     // Facts
     _factsLabel.stringValue = MacLCWatchFactsLine(_item.type, _item.genres, nil, nil);
+    _factsLabel.hidden = (_factsLabel.stringValue.length == 0);
 
     // Description & More button
     [self updateDescriptionText];
@@ -1907,8 +1179,11 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     // Details line
     [self updateDetailsLine];
 
-    // Play button
-    [self updatePlayButton];
+    // Play button & watch library states
+    [self updatePlayButtonAndStates];
+
+    // Favorite button
+    [self updateFavoriteButton];
 
     // About section
     [self updateAboutSection];
@@ -1925,6 +1200,7 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     // Facts
     NSArray *genres = (_meta.genres.count > 0) ? _meta.genres : _item.genres;
     _factsLabel.stringValue = MacLCWatchFactsLine(_item.type, genres, nil, nil);
+    _factsLabel.hidden = (_factsLabel.stringValue.length == 0);
 
     // Description & More button
     [self updateDescriptionText];
@@ -1932,8 +1208,11 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     // Details line
     [self updateDetailsLine];
 
-    // Play button
-    [self updatePlayButton];
+    // Play button & watch library states
+    [self updatePlayButtonAndStates];
+
+    // Favorite button
+    [self updateFavoriteButton];
 
     // Trailer
     if (_meta.trailerYouTubeIdentifier.length > 0) {
@@ -2091,20 +1370,135 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     _detailsLabel.stringValue = [parts componentsJoinedByString:@" · "];
 }
 
-- (void)updatePlayButton
+- (void)updatePlayButtonAndStates
 {
-    if ([self isSeries]) {
-        MacLCAddonVideo *firstEp = [self firstPlayableEpisode];
-        if (firstEp && firstEp.season >= 1 && firstEp.episode >= 1) {
-            _playButton.title = [NSString stringWithFormat:_NS("Play S%ld, E%ld"), (long)firstEp.season, (long)firstEp.episode];
+    MacLCWatchLibrary * const library = MacLCWatchLibrary.sharedLibrary;
+    MacLCWatchEntry * const entry = [library entryForTitle:_item.identifier];
+    const BOOL isSeries = [self isSeries];
+
+    if (!isSeries) {
+        MacLCWatchProgress * const movieProgress = [library progressForTitle:_item.identifier video:nil];
+        const BOOL canResume = (movieProgress != nil && movieProgress.canResume) ||
+                               (entry != nil && entry.resumeTarget != nil && entry.resumeTarget.kind == MacLCWatchResumeKindResume);
+        const BOOL isWatched = (movieProgress != nil && movieProgress.isWatched) || (entry != nil && entry.isWatched);
+
+        // Watched pill next to facts line (only for watched movie)
+        _watchedPill.hidden = !isWatched;
+
+        if (canResume) {
+            _playButton.title = _NS("Resume");
+            _playButton.image = [MacLCDesign symbolNamed:@"play.fill" accessibilityLabel:nil];
+            _startOverButton.hidden = NO;
+
+            // Subtitle in facts area
+            NSString *timeText = nil;
+            if (entry != nil && entry.resumeTarget != nil && entry.resumeTarget.detailText.length > 0) {
+                timeText = entry.resumeTarget.detailText;
+            } else {
+                NSTimeInterval remaining = (movieProgress != nil) ? movieProgress.remaining : 0.0;
+                if (remaining <= 0.0 && movieProgress != nil && movieProgress.duration > 0.0 && movieProgress.position > 0.0) {
+                    remaining = movieProgress.duration - movieProgress.position;
+                }
+                if (remaining > 0.0) {
+                    NSInteger const totalMins = (NSInteger)ceil(remaining / 60.0);
+                    if (totalMins >= 60) {
+                        NSInteger const h = totalMins / 60;
+                        NSInteger const m = totalMins % 60;
+                        if (m > 0) {
+                            timeText = [NSString stringWithFormat:_NS("%ld h %ld min left"), (long)h, (long)m];
+                        } else {
+                            timeText = [NSString stringWithFormat:_NS("%ld h left"), (long)h];
+                        }
+                    } else {
+                        timeText = [NSString stringWithFormat:_NS("%ld min left"), (long)totalMins];
+                    }
+                } else {
+                    timeText = _NS("Resume");
+                }
+            }
+            _factsSubtitleLabel.stringValue = timeText ?: @"";
+            _factsSubtitleLabel.hidden = NO;
+
+            // Progress bar under details line (200 wide, on picture, white)
+            double const fraction = (movieProgress != nil) ? movieProgress.fraction : ((entry != nil) ? entry.fraction : 0.0);
+            _progressBar.fraction = fraction;
+            _progressBar.hidden = NO;
+            [_headerLeadingStack setCustomSpacing:8.0 afterView:_detailsLabel];
         } else {
-            _playButton.title = _NS("Play S1, E1");
+            _startOverButton.hidden = YES;
+            _factsSubtitleLabel.stringValue = @"";
+            _factsSubtitleLabel.hidden = YES;
+            _progressBar.fraction = 0.0;
+            _progressBar.hidden = YES;
+            [_headerLeadingStack setCustomSpacing:16.0 afterView:_detailsLabel];
+
+            if (isWatched) {
+                _playButton.title = _NS("Play Again");
+                _playButton.image = [MacLCDesign symbolNamed:@"arrow.counterclockwise" accessibilityLabel:nil];
+            } else {
+                _playButton.title = _NS("Play");
+                _playButton.image = [MacLCDesign symbolNamed:@"play.fill" accessibilityLabel:nil];
+            }
         }
     } else {
-        _playButton.title = _NS("Play");
+        // Series
+        _watchedPill.hidden = YES;
+        _startOverButton.hidden = YES;
+        _factsSubtitleLabel.stringValue = @"";
+        _factsSubtitleLabel.hidden = YES;
+        _progressBar.fraction = 0.0;
+        _progressBar.hidden = YES;
+        [_headerLeadingStack setCustomSpacing:16.0 afterView:_detailsLabel];
+
+        MacLCAddonVideo *targetVideo = nil;
+        MacLCWatchResumeTarget * const target = entry.resumeTarget;
+        if (target != nil && _meta.videos.count > 0) {
+            for (MacLCAddonVideo *v in _meta.videos) {
+                if ([v.identifier isEqualToString:target.videoIdentifier] ||
+                    (v.season == target.season && v.episode == target.episode)) {
+                    targetVideo = v;
+                    break;
+                }
+            }
+        }
+
+        if (targetVideo != nil) {
+            if (target.kind == MacLCWatchResumeKindResume) {
+                _playButton.title = [NSString stringWithFormat:_NS("Resume S%ld, E%ld"), (long)target.season, (long)target.episode];
+            } else {
+                _playButton.title = [NSString stringWithFormat:_NS("Play S%ld, E%ld"), (long)target.season, (long)target.episode];
+            }
+        } else {
+            MacLCAddonVideo * const firstEp = [self firstPlayableEpisode];
+            if (firstEp != nil && firstEp.season >= 1 && firstEp.episode >= 1) {
+                _playButton.title = [NSString stringWithFormat:_NS("Play S%ld, E%ld"), (long)firstEp.season, (long)firstEp.episode];
+            } else {
+                _playButton.title = _NS("Play S1, E1");
+            }
+        }
+        _playButton.image = [MacLCDesign symbolNamed:@"play.fill" accessibilityLabel:nil];
     }
+
     _playButton.accessibilityLabel = _playButton.title;
     _playButton.toolTip = _playButton.title;
+}
+
+- (void)updateFavoriteButton
+{
+    BOOL const isFav = [MacLCWatchLibrary.sharedLibrary isFavorite:_item.identifier];
+    NSString * const symbol = isFav ? @"heart.fill" : @"heart";
+    NSString * const label = isFav ? _NS("Remove from Favorites") : _NS("Add to Favorites");
+    _favoriteButton.image = [MacLCDesign symbolNamed:symbol accessibilityLabel:label];
+    _favoriteButton.accessibilityLabel = label;
+    _favoriteButton.toolTip = label;
+    _favoriteButton.contentTintColor = isFav ? MacLCDesign.accent : nil;
+}
+
+- (void)favoriteButtonAction:(id)sender
+{
+    BOOL const isFav = [MacLCWatchLibrary.sharedLibrary isFavorite:_item.identifier];
+    [MacLCWatchLibrary.sharedLibrary setFavorite:!isFav forItem:_item];
+    [self updateFavoriteButton];
 }
 
 - (void)updateCredits
@@ -2203,6 +1597,9 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
             }
             if (meta) {
                 strongSelf.meta = meta;
+                if (meta.videos.count > 0) {
+                    [MacLCWatchLibrary.sharedLibrary updateEpisodes:meta.videos forItem:strongSelf->_item];
+                }
                 [strongSelf updateViewsWithMeta];
             }
         }
@@ -2299,30 +1696,240 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     MacLCWatchEpisodeItem *item = [collectionView makeItemWithIdentifier:MacLCWatchEpisodeItemIdentifier forIndexPath:indexPath];
     if (indexPath.item < (NSInteger)_episodesForCurrentSeason.count) {
         MacLCAddonVideo *video = _episodesForCurrentSeason[indexPath.item];
-        [item configureWithVideo:video];
+        [item configureWithVideo:video titleIdentifier:_item.identifier];
+        item.view.menu = [MacLCWatchActions menuForItem:_item video:video inHistory:NO];
 
         __weak typeof(self) weakSelf = self;
-        __weak typeof(item) weakItem = item;
         item.activationHandler = ^(MacLCAddonVideo *v) {
             __strong typeof(weakSelf) strongSelf = weakSelf;
-            __strong typeof(weakItem) strongItem = weakItem;
-            if (strongSelf && strongItem) {
-                [strongSelf showStreamPickerForVideo:v anchoredToView:strongItem.view];
+            if (strongSelf) {
+                [strongSelf activateEpisode:v];
             }
         };
     }
     return item;
 }
 
+- (void)collectionView:(NSCollectionView *)collectionView didSelectItemsAtIndexPaths:(NSSet<NSIndexPath *> *)indexPaths
+{
+    [collectionView deselectItemsAtIndexPaths:indexPaths];
+    NSIndexPath *indexPath = indexPaths.anyObject;
+    if (indexPath && indexPath.item < (NSInteger)_episodesForCurrentSeason.count) {
+        MacLCAddonVideo *video = _episodesForCurrentSeason[indexPath.item];
+        [self activateEpisode:video];
+    }
+}
+
+- (void)activateEpisode:(MacLCAddonVideo *)video
+{
+    MacLCWatchProgress * const progress = [MacLCWatchLibrary.sharedLibrary progressForTitle:_item.identifier video:video.identifier];
+    if (progress != nil && progress.canResume) {
+        BOOL const resumed = [MacLCWatchPlayback.sharedPlayback resumeProgress:progress item:_item];
+        if (resumed) {
+            return;
+        }
+    }
+    [self showStreamPickerForVideo:video];
+}
+
 #pragma mark - User Actions
 
 - (void)playButtonAction:(id)sender
 {
-    MacLCAddonVideo *video = nil;
-    if ([self isSeries]) {
-        video = [self firstPlayableEpisode];
+    MacLCWatchLibrary * const library = MacLCWatchLibrary.sharedLibrary;
+    MacLCWatchEntry * const entry = [library entryForTitle:_item.identifier];
+
+    if (![self isSeries]) {
+        MacLCWatchProgress * const movieProgress = [library progressForTitle:_item.identifier video:nil];
+        const BOOL canResume = (movieProgress != nil && movieProgress.canResume) ||
+                               (entry != nil && entry.resumeTarget != nil && entry.resumeTarget.kind == MacLCWatchResumeKindResume);
+
+        if (canResume) {
+            MacLCWatchProgress * const p = movieProgress ?: entry.resumeTarget.progress;
+            BOOL resumed = NO;
+            if (p != nil) {
+                resumed = [MacLCWatchPlayback.sharedPlayback resumeProgress:p item:_item];
+            }
+            if (!resumed) {
+                [self showStreamPickerForVideo:nil];
+            }
+            return;
+        }
+
+        const BOOL isWatched = (movieProgress != nil && movieProgress.isWatched) || (entry != nil && entry.isWatched);
+        if (isWatched) {
+            // "Play Again" — plays from 0
+            if (movieProgress != nil && movieProgress.streamMRL.length > 0) {
+                [MacLCWatchPlayback.sharedPlayback playMRL:movieProgress.streamMRL
+                                               streamLabel:movieProgress.streamLabel
+                                                      item:_item
+                                           videoIdentifier:nil
+                                                    season:0
+                                                   episode:0
+                                               episodeName:nil
+                                             startPosition:0.0];
+            } else {
+                [self showStreamPickerForVideo:nil];
+            }
+            return;
+        }
+
+        // Regular unwatched movie
+        [self showStreamPickerForVideo:nil];
+        return;
     }
-    [self showStreamPickerForVideo:video anchoredToView:_playButton];
+
+    // Series
+    MacLCAddonVideo *targetVideo = nil;
+    MacLCWatchResumeTarget * const target = entry.resumeTarget;
+    if (target != nil && _meta.videos.count > 0) {
+        for (MacLCAddonVideo *v in _meta.videos) {
+            if ([v.identifier isEqualToString:target.videoIdentifier] ||
+                (v.season == target.season && v.episode == target.episode)) {
+                targetVideo = v;
+                break;
+            }
+        }
+    }
+
+    if (targetVideo != nil) {
+        if (target.kind == MacLCWatchResumeKindResume) {
+            MacLCWatchProgress * const epProgress = target.progress ?: [library progressForTitle:_item.identifier video:targetVideo.identifier];
+            BOOL resumed = NO;
+            if (epProgress != nil) {
+                resumed = [MacLCWatchPlayback.sharedPlayback resumeProgress:epProgress item:_item];
+            }
+            if (!resumed) {
+                [self showStreamPickerForVideo:targetVideo];
+            }
+            return;
+        } else {
+            // Next up
+            [self showStreamPickerForVideo:targetVideo];
+            return;
+        }
+    }
+
+    // Fall back to lowest season >= 1
+    MacLCAddonVideo * const firstEp = [self firstPlayableEpisode];
+    [self showStreamPickerForVideo:firstEp];
+}
+
+- (void)startOverButtonAction:(id)sender
+{
+    MacLCWatchLibrary * const library = MacLCWatchLibrary.sharedLibrary;
+    MacLCWatchProgress * const movieProgress = [library progressForTitle:_item.identifier video:nil];
+    if (movieProgress != nil && movieProgress.streamMRL.length > 0) {
+        [MacLCWatchPlayback.sharedPlayback playMRL:movieProgress.streamMRL
+                                       streamLabel:movieProgress.streamLabel
+                                              item:_item
+                                   videoIdentifier:nil
+                                            season:0
+                                           episode:0
+                                       episodeName:nil
+                                     startPosition:0.0];
+    } else {
+        [self showStreamPickerForVideo:nil];
+    }
+}
+
+- (NSArray<MacLCAddonVideo *> *)releasedEpisodesForCurrentSeason
+{
+    NSMutableArray<MacLCAddonVideo *> * const released = [NSMutableArray array];
+    NSDate * const now = [NSDate date];
+    for (MacLCAddonVideo *v in _episodesForCurrentSeason) {
+        if (v.released == nil || [v.released compare:now] != NSOrderedDescending) {
+            [released addObject:v];
+        }
+    }
+    return [released copy];
+}
+
+- (NSMenu *)buildActionsMenu
+{
+    NSMenu *menu = [MacLCWatchActions menuForItem:_item video:nil inHistory:NO];
+    if (!menu) {
+        menu = [[NSMenu alloc] initWithTitle:@""];
+    }
+
+    if ([self isSeries] && _episodesForCurrentSeason.count > 0) {
+        NSArray<MacLCAddonVideo *> * const released = [self releasedEpisodesForCurrentSeason];
+        if (released.count > 0) {
+            NSInteger const seasonNum = _seasonPopUp.selectedTag;
+            BOOL allWatched = YES;
+            MacLCWatchLibrary * const library = MacLCWatchLibrary.sharedLibrary;
+            for (MacLCAddonVideo *v in released) {
+                MacLCWatchProgress *p = [library progressForTitle:_item.identifier video:v.identifier];
+                if (p == nil || !p.isWatched) {
+                    allWatched = NO;
+                    break;
+                }
+            }
+
+            if (menu.itemArray.count > 0) {
+                [menu addItem:[NSMenuItem separatorItem]];
+            }
+
+            NSString *title;
+            NSString *symbolName;
+            if (allWatched) {
+                title = (seasonNum == 0)
+                    ? _NS("Mark Specials as Unwatched")
+                    : [NSString stringWithFormat:_NS("Mark Season %ld as Unwatched"), (long)seasonNum];
+                symbolName = @"arrow.counterclockwise.circle";
+            } else {
+                title = (seasonNum == 0)
+                    ? _NS("Mark Specials as Watched")
+                    : [NSString stringWithFormat:_NS("Mark Season %ld as Watched"), (long)seasonNum];
+                symbolName = @"checkmark.circle";
+            }
+
+            NSMenuItem *seasonItem = [[NSMenuItem alloc] initWithTitle:title
+                                                                action:@selector(toggleSeasonWatched:)
+                                                         keyEquivalent:@""];
+            seasonItem.target = self;
+            seasonItem.image = [MacLCDesign symbolNamed:symbolName accessibilityLabel:title];
+            seasonItem.representedObject = @(allWatched);
+            [menu addItem:seasonItem];
+        }
+    }
+
+    return menu;
+}
+
+- (void)actionsButtonAction:(id)sender
+{
+    NSMenu * const menu = [self buildActionsMenu];
+    if (!menu) return;
+    NSPoint const pt = [sender isFlipped] ? NSMakePoint(0.0, NSHeight([sender bounds])) : NSZeroPoint;
+    [menu popUpMenuPositioningItem:nil atLocation:pt inView:sender];
+}
+
+- (void)toggleSeasonWatched:(NSMenuItem *)sender
+{
+    BOOL const wasAllWatched = [sender.representedObject boolValue];
+    BOOL const newWatched = !wasAllWatched;
+    NSArray<MacLCAddonVideo *> * const released = [self releasedEpisodesForCurrentSeason];
+    if (released.count > 0) {
+        [MacLCWatchLibrary.sharedLibrary markWatched:newWatched forItem:_item videos:released];
+    }
+}
+
+- (void)watchLibraryDidChange:(NSNotification *)notification
+{
+    NSSet<NSString *> * const changed = notification.userInfo[MacLCWatchLibraryChangedTitlesKey];
+    if (changed == nil || (_item.identifier != nil && [changed containsObject:_item.identifier])) {
+        [self updateWatchLibraryState];
+    }
+}
+
+- (void)updateWatchLibraryState
+{
+    [self updatePlayButtonAndStates];
+    [self updateFavoriteButton];
+    if ([self isSeries] && _episodesCollectionView != nil) {
+        [_episodesCollectionView reloadData];
+    }
 }
 
 - (void)trailerButtonAction:(id)sender
@@ -2377,24 +1984,24 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     [_descriptionPopover showRelativeToRect:_moreButton.bounds ofView:_moreButton preferredEdge:NSRectEdgeMaxY];
 }
 
-- (void)showStreamPickerForVideo:(nullable MacLCAddonVideo *)video anchoredToView:(NSView *)anchorView
+- (void)showStreamPickerForVideo:(nullable MacLCAddonVideo *)video
 {
-    if (_currentStreamPopover) {
-        [_currentStreamPopover performClose:nil];
-        _currentStreamPopover = nil;
-    }
+    NSWindow * const window = self.view.window;
+    if (!window) return;
 
-    MacLCWatchStreamPickerViewController *pickerVC = [[MacLCWatchStreamPickerViewController alloc] initWithItem:_item
-                                                                                                           video:video
-                                                                                                            meta:_meta];
-    NSPopover *popover = [[NSPopover alloc] init];
-    popover.behavior = NSPopoverBehaviorTransient;
-    popover.contentSize = NSMakeSize(420.0, [pickerVC preferredPickerHeight]);
-    popover.contentViewController = pickerVC;
-    pickerVC.popover = popover;
-    _currentStreamPopover = popover;
+    MacLCStreamPickerController * const picker =
+        [[MacLCStreamPickerController alloc] initWithItem:_item video:video];
+    _streamPickerController = picker;
 
-    [popover showRelativeToRect:anchorView.bounds ofView:anchorView preferredEdge:NSRectEdgeMaxY];
+    __weak typeof(self) weakSelf = self;
+    picker.completionHandler = ^(BOOL played) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf && strongSelf->_streamPickerController == picker) {
+            strongSelf->_streamPickerController = nil;
+        }
+    };
+
+    [picker beginSheetModalForWindow:window];
 }
 
 @end

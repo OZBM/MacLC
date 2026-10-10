@@ -21,6 +21,7 @@
 
 #import "MacLCAddonSearchWindowController.h"
 #import "MacLCAddons.h"
+#import "watch/MacLCWatchPlayback.h"
 
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCFormatBadgeView.h"
@@ -1855,11 +1856,11 @@ static NSString *SingularNameForType(NSString *type)
 
     msg_Dbg(getIntf(), "addons: playing \"%s\" %s", itemName.UTF8String, mrl.UTF8String);
 
-    VLCOpenInputMetadata * const meta = [[VLCOpenInputMetadata alloc] init];
-    meta.MRLString = mrl;
-    meta.itemName = itemName;
-
-    [VLCMain.sharedInstance.playQueueController addPlayQueueItems:@[meta] atPosition:(size_t)-1 startPlayback:YES];
+    /* From the start, as this window always did; the progress is recorded. */
+    [MacLCWatchPlayback.sharedPlayback playStream:_selectedStream
+                                             item:_selectedItem
+                                            video:_selectedVideo
+                                    startPosition:0];
     [self.window close];
 }
 
