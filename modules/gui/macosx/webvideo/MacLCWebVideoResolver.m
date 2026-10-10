@@ -68,6 +68,7 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
 - (instancetype)init {
     self = [super init];
     if (self) {
+        _extraArguments = @[];
         _tasksLock = [[NSLock alloc] init];
         _activeTasks = [NSMutableDictionary dictionary];
         _resolveQueue = dispatch_queue_create("com.hazenstudio.maclc.webvideoresolver", DISPATCH_QUEUE_SERIAL);
@@ -262,10 +263,21 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
     return MacLCWebVideoErrorExtractorFailed;
 }
 
+/* The fixed options, then the caller's extraArguments (cookies, language),
+ * then "--" and the address, so a hostile address is never read as an option. */
+- (NSArray<NSString *> *)_extractorArgumentsForTarget:(NSString *)target {
+    NSMutableArray<NSString *> *args = [@[@"--ignore-config", @"--no-warnings", @"--no-progress",
+                                          @"--socket-timeout", @"15", @"-J"] mutableCopy];
+    [args addObjectsFromArray:self.extraArguments ?: @[]];
+    [args addObject:@"--"];
+    [args addObject:target];
+    return args;
+}
+
 - (void)_runExtractorWithToken:(NSUUID *)token address:(NSString *)address extractor:(NSString *)extractor completion:(void (^)(MacLCWebVideoItem *_Nullable item, NSError *_Nullable error))completion {
     NSTask *task = [[NSTask alloc] init];
     task.executableURL = [NSURL fileURLWithPath:extractor];
-    task.arguments = @[@"--ignore-config", @"--no-warnings", @"--no-progress", @"--socket-timeout", @"15", @"-J", @"--", address];
+    task.arguments = [self _extractorArgumentsForTarget:address];
 
     NSPipe *outPipe = [NSPipe pipe];
     NSPipe *errPipe = [NSPipe pipe];
@@ -439,7 +451,7 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
                 if (firstUrl) {
                     NSTask *task = [[NSTask alloc] init];
                     task.executableURL = [NSURL fileURLWithPath:extractor];
-                    task.arguments = @[@"--ignore-config", @"--no-warnings", @"--no-progress", @"--socket-timeout", @"15", @"-J", @"--", firstUrl];
+                    task.arguments = [self _extractorArgumentsForTarget:firstUrl];
                     
                     [self.tasksLock lock];
                     self.activeTasks[token] = task;

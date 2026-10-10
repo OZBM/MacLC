@@ -32,6 +32,7 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/tests/MacLCWatchDiscoveryTest.m \
 	gui/macosx/tests/MacLCWatchLibraryTest.m \
 	gui/macosx/tests/MacLCTorrentStatsTest.m \
+	gui/macosx/tests/MacLCYouTubeModelTest.m \
 	gui/macosx/tests/MacLCNetworkAddressTest.m \
 	video_filter/maclc_frc_geometry.c \
 	video_output/apple/maclc_tonecurves.c \
@@ -48,6 +49,7 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/addons/watch/MacLCWatchDiscovery.m \
 	gui/macosx/addons/watch/MacLCWatchLibrary.m \
 	gui/macosx/torrent/MacLCTorrentStats.m \
+	gui/macosx/youtube/MacLCYouTubeModel.m \
 	gui/macosx/addons/watch/MacLCWatchCollectionsPool.m \
 	gui/macosx/cast/MacLCNetworkAddress.m \
 	gui/macosx/library/VLCInputItem.m \

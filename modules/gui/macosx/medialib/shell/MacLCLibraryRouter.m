@@ -33,6 +33,7 @@
 
 #import "addons/watch/MacLCWatchSections.h"
 #import "addons/watch/MacLCWatchLibrarySections.h"
+#import "youtube/MacLCYouTubeSections.h"
 
 NSNotificationName const MacLCLibraryRouterSectionDidChangeNotification =
     @"MacLCLibraryRouterSectionDidChangeNotification";
@@ -94,6 +95,12 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
         case VLCLibraryWatchShowsSegmentType:
         case VLCLibraryWatchFavoritesSegmentType:
         case VLCLibraryWatchHistorySegmentType:
+        case VLCLibraryYouTubeHomeSegmentType:
+        case VLCLibraryYouTubeSubscriptionsSegmentType:
+        case VLCLibraryYouTubeHistorySegmentType:
+        case VLCLibraryYouTubeWatchLaterSegmentType:
+        case VLCLibraryYouTubeLikedSegmentType:
+        case VLCLibraryYouTubePlaylistsSegmentType:
             return YES;
         default:
             return NO;
@@ -139,6 +146,18 @@ static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
             return MacLCWatchFavoritesSectionViewController.class;
         case VLCLibraryWatchHistorySegmentType:
             return MacLCWatchHistorySectionViewController.class;
+        case VLCLibraryYouTubeHomeSegmentType:
+            return MacLCYouTubeHomeSectionViewController.class;
+        case VLCLibraryYouTubeSubscriptionsSegmentType:
+            return MacLCYouTubeSubscriptionsSectionViewController.class;
+        case VLCLibraryYouTubeHistorySegmentType:
+            return MacLCYouTubeHistorySectionViewController.class;
+        case VLCLibraryYouTubeWatchLaterSegmentType:
+            return MacLCYouTubeWatchLaterSectionViewController.class;
+        case VLCLibraryYouTubeLikedSegmentType:
+            return MacLCYouTubeLikedSectionViewController.class;
+        case VLCLibraryYouTubePlaylistsSegmentType:
+            return MacLCYouTubePlaylistsSectionViewController.class;
         default:
             return nil;
     }

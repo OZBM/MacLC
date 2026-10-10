@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "/opt/homebrew/bin/yt-dlp", line 7, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/homebrew/Cellar/yt-dlp/2025.11.12/libexec/lib/python3.14/site-packages/yt_dlp/__init__.py", line 1079, in main
+    _exit(*variadic(_real_main(argv)))
+                    ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/yt-dlp/2025.11.12/libexec/lib/python3.14/site-packages/yt_dlp/__init__.py", line 981, in _real_main
+    with YoutubeDL(ydl_opts) as ydl:
+         ~~~~~~~~~^^^^^^^^^^
+  File "/opt/homebrew/Cellar/yt-dlp/2025.11.12/libexec/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py", line 1051, in __exit__
+    self.close()
+    ~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/yt-dlp/2025.11.12/libexec/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py", line 1054, in close
+    self.save_cookies()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/yt-dlp/2025.11.12/libexec/lib/python3.14/site-packages/yt_dlp/YoutubeDL.py", line 1046, in save_cookies
+    self.cookiejar.save()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/yt-dlp/2025.11.12/libexec/lib/python3.14/site-packages/yt_dlp/cookies.py", line 1323, in save
+    with self.open(filename, write=True) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.8/Frameworks/Python.framework/Versions/3.14/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/homebrew/Cellar/yt-dlp/2025.11.12/libexec/lib/python3.14/site-packages/yt_dlp/cookies.py", line 1278, in open
+    with open(file, 'w' if write else 'r', encoding='utf-8') as f:
+         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/nonexistent/cookies.txt'

@@ -573,6 +573,19 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/torrent/MacLCTorrentLoadingView.m \
 	gui/macosx/torrent/MacLCTorrentBufferViews.h \
 	gui/macosx/torrent/MacLCTorrentBufferViews.m \
+	gui/macosx/youtube/MacLCYouTubeModel.h \
+	gui/macosx/youtube/MacLCYouTubeModel.m \
+	gui/macosx/youtube/MacLCYouTubeService.h \
+	gui/macosx/youtube/MacLCYouTubeService.m \
+	gui/macosx/youtube/MacLCYouTubeAccount.h \
+	gui/macosx/youtube/MacLCYouTubeAccount.m \
+	gui/macosx/youtube/MacLCYouTubeSignInWindowController.h \
+	gui/macosx/youtube/MacLCYouTubeSignInWindowController.m \
+	gui/macosx/youtube/MacLCYouTubeViews.h \
+	gui/macosx/youtube/MacLCYouTubeViews.m \
+	gui/macosx/youtube/MacLCYouTubeSections.h \
+	gui/macosx/youtube/MacLCYouTubeSections.m \
+	gui/macosx/youtube/MacLCYouTubePages.m \
 	gui/macosx/cast/MacLCCastController.h \
 	gui/macosx/cast/MacLCCastController.m \
 	gui/macosx/cast/MacLCCastStatusView.h \

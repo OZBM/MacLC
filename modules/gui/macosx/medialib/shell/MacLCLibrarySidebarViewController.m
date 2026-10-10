@@ -223,6 +223,28 @@ static NSUserInterfaceItemIdentifier const kOutlineColumnID = @"MacLCSidebarOutl
     }
     [items addObject:watchHeader];
 
+    /* YouTube: its own group after Watch, as in the sections' file comment. */
+    MacLCSidebarItem * const youTubeHeader = [[MacLCSidebarItem alloc] init];
+    youTubeHeader.title = _NS("YouTube");
+    youTubeHeader.isHeader = YES;
+    youTubeHeader.segmentType = VLCLibraryYouTubeHomeSegmentType;
+    const struct { NSInteger type; NSString *title; NSString *symbol; } youTubeRows[] = {
+        { VLCLibraryYouTubeHomeSegmentType, _NS("Home"), @"house" },
+        { VLCLibraryYouTubeSubscriptionsSegmentType, _NS("Subscriptions"), @"play.square.stack" },
+        { VLCLibraryYouTubeHistorySegmentType, _NS("History"), @"clock.arrow.circlepath" },
+        { VLCLibraryYouTubeWatchLaterSegmentType, _NS("Watch Later"), @"clock" },
+        { VLCLibraryYouTubeLikedSegmentType, _NS("Liked Videos"), @"hand.thumbsup" },
+        { VLCLibraryYouTubePlaylistsSegmentType, _NS("Playlists"), @"list.and.film" },
+    };
+    for (size_t i = 0; i < ARRAY_SIZE(youTubeRows); i++) {
+        MacLCSidebarItem * const row = [[MacLCSidebarItem alloc] init];
+        row.title = youTubeRows[i].title;
+        row.image = [MacLCDesign symbolNamed:youTubeRows[i].symbol accessibilityLabel:row.title];
+        row.segmentType = youTubeRows[i].type;
+        [youTubeHeader.children addObject:row];
+    }
+    [items addObject:youTubeHeader];
+
     if (hasLibrary) {
         /* The library's own home, first of the Library group: "Home" is
          * Watch's. */

@@ -1,0 +1,1 @@
+ERROR: [youtube:tab] @thischannelshouldnotexist98765xyz: Unable to download API page: HTTP Error 404: Not Found (caused by <HTTPError 404: Not Found>)

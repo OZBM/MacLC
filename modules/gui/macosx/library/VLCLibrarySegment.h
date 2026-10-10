@@ -55,8 +55,15 @@ typedef NS_ENUM(NSInteger, VLCLibrarySegmentType) {
     VLCLibraryWatchHomeSegmentType,
     VLCLibraryWatchMoviesSegmentType,
     VLCLibraryWatchShowsSegmentType,
+    /* Watch Favorites and History, then the YouTube sections. Appended too. */
     VLCLibraryWatchFavoritesSegmentType,
     VLCLibraryWatchHistorySegmentType,
+    VLCLibraryYouTubeHomeSegmentType,
+    VLCLibraryYouTubeSubscriptionsSegmentType,
+    VLCLibraryYouTubeHistorySegmentType,
+    VLCLibraryYouTubeWatchLaterSegmentType,
+    VLCLibraryYouTubeLikedSegmentType,
+    VLCLibraryYouTubePlaylistsSegmentType,
     VLCLibraryHighSentinelSegment,
 };
 

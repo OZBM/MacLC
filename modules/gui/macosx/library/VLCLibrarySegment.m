@@ -808,6 +808,51 @@ NSArray<NSString *> *defaultBookmarkedLocations()
 @end
 
 
+// MARK: - YouTube segments
+
+/* Shown by the native library router (MacLCYouTubeSections.h). */
+@interface VLCLibraryYouTubeSegment : VLCLibrarySegment
+@end
+
+@implementation VLCLibraryYouTubeSegment
+
+- (instancetype)initWithSegmentType:(VLCLibrarySegmentType)segmentType
+                              title:(NSString *)title
+                         symbolName:(NSString *)symbolName
+{
+    self = [super initWithSegmentType:segmentType];
+    if (self) {
+        self.internalDisplayString = title;
+        self.internalSearchFieldPlaceholder = _NS("Search YouTube");
+        self.internalDisplayImage = [MacLCDesign symbolNamed:symbolName
+                                                   pointSize:15.
+                                                      weight:NSFontWeightRegular
+                                          accessibilityLabel:title];
+    }
+    return self;
+}
+
++ (instancetype)segmentWithYouTubeSegmentType:(VLCLibrarySegmentType)segmentType
+{
+    switch (segmentType) {
+        case VLCLibraryYouTubeSubscriptionsSegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("Subscriptions") symbolName:@"play.square.stack"];
+        case VLCLibraryYouTubeHistorySegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("History") symbolName:@"clock.arrow.circlepath"];
+        case VLCLibraryYouTubeWatchLaterSegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("Watch Later") symbolName:@"clock"];
+        case VLCLibraryYouTubeLikedSegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("Liked Videos") symbolName:@"hand.thumbsup"];
+        case VLCLibraryYouTubePlaylistsSegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("Playlists") symbolName:@"list.and.film"];
+        default:
+            return [[self alloc] initWithSegmentType:VLCLibraryYouTubeHomeSegmentType title:_NS("Home") symbolName:@"house"];
+    }
+}
+
+@end
+
+
 @interface VLCLibraryBrowseSegment : VLCLibrarySegment
 @end
 
@@ -890,6 +935,13 @@ NSArray<NSString *> *defaultBookmarkedLocations()
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchShowsSegmentType],
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchFavoritesSegmentType],
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchHistorySegmentType],
+        [[VLCLibraryHeaderSegment alloc] initWithDisplayString:_NS("YouTube")],
+        [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:VLCLibraryYouTubeHomeSegmentType],
+        [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:VLCLibraryYouTubeSubscriptionsSegmentType],
+        [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:VLCLibraryYouTubeHistorySegmentType],
+        [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:VLCLibraryYouTubeWatchLaterSegmentType],
+        [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:VLCLibraryYouTubeLikedSegmentType],
+        [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:VLCLibraryYouTubePlaylistsSegmentType],
     ]];
 
     if (VLCMain.sharedInstance.libraryController.shouldUseMediaLibrary) {
@@ -951,6 +1003,13 @@ NSArray<NSString *> *defaultBookmarkedLocations()
         case VLCLibraryWatchFavoritesSegmentType:
         case VLCLibraryWatchHistorySegmentType:
             return [VLCLibraryWatchSegment segmentWithWatchSegmentType:segmentType];
+        case VLCLibraryYouTubeHomeSegmentType:
+        case VLCLibraryYouTubeSubscriptionsSegmentType:
+        case VLCLibraryYouTubeHistorySegmentType:
+        case VLCLibraryYouTubeWatchLaterSegmentType:
+        case VLCLibraryYouTubeLikedSegmentType:
+        case VLCLibraryYouTubePlaylistsSegmentType:
+            return [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:segmentType];
         default:
             return nil;
     }

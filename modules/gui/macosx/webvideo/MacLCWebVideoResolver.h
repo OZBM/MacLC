@@ -87,6 +87,11 @@ typedef NS_ENUM(NSInteger, MacLCWebVideoErrorCode) {
 /** Absolute path of the discovered extractor, nil when none is installed. */
 @property (readonly, copy, nullable) NSString *extractorPath;
 
+/** Extra extractor options (cookies, extractor arguments), inserted before
+ * "--" in every extractor call. Empty by default: nothing changes unless a
+ * client such as the YouTube section sets it. */
+@property (copy) NSArray<NSString *> *extraArguments;
+
 /** Looks for the extractor again, after the user installed it. */
 - (void)refreshExtractorPath;
 

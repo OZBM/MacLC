@@ -54,6 +54,7 @@
 #import "addons/MacLCAddons.h"
 #import "addons/MacLCAddonSearchWindowController.h"
 #import "addons/watch/MacLCWatchSections.h"
+#import "youtube/MacLCYouTubeSections.h"
 #import "library/VLCLibraryWindowController.h"
 #import "library/VLCLibraryWindowNavigationSidebarViewController.h"
 #import "medialib/shell/MacLCLibrarySidebarViewController.h"
@@ -497,6 +498,36 @@ static VLCMain *sharedInstance = nil;
             if (then.length > 0 && [section isKindOfClass:MacLCWatchSectionViewController.class])
                 [(MacLCWatchSectionViewController *)section
                     debugOpenFirstFeaturedShowingStreams:[then isEqualToString:@"play"]];
+        });
+    }
+
+    /* MACLC_DEBUG_YOUTUBE=home|subscriptions|history|watchlater|liked|playlists[:<page>]
+     * selects that YouTube section; <page> (everything after the first ":")
+     * goes to its -debugOpen:, e.g. "search=swift" or "channel=https://...". */
+    const char * const debugYouTube = getenv("MACLC_DEBUG_YOUTUBE");
+    if (debugYouTube != NULL) {
+        NSString * const spec = @(debugYouTube);
+        const NSRange colon = [spec rangeOfString:@":"];
+        NSString * const name = colon.location == NSNotFound ? spec : [spec substringToIndex:colon.location];
+        NSString * const page = colon.location == NSNotFound ? @"" : [spec substringFromIndex:colon.location + 1];
+        NSInteger segmentType = VLCLibraryYouTubeHomeSegmentType;
+        if ([name isEqualToString:@"subscriptions"])
+            segmentType = VLCLibraryYouTubeSubscriptionsSegmentType;
+        else if ([name isEqualToString:@"history"])
+            segmentType = VLCLibraryYouTubeHistorySegmentType;
+        else if ([name isEqualToString:@"watchlater"])
+            segmentType = VLCLibraryYouTubeWatchLaterSegmentType;
+        else if ([name isEqualToString:@"liked"])
+            segmentType = VLCLibraryYouTubeLikedSegmentType;
+        else if ([name isEqualToString:@"playlists"])
+            segmentType = VLCLibraryYouTubePlaylistsSegmentType;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            VLCLibraryWindow * const window = (VLCLibraryWindow *)self->_libraryWindowController.window;
+            [window.splitViewController.navSidebarViewController selectSegment:segmentType];
+            MacLCLibrarySectionViewController * const section =
+                [MacLCLibraryRouter routerForLibraryWindow:window].currentSection;
+            if (page.length > 0 && [section isKindOfClass:MacLCYouTubeSectionViewController.class])
+                [(MacLCYouTubeSectionViewController *)section debugOpen:page];
         });
     }
 
