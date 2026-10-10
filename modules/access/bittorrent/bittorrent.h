@@ -52,6 +52,38 @@
 namespace maclc_bt
 {
 
+/* What the interface shows of one open file (a reader). Written by the
+ * reader and read by the snapshot, both under the session lock; the reader
+ * registers it in its Torrent (`streams`) at open and takes it out at close,
+ * so the snapshot never sees a freed one. */
+struct ReaderStats
+{
+    std::string file;                /* path inside the torrent */
+    int64_t size = 0;
+    int64_t file_offset = 0;         /* where the file starts in the torrent */
+    int piece_length = 0;
+    int first_piece = 0;
+    int last_piece = 0;
+
+    uint64_t pos = 0;                /* reading position in the file */
+    int window_end = 0;              /* first piece past the deadline window */
+    int64_t need = 0;                /* verified bytes the start gate wants */
+    bool gating = false;             /* the start gate is waiting */
+    bool fresh = false;              /* gate open, nothing read since */
+    vlc_tick_t wait_since = VLC_TICK_INVALID; /* a read waits for a piece */
+    double rate_in = 0;              /* bytes/s the player reads, 0 unknown */
+};
+
+using ReaderStatsRef = std::shared_ptr<ReaderStats>;
+
+struct TrackerStat
+{
+    std::string url;
+    std::string state;               /* updating, ok, error */
+    std::string message;
+    int peers = -1;
+};
+
 /* A piece as libtorrent read it back (read_piece_alert). */
 struct PieceData
 {
@@ -66,8 +98,12 @@ struct Torrent
     std::string key;                 /* hex of the best info hash */
     std::string save_path;           /* where its files are written */
 
+    std::string name;                /* display name */
     int users = 0;                   /* readers and accesses holding it */
     vlc_tick_t idle_since = VLC_TICK_INVALID;
+    vlc_tick_t added_at = VLC_TICK_INVALID;      /* first Acquire() */
+    vlc_tick_t last_user_at = VLC_TICK_INVALID;  /* users went up last */
+    vlc_tick_t first_data_at = VLC_TICK_INVALID; /* first piece verified */
 
     bool has_metadata = false;
     std::shared_ptr<const lt::torrent_info> info;
@@ -81,6 +117,19 @@ struct Torrent
     int download_rate = 0;           /* bytes per second, payload */
     int upload_rate = 0;
     int progress_ppm = 0;            /* of what is wanted */
+    int64_t downloaded = 0;          /* payload bytes, whole life */
+    int64_t uploaded = 0;
+    int swarm_seeds = -1;            /* per the trackers' scrapes, -1 unknown */
+    int swarm_leechers = -1;
+
+    /* Refreshed by the session thread about twice a second for torrents
+     * somebody uses, so that the snapshot costs no libtorrent round trip. */
+    int peers_connecting = 0;
+    int peers_handshaking = 0;
+    int peers_unchoked = 0;          /* connected and not choking us */
+    int src_tracker = 0, src_dht = 0, src_pex = 0, src_lsd = 0, src_incoming = 0;
+    std::vector<TrackerStat> trackers;
+    std::vector<ReaderStatsRef> streams;   /* open files, oldest first */
 
     /* Verified pieces are read through libtorrent, never from the files it
      * writes: a piece is announced once its hash matches, which can be
@@ -106,6 +155,14 @@ void Broadcast();
 TorrentRef Acquire(vlc_object_t *obj, lt::add_torrent_params &&params,
                    std::string &err);
 void Release(TorrentRef &torrent);
+
+/* Verified bytes in a row from `pos` in the file of `stats` (whole pieces,
+ * clipped to the file). Lock held. */
+int64_t VerifiedAhead(const Torrent &torrent, const ReaderStats &stats, uint64_t pos);
+
+/* Makes the interface's snapshot function ("maclc-bt-snapshot") reachable
+ * from obj's libvlc instance; cheap once done. */
+void PublishSnapshot(vlc_object_t *obj);
 
 /* The folder the session downloads into (created if needed). */
 std::string DownloadDir(vlc_object_t *obj);

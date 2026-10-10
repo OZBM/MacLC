@@ -82,7 +82,13 @@ static void ExtractorClose(vlc_object_t *);
 #define PORT_TEXT N_("Listening port")
 #define PORT_LONGTEXT N_("0 picks a free port each time.")
 #define CACHING_TEXT N_("Caching (ms)")
-#define CACHING_LONGTEXT N_("How much of a torrent to buffer before playing.")
+#define CACHING_LONGTEXT N_("How much media is kept ready ahead of the playing " \
+    "position, in milliseconds. The default (3000) picks 3 to 20 seconds " \
+    "from the size of the start buffer; any other value is used as is.")
+#define PREBUFFER_TEXT N_("Start buffer (seconds)")
+#define PREBUFFER_LONGTEXT N_("Seconds of the film to download before " \
+    "playback starts. 0 picks the amount from the size of the film and the " \
+    "download speed.")
 
 vlc_module_begin()
     set_shortname(N_("BitTorrent"))
@@ -99,6 +105,8 @@ vlc_module_begin()
     add_integer_with_range("bittorrent-port", 0, 0, 65535, PORT_TEXT, PORT_LONGTEXT)
     add_integer_with_range("bittorrent-caching", 3000, 0, 60000,
                            CACHING_TEXT, CACHING_LONGTEXT)
+    add_integer_with_range("bittorrent-prebuffer", 0, 0, 600,
+                           PREBUFFER_TEXT, PREBUFFER_LONGTEXT)
 
     /* The session thread lives past the last stream, and an atexit handler
      * stops it: the code must stay mapped. */
@@ -288,14 +296,23 @@ void OnInterrupt(void *data)
 
 enum class Waited { Ready, Stopped, Cancelled, Failed, TimedOut };
 
+/* The macOS interface draws the progress of a torrent itself and says so. */
+bool InterfaceDrawsProgress(vlc_object_t *obj)
+{
+    vlc_object_t *libvlc = VLC_OBJECT(vlc_object_instance(obj));
+    return var_Type(libvlc, "maclc-bt-gui") != 0 && var_GetBool(libvlc, "maclc-bt-gui");
+}
+
 /* Waits until ready() holds (called with the session lock held). A progress
- * dialog shows once the wait gets long; *dialog stays up for the caller to
- * release, so that repeated short waits do not make it blink. */
+ * dialog shows once the wait gets long, unless the interface draws it;
+ * *dialog stays up for the caller to release, so that repeated short waits
+ * do not make it blink. */
 Waited WaitFor(vlc_object_t *obj, const TorrentRef &t,
                const std::function<bool()> &ready,
                const std::function<std::string()> &describe,
                vlc_tick_t timeout, vlc_dialog_id **dialog)
 {
+    const bool silent = InterfaceDrawsProgress(obj);
     WaitState state;
     vlc_interrupt_register(OnInterrupt, &state);
 
@@ -326,10 +343,12 @@ Waited WaitFor(vlc_object_t *obj, const TorrentRef &t,
         }
         if (now >= next_update)
         {
-            const std::string text = describe();
+            const std::string text = silent ? std::string() : describe();
             Unlock();
             bool cancelled = false;
-            if (*dialog == NULL)
+            if (silent)
+                ; /* the interface shows it */
+            else if (*dialog == NULL)
                 *dialog = vlc_dialog_display_progress(obj, true, 0.f, _("Cancel"),
                                                       _("BitTorrent"), "%s",
                                                       text.c_str());
@@ -526,6 +545,7 @@ static int AccessOpen(vlc_object_t *obj)
     stream_t *access = (stream_t *)obj;
     if (access->psz_url == NULL || strncasecmp(access->psz_url, "magnet:", 7) != 0)
         return VLC_EGENERIC;
+    PublishSnapshot(obj);
 
     try
     {
@@ -738,6 +758,7 @@ static int DirectoryOpen(vlc_object_t *obj)
     stream_directory_t *directory = (stream_directory_t *)obj;
     if (!LooksLikeTorrent(directory->source))
         return VLC_EGENERIC;
+    PublishSnapshot(obj);
 
     try
     {
@@ -799,14 +820,56 @@ struct Reader
     vlc_dialog_id *dialog = NULL;
     input_item_t *item = NULL;    /* not owned */
     vlc_tick_t next_info = VLC_TICK_INVALID;
+
+    ReaderStatsRef stats;         /* what the interface sees, session lock */
+    int64_t bitrate = 0;          /* estimated, bytes per second */
+    int64_t window_bytes = 0;     /* how far ahead pieces get deadlines */
+    vlc_tick_t next_window = VLC_TICK_INVALID; /* next window recalculation */
+    std::vector<int> tail_pieces; /* asked for by PrefetchTail() */
+    vlc_tick_t pts_delay = VLC_TICK_INVALID;   /* once the start gate is open */
+
+    /* What the player consumes, for the window and the snapshot (lock). */
+    vlc_tick_t last_read = VLC_TICK_INVALID;
+    vlc_tick_t rate_clock = VLC_TICK_INVALID;
+    uint64_t rate_pos = 0;
+    bool rate_known = false;
+    bool rate_warm = false;
+    double rate_avg = 0;
 };
+
+constexpr int64_t kMinWindow = 48ll << 20;
+constexpr int64_t kMaxWindow = 384ll << 20;
 
 /* How far ahead of the reading position pieces get deadlines, and how far
  * apart the deadlines are: bytes and time, whatever the piece size. */
-int WindowPieces(int piece_length)
+int WindowPieces(const Reader *r)
 {
-    const int64_t window = 48ll << 20;
-    return (int)std::clamp<int64_t>((window + piece_length - 1) / piece_length, 4, 256);
+    const int64_t length = r->piece_length;
+    return (int)std::clamp<int64_t>((r->window_bytes + length - 1) / length, 4, 4096);
+}
+
+/* Two minutes of what the player actually reads, at least the 48 MiB that
+ * suit an ordinary film; seen again every few seconds, never in the middle
+ * of a placement. Pieces already given a deadline keep it: Schedule() only
+ * ever moves the end of the window forward. */
+void UpdateWindow(Reader *r)
+{
+    const vlc_tick_t now = vlc_tick_now();
+    if (r->next_window != VLC_TICK_INVALID && now < r->next_window)
+        return;
+    r->next_window = now + VLC_TICK_FROM_SEC(5);
+    Lock();
+    const double rate = r->stats->rate_in;
+    Unlock();
+    r->window_bytes = rate > 0 ? std::clamp<int64_t>((int64_t)(rate * 120), kMinWindow, kMaxWindow)
+                               : kMinWindow;
+}
+
+void SyncWindow(Reader *r)
+{
+    Lock();
+    r->stats->window_end = r->window_end;
+    Unlock();
 }
 
 int DeadlineStep(int piece_length)
@@ -918,7 +981,8 @@ void Schedule(Reader *r, int piece)
         return;
     r->seen = piece;
 
-    const int count = WindowPieces(r->piece_length);
+    UpdateWindow(r);
+    const int count = WindowPieces(r);
     const int step = DeadlineStep(r->piece_length);
 
     if (r->head >= 0 && piece != r->head + 1)
@@ -988,7 +1052,8 @@ void Schedule(Reader *r, int piece)
     });
     for (const auto &d : deadlines)
         r->timed.push_back(d.first);
-    if (r->timed.size() > 1024)
+    SyncWindow(r);
+    if (r->timed.size() > std::max<size_t>(1024, 2 * count))
     {
         /* Reading on only adds: forget what arrived. */
         Lock();
@@ -1024,6 +1089,173 @@ void PrefetchTail(Reader *r)
         SetPriority(r->torrent->handle, pieces, PriorityAt(1));
     });
     r->timed.insert(r->timed.end(), pieces.begin(), pieces.end());
+    r->tail_pieces = pieces;
+}
+
+/* Gives deadlines to the pieces between the end of the window and where a
+ * larger window now reaches (the start gate asks for more than 48 MiB when
+ * the swarm is slow). */
+void Extend(Reader *r)
+{
+    const int end = std::min(r->last_piece + 1, r->head + WindowPieces(r));
+    if (r->head < 0 || end <= r->window_end)
+        return;
+    const int step = DeadlineStep(r->piece_length);
+    std::vector<std::pair<int, int>> deadlines;
+    std::vector<std::pair<lt::piece_index_t, lt::download_priority_t>> priorities;
+    Lock();
+    for (int k = r->window_end; k < end; k++)
+        if (!r->torrent->have[k])
+        {
+            deadlines.emplace_back(k, (k - r->head) * step);
+            priorities.emplace_back(lt::piece_index_t(k), PriorityAt(k - r->head));
+        }
+    Unlock();
+    r->window_end = end;
+    const lt::torrent_handle &h = r->torrent->handle;
+    Try([&] {
+        for (const auto &d : deadlines)
+            h.set_piece_deadline(lt::piece_index_t(d.first), d.second);
+        if (!priorities.empty())
+            h.prioritize_pieces(priorities);
+    });
+    for (const auto &d : deadlines)
+        r->timed.push_back(d.first);
+    SyncWindow(r);
+}
+
+/*****************************************************************************
+ * The start gate
+ *****************************************************************************/
+
+/* Playback does not start on the first piece: the player would be reading at
+ * the speed of the network from its first byte, and the first hiccup would be
+ * a stall. The gate waits until a few seconds of film are verified. */
+constexpr int64_t kGateMin = 8ll << 20;
+constexpr int64_t kGateMax = 512ll << 20;
+constexpr int64_t kGateMargin = 16ll << 20;  /* window beyond what the gate wants */
+constexpr vlc_tick_t kGateTimeout = VLC_TICK_FROM_SEC(120);
+
+struct GatePlan
+{
+    int seconds = 20;            /* of media */
+    int64_t need = 0;            /* verified bytes from the start of the file */
+};
+
+/* A film's bitrate from its size alone: a 100-minute film, kept between
+ * 1.5 and 60 Mbit/s. */
+int64_t EstimateBitrate(int64_t size)
+{
+    return std::clamp<int64_t>(size / 6000, 187500, 7500000); /* bytes per second */
+}
+
+/* How much to wait for, from what is known now (lock held): the user's
+ * choice, else 20 s of film until the swarm's speed is known (two seconds of
+ * data), then 10 to 90 s by how much faster than the film it is. */
+GatePlan PlanGate(const Reader *r, const Torrent &t, int user_seconds)
+{
+    GatePlan plan;
+    const vlc_tick_t now = vlc_tick_now();
+    const bool known = t.first_data_at != VLC_TICK_INVALID
+                    && now - t.first_data_at >= VLC_TICK_FROM_SEC(2) && t.download_rate > 0;
+    if (user_seconds > 0)
+        plan.seconds = user_seconds;
+    else if (known)
+    {
+        const double fill = (double)t.download_rate / (double)r->bitrate;
+        plan.seconds = fill >= 4 ? 10 : fill >= 1.5 ? 20 : fill >= 1 ? 45 : 90;
+    }
+    const int64_t cap = std::min<int64_t>(r->size / 4, kGateMax);
+    plan.need = std::min<int64_t>(std::max<int64_t>(plan.seconds * r->bitrate, kGateMin), cap);
+    return plan;
+}
+
+/* Lock held. */
+bool GateReached(const Reader *r, const Torrent &t, int64_t need)
+{
+    for (int k : r->tail_pieces)
+        if (!t.have[k])
+            return false;
+    return VerifiedAhead(t, *r->stats, 0) >= need;
+}
+
+/* Waits for the gate to open, widening the window when the plan grows beyond
+ * it. Gives up after two minutes (TimedOut: play anyway). */
+Waited RunGate(stream_extractor_t *extractor, Reader *r, int user_seconds,
+               GatePlan &plan, vlc_tick_t &spent)
+{
+    const TorrentRef &t = r->torrent;
+    const vlc_tick_t start = vlc_tick_now();
+    vlc_dialog_id *dialog = NULL;
+    Waited waited = Waited::Ready;
+    for (;;)
+    {
+        bool reached = false;
+        const vlc_tick_t left = kGateTimeout - (vlc_tick_now() - start);
+        if (left <= 0)
+        {
+            waited = Waited::TimedOut;
+            break;
+        }
+        waited = WaitFor(VLC_OBJECT(extractor), t,
+            [&] {
+                plan = PlanGate(r, *t, user_seconds);
+                r->stats->need = plan.need;
+                reached = GateReached(r, *t, plan.need);
+                return reached || plan.need + kGateMargin > r->window_bytes;
+            },
+            [&] {
+                const int64_t ahead = VerifiedAhead(*t, *r->stats, 0);
+                char text[64];
+                snprintf(text, sizeof(text), " (%d%%)",
+                         plan.need > 0 ? (int)std::min<int64_t>(100, ahead * 100 / plan.need) : 100);
+                return std::string(_("Buffering")) + " \"" + r->name + "\"" + text + "\n" + Rates(t);
+            },
+            left, &dialog);
+        if (waited != Waited::Ready || reached)
+            break;
+        r->window_bytes = plan.need + kGateMargin;
+        Extend(r);
+    }
+    if (dialog != NULL)
+        vlc_dialog_release(VLC_OBJECT(extractor), dialog);
+    spent = vlc_tick_now() - start;
+    return waited;
+}
+
+/* The player's consumption, as a moving average of file bytes per second of
+ * wall time, one sample per six seconds or more (lock held, r->pos up to
+ * date). It counts how far the position moved, not the bytes read: a player
+ * that does not play the video track skips it with seeks. The player reads
+ * in bursts a couple of seconds apart, so a shorter sample would measure the
+ * bursts. Ten seconds without a read is a pause or a long wait, and a big
+ * jump (see ExtractorSeek) is a seek: the clock restarts at the next read.
+ * The first sample, which holds the burst of the player filling its own
+ * cache, is dropped. */
+void Consumed(Reader *r)
+{
+    const vlc_tick_t now = vlc_tick_now();
+    if (r->last_read == VLC_TICK_INVALID || now - r->last_read > VLC_TICK_FROM_SEC(10))
+    {
+        r->rate_clock = now;
+        r->rate_pos = r->pos;
+    }
+    r->last_read = now;
+    const vlc_tick_t span = now - r->rate_clock;
+    if (span < VLC_TICK_FROM_SEC(6))
+        return;
+    const double moved = r->pos > r->rate_pos ? (double)(r->pos - r->rate_pos) : 0.;
+    const double sample = moved * CLOCK_FREQ / (double)span;
+    r->rate_clock = now;
+    r->rate_pos = r->pos;
+    if (!r->rate_warm)
+    {
+        r->rate_warm = true; /* the first sample holds the player's start-up burst */
+        return;
+    }
+    r->rate_avg = r->rate_known ? 0.7 * r->rate_avg + 0.3 * sample : sample;
+    r->rate_known = true;
+    r->stats->rate_in = r->rate_avg;
 }
 
 void UpdateInfo(stream_extractor_t *extractor, Reader *r)
@@ -1049,11 +1281,31 @@ void UpdateInfo(stream_extractor_t *extractor, Reader *r)
     FlushLog(VLC_OBJECT(extractor));
 }
 
+/* Says in the snapshot that a read is waiting for a piece, for as long as
+ * this lives. */
+struct WaitMark
+{
+    Reader *r;
+    explicit WaitMark(Reader *reader) : r(reader)
+    {
+        Lock();
+        r->stats->wait_since = vlc_tick_now();
+        Unlock();
+    }
+    ~WaitMark()
+    {
+        Lock();
+        r->stats->wait_since = VLC_TICK_INVALID;
+        Unlock();
+    }
+};
+
 /* Waits for the piece to be verified, then for libtorrent to read it back,
  * and keeps it in the reader. */
 bool FetchPiece(stream_extractor_t *extractor, Reader *r, int piece)
 {
     const TorrentRef &t = r->torrent;
+    const WaitMark mark(r);
     auto buffering = [&] {
         return std::string(_("Buffering")) + " \"" + r->name + "\"\n" + Rates(t);
     };
@@ -1161,6 +1413,11 @@ ssize_t ExtractorRead(stream_extractor_t *extractor, void *buf, size_t len)
         const size_t n = (size_t)std::min<int64_t>((int64_t)len, available);
         memcpy(buf, r->cur_data.get() + in_piece, n);
         r->pos += n;
+        Lock();
+        r->stats->pos = r->pos;
+        r->stats->fresh = false;
+        Consumed(r);
+        Unlock();
         UpdateInfo(extractor, r);
         return n;
     }
@@ -1175,7 +1432,13 @@ ssize_t ExtractorRead(stream_extractor_t *extractor, void *buf, size_t len)
 int ExtractorSeek(stream_extractor_t *extractor, uint64_t pos)
 {
     Reader *r = static_cast<Reader *>(extractor->p_sys);
+    Lock();
+    /* Skipping a few chunks is reading on; a real jump restarts the rate. */
+    if (pos + (1u << 20) < r->pos || pos > r->pos + (16u << 20))
+        r->last_read = VLC_TICK_INVALID;
     r->pos = pos;
+    r->stats->pos = pos;
+    Unlock();
     /* The window moves on the next read, when it is known that the data
      * there is really wanted. */
     return VLC_SUCCESS;
@@ -1203,8 +1466,12 @@ int ExtractorControl(stream_extractor_t *extractor, int query, va_list args)
             *va_arg(args, uint64_t *) = r->size;
             return VLC_SUCCESS;
         case STREAM_GET_PTS_DELAY:
-            *va_arg(args, vlc_tick_t *) =
-                VLC_TICK_FROM_MS(var_InheritInteger(extractor, "bittorrent-caching"));
+            /* What VLC keeps demuxed ahead of the clock: a stall shorter
+             * than this does not show. Left at its default, it follows
+             * the start buffer chosen when the stream opened. */
+            *va_arg(args, vlc_tick_t *) = r->pts_delay != VLC_TICK_INVALID
+                ? r->pts_delay
+                : VLC_TICK_FROM_MS(var_InheritInteger(extractor, "bittorrent-caching"));
             return VLC_SUCCESS;
         case STREAM_SET_PAUSE_STATE:
             return VLC_SUCCESS;
@@ -1240,123 +1507,16 @@ int FindFile(const lt::file_storage &files, const char *identifier)
 
 } /* namespace */
 
-static int ExtractorOpen(vlc_object_t *obj)
+/* Everything ExtractorOpen() set up, undone: used by the close and by an open
+ * that fails after the reader registered itself. */
+static void Teardown(Reader *r)
 {
-    stream_extractor_t *extractor = (stream_extractor_t *)obj;
-    if (!LooksLikeTorrent(extractor->source))
-        return VLC_EGENERIC;
-
-    stream_t *access = BottomOf(extractor->source);
-    if (access->b_preparsing)
-    {
-        /* Preparsing would start a download to read a duration. */
-        msg_Dbg(extractor, "not streaming a torrent to preparse it");
-        return VLC_EGENERIC;
-    }
-
-    try
-    {
-        lt::add_torrent_params params;
-        std::string err;
-        if (!LoadTorrent(extractor->source, params, err))
-        {
-            msg_Dbg(extractor, "not a torrent: %s", err.c_str());
-            return VLC_EGENERIC;
-        }
-        const lt::file_storage &files = FilesOf(*params.ti);
-        const int index = FindFile(files, extractor->identifier);
-        if (index < 0)
-        {
-            msg_Err(extractor, "no file \"%s\" in torrent \"%s\"",
-                    extractor->identifier, params.ti->name().c_str());
-            return VLC_EGENERIC;
-        }
-
-        auto r = std::make_unique<Reader>();
-        r->file = lt::file_index_t(index);
-        r->name = files.file_path(r->file);
-        r->size = files.file_size(r->file);
-        r->file_offset = files.file_offset(r->file);
-        r->piece_length = params.ti->piece_length();
-        r->first_piece = (int)(r->file_offset / r->piece_length);
-        r->last_piece = r->size > 0
-                      ? (int)((r->file_offset + r->size - 1) / r->piece_length)
-                      : r->first_piece;
-        /* A read in the last 16 MiB while the window is elsewhere is taken
-         * for a demuxer reading an index there, not for a seek. */
-        r->tail_first = PieceOf(r.get(), r->size - std::min<int64_t>(r->size, 16ll << 20));
-        r->item = access->p_input_item;
-        const std::string name = r->name;
-
-        r->torrent = Acquire(obj, std::move(params), err);
-        if (r->torrent == nullptr)
-        {
-            msg_Err(extractor, "cannot add the torrent: %s", err.c_str());
-            return VLC_EGENERIC;
-        }
-        const TorrentRef &t = r->torrent;
-
-        /* Added from its metadata, it has it at once; a magnet added by the
-         * access has it too by now. Wait a little in case of a race. */
-        vlc_dialog_id *dialog = NULL;
-        const Waited waited = WaitFor(obj, t, [&] { return t->has_metadata; },
-                                      [&] { return name; },
-                                      VLC_TICK_FROM_SEC(30), &dialog);
-        if (dialog != NULL)
-            vlc_dialog_release(obj, dialog);
-        Lock();
-        const bool consistent = waited == Waited::Ready
-                             && (int)t->have.size() > r->last_piece
-                             && (int)t->readers.size() > index;
-        if (consistent)
-            t->readers[index]++;
-        Unlock();
-        if (!consistent)
-        {
-            msg_Err(extractor, "the torrent's metadata is not usable");
-            Release(r->torrent);
-            return VLC_EGENERIC;
-        }
-
-        /* The file stays at priority 0: only pieces with a deadline (the
-         * window ahead of the reader and the end of the file) are asked
-         * for, so peers serve them in deadline order. A file downloaded at
-         * normal priority fills the peers' request queues with pieces the
-         * player does not need yet, and the one it waits for comes last
-         * (set_piece_deadline raises its piece to the top priority). */
-        Schedule(r.get(), r->first_piece);
-        if (WantsTail(name))
-            PrefetchTail(r.get());
-
-        msg_Dbg(extractor, "streaming \"%s\" (%" PRId64 " bytes, pieces %d-%d of %d KiB)",
-                name.c_str(), r->size, r->first_piece, r->last_piece,
-                r->piece_length / 1024);
-
-        extractor->pf_read = ExtractorRead;
-        extractor->pf_seek = ExtractorSeek;
-        extractor->pf_control = ExtractorControl;
-        extractor->p_sys = r.release();
-        return VLC_SUCCESS;
-    }
-    catch (const std::exception &e)
-    {
-        msg_Err(extractor, "%s", e.what());
-        return VLC_EGENERIC;
-    }
-}
-
-static void ExtractorClose(vlc_object_t *obj)
-{
-    stream_extractor_t *extractor = (stream_extractor_t *)obj;
-    Reader *r = static_cast<Reader *>(extractor->p_sys);
-
-    if (r->dialog != NULL)
-        vlc_dialog_release(obj, r->dialog);
-
     try
     {
         const int index = static_cast<int>(r->file);
         Lock();
+        auto &streams = r->torrent->streams;
+        streams.erase(std::remove(streams.begin(), streams.end(), r->stats), streams.end());
         bool nobody = false, alone = true;
         if (index < (int)r->torrent->readers.size())
         {
@@ -1377,5 +1537,188 @@ static void ExtractorClose(vlc_object_t *obj)
     catch (...)
     {
     }
+}
+
+static int ExtractorOpen(vlc_object_t *obj)
+{
+    stream_extractor_t *extractor = (stream_extractor_t *)obj;
+    if (!LooksLikeTorrent(extractor->source))
+        return VLC_EGENERIC;
+
+    stream_t *access = BottomOf(extractor->source);
+    if (access->b_preparsing)
+    {
+        /* Preparsing would start a download to read a duration. */
+        msg_Dbg(extractor, "not streaming a torrent to preparse it");
+        return VLC_EGENERIC;
+    }
+    PublishSnapshot(obj);
+
+    std::unique_ptr<Reader> r;
+    bool registered = false; /* readers[] and streams[] hold this reader */
+    try
+    {
+        lt::add_torrent_params params;
+        std::string err;
+        if (!LoadTorrent(extractor->source, params, err))
+        {
+            msg_Dbg(extractor, "not a torrent: %s", err.c_str());
+            return VLC_EGENERIC;
+        }
+        const lt::file_storage &files = FilesOf(*params.ti);
+        const int index = FindFile(files, extractor->identifier);
+        if (index < 0)
+        {
+            msg_Err(extractor, "no file \"%s\" in torrent \"%s\"",
+                    extractor->identifier, params.ti->name().c_str());
+            return VLC_EGENERIC;
+        }
+
+        r = std::make_unique<Reader>();
+        r->file = lt::file_index_t(index);
+        r->name = files.file_path(r->file);
+        r->size = files.file_size(r->file);
+        r->file_offset = files.file_offset(r->file);
+        r->piece_length = params.ti->piece_length();
+        r->first_piece = (int)(r->file_offset / r->piece_length);
+        r->last_piece = r->size > 0
+                      ? (int)((r->file_offset + r->size - 1) / r->piece_length)
+                      : r->first_piece;
+        /* A read in the last 16 MiB while the window is elsewhere is taken
+         * for a demuxer reading an index there, not for a seek. */
+        r->tail_first = PieceOf(r.get(), r->size - std::min<int64_t>(r->size, 16ll << 20));
+        r->item = access->p_input_item;
+        r->bitrate = EstimateBitrate(r->size);
+        r->window_bytes = kMinWindow;
+        const std::string name = r->name;
+
+        r->stats = std::make_shared<ReaderStats>();
+        r->stats->file = r->name;
+        r->stats->size = r->size;
+        r->stats->file_offset = r->file_offset;
+        r->stats->piece_length = r->piece_length;
+        r->stats->first_piece = r->first_piece;
+        r->stats->last_piece = r->last_piece;
+
+        r->torrent = Acquire(obj, std::move(params), err);
+        if (r->torrent == nullptr)
+        {
+            msg_Err(extractor, "cannot add the torrent: %s", err.c_str());
+            return VLC_EGENERIC;
+        }
+        const TorrentRef &t = r->torrent;
+
+        /* Added from its metadata, it has it at once; a magnet added by the
+         * access has it too by now. Wait a little in case of a race. */
+        vlc_dialog_id *dialog = NULL;
+        const Waited waited = WaitFor(obj, t, [&] { return t->has_metadata; },
+                                      [&] { return name; },
+                                      VLC_TICK_FROM_SEC(30), &dialog);
+        if (dialog != NULL)
+            vlc_dialog_release(obj, dialog);
+        /* Only a media file waits at the start gate. */
+        const bool gated = IsPlayable(name);
+        const int user_seconds = (int)var_InheritInteger(extractor, "bittorrent-prebuffer");
+        GatePlan plan;
+        Lock();
+        const bool consistent = waited == Waited::Ready
+                             && (int)t->have.size() > r->last_piece
+                             && (int)t->readers.size() > index;
+        if (consistent)
+        {
+            t->readers[index]++;
+            r->stats->gating = gated;
+            t->streams.push_back(r->stats);
+            registered = true;
+            plan = PlanGate(r.get(), *t, user_seconds);
+            r->stats->need = gated ? plan.need : 0;
+        }
+        Unlock();
+        if (!consistent)
+        {
+            msg_Err(extractor, "the torrent's metadata is not usable");
+            Release(r->torrent);
+            return VLC_EGENERIC;
+        }
+        if (gated)
+            r->window_bytes = std::max(kMinWindow, plan.need + kGateMargin);
+
+        /* The file stays at priority 0: only pieces with a deadline (the
+         * window ahead of the reader and the end of the file) are asked
+         * for, so peers serve them in deadline order. A file downloaded at
+         * normal priority fills the peers' request queues with pieces the
+         * player does not need yet, and the one it waits for comes last
+         * (set_piece_deadline raises its piece to the top priority). */
+        Schedule(r.get(), r->first_piece);
+        if (WantsTail(name))
+            PrefetchTail(r.get());
+
+        msg_Dbg(extractor, "streaming \"%s\" (%" PRId64 " bytes, pieces %d-%d of %d KiB)",
+                name.c_str(), r->size, r->first_piece, r->last_piece,
+                r->piece_length / 1024);
+
+        if (gated)
+        {
+            vlc_tick_t spent = 0;
+            const Waited gate = RunGate(extractor, r.get(), user_seconds, plan, spent);
+            Lock();
+            r->stats->gating = false;
+            r->stats->fresh = gate == Waited::Ready || gate == Waited::TimedOut;
+            const int64_t ahead = VerifiedAhead(*t, *r->stats, 0);
+            const int rate = t->download_rate;
+            Unlock();
+            if (gate != Waited::Ready && gate != Waited::TimedOut)
+            {
+                if (gate == Waited::Failed)
+                    msg_Err(extractor, "torrent failed while buffering");
+                else
+                    msg_Dbg(extractor, "start buffer interrupted");
+                Teardown(r.get());
+                return VLC_EGENERIC;
+            }
+            if (gate == Waited::TimedOut)
+                msg_Warn(extractor, "start buffer incomplete after %d s, playing anyway",
+                         (int)SEC_FROM_VLC_TICK(spent));
+            msg_Dbg(extractor, "start buffer %s after %" PRId64 " ms: %" PRId64 " of %"
+                    PRId64 " KiB wanted (%d s of film at an estimated %d kbit/s, %d kB/s down)",
+                    gate == Waited::Ready ? "ready" : "given up", MS_FROM_VLC_TICK(spent),
+                    ahead / 1024, plan.need / 1024, plan.seconds,
+                    (int)(r->bitrate * 8 / 1000), rate / 1000);
+            /* A stall shorter than the player's lead is invisible: half
+             * the start buffer's seconds, unless the user chose. Capped at
+             * 10 s: the lead also delays the first picture and every seek
+             * (20 s gave a 25 s start on a slow, stalling swarm). */
+            if (var_InheritInteger(extractor, "bittorrent-caching") == 3000)
+                r->pts_delay = VLC_TICK_FROM_SEC(std::clamp(plan.seconds / 2, 3, 10));
+            r->window_bytes = kMinWindow; /* until the player's own rate is known */
+            r->next_window = vlc_tick_now() + VLC_TICK_FROM_SEC(5);
+        }
+
+        extractor->pf_read = ExtractorRead;
+        extractor->pf_seek = ExtractorSeek;
+        extractor->pf_control = ExtractorControl;
+        extractor->p_sys = r.release();
+        return VLC_SUCCESS;
+    }
+    catch (const std::exception &e)
+    {
+        msg_Err(extractor, "%s", e.what());
+        if (registered && r != nullptr)
+            Teardown(r.get());
+        else if (r != nullptr && r->torrent != nullptr)
+            Release(r->torrent);
+        return VLC_EGENERIC;
+    }
+}
+
+static void ExtractorClose(vlc_object_t *obj)
+{
+    stream_extractor_t *extractor = (stream_extractor_t *)obj;
+    Reader *r = static_cast<Reader *>(extractor->p_sys);
+
+    if (r->dialog != NULL)
+        vlc_dialog_release(obj, r->dialog);
+
+    Teardown(r);
     delete r;
 }

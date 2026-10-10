@@ -25,11 +25,15 @@
 #include <vlc_common.h>
 #include <vlc_configuration.h>
 #include <vlc_fs.h>
+#include <vlc_variables.h>
 
 #include <algorithm>
 #include <chrono>
+#include <cerrno>
 #include <condition_variable>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <deque>
 #include <map>
 #include <mutex>
@@ -37,12 +41,17 @@
 
 #include <ctime>
 #include <dirent.h>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #include <libtorrent/alert_types.hpp>
+#include <libtorrent/announce_entry.hpp>
+#include <libtorrent/bdecode.hpp>
 #include <libtorrent/fingerprint.hpp>
+#include <libtorrent/peer_info.hpp>
 #include <libtorrent/session.hpp>
 #include <libtorrent/session_params.hpp>
+#include <libtorrent/session_stats.hpp>
 #include <libtorrent/settings_pack.hpp>
 #include <libtorrent/torrent_status.hpp>
 #include <libtorrent/version.hpp>
@@ -76,6 +85,7 @@ struct Session
     bool quit = false;      /* the process is exiting */
     bool stopping = false;  /* the thread decided to end the session */
     bool dead = false;      /* ... and has: join it and start over */
+    int dht_nodes = -1;     /* DHT routing table size, -1 unknown */
 };
 
 /* Constant-initialised: usable from the atexit handler, which runs before
@@ -122,6 +132,8 @@ void PublishMetadata(const TorrentRef &t)
 
     std::lock_guard<std::mutex> lock(g_mutex);
     const int pieces = info->num_pieces();
+    if (t->name.empty())
+        t->name = info->name();
     if (!t->has_metadata)
     {
         t->info = info;
@@ -136,6 +148,9 @@ void PublishMetadata(const TorrentRef &t)
         if (piece >= 0 && piece < pieces)
             t->have[piece] = 1;
     t->pending.clear();
+    if (t->first_data_at == VLC_TICK_INVALID
+     && std::find(t->have.begin(), t->have.end(), 1) != t->have.end())
+        t->first_data_at = vlc_tick_now();
     g_cond.notify_all();
 }
 
@@ -184,6 +199,8 @@ void HandleAlerts(Session *s, std::vector<lt::alert *> &alerts,
                 t->have[piece] = 1;
             else
                 t->pending.push_back(piece);
+            if (t->first_data_at == VLC_TICK_INVALID)
+                t->first_data_at = vlc_tick_now();
             changed = true;
         }
         else if (auto *rp = lt::alert_cast<lt::read_piece_alert>(a))
@@ -215,8 +232,18 @@ void HandleAlerts(Session *s, std::vector<lt::alert *> &alerts,
                 t->download_rate = status.download_payload_rate;
                 t->upload_rate = status.upload_payload_rate;
                 t->progress_ppm = status.progress_ppm;
+                t->downloaded = status.total_payload_download;
+                t->uploaded = status.total_payload_upload;
+                t->swarm_seeds = status.num_complete;
+                t->swarm_leechers = status.num_incomplete;
             }
             changed = true;
+        }
+        else if (auto *ss = lt::alert_cast<lt::session_stats_alert>(a))
+        {
+            static const int dht_nodes = lt::find_metric_idx("dht.dht_nodes");
+            if (dht_nodes >= 0)
+                s->dht_nodes = static_cast<int>(ss->counters()[dht_nodes]);
         }
         else if (auto *m = lt::alert_cast<lt::metadata_received_alert>(a))
         {
@@ -286,14 +313,134 @@ bool Housekeep(Session *s, vlc_tick_t now)
     return now - s->empty_since > kSessionLinger;
 }
 
+/* Peers by state and source, and the trackers' state, for the snapshot. Called
+ * without the lock: both are round trips to the network thread. */
+void RefreshStats(const TorrentRef &t)
+{
+    std::vector<lt::peer_info> peers;
+    std::vector<lt::announce_entry> entries;
+    if (!Try([&] {
+            t->handle.get_peer_info(peers);
+            entries = t->handle.trackers();
+        }))
+        return;
+
+    int connecting = 0, handshaking = 0, unchoked = 0;
+    int tracker = 0, dht = 0, pex = 0, lsd = 0, incoming = 0;
+    for (const lt::peer_info &p : peers)
+    {
+        if (p.flags & lt::peer_info::connecting)
+            connecting++;
+        else if (p.flags & lt::peer_info::handshake)
+            handshaking++;
+        else if (!(p.flags & lt::peer_info::remote_choked))
+            unchoked++; /* "choked" in libtorrent is the other way round: we choke them */
+        /* A peer found by several means counts in each. */
+        tracker += (p.source & lt::peer_info::tracker) ? 1 : 0;
+        dht += (p.source & lt::peer_info::dht) ? 1 : 0;
+        pex += (p.source & lt::peer_info::pex) ? 1 : 0;
+        lsd += (p.source & lt::peer_info::lsd) ? 1 : 0;
+        incoming += (p.source & lt::peer_info::incoming) ? 1 : 0;
+    }
+
+    std::vector<TrackerStat> trackers;
+    for (const lt::announce_entry &e : entries)
+    {
+        if (trackers.size() >= 8)
+            break;
+        TrackerStat stat;
+        stat.url = e.url.substr(0, e.url.find('?')); /* a passkey travels in the query */
+        bool updating = false, ok = false, failed = false;
+        int seeds = -1, leechers = -1;
+        for (const lt::announce_endpoint &ep : e.endpoints)
+        {
+            if (!ep.enabled)
+                continue;
+            for (const lt::announce_infohash &ih : ep.info_hashes)
+            {
+                updating = updating || ih.updating;
+                if (ih.start_sent && ih.fails == 0)
+                    ok = true;
+                if (ih.fails > 0 || ih.last_error)
+                {
+                    failed = true;
+                    stat.message = ih.last_error ? ih.last_error.message() : ih.message;
+                }
+                else if (stat.message.empty())
+                    stat.message = ih.message;
+                seeds = std::max(seeds, ih.scrape_complete);
+                leechers = std::max(leechers, ih.scrape_incomplete);
+            }
+        }
+        /* One endpoint answering is enough; nothing yet is still "updating". */
+        stat.state = ok ? "ok" : updating ? "updating"
+                   : (failed || !stat.message.empty()) ? "error" : "updating";
+        if (ok && failed)
+            stat.message.clear();
+        if (seeds >= 0 || leechers >= 0)
+            stat.peers = std::max(seeds, 0) + std::max(leechers, 0);
+        trackers.push_back(std::move(stat));
+    }
+
+    std::lock_guard<std::mutex> lock(g_mutex);
+    t->peers_connecting = connecting;
+    t->peers_handshaking = handshaking;
+    t->peers_unchoked = unchoked;
+    t->src_tracker = tracker;
+    t->src_dht = dht;
+    t->src_pex = pex;
+    t->src_lsd = lsd;
+    t->src_incoming = incoming;
+    t->trackers = std::move(trackers);
+}
+
+/* The DHT's routing table, kept for the next launch: a session that starts
+ * from it finds peers in seconds instead of bootstrapping from four routers.
+ * It lives in the Metadata folder, which ClearLeftovers() spares. */
+std::string DhtStatePath(const Session *s)
+{
+    return s->download_dir + "/Metadata/dht.dat";
+}
+
+void SaveDhtState(Session *s)
+{
+    const std::string path = DhtStatePath(s);
+    std::vector<char> buf;
+    size_t nodes = 0;
+    if (!Try([&] {
+            const lt::session_params params =
+                s->ses->session_state(lt::session::save_dht_state);
+            nodes = params.dht_state.nodes.size() + params.dht_state.nodes6.size();
+            buf = lt::write_session_params_buf(params, lt::session::save_dht_state);
+        }) || nodes == 0 || buf.empty())
+        return; /* an empty table would erase a good file */
+    /* A short session knows few nodes: it must not replace a fuller table. */
+    if (nodes < 16 && access(path.c_str(), F_OK) == 0)
+        return;
+
+    const std::string tmp = path + ".tmp." + std::to_string(getpid());
+    if (mkdir((s->download_dir + "/Metadata").c_str(), 0700) != 0 && errno != EEXIST)
+        return;
+    FILE *f = fopen(tmp.c_str(), "wb");
+    if (f == nullptr)
+        return;
+    fchmod(fileno(f), 0600);
+    const bool ok = fwrite(buf.data(), 1, buf.size(), f) == buf.size();
+    if (fclose(f) == 0 && ok)
+        rename(tmp.c_str(), path.c_str());
+    else
+        unlink(tmp.c_str());
+}
+
 void Run(Session *s)
 {
     std::vector<lt::alert *> alerts;
     vlc_tick_t next_housekeeping = vlc_tick_now();
+    vlc_tick_t next_refresh = vlc_tick_now();
 
     for (;;)
     {
-        std::vector<TorrentRef> publish;
+        std::vector<TorrentRef> publish, refresh;
         s->ses->wait_for_alert(lt::milliseconds(250));
         s->ses->pop_alerts(&alerts);
 
@@ -307,7 +454,15 @@ void Run(Session *s)
             {
                 next_housekeeping = now + VLC_TICK_FROM_SEC(1);
                 s->ses->post_torrent_updates();
+                s->ses->post_session_stats(); /* DHT size, for the snapshot */
                 end = Housekeep(s, now);
+            }
+            if (now >= next_refresh)
+            {
+                next_refresh = now + VLC_TICK_FROM_MS(500);
+                for (auto &entry : s->torrents)
+                    if (entry.second->users > 0)
+                        refresh.push_back(entry.second);
             }
             if (s->quit)
                 end = true;
@@ -318,10 +473,15 @@ void Run(Session *s)
         /* After the lock is gone: these talk to the network thread. */
         for (const TorrentRef &t : publish)
             PublishMetadata(t);
+        if (!end)
+            for (const TorrentRef &t : refresh)
+                RefreshStats(t);
 
         if (end)
             break;
     }
+
+    SaveDhtState(s);
 
     {
         std::lock_guard<std::mutex> lock(g_mutex);
@@ -362,6 +522,17 @@ void StopAtExit()
         while (s->adding > 0)
             g_cond.wait_for(lock, std::chrono::milliseconds(50));
         s->quit = true;
+        /* Leaving a swarm (trackers, port mappings, disk flush) normally
+         * takes a second or two; never let it hold the quitting player:
+         * past 3 s, end the process here, before libtorrent's own static
+         * destructors could run under its still-live threads. libvlc is
+         * already released; leftovers are cleared at the next launch. */
+        if (!g_cond.wait_for(lock, std::chrono::seconds(3), [s] { return s->dead; }))
+        {
+            fputs("MacLC: the BitTorrent session did not stop within 3 s, exiting now\n", stderr);
+            fflush(stderr); /* not NULL: it would wait for stdin's lock, which a reader may hold forever */
+            _exit(EXIT_SUCCESS);
+        }
     }
     if (s->thread.joinable())
         s->thread.join();
@@ -462,6 +633,32 @@ void ClearLeftovers(const std::string &dir)
     }
 }
 
+/* The routing table the last session saved, if the file reads back. */
+void LoadDhtState(const Session *s, lt::session_params &params)
+{
+    const std::string path = DhtStatePath(s);
+    FILE *f = fopen(path.c_str(), "rb");
+    if (f == nullptr)
+        return;
+    std::vector<char> buf;
+    char chunk[4096];
+    size_t got;
+    while ((got = fread(chunk, 1, sizeof(chunk), f)) > 0 && buf.size() < (1u << 20))
+        buf.insert(buf.end(), chunk, chunk + got);
+    fclose(f);
+
+    lt::error_code ec;
+    const lt::bdecode_node node = lt::bdecode(lt::span<char const>(buf.data(), buf.size()), ec);
+    if (ec || node.type() != lt::bdecode_node::dict_t)
+    {
+        unlink(path.c_str()); /* corrupt: the next session writes a new one */
+        return;
+    }
+    Try([&] {
+        params.dht_state = lt::read_session_params(node, lt::session::save_dht_state).dht_state;
+    });
+}
+
 Session *StartSession(vlc_object_t *obj, std::string &err)
 {
     auto s = std::make_unique<Session>();
@@ -513,9 +710,27 @@ Session *StartSession(vlc_object_t *obj, std::string &err)
     pack.set_int(lt::settings_pack::min_reconnect_time, 5);
     pack.set_int(lt::settings_pack::upload_rate_limit, upload > 0 ? upload * 1024 : 0);
 
+    /* Room for a big swarm (default 200; libtorrent also keeps it under
+     * what the process's file limit allows). */
+    pack.set_int(lt::settings_pack::connections_limit, 400);
+    /* New outgoing connections per second (default 30). */
+    pack.set_int(lt::settings_pack::connection_speed, 100);
+    /* Several peers can sit behind one NAT address. */
+    pack.set_bool(lt::settings_pack::allow_multiple_connections_per_ip, true);
+    /* A dead tracker must not delay the first round of announces
+     * (default 30 s to give up on a reply). */
+    pack.set_int(lt::settings_pack::tracker_completion_timeout, 15);
+    pack.set_int(lt::settings_pack::tracker_receive_timeout, 10);
+    /* Requests a fast peer may have in flight (default 500) ... */
+    pack.set_int(lt::settings_pack::max_out_request_queue, 1500);
+    /* ... and the time within which a peer should send a whole piece for it
+     * to be asked for whole pieces (default 20 s): only the really fast. */
+    pack.set_int(lt::settings_pack::whole_pieces_threshold, 5);
+
     try
     {
         lt::session_params params(std::move(pack));
+        LoadDhtState(s.get(), params);
         s->ses = std::make_unique<lt::session>(std::move(params));
     }
     catch (const std::exception &e)
@@ -610,6 +825,37 @@ void FlushLog(vlc_object_t *obj)
         msg_Dbg(obj, "libtorrent: %s", line.c_str());
 }
 
+namespace
+{
+
+/* A magnet link or torrent with few trackers (Torrentio's carry none that
+ * answer) gets a few well-known public ones, which find peers within
+ * seconds where the DHT alone needs a minute. Never on a private torrent:
+ * its tracker is the only one allowed to hear about it. */
+void AddDefaultTrackers(lt::add_torrent_params &params)
+{
+    static const char *const defaults[] = {
+        "udp://tracker.opentrackr.org:1337/announce",
+        "udp://open.demonii.com:1337/announce",
+        "udp://tracker.torrent.eu.org:451/announce",
+        "udp://open.stealth.si:80/announce",
+        "udp://exodus.desync.com:6969/announce",
+        "udp://explodie.org:6969/announce",
+        "https://tracker.tamersunion.org:443/announce",
+    };
+    if (params.ti != nullptr && params.ti->priv())
+        return;
+    /* load_torrent_*() and parse_magnet_uri() both put the trackers here. */
+    if (params.trackers.size() >= 3)
+        return;
+    const std::vector<std::string> known = params.trackers;
+    for (const char *url : defaults)
+        if (std::find(known.begin(), known.end(), url) == known.end())
+            params.trackers.push_back(url);
+}
+
+} /* namespace */
+
 TorrentRef Acquire(vlc_object_t *obj, lt::add_torrent_params &&params,
                    std::string &err)
 {
@@ -650,6 +896,7 @@ TorrentRef Acquire(vlc_object_t *obj, lt::add_torrent_params &&params,
             TorrentRef t = it->second;
             t->users++;
             t->idle_since = VLC_TICK_INVALID;
+            t->last_user_at = vlc_tick_now();
             lock.unlock();
             /* A magnet link can bring trackers and peers the first
              * source did not have. */
@@ -667,6 +914,9 @@ TorrentRef Acquire(vlc_object_t *obj, lt::add_torrent_params &&params,
     }
 
     params.save_path = download_dir;
+    const std::string name = !params.name.empty() ? params.name
+                           : params.ti != nullptr ? params.ti->name() : std::string();
+    AddDefaultTrackers(params);
     params.flags &= ~(lt::torrent_flags::auto_managed | lt::torrent_flags::paused
                     | lt::torrent_flags::duplicate_is_error);
     /* Only what is being played is downloaded: readers ask for pieces with
@@ -705,11 +955,14 @@ TorrentRef Acquire(vlc_object_t *obj, lt::add_torrent_params &&params,
             t = std::make_shared<Torrent>();
             t->handle = handle;
             t->key = key;
+            t->name = name;
             t->save_path = download_dir;
+            t->added_at = vlc_tick_now();
             s->torrents.emplace(key, t);
         }
         t->users++;
         t->idle_since = VLC_TICK_INVALID;
+        t->last_user_at = vlc_tick_now();
     }
     PublishMetadata(t);
     FlushLog(obj);
@@ -726,6 +979,350 @@ void Release(TorrentRef &torrent)
             torrent->idle_since = vlc_tick_now();
     }
     torrent.reset();
+}
+
+/*****************************************************************************
+ * The snapshot the interface polls (variable "maclc-bt-snapshot")
+ *****************************************************************************/
+
+int64_t VerifiedAhead(const Torrent &t, const ReaderStats &r, uint64_t pos)
+{
+    if (r.piece_length <= 0 || (int64_t)pos >= r.size)
+        return 0;
+    const int64_t pl = r.piece_length;
+    const int start = (int)((r.file_offset + (int64_t)pos) / pl);
+    int piece = start;
+    while (piece <= r.last_piece && piece < (int)t.have.size() && t.have[piece])
+        piece++;
+    if (piece == start)
+        return 0;
+    const int64_t end = std::min<int64_t>(r.size, piece * pl - r.file_offset);
+    return std::max<int64_t>(0, end - (int64_t)pos);
+}
+
+namespace
+{
+
+void JsonString(std::string &out, const std::string &text)
+{
+    out.push_back('"');
+    for (size_t i = 0; i < text.size();)
+    {
+        const unsigned char c = text[i];
+        if (c == '"' || c == '\\')
+        {
+            out.push_back('\\');
+            out.push_back((char)c);
+            i++;
+        }
+        else if (c < 0x20)
+        {
+            char escape[8];
+            snprintf(escape, sizeof(escape), "\\u%04x", c);
+            out += escape;
+            i++;
+        }
+        else if (c < 0x80)
+        {
+            out.push_back((char)c);
+            i++;
+        }
+        else
+        {
+            /* Names come from the network: anything that is not well-formed
+             * UTF-8 becomes U+FFFD, a JSON parser may refuse the lot. */
+            const size_t n = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : c >= 0xC2 ? 2 : 0;
+            bool ok = n > 0 && c <= 0xF4 && i + n <= text.size();
+            for (size_t k = 1; ok && k < n; k++)
+                ok = ((unsigned char)text[i + k] & 0xC0) == 0x80;
+            if (ok && n > 2)
+            {
+                const unsigned char c1 = text[i + 1];
+                ok = !(c == 0xE0 && c1 < 0xA0) && !(c == 0xED && c1 >= 0xA0)
+                  && !(c == 0xF0 && c1 < 0x90) && !(c == 0xF4 && c1 >= 0x90);
+            }
+            if (ok)
+            {
+                out.append(text, i, n);
+                i += n;
+            }
+            else
+            {
+                out += "\xEF\xBF\xBD";
+                i++;
+            }
+        }
+    }
+    out.push_back('"');
+}
+
+void JsonKey(std::string &out, const char *key)
+{
+    out.push_back('"');
+    out += key;
+    out += "\":";
+}
+
+void JsonInt(std::string &out, const char *key, int64_t value)
+{
+    JsonKey(out, key);
+    out += std::to_string(value);
+}
+
+void JsonText(std::string &out, const char *key, const std::string &value)
+{
+    JsonKey(out, key);
+    JsonString(out, value);
+}
+
+/* The verified byte ranges of the reader's file, at most 128: the smallest
+ * gaps are closed first. Lock held. */
+void JsonRanges(std::string &out, const Torrent &t, const ReaderStats &r)
+{
+    std::vector<std::pair<int64_t, int64_t>> ranges;
+    const int64_t pl = r.piece_length;
+    const int last = std::min(r.last_piece, (int)t.have.size() - 1);
+    for (int p = std::max(r.first_piece, 0); p <= last && pl > 0;)
+    {
+        if (!t.have[p])
+        {
+            p++;
+            continue;
+        }
+        int q = p;
+        while (q + 1 <= last && t.have[q + 1])
+            q++;
+        const int64_t from = std::max<int64_t>(0, p * pl - r.file_offset);
+        const int64_t to = std::min<int64_t>(r.size, (q + 1) * pl - r.file_offset);
+        if (to > from)
+            ranges.emplace_back(from, to);
+        p = q + 1;
+    }
+
+    constexpr size_t kMaxRanges = 128;
+    if (ranges.size() > kMaxRanges)
+    {
+        std::vector<int64_t> gaps;
+        gaps.reserve(ranges.size() - 1);
+        for (size_t i = 1; i < ranges.size(); i++)
+            gaps.push_back(ranges[i].first - ranges[i - 1].second);
+        const size_t close = ranges.size() - kMaxRanges; /* gaps to close */
+        std::nth_element(gaps.begin(), gaps.begin() + (close - 1), gaps.end());
+        const int64_t limit = gaps[close - 1];
+        std::vector<std::pair<int64_t, int64_t>> merged{ranges[0]};
+        for (size_t i = 1; i < ranges.size(); i++)
+        {
+            if (ranges[i].first - merged.back().second <= limit)
+                merged.back().second = ranges[i].second;
+            else
+                merged.push_back(ranges[i]);
+        }
+        ranges.swap(merged);
+    }
+
+    out += "\"ranges\":[";
+    for (size_t i = 0; i < ranges.size(); i++)
+    {
+        if (i > 0)
+            out.push_back(',');
+        out += "[" + std::to_string(ranges[i].first) + "," + std::to_string(ranges[i].second) + "]";
+    }
+    out.push_back(']');
+}
+
+const char *ReaderStage(const ReaderStats &r, vlc_tick_t now)
+{
+    if (r.gating)
+        return "buffering";
+    if (r.wait_since != VLC_TICK_INVALID && now - r.wait_since > VLC_TICK_FROM_MS(400))
+        return "stalled";
+    return r.fresh ? "ready" : "playing";
+}
+
+const char *TorrentStage(const Torrent &t, vlc_tick_t now)
+{
+    if (!t.error.empty())
+        return "error";
+    if (!t.has_metadata)
+        return t.peers > 0 ? "metadata" : "trackers";
+    if (std::find(t.have.begin(), t.have.end(), 1) == t.have.end())
+        return "connecting";
+    if (t.streams.empty())
+        return "downloading";
+    return ReaderStage(*t.streams.back(), now);
+}
+
+std::string BuildSnapshot()
+{
+    std::string out;
+    out.reserve(4096);
+    const vlc_tick_t now = vlc_tick_now();
+
+    std::lock_guard<std::mutex> lock(g_mutex);
+    const Session *s = g_session;
+    out += "{\"v\":1,";
+    JsonInt(out, "now_ms", MS_FROM_VLC_TICK(now));
+    out.push_back(',');
+    JsonInt(out, "dht_nodes", s != nullptr ? s->dht_nodes : -1);
+
+    std::string active;
+    vlc_tick_t newest = VLC_TICK_INVALID;
+    if (s != nullptr)
+        for (const auto &entry : s->torrents)
+        {
+            const Torrent &t = *entry.second;
+            if (t.users > 0 && (newest == VLC_TICK_INVALID || t.last_user_at > newest))
+            {
+                newest = t.last_user_at;
+                active = t.key;
+            }
+        }
+    out.push_back(',');
+    JsonText(out, "active", active);
+
+    out += ",\"torrents\":[";
+    bool first = true;
+    if (s != nullptr)
+        for (const auto &entry : s->torrents)
+        {
+            const Torrent &t = *entry.second;
+            out += first ? "{" : ",{";
+            first = false;
+            JsonText(out, "key", t.key);
+            out.push_back(',');
+            JsonText(out, "name", t.name);
+            out.push_back(',');
+            JsonText(out, "stage", TorrentStage(t, now));
+            out.push_back(',');
+            JsonText(out, "error", t.error);
+            out.push_back(',');
+            JsonInt(out, "size", t.info != nullptr ? t.info->total_size() : 0);
+            out.push_back(',');
+            JsonInt(out, "pieces", t.info != nullptr ? t.info->num_pieces() : 0);
+            out.push_back(',');
+            JsonInt(out, "piece_size", t.info != nullptr ? t.info->piece_length() : 0);
+            out.push_back(',');
+            JsonInt(out, "peers", t.peers);
+            out.push_back(',');
+            JsonInt(out, "seeds", t.seeds);
+            out.push_back(',');
+            JsonInt(out, "peers_connecting", t.peers_connecting);
+            out.push_back(',');
+            JsonInt(out, "peers_handshaking", t.peers_handshaking);
+            out.push_back(',');
+            JsonInt(out, "peers_unchoked", t.peers_unchoked);
+            out.push_back(',');
+            JsonInt(out, "swarm_seeds", t.swarm_seeds);
+            out.push_back(',');
+            JsonInt(out, "swarm_leechers", t.swarm_leechers);
+            out += ",\"sources\":{";
+            JsonInt(out, "tracker", t.src_tracker);
+            out.push_back(',');
+            JsonInt(out, "dht", t.src_dht);
+            out.push_back(',');
+            JsonInt(out, "pex", t.src_pex);
+            out.push_back(',');
+            JsonInt(out, "lsd", t.src_lsd);
+            out.push_back(',');
+            JsonInt(out, "incoming", t.src_incoming);
+            out += "},\"trackers\":[";
+            for (size_t i = 0; i < t.trackers.size(); i++)
+            {
+                const TrackerStat &tr = t.trackers[i];
+                out += i > 0 ? ",{" : "{";
+                JsonText(out, "url", tr.url);
+                out.push_back(',');
+                JsonText(out, "state", tr.state);
+                out.push_back(',');
+                JsonInt(out, "peers", tr.peers);
+                out.push_back(',');
+                JsonText(out, "message", tr.message);
+                out.push_back('}');
+            }
+            out += "],";
+            JsonInt(out, "down", t.download_rate);
+            out.push_back(',');
+            JsonInt(out, "up", t.upload_rate);
+            out.push_back(',');
+            JsonInt(out, "downloaded", t.downloaded);
+            out.push_back(',');
+            JsonInt(out, "uploaded", t.uploaded);
+            out.push_back(',');
+            JsonInt(out, "uptime_ms", t.added_at != VLC_TICK_INVALID ? MS_FROM_VLC_TICK(now - t.added_at) : 0);
+            out.push_back(',');
+            JsonInt(out, "first_data_ms", t.first_data_at != VLC_TICK_INVALID && t.added_at != VLC_TICK_INVALID
+                                        ? MS_FROM_VLC_TICK(t.first_data_at - t.added_at) : -1);
+            out.push_back('}');
+        }
+
+    out += "],\"readers\":[";
+    first = true;
+    if (s != nullptr)
+        for (const auto &entry : s->torrents)
+        {
+            const Torrent &t = *entry.second;
+            for (const ReaderStatsRef &ref : t.streams)
+            {
+                const ReaderStats &r = *ref;
+                out += first ? "{" : ",{";
+                first = false;
+                JsonText(out, "torrent", t.key);
+                out.push_back(',');
+                JsonText(out, "file", r.file);
+                out.push_back(',');
+                JsonInt(out, "size", r.size);
+                out.push_back(',');
+                JsonInt(out, "pos", (int64_t)r.pos);
+                out.push_back(',');
+                JsonInt(out, "ahead", VerifiedAhead(t, r, r.pos));
+                out.push_back(',');
+                JsonRanges(out, t, r);
+                out.push_back(',');
+                JsonInt(out, "window_end", std::clamp<int64_t>(
+                            (int64_t)r.window_end * r.piece_length - r.file_offset, 0, r.size));
+                out.push_back(',');
+                JsonText(out, "stage", ReaderStage(r, now));
+                out.push_back(',');
+                JsonInt(out, "need", r.need);
+                out.push_back(',');
+                JsonInt(out, "rate_in", (int64_t)r.rate_in);
+                out.push_back(',');
+                JsonInt(out, "stall_ms", r.wait_since != VLC_TICK_INVALID
+                                       ? MS_FROM_VLC_TICK(now - r.wait_since) : 0);
+                out.push_back('}');
+            }
+        }
+    out += "]}";
+    return out;
+}
+
+/* Called by the interface from its main thread, a few times a second. The
+ * caller frees the result with free(). */
+static char *MacLCBtSnapshot(void)
+{
+    try
+    {
+        return strdup(BuildSnapshot().c_str());
+    }
+    catch (...)
+    {
+        return strdup("{\"v\":1,\"now_ms\":0,\"dht_nodes\":-1,\"active\":\"\","
+                      "\"torrents\":[],\"readers\":[]}");
+    }
+}
+
+} /* namespace */
+
+void PublishSnapshot(vlc_object_t *obj)
+{
+    vlc_object_t *libvlc = VLC_OBJECT(vlc_object_instance(obj));
+    /* A second var_Create() would take a second reference; the lock also
+     * keeps two streams opening together from both seeing nothing. */
+    std::lock_guard<std::mutex> lock(g_mutex);
+    if (var_Type(libvlc, "maclc-bt-snapshot") != 0)
+        return;
+    if (var_Create(libvlc, "maclc-bt-snapshot", VLC_VAR_ADDRESS) == VLC_SUCCESS)
+        var_SetAddress(libvlc, "maclc-bt-snapshot", (void *)MacLCBtSnapshot);
 }
 
 } /* namespace maclc_bt */
