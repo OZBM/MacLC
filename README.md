@@ -244,6 +244,19 @@ third-party services, to be used only for content you have the right to watch.
 - **File ▸ Search Add-ons…** finds a title and plays a stream. Streams become MRLs: magnet
   links go through the BitTorrent module (with the file name the add-on gives), web links play
   as they are, YouTube ids go through yt-dlp.
+- **Discovery** (1.4): Home can be narrowed to the streaming services you use, with genre tiles
+  and *The Edit*, editorial collections renewed over time. **Choose a Version** turns each
+  stream into plain facts (resolution, HDR, sound, language, size, peers) with filters, and
+  short animated tips explain the jargon.
+- **History and favorites** (1.4): Favorites and History in the sidebar, Continue Watching on
+  Home, playback that resumes where it stopped (also after relaunching), and Mark as Watched.
+- **Torrents you can follow** (1.4): playback starts once a few seconds are verified, the
+  buffer adapts to the swarm, an animated screen explains what is happening while a torrent
+  opens, and a marker on the playback bar shows what is buffered, the speed and the peers.
+- **YouTube** (1.4): Home, Subscriptions, History, Watch Later, Liked Videos and Playlists, with
+  search, channels and playlists, on [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). Signing in
+  is optional: Google's own page in a private web view (MacLC never sees the password), or the
+  session of a browser where you are already signed in.
 
 ### 12. Sound modes, equalizer and Play on TV
 
@@ -323,7 +336,7 @@ This removes the "downloaded from the internet" extended attribute and produces 
 The source code is public at [github.com/OZBM/MacLC](https://github.com/OZBM/MacLC). Each release provides the SHA-256 checksum of the disk image so you can verify its integrity in Terminal:
 
 ```bash
-shasum -a 256 maclc-1.3.dmg
+shasum -a 256 maclc-1.4.dmg
 ```
 
 If macOS ever reports that MacLC **"is damaged and can't be opened"**, do not attempt to bypass it: this means the download was incomplete or corrupted in transit. Delete the file, download it again, and check the SHA-256 hash.
@@ -332,7 +345,7 @@ If macOS ever reports that MacLC **"is damaged and can't be opened"**, do not at
 
 Media playback requires no external tools or libraries. Two optional features can use external tools if they are present on your system:
 
-- **Open Web Video**: Uses [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to resolve streaming URLs (`brew install yt-dlp`).
+- **Open Web Video and YouTube**: use [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to resolve streaming URLs (`brew install yt-dlp`; keep it up to date, as YouTube changes often).
 - **SVP motion interpolation**: Interacts with [SVP 4 Mac](https://www.svp-team.com/) and VapourSynth if you use the SmoothVideo Project interpolation engine.
 
 ---
