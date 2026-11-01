@@ -64,13 +64,6 @@
     [pboardItem setString:itemURL.absoluteString
                   forType:itemURL.isFileURL ? NSPasteboardTypeFileURL : NSPasteboardTypeURL];
 
-    if (itemURL.isFileURL) {
-        NSString * const localPath = itemURL.path;
-        if (localPath.length > 0) {
-            [pboardItem setPropertyList:@[localPath] forType:NSFilenamesPboardType];
-        }
-    }
-
     return pboardItem;
 }
 

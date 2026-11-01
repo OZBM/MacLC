@@ -122,7 +122,7 @@ writeItemsAtIndexPaths:(NSSet<NSIndexPath *> *)indexPaths
 
     NSUInteger numberOfIndexPaths = indexPaths.count;
     NSMutableArray *encodedLibraryItemsArray = [NSMutableArray arrayWithCapacity:numberOfIndexPaths];
-    NSMutableArray *filePathsArray = [NSMutableArray arrayWithCapacity:numberOfIndexPaths];
+    NSMutableArray<NSURL *> *fileURLsArray = [NSMutableArray arrayWithCapacity:numberOfIndexPaths];
 
     for (NSIndexPath *indexPath in indexPaths) {
 
@@ -135,7 +135,9 @@ writeItemsAtIndexPaths:(NSSet<NSIndexPath *> *)indexPaths
             VLCMediaLibraryFile *file = mediaItem.files.firstObject;
             if (file) {
                 NSURL *url = [NSURL URLWithString:file.MRL];
-                [filePathsArray addObject:url.path];
+                if (url) {
+                    [fileURLsArray addObject:url];
+                }
             }
         }];
     }
@@ -148,9 +150,11 @@ writeItemsAtIndexPaths:(NSSet<NSIndexPath *> *)indexPaths
         NSLog(@"Failed to archive MediaLibrary Item drag payload: %@", archiveError);
         return NO;
     }
-    [pasteboard declareTypes:@[VLCMediaLibraryMediaItemPasteboardType, NSFilenamesPboardType] owner:self];
-    [pasteboard setPropertyList:filePathsArray forType:NSFilenamesPboardType];
+    [pasteboard declareTypes:@[VLCMediaLibraryMediaItemPasteboardType] owner:self];
     [pasteboard setData:data forType:VLCMediaLibraryMediaItemPasteboardType];
+    if (fileURLsArray.count > 0) {
+        [pasteboard writeObjects:fileURLsArray];
+    }
 
     return YES;
 }

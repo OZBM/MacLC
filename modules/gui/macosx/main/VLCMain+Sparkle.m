@@ -52,7 +52,7 @@ NSString *const kARM64UpdateURLString = @"";
 /* received directly before the update gets installed, so let's shut down a bit */
 - (void)updater:(SPUUpdater *)updater willInstallUpdate:(SUAppcastItem *)update
 {
-    [NSApp activateIgnoringOtherApps:YES];
+    [NSApp activate];
     [self.playQueueController stopPlayback];
 }
 

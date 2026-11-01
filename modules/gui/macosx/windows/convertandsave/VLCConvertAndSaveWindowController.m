@@ -231,7 +231,7 @@ NSString *VLCConvertAndSaveProfileNamesKey = @"CASProfileNames";
     [[_streamSDPMatrix cellWithTag:1] setTitle:_NS("HTTP Announcement")];
     [[_streamSDPMatrix cellWithTag:2] setTitle:_NS("RTSP Announcement")];
     [[_streamSDPMatrix cellWithTag:3] setTitle:_NS("Export SDP as file")];
-    [_streamSAPCheckbox setState:NSOffState];
+    [_streamSAPCheckbox setState:NSControlStateValueOff];
     [_streamSDPMatrix setEnabled:NO];
     [_streamSDPFileBrowseButton setStringValue:_NS("Browse…")];
     [_streamChannelLabel setStringValue:_NS("Channel Name")];
@@ -328,7 +328,7 @@ NSString *VLCConvertAndSaveProfileNamesKey = @"CASProfileNames";
     [openPanel setCanChooseDirectories:NO];
     [openPanel setResolvesAliases:YES];
     [openPanel setAllowsMultipleSelection:NO];
-    [openPanel setAllowedFileTypes:[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA]];
+    openPanel.allowedContentTypes = [NSString contentTypesFromExtensions:[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA]];
     [openPanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger returnCode) {
         if (returnCode == NSModalResponseOK) {
             [self setMRL: [[openPanel URL] absoluteString]];
@@ -443,7 +443,7 @@ NSString *VLCConvertAndSaveProfileNamesKey = @"CASProfileNames";
     [saveFilePanel setCanSelectHiddenExtension: YES];
     [saveFilePanel setCanCreateDirectories: YES];
     if ([[_customizeEncapMatrix selectedCell] tag] != RAW) // there is no clever guess for this
-        [saveFilePanel setAllowedFileTypes:[NSArray arrayWithObject:[self currentEncapsulationFormatAsFileExtension:YES]]];
+        saveFilePanel.allowedContentTypes = [NSString contentTypesFromExtensions:[NSArray arrayWithObject:[self currentEncapsulationFormatAsFileExtension:YES]]];
     [saveFilePanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger returnCode) {
         if (returnCode == NSModalResponseOK) {
             [self setOutputDestination:[[saveFilePanel URL] path]];
@@ -475,21 +475,21 @@ NSString *VLCConvertAndSaveProfileNamesKey = @"CASProfileNames";
 
 - (IBAction)videoSettingsChanged:(id)sender
 {
-    bool enableSettings = [_customizeVidCheckbox state] == NSOnState && [_customizeVidKeepCheckbox state] == NSOffState;
+    bool enableSettings = [_customizeVidCheckbox state] == NSControlStateValueOn && [_customizeVidKeepCheckbox state] == NSControlStateValueOff;
     [_customizeVidSettingsBox enableSubviews:enableSettings];
-    [_customizeVidKeepCheckbox setEnabled:[_customizeVidCheckbox state] == NSOnState];
+    [_customizeVidKeepCheckbox setEnabled:[_customizeVidCheckbox state] == NSControlStateValueOn];
 }
 
 - (IBAction)audioSettingsChanged:(id)sender
 {
-    bool enableSettings = [_customizeAudCheckbox state] == NSOnState && [_customizeAudKeepCheckbox state] == NSOffState;
+    bool enableSettings = [_customizeAudCheckbox state] == NSControlStateValueOn && [_customizeAudKeepCheckbox state] == NSControlStateValueOff;
     [_customizeAudSettingsBox enableSubviews:enableSettings];
-    [_customizeAudKeepCheckbox setEnabled:[_customizeAudCheckbox state] == NSOnState];
+    [_customizeAudKeepCheckbox setEnabled:[_customizeAudCheckbox state] == NSControlStateValueOn];
 }
 
 - (IBAction)subSettingsChanged:(id)sender
 {
-    bool enableSettings = [_customizeSubsCheckbox state] == NSOnState;
+    bool enableSettings = [_customizeSubsCheckbox state] == NSControlStateValueOn;
     [_customizeSubsOverlayCheckbox setEnabled:enableSettings];
     [_customizeSubsPopup setEnabled:enableSettings];
 }
@@ -627,7 +627,7 @@ NSString *VLCConvertAndSaveProfileNamesKey = @"CASProfileNames";
     NSSavePanel * saveFilePanel = [NSSavePanel savePanel];
     [saveFilePanel setCanSelectHiddenExtension: YES];
     [saveFilePanel setCanCreateDirectories: YES];
-    [saveFilePanel setAllowedFileTypes:[NSArray arrayWithObject:@"sdp"]];
+    saveFilePanel.allowedContentTypes = [NSString contentTypesFromExtensions:[NSArray arrayWithObject:@"sdp"]];
     [saveFilePanel beginSheetModalForWindow:_streamPanel completionHandler:^(NSInteger returnCode) {
         if (returnCode == NSModalResponseOK)
             [self->_streamSDPField setStringValue:[[saveFilePanel URL] path]];
@@ -639,29 +639,20 @@ NSString *VLCConvertAndSaveProfileNamesKey = @"CASProfileNames";
 
 - (BOOL)handlePasteBoardFromDragSession:(NSPasteboard *)paste
 {
-    NSArray *types = [NSArray arrayWithObjects:NSFilenamesPboardType, nil];
-    NSString *desired_type = [paste availableTypeFromArray: types];
-    NSData *carried_data = [paste dataForType: desired_type];
+    NSArray<NSURL *> *values = [paste readObjectsForClasses:@[NSURL.class]
+                                                    options:@{NSPasteboardURLReadingFileURLsOnlyKey: @YES}];
+    values = [values sortedArrayUsingComparator:^NSComparisonResult(NSURL *url1, NSURL *url2) {
+        return [url1.path caseInsensitiveCompare:url2.path];
+    }];
 
-    if (carried_data == nil)
+    NSURL *url = values.firstObject;
+    if (!url) {
         return NO;
-
-    if ([desired_type isEqualToString:NSFilenamesPboardType]) {
-        NSArray *values = [[paste propertyListForType: NSFilenamesPboardType] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
-
-        if ([values count] > 0) {
-            NSURL *url = [NSURL fileURLWithPath:[values firstObject] isDirectory:NO];
-            if (!url) {
-                return NO;
-            }
-            [self setMRL:url.absoluteString];
-            [self updateOKButton];
-            [self updateDropView];
-            return YES;
-        }
     }
-
-    return NO;
+    [self setMRL:url.absoluteString];
+    [self updateOKButton];
+    [self updateDropView];
+    return YES;
 }
 
 # pragma mark -
@@ -1001,7 +992,7 @@ NSString *VLCConvertAndSaveProfileNamesKey = @"CASProfileNames";
     [self.currentProfile addObject: [NSString stringWithFormat:@"%li", [_customizeSubsCheckbox state]]];
     
     NSString *videoCodec;
-    if([_customizeVidKeepCheckbox state] == NSOnState)
+    if([_customizeVidKeepCheckbox state] == NSControlStateValueOn)
         videoCodec = @"copy";
     else {
         i = [_customizeVidCodecPopup indexOfSelectedItem];
@@ -1019,7 +1010,7 @@ NSString *VLCConvertAndSaveProfileNamesKey = @"CASProfileNames";
     [self.currentProfile addObject: [NSString stringWithFormat:@"%i", [_customizeVidHeightField intValue]]];
 
     NSString *audioCodec;
-    if([_customizeAudKeepCheckbox state] == NSOnState)
+    if([_customizeAudKeepCheckbox state] == NSControlStateValueOn)
         audioCodec = @"copy";
     else {
         i = [_customizeAudCodecPopup indexOfSelectedItem];

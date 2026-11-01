@@ -66,8 +66,7 @@ static NSString *VLCPlayQueueCellIdentifier = @"VLCPlayQueueCellIdentifier";
         VLCPlaylistItemPasteboardType,
         NSPasteboardTypeURL,
         NSPasteboardTypeFileURL,
-        NSPasteboardTypeString,
-        NSFilenamesPboardType
+        NSPasteboardTypeString
     ]];
 }
 

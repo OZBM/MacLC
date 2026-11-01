@@ -22,6 +22,7 @@
 
 #import "MacLCDesign.h"
 #import "MacLCCardView.h"
+#import "extensions/NSScreen+VLCAdditions.h"
 
 #import <os/lock.h>
 
@@ -475,7 +476,8 @@
 
 + (CGFloat)minimumHitTarget
 {
-    return 28.0;
+    // 44 pt is the size a fingertip needs; a pointer needs much less.
+    return NSScreen.touchInterfaceEnabled ? 44.0 : 28.0;
 }
 
 

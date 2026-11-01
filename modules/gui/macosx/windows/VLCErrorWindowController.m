@@ -24,6 +24,7 @@
 #import "VLCErrorWindowController.h"
 
 #import "extensions/NSString+Helpers.h"
+#import "theme/MacLCDesign.h"
 
 @interface VLCErrorWindowController()
 {
@@ -69,7 +70,9 @@
                      range: NSMakeRange(0, [title length])];
     [_errors addObject: ourError];
 
-    [_icons addObject: [NSWorkspace.sharedWorkspace iconForFileType:NSFileTypeForHFSTypeCode(kAlertStopIcon)]];
+    NSImage *icon = [[MacLCDesign symbolNamed:@"xmark.octagon.fill" accessibilityLabel:_NS("Error")]
+                     imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPaletteColors:@[NSColor.systemRedColor]]];
+    [_icons addObject: icon ?: [NSImage imageNamed:NSImageNameCaution]];
 
     [self.errorTable reloadData];
 }

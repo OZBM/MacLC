@@ -46,9 +46,10 @@ static NSView *createControlFromWidget(extension_widget_t *widget, id self)
         switch (widget->type) {
             case EXTENSION_WIDGET_HTML:
             {
-                WebView *webView = [[WebView alloc] initWithFrame:NSMakeRect (0,0,1,1)];
+                WKWebView *webView = [[WKWebView alloc] initWithFrame:NSMakeRect (0,0,1,1)];
                 [webView setAutoresizingMask:NSViewHeightSizable | NSViewWidthSizable];
-                [webView setDrawsBackground:NO];
+                // WKWebView has no public transparent-background switch on macOS; this KVC key is the usual one.
+                [webView setValue:@NO forKey:@"drawsBackground"];
                 return webView;
             }
             case EXTENSION_WIDGET_LABEL:
@@ -88,7 +89,7 @@ static NSView *createControlFromWidget(extension_widget_t *widget, id self)
             case EXTENSION_WIDGET_CHECK_BOX:
             {
                 VLCDialogButton *button = [[VLCDialogButton alloc] init];
-                [button setButtonType:NSSwitchButton];
+                [button setButtonType:NSButtonTypeSwitch];
                 [button setWidget:widget];
                 [button setAction:@selector(triggerClick:)];
                 [button setTarget:self];
@@ -100,7 +101,7 @@ static NSView *createControlFromWidget(extension_widget_t *widget, id self)
             case EXTENSION_WIDGET_BUTTON:
             {
                 VLCDialogButton *button = [[VLCDialogButton alloc] init];
-                [button setBezelStyle:NSRoundedBezelStyle];
+                [button setBezelStyle:NSBezelStyleRounded];
                 [button setWidget:widget];
                 [button setAction:@selector(triggerClick:)];
                 [button setTarget:self];
@@ -147,7 +148,7 @@ static NSView *createControlFromWidget(extension_widget_t *widget, id self)
             {
                 NSProgressIndicator *spinner = [[NSProgressIndicator alloc] init];
                 [spinner setUsesThreadedAnimation:YES];
-                [spinner setStyle:NSProgressIndicatorSpinningStyle];
+                [spinner setStyle:NSProgressIndicatorStyleSpinning];
                 [spinner setDisplayedWhenStopped:YES];
                 [spinner startAnimation:self];
                 return spinner;
@@ -169,11 +170,10 @@ static void updateControlFromWidget(NSView *control, extension_widget_t *widget,
             case EXTENSION_WIDGET_HTML:
             {
                 // Get the web view
-                assert([control isKindOfClass:[WebView class]]);
-                WebView *webView = (WebView *)control;
+                assert([control isKindOfClass:[WKWebView class]]);
+                WKWebView *webView = (WKWebView *)control;
                 NSString *string = [defaultStyleCSS stringByAppendingString:toNSStr(widget->psz_text)];
-                [[webView mainFrame] loadHTMLString:string baseURL:[NSURL URLWithString:@""]];
-                [webView setNeedsDisplay:YES];
+                [webView loadHTMLString:string baseURL:nil];
                 break;
             }
             case EXTENSION_WIDGET_LABEL:
@@ -196,7 +196,7 @@ static void updateControlFromWidget(NSView *control, extension_widget_t *widget,
                 NSButton *button = (NSButton *)control;
                 [button setTitle:toNSStr(widget->psz_text)];
                 if (widget->type == EXTENSION_WIDGET_CHECK_BOX)
-                    [button setState:widget->b_checked ? NSOnState : NSOffState];
+                    [button setState:widget->b_checked ? NSControlStateValueOn : NSControlStateValueOff];
                 break;
             }
             case EXTENSION_WIDGET_DROPDOWN:
@@ -322,7 +322,7 @@ static void extensionDialogCallback(extension_dialog_t *p_ext_dialog,
     if (widget->type == EXTENSION_WIDGET_BUTTON)
         extension_WidgetClicked(widget->p_dialog, widget);
     else
-        widget->b_checked = [button state] == NSOnState;
+        widget->b_checked = [button state] == NSControlStateValueOn;
     vlc_mutex_unlock(&widget->p_dialog->lock);
 }
 

@@ -174,13 +174,12 @@
     if (!self.statusItem) {
         // Init the status item
         self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
-        [self.statusItem setHighlightMode:YES];
-        [self.statusItem setEnabled:YES];
+        self.statusItem.button.enabled = YES;
 
         // Set the status item image
         NSImage *menuIcon = NSImage.VLCStatusBarIconImage;
         [menuIcon setTemplate:YES];
-        [self.statusItem setImage:menuIcon];
+        self.statusItem.button.image = menuIcon;
 
         // Attach pull-down menu
         [self.statusItem setMenu:_vlcStatusBarIconMenu];
@@ -376,7 +375,7 @@
 - (void)updateMenuItemRandom
 {
     // Get current random status
-    [randomButton setState:VLCMain.sharedInstance.playQueueController.playbackOrder == VLC_PLAYLIST_PLAYBACK_ORDER_RANDOM ? NSOnState : NSOffState];
+    [randomButton setState:VLCMain.sharedInstance.playQueueController.playbackOrder == VLC_PLAYLIST_PLAYBACK_ORDER_RANDOM ? NSControlStateValueOn : NSControlStateValueOff];
 }
 
 #pragma mark -
@@ -401,9 +400,9 @@
 - (void)setStoppedStatus:(BOOL)stopped
 {
     if (stopped) {
-        [playPauseButton setState:NSOffState];
+        [playPauseButton setState:NSControlStateValueOff];
     } else {
-        [playPauseButton setState:NSOnState];
+        [playPauseButton setState:NSControlStateValueOn];
     }
 }
 
@@ -445,7 +444,7 @@
 // Action: Show VLC main window
 - (IBAction)statusBarIconShowMainWindow:(id)sender
 {
-    [NSApplication.sharedApplication activateIgnoringOtherApps:YES];
+    [NSApp activate];
     [(NSWindow *)VLCMain.sharedInstance.libraryWindow makeKeyAndOrderFront:sender];
 }
 

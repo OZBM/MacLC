@@ -295,7 +295,7 @@ static void updateProgressCallback(void *p_data,
     [_authenticationPasswordTextField setStringValue:@""];
 
     _authenticationStorePasswordCheckbox.hidden = !askToStore;
-    _authenticationStorePasswordCheckbox.state = NSOffState;
+    _authenticationStorePasswordCheckbox.state = NSControlStateValueOff;
 
     [_authenticationWindow center];
     _modalDialogID = dialogID;
@@ -311,7 +311,7 @@ static void updateProgressCallback(void *p_data,
         vlc_dialog_id_post_login(dialogID,
                                  username ? [username UTF8String] : NULL,
                                  password ? [password UTF8String] : NULL,
-                                 _authenticationStorePasswordCheckbox.state == NSOnState);
+                                 _authenticationStorePasswordCheckbox.state == NSControlStateValueOn);
     }
 }
 

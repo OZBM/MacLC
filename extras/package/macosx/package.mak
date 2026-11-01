@@ -191,4 +191,6 @@ EXTRA_DIST += \
 	extras/package/macosx/dmg/background.tiff \
 	extras/package/macosx/asset_sources/vlc_app_icon.svg \
 	extras/package/macosx/VLC.entitlements \
-	extras/package/macosx/VLC.xcodeproj/project.pbxproj
+	extras/package/macosx/MacLC.xcconfig \
+	extras/package/macosx/MacLC.xcodeproj/project.pbxproj \
+	extras/package/macosx/MacLC.xcodeproj/xcshareddata/xcschemes/MacLC-Package.xcscheme

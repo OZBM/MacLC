@@ -125,10 +125,17 @@
     if (alertButton == NSAlertFirstButtonReturn) {
         /* terminate and restart
          * NOTE you may not use [VLCMain relaunchApplication] here as it depends on the app not having moved and WILL crash */
-        [NSWorkspace.sharedWorkspace launchApplicationAtURL:_appLocationURL.absoluteURL
-                                                      options:NSWorkspaceLaunchNewInstance
-                                                configuration:@{}
-                                                        error:nil];
+        NSWorkspaceOpenConfiguration * const configuration = NSWorkspaceOpenConfiguration.configuration;
+        configuration.createsNewApplicationInstance = YES;
+        // The launch is asynchronous: quit only once the new instance is requested.
+        [NSWorkspace.sharedWorkspace openApplicationAtURL:_appLocationURL.absoluteURL
+                                            configuration:configuration
+                                        completionHandler:^(NSRunningApplication * const app, NSError * const error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self terminate:self];
+            });
+        }];
+        return;
     }
 
     [self terminate:self];
@@ -140,7 +147,7 @@
 // thus we override terminate: to send a stop:
 - (void)terminate:(id)sender
 {
-    [self activateIgnoringOtherApps:YES];
+    [self activate];
     libvlc_Quit(vlc_object_instance(_intf));
 }
 

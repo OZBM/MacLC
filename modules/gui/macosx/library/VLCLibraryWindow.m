@@ -255,7 +255,7 @@ static int ShowController(vlc_object_t * __unused p_this,
 
     self.placeholderLabel.font = MacLCDesign.title3;
     self.placeholderLabel.textColor = MacLCDesign.secondaryLabel;
-    ((NSButton *)self.placeholderGoToBrowseButton).bezelColor = MacLCDesign.accent;
+    self.placeholderGoToBrowseButton.bezelColor = MacLCDesign.accent;
 
     /* The native library brings its own chrome: a code-built toolbar replaces
      * the XIB one, and the floating Now Playing bar of the split view
@@ -770,7 +770,9 @@ static int ShowController(vlc_object_t * __unused p_this,
 
     self.appearance = nil;
 
-    [self makeFirstResponder:self.splitViewController.multifunctionSidebarViewController.view];
+    // The sidebar is detached from the window while it is collapsed.
+    NSView * const sidebarView = self.splitViewController.multifunctionSidebarViewController.view;
+    [self makeFirstResponder:sidebarView.window == self ? sidebarView : nil];
     [VLCMain.sharedInstance.voutProvider updateWindowLevelForHelperWindows:NSNormalWindowLevel];
 
     // restore alpha value to 1 for the case that macosx-opaqueness is set to < 1

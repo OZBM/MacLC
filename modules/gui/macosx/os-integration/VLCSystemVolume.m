@@ -29,7 +29,7 @@
     msg_Generic(getIntf(), VLC_MSG_ERR, "VLCSystemVolume: " __VA_ARGS__)
 
 static const AudioObjectPropertyAddress virtualMasterPropertyAddress = {
-    .mElement   = kAudioObjectPropertyElementMaster,
+    .mElement   = kAudioObjectPropertyElementMain,
     .mScope     = kAudioObjectPropertyScopeOutput,
     .mSelector  = kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
 };
@@ -39,7 +39,7 @@ static const AudioObjectPropertyAddress virtualMasterPropertyAddress = {
 + (AudioDeviceID)defaultOutputDevice
 {
     const AudioObjectPropertyAddress defaultDevicePropertyAddress = {
-        .mElement   = kAudioObjectPropertyElementMaster,
+        .mElement   = kAudioObjectPropertyElementMain,
         .mScope     = kAudioObjectPropertyScopeOutput,
         .mSelector  = kAudioHardwarePropertyDefaultOutputDevice,
     };

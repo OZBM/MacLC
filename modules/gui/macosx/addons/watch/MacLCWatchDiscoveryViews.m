@@ -208,7 +208,7 @@ static dispatch_once_t sScrollerNotificationOnce;
         self.wantsLayer = YES;
         self.translatesAutoresizingMaskIntoConstraints = NO;
         self.layer.masksToBounds = YES;
-        self.layer.cornerRadius = 13.0; // 26 pt circle
+        self.layer.cornerRadius = MAX(26.0, MacLCDesign.minimumHitTarget) / 2.0;
         self.layer.backgroundColor = NSColor.quaternarySystemFillColor.CGColor;
         self.contentTintColor = NSColor.labelColor;
         self.imagePosition = NSImageOnly;
@@ -467,13 +467,13 @@ NSUserInterfaceItemIdentifier const MacLCWatchShelfHeaderIdentifier = @"MacLCWat
 
         [_nextButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
         [_nextButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-        [_nextButton.widthAnchor constraintEqualToConstant:26.0],
-        [_nextButton.heightAnchor constraintEqualToConstant:26.0],
+        [_nextButton.widthAnchor constraintEqualToConstant:MAX(26.0, MacLCDesign.minimumHitTarget)],
+        [_nextButton.heightAnchor constraintEqualToConstant:MAX(26.0, MacLCDesign.minimumHitTarget)],
 
         [_prevButton.trailingAnchor constraintEqualToAnchor:_nextButton.leadingAnchor constant:-6.0],
         [_prevButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
-        [_prevButton.widthAnchor constraintEqualToConstant:26.0],
-        [_prevButton.heightAnchor constraintEqualToConstant:26.0],
+        [_prevButton.widthAnchor constraintEqualToConstant:MAX(26.0, MacLCDesign.minimumHitTarget)],
+        [_prevButton.heightAnchor constraintEqualToConstant:MAX(26.0, MacLCDesign.minimumHitTarget)],
 
         [_actionButton.trailingAnchor constraintEqualToAnchor:_prevButton.leadingAnchor constant:-12.0],
         [_actionButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],

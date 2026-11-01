@@ -296,7 +296,7 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
 {
     // Indeed, we somehow can have an "inactive" fullscreen (but a visible window!).
     // But this creates some problems when leaving fs over remote intfs, so activate app here.
-    [NSApp activateIgnoringOtherApps:YES];
+    [NSApp activate];
 
     [self setFullscreen: YES];
     _inFullscreenTransition = NO;

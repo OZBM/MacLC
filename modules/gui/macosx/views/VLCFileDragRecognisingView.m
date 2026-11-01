@@ -76,20 +76,19 @@
         return YES;
     }
 
-    const id propertyList = [pasteboard propertyListForType:NSFilenamesPboardType];
-    if (propertyList == nil) {
+    NSArray<NSURL *> * const fileURLs = [pasteboard readObjectsForClasses:@[NSURL.class]
+                                                                  options:@{NSPasteboardURLReadingFileURLsOnlyKey: @YES}];
+    if (fileURLs.count == 0) {
         return NO;
     }
 
-    NSArray * const values = propertyList;
-    const NSUInteger valueCount = values.count;
-    if (valueCount <= 0) {
-        return NO;
-    }
+    NSMutableArray<VLCOpenInputMetadata *> * const metadataArray = [NSMutableArray arrayWithCapacity:fileURLs.count];
 
-    NSMutableArray * const metadataArray = [NSMutableArray arrayWithCapacity:valueCount];
-
-    for (NSString * const filepath in values) {
+    for (NSURL * const fileURL in fileURLs) {
+        NSString * const filepath = fileURL.path;
+        if (filepath.length == 0) {
+            continue;
+        }
         VLCOpenInputMetadata * const inputMetadata = [VLCOpenInputMetadata inputMetaWithPath:filepath];
         if (inputMetadata != nil) {
             [metadataArray addObject:inputMetadata];
@@ -144,8 +143,7 @@
         VLCMediaLibraryMediaItemUTI,
         NSPasteboardTypeURL,
         NSPasteboardTypeFileURL,
-        NSPasteboardTypeString,
-        NSFilenamesPboardType
+        NSPasteboardTypeString
     ]];
 }
 

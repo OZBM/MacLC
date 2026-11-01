@@ -264,7 +264,7 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
      * that floats, or it would cover the windows it opens (Search Add-ons). */
     [self.window setLevel:windowLevel > NSFloatingWindowLevel ? windowLevel : NSNormalWindowLevel];
     [self.window makeKeyAndOrderFront:nil];
-    [NSApp activateIgnoringOtherApps:YES];
+    [NSApp activate];
 
     if (_currentPane) {
         [_currentPane loadSettings];

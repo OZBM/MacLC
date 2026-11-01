@@ -60,7 +60,7 @@ enum {
     if (_dataPort)
         return _dataPort;
 
-    io_service_t serviceObject = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleLMUController"));
+    io_service_t serviceObject = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleLMUController"));
 
     if (!serviceObject) {
         msg_Warn(getIntf(), "Failed to get an AppleLMUController service, keyboard dimming will not work");

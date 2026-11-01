@@ -424,7 +424,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (class, readonly) CGFloat cardCornerRadius;
 
 /**
- * Minimum touch and pointer hit target dimension: 28 pt (≥ 28×28 pt).
+ * Minimum hit target dimension: 28 pt for a pointer, 44 pt when the touch
+ * interface is enabled (see +[NSScreen touchInterfaceEnabled]).
  */
 @property (class, readonly) CGFloat minimumHitTarget;
 

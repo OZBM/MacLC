@@ -26,6 +26,10 @@
 @interface NSScreen (VLCAdditions)
 
 + (NSScreen *)screenWithDisplayID: (CGDirectDisplayID)displayID;
+/// YES when a screen accepts direct touch, or with the debug default
+/// MacLCForceTouchUI. Read when views are built: plugging a touch screen in
+/// later does not relayout what already exists.
++ (BOOL)touchInterfaceEnabled;
 - (BOOL)hasMenuBar;
 - (BOOL)hasDock;
 - (BOOL)isScreen: (NSScreen*)screen;

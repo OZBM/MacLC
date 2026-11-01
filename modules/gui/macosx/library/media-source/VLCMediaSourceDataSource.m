@@ -277,7 +277,7 @@ static NSString *MacLCBrowseItemCountString(NSInteger count)
     [self.tableView setAction:nil];
     [self.tableView setDoubleAction:@selector(tableViewAction:)];
     [self.tableView setTarget:self];
-    [self.tableView registerForDraggedTypes:@[NSFilenamesPboardType]];
+    [self.tableView registerForDraggedTypes:@[NSPasteboardTypeFileURL]];
     [self.tableView setDraggingSourceOperationMask:NSDragOperationCopy forLocal:NO];
     [self.tableView setDraggingSourceOperationMask:NSDragOperationCopy forLocal:YES];
 }
@@ -733,8 +733,9 @@ minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
                  proposedRow:(NSInteger)row
        proposedDropOperation:(NSTableViewDropOperation)dropOperation
 {
-    const id propertyList = [info.draggingPasteboard propertyListForType:NSFilenamesPboardType];
-    if (propertyList == nil) {
+    NSArray<NSURL *> * const fileURLs = [info.draggingPasteboard readObjectsForClasses:@[NSURL.class]
+                                                                               options:@{NSPasteboardURLReadingFileURLsOnlyKey: @YES}];
+    if (fileURLs.count == 0) {
         return NSDragOperationNone;
     }
 

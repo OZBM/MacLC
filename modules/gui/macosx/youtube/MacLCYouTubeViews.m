@@ -26,6 +26,7 @@
 #import "youtube/MacLCYouTubeService.h"
 #import "addons/watch/MacLCWatchComponents.h"
 #import "theme/MacLCDesign.h"
+#import "extensions/NSScreen+VLCAdditions.h"
 #import "medialib/components/MacLCEmptyStateView.h"
 #import "extensions/NSString+Helpers.h"
 
@@ -190,7 +191,7 @@ static void StyleGlassCircleButton(NSButton *button, CGFloat size)
         _addToQueueButton.toolTip = _NS("Add to Queue");
         _addToQueueButton.accessibilityLabel = _NS("Add to Queue");
         _addToQueueButton.alphaValue = 0.0;
-        StyleGlassCircleButton(_addToQueueButton, 28.0);
+        StyleGlassCircleButton(_addToQueueButton, MAX(28.0, MacLCDesign.minimumHitTarget));
         [_thumbnailWrapperView addSubview:_addToQueueButton];
 
         /* Spinner for opening */
@@ -497,7 +498,8 @@ static void StyleGlassCircleButton(NSButton *button, CGFloat size)
     const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
         ? CATransform3DMakeScale(1.03, 1.03, 1.0)
         : CATransform3DIdentity;
-    const CGFloat targetAlpha = hovered ? 1.0 : 0.0;
+    // A finger cannot hover, so on a touch screen the button stays visible.
+    const CGFloat targetAlpha = (hovered || NSScreen.touchInterfaceEnabled) ? 1.0 : 0.0;
 
     CALayer * const layer = _thumbnailWrapperView.layer;
     if (layer == nil) {
@@ -790,6 +792,9 @@ static void StyleGlassCircleButton(NSButton *button, CGFloat size)
 
     MacLCYouTubeVideoCardView * const cv = self.cardView;
     [cv configureWithVideo:video showsChannel:_showsChannel];
+    if (NSScreen.touchInterfaceEnabled) {
+        [cv updateHoverState:NO animated:NO];
+    }
 
     if (video == nil || video.thumbnailURL == nil) {
         cv.thumbnailImageView.layer.contents = nil;
@@ -961,7 +966,7 @@ static void StyleGlassCircleButton(NSButton *button, CGFloat size)
         _addToQueueButton.toolTip = _NS("Add to Queue");
         _addToQueueButton.accessibilityLabel = _NS("Add to Queue");
         _addToQueueButton.alphaValue = 0.0;
-        StyleGlassCircleButton(_addToQueueButton, 28.0);
+        StyleGlassCircleButton(_addToQueueButton, MAX(28.0, MacLCDesign.minimumHitTarget));
         [_leadingWrapperView addSubview:_addToQueueButton];
 
         /* Opening spinner */
@@ -1381,7 +1386,8 @@ static void StyleGlassCircleButton(NSButton *button, CGFloat size)
     const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
         ? CATransform3DMakeScale(1.03, 1.03, 1.0)
         : CATransform3DIdentity;
-    const CGFloat targetAlpha = (hovered && self.item.result.kind == MacLCYouTubeResultKindVideo) ? 1.0 : 0.0;
+    // A finger cannot hover, so on a touch screen the button stays visible.
+    const CGFloat targetAlpha = ((hovered || NSScreen.touchInterfaceEnabled) && self.item.result.kind == MacLCYouTubeResultKindVideo) ? 1.0 : 0.0;
 
     CALayer * const layer = _leadingWrapperView.layer;
     if (layer == nil) {
@@ -1691,6 +1697,9 @@ static void StyleGlassCircleButton(NSButton *button, CGFloat size)
 
     MacLCYouTubeResultRowView * const rv = self.rowView;
     [rv configureWithResult:result];
+    if (NSScreen.touchInterfaceEnabled) {
+        [rv updateHoverState:NO animated:NO];
+    }
 
     if (result == nil) {
         rv.thumbnailImageView.layer.contents = nil;

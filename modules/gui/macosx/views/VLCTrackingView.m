@@ -23,6 +23,7 @@
 #import "VLCTrackingView.h"
 
 #import "extensions/NSAnimationContext+VLCAdditions.h"
+#import "extensions/NSScreen+VLCAdditions.h"
 
 @interface VLCTrackingView ()
 {
@@ -138,7 +139,8 @@
 
 - (void)handleMouseExit
 {
-    if (!self.enabled) {
+    // A finger has no hover: on a touch screen the hover controls stay up.
+    if (!self.enabled || NSScreen.touchInterfaceEnabled) {
         return;
     }
 
@@ -172,6 +174,13 @@
                                                    owner:self
                                                 userInfo:nil];
     [self addTrackingArea:_trackingArea];
+
+    if (NSScreen.touchInterfaceEnabled) {
+        if (!_mouseIn) {
+            [self handleMouseEnter];
+        }
+        return;
+    }
 
     // Once tracking area updated, check if the cursor is still inside the tracking view.
     // This prevents situations where the mouseEntered/mouseExited is not called because the view

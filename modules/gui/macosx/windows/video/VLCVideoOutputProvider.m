@@ -825,7 +825,7 @@ static int WindowFloatOnTop(vlc_object_t *obj,
         if (b_fullscreen) {
             if (_playerController.playerState != VLC_PLAYER_STATE_STOPPED && [_playerController activeVideoPlayback]) {
                 // activate app, as method can also be triggered from outside the app (prevents nasty window layout)
-                [NSApp activateIgnoringOtherApps:YES];
+                [NSApp activate];
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [o_current_window enterFullscreenWithAnimation:b_animation];
                 });

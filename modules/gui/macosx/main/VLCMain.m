@@ -47,6 +47,8 @@
 #include <Metal/Metal.h>
 
 #import "extensions/NSString+Helpers.h"
+#import "extensions/NSScreen+VLCAdditions.h"
+#import "extensions/NSWindow+VLCAdditions.h"
 
 #import "library/VLCLibraryController.h"
 #import "library/VLCLibraryWindow.h"
@@ -381,11 +383,11 @@ static VLCMain *sharedInstance = nil;
     // Change this if you are going to add new shaders!
     if (((VLCApplication *)NSApplication.sharedApplication).winterHolidaysTheming) {
         _metalDevice = MTLCreateSystemDefaultDevice();
-        NSString * const libraryPath =
-            [NSBundle.mainBundle pathForResource:@"Shaders" ofType:@"metallib"];
-        if (libraryPath) {
+        NSURL * const libraryURL =
+            [NSBundle.mainBundle URLForResource:@"Shaders" withExtension:@"metallib"];
+        if (libraryURL) {
             NSError *error = nil;
-            _metalLibrary = [_metalDevice newLibraryWithFile:libraryPath error:&error];
+            _metalLibrary = [_metalDevice newLibraryWithURL:libraryURL error:&error];
             if (!_metalLibrary) {
                 NSLog(@"Error creating Metal library: %@", error);
             }
@@ -422,6 +424,16 @@ static VLCMain *sharedInstance = nil;
     }
 
     [_libraryWindowController.window makeKeyAndOrderFront:nil];
+
+    if (NSScreen.touchInterfaceEnabled) {
+        [NSNotificationCenter.defaultCenter addObserverForName:NSWindowDidBecomeKeyNotification
+                                                        object:nil
+                                                         queue:NSOperationQueue.mainQueue
+                                                    usingBlock:^(NSNotification * const notification) {
+            [(NSWindow *)notification.object installTouchContextMenuGesture];
+        }];
+        [_libraryWindowController.window installTouchContextMenuGesture];
+    }
 
     /* Play on TV (Chromecast discovery, AirPlay route) and the Sound modes,
      * whose filters live on the player's audio output. */

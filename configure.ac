@@ -2,7 +2,7 @@ dnl Autoconf settings for vlc
 
 AC_COPYRIGHT([Copyright 1999-2026 VLC authors and VideoLAN])
 
-AC_INIT([vlc], [1.4])
+AC_INIT([vlc], [1.5])
 
 dnl MacLC carries its own product version, set in AC_INIT above. The VERSION_*
 dnl tuple below is libvlc's API version, not the product's: lib/core.c asserts
@@ -323,6 +323,10 @@ int foo() { return my_array[0]; }
         CCAS="${CCAS} -mmacosx-version-min=${with_macosx_version_min}"
         LD="${LD} -mmacosx_version_min=${with_macosx_version_min}"
     fi
+    dnl LT_INIT detects OBJC and OBJCXX again and drops the flags above:
+    dnl keep them to restore after it.
+    vlc_darwin_objc="${OBJC}"
+    vlc_darwin_objcxx="${OBJCXX}"
     ;;
   *mingw32* | *cygwin* | *wince* | *mingwce*)
     dnl Force libtool to not link to (shared) libgcc_s when detecting C++ dependencies
@@ -727,6 +731,10 @@ AC_CACHE_VAL(lt_cv_deplibs_check_method,
 LT_INIT([dlopen win32-dll shared disable-static])
 LT_LANG([C++])
 LT_LANG([Windows Resource])
+AS_IF([test -n "${vlc_darwin_objc}"], [
+  OBJC="${vlc_darwin_objc}"
+  OBJCXX="${vlc_darwin_objcxx}"
+])
 
 DOLT
 

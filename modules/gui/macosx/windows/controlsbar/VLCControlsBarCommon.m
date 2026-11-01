@@ -245,6 +245,14 @@
         }
         _torrentMarker.avoidViews = timeLabels;
         self.timeSlider.downloadHead = -1.0;
+        // A finger drag sends no mouse events: tracking events keep the
+        // periodic position update from fighting the drag.
+        [self.timeSlider addTarget:self
+                            action:@selector(timeSliderTrackingBegan:)
+                  forControlEvents:NSControlEventTrackingBegan];
+        [self.timeSlider addTarget:self
+                            action:@selector(timeSliderTrackingEnded:)
+                  forControlEvents:NSControlEventTrackingEndedInside | NSControlEventTrackingEndedOutside | NSControlEventTrackingCancelled];
     }
     [MacLCTorrentMonitor.sharedMonitor start];
     [self torrentMonitorDidUpdate:nil];
@@ -490,8 +498,20 @@
             _isTimeSliderBeingDragged = NO;
             break;
         default:
+            // Direct touch and keyboard changes carry no mouse event: seek too.
+            [_playerController setPositionFast:[sender floatValue]];
             return;
     }
+}
+
+- (void)timeSliderTrackingBegan:(id)sender
+{
+    _isTimeSliderBeingDragged = YES;
+}
+
+- (void)timeSliderTrackingEnded:(id)sender
+{
+    _isTimeSliderBeingDragged = NO;
 }
 
 - (IBAction)volumeAction:(id)sender

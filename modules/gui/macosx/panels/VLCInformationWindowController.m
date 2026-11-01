@@ -694,7 +694,7 @@ SET_INPUTITEM_PROP(field, field)                \
 - (IBAction)chooseArtwork:(id)sender
 {
     NSOpenPanel * const panel = [NSOpenPanel openPanel];
-    [panel setAllowedFileTypes:@[@"png", @"jpg", @"jpeg", @"gif", @"tiff", @"tif", @"bmp"]];
+    panel.allowedContentTypes = [NSString contentTypesFromExtensions:@[@"png", @"jpg", @"jpeg", @"gif", @"tiff", @"tif", @"bmp"]];
     [panel setAllowsMultipleSelection:NO];
     [panel setCanChooseDirectories:NO];
     [panel setCanChooseFiles:YES];

@@ -231,6 +231,12 @@
     _scrollView.drawsBackground = NO;
     _scrollView.hasVerticalScroller = YES;
     _scrollView.autohidesScrollers = YES;
+    if (@available(macOS 27.0, *)) {
+        NSRefreshController * const refreshController = [[NSRefreshController alloc] init];
+        refreshController.target = self;
+        refreshController.action = @selector(refreshPulled:);
+        _scrollView.refreshController = refreshController;
+    }
     [rootView addSubview:_scrollView];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -330,10 +336,18 @@
     }
 }
 
+- (void)refreshPulled:(id)sender
+{
+    [self loadInitialContent];
+}
+
 - (void)handlePageResponse:(nullable MacLCYouTubePage *)page error:(nullable NSError *)error isAppend:(BOOL)isAppend
 {
     _isLoading = NO;
     _inFlightRequest = nil;
+    if (@available(macOS 27.0, *)) {
+        [_scrollView.refreshController endRefreshing];
+    }
 
     if (error != nil) {
         if (!isAppend) {

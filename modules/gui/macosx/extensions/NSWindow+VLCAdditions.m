@@ -30,4 +30,40 @@
     return titlebarView.frame.size.height;
 }
 
+static NSString * const VLCTouchContextMenuGestureName = @"MacLCTouchContextMenu";
+
+- (void)installTouchContextMenuGesture
+{
+    NSView * const contentView = self.contentView;
+    for (NSGestureRecognizer * const recognizer in contentView.gestureRecognizers) {
+        if ([recognizer.name isEqualToString:VLCTouchContextMenuGestureName]) {
+            return;
+        }
+    }
+    NSPressGestureRecognizer * const press =
+        [[NSPressGestureRecognizer alloc] initWithTarget:self action:@selector(vlc_touchContextMenu:)];
+    press.name = VLCTouchContextMenuGestureName;
+    [contentView addGestureRecognizer:press];
+}
+
+- (void)vlc_touchContextMenu:(NSPressGestureRecognizer *)recognizer
+{
+    if (recognizer.state != NSGestureRecognizerStateBegan) {
+        return;
+    }
+    // A synthesized right click reaches the view under the finger the normal
+    // way, so each view keeps its own menuForEvent: or rightMouseDown: menu.
+    NSEvent * const rightClick =
+        [NSEvent mouseEventWithType:NSEventTypeRightMouseDown
+                           location:[recognizer locationInView:nil]
+                      modifierFlags:0
+                          timestamp:NSProcessInfo.processInfo.systemUptime
+                       windowNumber:self.windowNumber
+                            context:nil
+                        eventNumber:0
+                         clickCount:1
+                           pressure:1.0];
+    [self sendEvent:rightClick];
+}
+
 @end

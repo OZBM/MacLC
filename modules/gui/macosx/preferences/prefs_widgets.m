@@ -126,8 +126,8 @@ my_width, tooltip, init_value)                                              \
 {                                                                           \
     NSRect s_rc = superFrame;                                               \
     o_button = [[NSButton alloc] initWithFrame: s_rc];                      \
-    [o_button setButtonType: NSMomentaryPushInButton];                      \
-    [o_button setBezelStyle: NSRoundedBezelStyle];                          \
+    [o_button setButtonType: NSButtonTypeMomentaryPushIn];                      \
+    [o_button setBezelStyle: NSBezelStylePush];                          \
     [o_button setTitle: title];                                             \
     [o_button setFont:[NSFont systemFontOfSize:0]];                         \
     [o_button sizeToFit];                                                   \
@@ -200,7 +200,7 @@ my_width, tooltip, init_value)                                              \
     s_rc.origin.y = superFrame.size.height - 18 + my_y_offset;              \
     o_checkbox = [[NSButton alloc] initWithFrame: s_rc];                    \
     [o_checkbox setFont:[NSFont systemFontOfSize:0]];                       \
-    [o_checkbox setButtonType: NSSwitchButton];                             \
+    [o_checkbox setButtonType: NSButtonTypeSwitch];                            \
     [o_checkbox setImagePosition: position];                                \
     [o_checkbox setIntValue: init_value];                                   \
     [o_checkbox setTitle: label];                                           \
@@ -1814,7 +1814,7 @@ o_moduleenabled = [NSNumber numberWithBool:NO];\
 
     NSTableHeaderCell *o_headerCell = [[NSTableHeaderCell alloc] initTextCell:@"Enabled"];
     NSCell *o_dataCell = [[NSButtonCell alloc] init];
-    [(NSButtonCell*)o_dataCell setButtonType:NSSwitchButton];
+    [(NSButtonCell*)o_dataCell setButtonType:NSButtonTypeSwitch];
     [o_dataCell setTitle:@""];
     [o_dataCell setFont:[NSFont systemFontOfSize:0]];
     NSTableColumn *o_tableColumn = [[NSTableColumn alloc]

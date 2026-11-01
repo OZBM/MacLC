@@ -381,7 +381,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
     // Delay this to allow the full animation to run inside the modal event loop
     dispatch_async(dispatch_get_main_queue(), ^{
         [_tabView selectTabViewItemWithIdentifier:identifier];
-        [_fileSubCheckbox setState: NSOffState];
+        [_fileSubCheckbox setState: NSControlStateValueOff];
     });
 
     NSModalResponse i_result = [NSApp runModalForWindow: self.window];
@@ -400,13 +400,13 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
     VLCOpenInputMetadata *inputMetadata = [[VLCOpenInputMetadata alloc] init];
     inputMetadata.MRLString = [self MRL];
 
-    if ([_fileSubCheckbox state] == NSOnState) {
+    if ([_fileSubCheckbox state] == NSControlStateValueOn) {
         [self addSubtitleOptionsToArray:options];
     }
-    if ([_fileCustomTimingCheckbox state] == NSOnState) {
+    if ([_fileCustomTimingCheckbox state] == NSControlStateValueOn) {
         [self addTimingOptionsToArray:options];
     }
-    if ([_outputCheckbox state] == NSOnState) {
+    if ([_outputCheckbox state] == NSControlStateValueOn) {
         [self addStreamOutputOptionsToArray:options];
     }
     if ([_fileSlaveCheckbox state] && _fileSlavePath)
@@ -429,7 +429,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
 - (void)addSubtitleOptionsToArray:(NSMutableArray *)options
 {
     [options addObject: [NSString stringWithFormat: @"sub-file=%@", _subPath]];
-    if ([_fileSubOverrideCheckbox state] == NSOnState) {
+    if ([_fileSubOverrideCheckbox state] == NSControlStateValueOn) {
         [options addObject: [NSString stringWithFormat: @"sub-delay=%f", ([self fileSubDelay] * 10)]];
         [options addObject: [NSString stringWithFormat: @"sub-fps=%f", [self fileSubFps]]];
     }
@@ -505,7 +505,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
 - (IBAction)expandMRLfieldAction:(id)sender
 {
     [NSAnimationContext runAnimationRespectingPreferencesWithChanges:^(NSAnimationContext * const __unused context) {
-        if ([_mrlButton state] == NSOffState) {
+        if ([_mrlButton state] == NSControlStateValueOff) {
             self.mrlViewHeightConstraint.animator.constant = 0;
             self.mrlBox.hidden = YES;
         } else {
@@ -549,7 +549,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     [openPanel setAllowsMultipleSelection: YES];
     [openPanel setCanChooseDirectories: YES];
-    [openPanel setAllowedFileTypes:[[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA] arrayByAddingObject:@"torrent"]];
+    openPanel.allowedContentTypes = [NSString contentTypesFromExtensions:[[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA] arrayByAddingObject:@"torrent"]];
     [openPanel setTitle: _NS("Open File")];
     [openPanel setPrompt: _NS("Open")];
 
@@ -632,7 +632,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     [openPanel setAllowsMultipleSelection: NO];
     [openPanel setCanChooseDirectories: YES];
-    [openPanel setAllowedFileTypes:[[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA] arrayByAddingObject:@"torrent"]];
+    openPanel.allowedContentTypes = [NSString contentTypesFromExtensions:[[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA] arrayByAddingObject:@"torrent"]];
     [openPanel setTitle: _NS("Open File")];
     [openPanel setPrompt: _NS("Open")];
     [openPanel beginSheetModalForWindow:[sender window] completionHandler:^(NSInteger returnCode) {
@@ -657,12 +657,12 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
         openPanel = [NSOpenPanel openPanel];
         [openPanel setCanChooseFiles: YES];
         [openPanel setCanChooseDirectories: NO];
-        [openPanel setAllowedFileTypes:[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA]];
+        openPanel.allowedContentTypes = [NSString contentTypesFromExtensions:[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_MEDIA]];
         if ([openPanel runModal] == NSModalResponseOK) {
             _fileSlavePath = [[[openPanel URLs] firstObject] path];
         }
     }
-    if (_fileSlavePath && [_fileSlaveCheckbox state] == NSOnState) {
+    if (_fileSlavePath && [_fileSlaveCheckbox state] == NSControlStateValueOn) {
         [_fileSlaveFilenameLabel setStringValue: [[NSFileManager defaultManager] displayNameAtPath:_fileSlavePath]];
         [_fileSlaveIconWell setImage: [NSWorkspace.sharedWorkspace iconForFile: _fileSlavePath]];
     } else {
@@ -902,7 +902,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
     /* work-around for Mountain Lion, which treats folders called "BDMV" including an item named "INDEX.BDM"
      * as a _FILE_. Don't ask, move on. There is nothing to see here */
     [openPanel setCanChooseFiles: YES];
-    [openPanel setAllowedFileTypes:[NSArray arrayWithObject:@"public.directory"]];
+    openPanel.allowedContentTypes = @[UTTypeDirectory];
 
     if ([openPanel runModal] == NSModalResponseOK) {
         NSURL *path = openPanel.URL;
@@ -1248,7 +1248,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
 
 - (IBAction)subsChanged:(id)sender
 {
-    if ([_fileSubCheckbox state] == NSOnState) {
+    if ([_fileSubCheckbox state] == NSControlStateValueOn) {
         [_fileSubSettingsButton setEnabled:YES];
         if (_subPath) {
             [_fileSubtitlesFilenameLabel setStringValue: [[NSFileManager defaultManager] displayNameAtPath:_subPath]];
@@ -1277,7 +1277,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
 {
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     [openPanel setAllowsMultipleSelection: NO];
-    [openPanel setAllowedFileTypes:[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_SUBTITLE]];
+    openPanel.allowedContentTypes = [NSString contentTypesFromExtensions:[NSString extensionsArrayFromVLCStyleString:EXTENSIONS_SUBTITLE]];
     [openPanel setTitle: _NS("Open File")];
     [openPanel setPrompt: _NS("Open")];
 
@@ -1324,10 +1324,28 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
 
 #pragma mark - audio and video device management
 
+static NSArray<AVCaptureDevice *> *VLCCaptureDevices(AVMediaType mediaType)
+{
+    NSArray<AVCaptureDeviceType> * const types = @[
+        AVCaptureDeviceTypeBuiltInWideAngleCamera,
+        AVCaptureDeviceTypeExternal,
+        AVCaptureDeviceTypeMicrophone,
+        AVCaptureDeviceTypeContinuityCamera,
+        AVCaptureDeviceTypeDeskViewCamera
+    ];
+    AVCaptureDeviceDiscoverySession * const session =
+        [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:types
+                                                               mediaType:nil
+                                                                position:AVCaptureDevicePositionUnspecified];
+    NSPredicate * const predicate = [NSPredicate predicateWithBlock:^BOOL(AVCaptureDevice * const device, NSDictionary * const bindings) {
+        return [device hasMediaType:mediaType] || [device hasMediaType:AVMediaTypeMuxed];
+    }];
+    return [session.devices filteredArrayUsingPredicate:predicate];
+}
+
 - (void)updateVideoDevicesAndRepresentation
 {
-    _avvideoDevices = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]
-                         arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
+    _avvideoDevices = VLCCaptureDevices(AVMediaTypeVideo);
 
     [_qtkVideoDevicePopup removeAllItems];
     msg_Dbg(getIntf(), "Found %lu video capture devices", _avvideoDevices.count);
@@ -1353,8 +1371,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
 
 - (void)updateAudioDevicesAndRepresentation
 {
-    _avaudioDevices = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeAudio]
-                        arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
+    _avaudioDevices = VLCCaptureDevices(AVMediaTypeAudio);
 
     [_qtkAudioDevicePopup removeAllItems];
     [_screenqtkAudioPopup removeAllItems];

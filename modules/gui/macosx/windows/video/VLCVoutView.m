@@ -216,6 +216,9 @@
                 vlc_window_ReportMousePressed(_wnd, MOUSE_BUTTON_LEFT);
             }
             vlc_mutex_unlock(&_mutex);
+            // A tap gives no mouse move, so it must bring the controls back itself.
+            [NSNotificationCenter.defaultCenter postNotificationName:VLCVideoWindowShouldShowFullscreenController
+                                                              object:self];
         } else if (o_event.clickCount == 2) {
             [_playerController toggleFullscreen];
         }

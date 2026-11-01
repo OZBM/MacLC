@@ -179,9 +179,9 @@ static const struct vlc_logger_operations log_ops = { MsgCallback, NULL };
 - (void)splitViewDidResizeSubviews:(NSNotification *)notification
 {
     if ([_splitView isSubviewCollapsed:_detailView]) {
-        [_toggleDetailsButton setState:NSOffState];
+        [_toggleDetailsButton setState:NSControlStateValueOff];
     } else {
-        [_toggleDetailsButton setState:NSOnState];
+        [_toggleDetailsButton setState:NSControlStateValueOn];
     }
 }
 
@@ -196,7 +196,7 @@ static const struct vlc_logger_operations log_ops = { MsgCallback, NULL };
 
     [saveFolderPanel setCanSelectHiddenExtension: NO];
     [saveFolderPanel setCanCreateDirectories: YES];
-    [saveFolderPanel setAllowedFileTypes: [NSArray arrayWithObject:@"txt"]];
+    saveFolderPanel.allowedContentTypes = [NSString contentTypesFromExtensions:[NSArray arrayWithObject:@"txt"]];
     /* The version goes in outside the localised string: a translation that
      * gained a format specifier would otherwise read arguments that are not
      * there. */

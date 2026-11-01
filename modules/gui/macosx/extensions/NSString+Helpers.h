@@ -26,6 +26,7 @@
  *****************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <vlc_input.h>
 
 NSString *toNSStr(const char *str);
@@ -216,6 +217,9 @@ bool fixIntfSettings(void);
  * stripping any leading "*." prefix.
  */
 + (NSArray<NSString *> *)extensionsArrayFromVLCStyleString:(const char *)extensionsString;
+
+/// UTTypes for file extensions, for NSSavePanel.allowedContentTypes.
++ (NSArray<UTType *> *)contentTypesFromExtensions:(NSArray<NSString *> *)extensions;
 
 @end
 

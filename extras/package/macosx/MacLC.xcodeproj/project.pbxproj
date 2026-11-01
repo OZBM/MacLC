@@ -1,0 +1,267 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4D1C00000000000000000101 /* maclc_frc_geometry.c in Sources */ = {isa = PBXBuildFile; fileRef = 4D1C00000000000000000201 /* maclc_frc_geometry.c */; settings = {COMPILER_FLAGS = "-std=gnu23"; }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		4D1C00000000000000000201 /* maclc_frc_geometry.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = maclc_frc_geometry.c; sourceTree = "<group>"; };
+		4D1C00000000000000000202 /* maclc_frc_geometry.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = maclc_frc_geometry.h; sourceTree = "<group>"; };
+		4D1C00000000000000000203 /* MacLC.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = MacLC.xcconfig; sourceTree = "<group>"; };
+		4D1C00000000000000000204 /* libmacosx_plugin.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libmacosx_plugin.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4D1C00000000000000000301 /* Exceptions for "macosx" folder in "macosx_plugin" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				.gitignore,
+				Makefile.am,
+				Resources,
+				UI,
+				shaders/VLCSnowShader.metal,
+				tests,
+			);
+			target = 4D1C00000000000000000601 /* macosx_plugin */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		4D1C00000000000000000401 /* macosx */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4D1C00000000000000000301 /* Exceptions for "macosx" folder in "macosx_plugin" target */,
+			);
+			path = ../../../modules/gui/macosx;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4D1C00000000000000000501 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4D1C00000000000000000701 = {
+			isa = PBXGroup;
+			children = (
+				4D1C00000000000000000203 /* MacLC.xcconfig */,
+				4D1C00000000000000000401 /* macosx */,
+				4D1C00000000000000000702 /* video_filter */,
+				4D1C00000000000000000703 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4D1C00000000000000000702 /* video_filter */ = {
+			isa = PBXGroup;
+			children = (
+				4D1C00000000000000000201 /* maclc_frc_geometry.c */,
+				4D1C00000000000000000202 /* maclc_frc_geometry.h */,
+			);
+			path = ../../../modules/video_filter;
+			sourceTree = "<group>";
+		};
+		4D1C00000000000000000703 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4D1C00000000000000000204 /* libmacosx_plugin.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		4D1C00000000000000000602 /* MacLC Package */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-lc \"make -j12 package-macosx\"";
+			buildConfigurationList = 4D1C00000000000000000903 /* Build configuration list for PBXLegacyTarget "MacLC Package" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/zsh;
+			buildWorkingDirectory = "$(SRCROOT)/../../../build";
+			dependencies = (
+			);
+			name = "MacLC Package";
+			passBuildSettingsInEnvironment = 0;
+			productName = "MacLC Package";
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXNativeTarget section */
+		4D1C00000000000000000601 /* macosx_plugin */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4D1C00000000000000000902 /* Build configuration list for PBXNativeTarget "macosx_plugin" */;
+			buildPhases = (
+				4D1C00000000000000000801 /* Sources */,
+				4D1C00000000000000000501 /* Frameworks */,
+				4D1C00000000000000000802 /* Deploy into build/MacLC.app */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4D1C00000000000000000401 /* macosx */,
+			);
+			name = macosx_plugin;
+			productName = macosx_plugin;
+			productReference = 4D1C00000000000000000204 /* libmacosx_plugin.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4D1C00000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2720;
+				TargetAttributes = {
+					4D1C00000000000000000601 = {
+						CreatedOnToolsVersion = 27.2;
+					};
+					4D1C00000000000000000602 = {
+						CreatedOnToolsVersion = 27.2;
+					};
+				};
+			};
+			buildConfigurationList = 4D1C00000000000000000901 /* Build configuration list for PBXProject "MacLC" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4D1C00000000000000000701;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4D1C00000000000000000703 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4D1C00000000000000000601 /* macosx_plugin */,
+				4D1C00000000000000000602 /* MacLC Package */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4D1C00000000000000000802 /* Deploy into build/MacLC.app */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Deploy into build/MacLC.app";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\nAPP=\"$MACLC_BUILD/MacLC.app/Contents\"\nif [ ! -x \"$APP/MacOS/MacLC\" ]; then\n    echo \"error: $MACLC_BUILD/MacLC.app is missing: build the MacLC-Package scheme first\"\n    exit 1\nfi\ndst=\"$APP/Frameworks/plugins/$FULL_PRODUCT_NAME\"\n# Copy then rename: overwriting a signed Mach-O in place gets the next launch killed.\ncp \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME\" \"$dst.new.$$\"\n# Xcode signs the product after this phase; dyld needs a signature now.\ncodesign --force --sign - \"$dst.new.$$\"\nmv -f \"$dst.new.$$\" \"$dst\"\n# Interface Builder edits: let make compile the xibs, then copy the nibs.\nnibs=$(cd \"$MACLC_ROOT/modules\" && ls gui/macosx/UI/*.xib | sed 's/xib$/nib/')\nmake -C \"$MACLC_BUILD/modules\" $nibs\nrsync -a --include='*.nib' --include='*/' --exclude='*' \"$MACLC_BUILD/modules/gui/macosx/UI/\" \"$APP/Resources/Base.lproj/\"\nVLC_LIB_PATH=\"$APP/Frameworks\" \"$MACLC_BUILD/bin/vlc-cache-gen\" \"$APP/Frameworks/plugins\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4D1C00000000000000000801 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D1C00000000000000000101 /* maclc_frc_geometry.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4D1C00000000000000000A01 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4D1C00000000000000000203 /* MacLC.xcconfig */;
+			buildSettings = {
+				GCC_OPTIMIZATION_LEVEL = 0;
+			};
+			name = Debug;
+		};
+		4D1C00000000000000000A02 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4D1C00000000000000000203 /* MacLC.xcconfig */;
+			buildSettings = {
+				GCC_OPTIMIZATION_LEVEL = 2;
+			};
+			name = Release;
+		};
+		4D1C00000000000000000A03 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		4D1C00000000000000000A04 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		4D1C00000000000000000A05 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "MacLC Package";
+			};
+			name = Debug;
+		};
+		4D1C00000000000000000A06 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "MacLC Package";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4D1C00000000000000000901 /* Build configuration list for PBXProject "MacLC" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4D1C00000000000000000A01 /* Debug */,
+				4D1C00000000000000000A02 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4D1C00000000000000000902 /* Build configuration list for PBXNativeTarget "macosx_plugin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4D1C00000000000000000A03 /* Debug */,
+				4D1C00000000000000000A04 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4D1C00000000000000000903 /* Build configuration list for PBXLegacyTarget "MacLC Package" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4D1C00000000000000000A05 /* Debug */,
+				4D1C00000000000000000A06 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4D1C00000000000000000001 /* Project object */;
+}

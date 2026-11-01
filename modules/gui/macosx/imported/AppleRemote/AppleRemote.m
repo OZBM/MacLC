@@ -507,7 +507,7 @@ static void QueueCallbackFunction(void* target,  IOReturn result, void* __unused
     hidMatchDictionary = IOServiceMatching(AppleRemoteDeviceName);
 
     // Now search I/O Registry for matching devices.
-    ioReturnValue = IOServiceGetMatchingServices(kIOMasterPortDefault, hidMatchDictionary, &hidObjectIterator);
+    ioReturnValue = IOServiceGetMatchingServices(kIOMainPortDefault, hidMatchDictionary, &hidObjectIterator);
 
     if ((ioReturnValue == kIOReturnSuccess) && (hidObjectIterator != 0)) {
         hidDevice = IOIteratorNext(hidObjectIterator);

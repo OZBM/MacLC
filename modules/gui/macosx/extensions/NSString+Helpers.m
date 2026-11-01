@@ -261,6 +261,18 @@ NSString *const kVLCMediaUnknown = @"Unknown";
     return [extensions componentsSeparatedByString:@";"];
 }
 
++ (NSArray<UTType *> *)contentTypesFromExtensions:(NSArray<NSString *> *)extensions
+{
+    NSMutableArray<UTType *> * const types = [NSMutableArray arrayWithCapacity:extensions.count];
+    for (NSString *ext in extensions) {
+        UTType * const type = [UTType typeWithFilenameExtension:ext];
+        if (type != nil) {
+            [types addObject:type];
+        }
+    }
+    return types.copy;
+}
+
 @end
 
 #pragma mark -
@@ -468,10 +480,10 @@ NSString * getVolumeTypeFromMountPath(NSString *mountPath)
     NSString *bsdMount = [NSString stringWithUTF8String:stf.f_mntfromname];
     NSString *bsdName = [bsdMount lastPathComponent];
 
-    CFMutableDictionaryRef matchingDict = IOBSDNameMatching(kIOMasterPortDefault, 0, [bsdName UTF8String]);
+    CFMutableDictionaryRef matchingDict = IOBSDNameMatching(kIOMainPortDefault, 0, [bsdName UTF8String]);
     NSString *returnValue;
 
-    io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, matchingDict);
+    io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, matchingDict);
     if (IO_OBJECT_NULL != service) {
         if (IOObjectConformsTo(service, kIOCDMediaClass)) {
             returnValue = kVLCMediaAudioCD;

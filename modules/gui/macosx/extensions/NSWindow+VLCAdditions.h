@@ -28,6 +28,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (readonly) CGFloat titlebarHeight;
 
+/// Adds a long press on the content view that opens the context menu of the
+/// view under the finger, as a right click would. Calling it again does nothing.
+- (void)installTouchContextMenuGesture;
+
 @end
 
 NS_ASSUME_NONNULL_END

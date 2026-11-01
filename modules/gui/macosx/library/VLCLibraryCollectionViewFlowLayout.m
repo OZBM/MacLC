@@ -56,7 +56,7 @@ typedef NS_ENUM(NSUInteger, VLCExpandAnimationType) {
 #pragma mark - VLCLibraryCollectionViewFlowLayout
 @interface VLCLibraryCollectionViewFlowLayout ()
 {
-    CVDisplayLinkRef _displayLinkRef;
+    CADisplayLink *_displayLink;
 
     NSArray *_mediumHeightAnimationSteps;
     NSArray *_largeHeightAnimationSteps;
@@ -68,7 +68,6 @@ typedef NS_ENUM(NSUInteger, VLCExpandAnimationType) {
 
     BOOL _invalidateAll;
     CGFloat _previousWidth;
-    NSUInteger _displayLinkGeneration;
 }
 
 @property (nonatomic, readwrite) BOOL detailViewIsAnimating;
@@ -446,43 +445,26 @@ typedef NS_ENUM(NSUInteger, VLCExpandAnimationType) {
 
     _detailViewIsAnimating = YES;
 
-    if (_displayLinkRef == NULL) {
+    if (_displayLink == nil) {
         [self initDisplayLink];
     }
 }
 
 - (void)initDisplayLink
 {
-    const CVReturn createResult = CVDisplayLinkCreateWithActiveCGDisplays(&_displayLinkRef);
-
-    if ((createResult != kCVReturnSuccess) || (_displayLinkRef == NULL)) {
+    // The link retains self until releaseDisplayLink invalidates it (animation end, reset or dealloc path).
+    _displayLink = [self.collectionView displayLinkWithTarget:self selector:@selector(displayLinkDidFire:)];
+    if (_displayLink == nil) {
         _detailViewIsAnimating = NO;
         return;
     }
+    [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
+}
 
-    const NSUInteger displayLinkGeneration = ++_displayLinkGeneration;
-    CVDisplayLinkRef const expectedDisplayLink = _displayLinkRef;
-    __weak VLCLibraryCollectionViewFlowLayout * const weakSelf = self;
-    const CVReturn handlerResult = CVDisplayLinkSetOutputHandler(_displayLinkRef, ^CVReturn(
-        CVDisplayLinkRef displayLink __unused,
-        const CVTimeStamp *inNow __unused,
-        const CVTimeStamp *inOutputTime __unused,
-        CVOptionFlags flagsIn __unused,
-        CVOptionFlags *flagsOut __unused) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            VLCLibraryCollectionViewFlowLayout * const strongSelf = weakSelf;
-            if (strongSelf == nil || strongSelf->_displayLinkGeneration != displayLinkGeneration ||
-                strongSelf->_displayLinkRef != expectedDisplayLink) {
-                return;
-            }
-            [strongSelf advanceDetailViewAnimation];
-        });
-        return kCVReturnSuccess;
-    });
-
-    if (handlerResult != kCVReturnSuccess || CVDisplayLinkStart(_displayLinkRef) != kCVReturnSuccess) {
-        [self releaseDisplayLink];
-        _detailViewIsAnimating = NO;
+- (void)displayLinkDidFire:(CADisplayLink *)displayLink
+{
+    if (displayLink == _displayLink) {
+        [self advanceDetailViewAnimation];
     }
 }
 
@@ -517,16 +499,8 @@ typedef NS_ENUM(NSUInteger, VLCExpandAnimationType) {
 
 - (void)releaseDisplayLink
 {
-    if (_displayLinkRef == NULL ) {
-        return;
-    }
-
-    CVDisplayLinkRef const displayLink = _displayLinkRef;
-    _displayLinkRef = NULL;
-    ++_displayLinkGeneration;
-
-    CVDisplayLinkStop(displayLink);
-    CVDisplayLinkRelease(displayLink);
+    [_displayLink invalidate];
+    _displayLink = nil;
 }
 
 @end

@@ -406,13 +406,21 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         MacLCGlassView * const circle = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
         circle.translatesAutoresizingMaskIntoConstraints = NO;
         circle.forcesDarkAppearance = YES;
-        circle.cornerRadius = 18.0;
+        const CGFloat diameter = MAX(36.0, MacLCDesign.minimumHitTarget);
+        circle.cornerRadius = diameter / 2.0;
         [parent addSubview:circle positioned:NSWindowBelow relativeTo:button];
+        // The button, not the circle, takes the click: it should cover the circle.
+        // Not required: the XIB pins the buttons inside a 32 pt title bar.
+        NSLayoutConstraint * const coverWidth = [button.widthAnchor constraintGreaterThanOrEqualToConstant:diameter];
+        NSLayoutConstraint * const coverHeight = [button.heightAnchor constraintGreaterThanOrEqualToConstant:diameter];
+        coverWidth.priority = coverHeight.priority = NSLayoutPriorityDefaultHigh;
         [NSLayoutConstraint activateConstraints:@[
             [circle.centerXAnchor constraintEqualToAnchor:button.centerXAnchor],
             [circle.centerYAnchor constraintEqualToAnchor:button.centerYAnchor],
-            [circle.widthAnchor constraintEqualToConstant:36.0],
-            [circle.heightAnchor constraintEqualToConstant:36.0],
+            [circle.widthAnchor constraintEqualToConstant:diameter],
+            [circle.heightAnchor constraintEqualToConstant:diameter],
+            coverWidth,
+            coverHeight,
         ]];
         [circle bind:NSHiddenBinding toObject:button withKeyPath:@"hidden" options:nil];
     }
