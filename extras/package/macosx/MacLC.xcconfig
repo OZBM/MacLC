@@ -47,6 +47,6 @@ OTHER_CFLAGS = -mbranch-protection=standard -funroll-loops
 WARNING_CFLAGS = -Wall -Wextra -Wsign-compare -Wundef -Wpointer-arith -Wvolatile-register-var -Wformat -Wformat-security -Werror=partial-availability
 
 LIBRARY_SEARCH_PATHS = $(MACLC_BUILD)/src/.libs
-OTHER_LDFLAGS = -lvlccore $(MACLC_BUILD)/compat/.libs/libcompat.a -framework AVKit -framework AVFoundation -framework Cocoa -framework CoreAudio -framework CoreGraphics -framework CoreMedia -framework CoreVideo -framework IOKit -framework QuartzCore -framework SystemConfiguration -framework ScriptingBridge -framework WebKit -framework QuickLook -framework QuickLookThumbnailing -framework Metal -framework MetalKit -framework UniformTypeIdentifiers -weak_framework MediaPlayer -Wl,-headerpad_max_install_names
+OTHER_LDFLAGS = -lvlccore $(MACLC_BUILD)/compat/.libs/libcompat.a -framework AVKit -framework AVFoundation -framework Cocoa -framework CoreAudio -framework CoreGraphics -framework CoreMedia -framework CoreVideo -framework IOKit -framework QuartzCore -framework SystemConfiguration -framework ScriptingBridge -framework WebKit -framework QuickLook -framework QuickLookThumbnailing -framework Metal -framework MetalKit -framework VideoToolbox -framework UniformTypeIdentifiers -weak_framework MediaPlayer -Wl,-headerpad_max_install_names
 
 DEBUG_INFORMATION_FORMAT = dwarf-with-dsym

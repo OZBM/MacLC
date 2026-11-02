@@ -82,6 +82,7 @@
 #import "hdr/MacLCHDRMenuController.h"
 #import "hdr/MacLCHDRPanelViewController.h"
 #import "hdr/MacLCSDRToHDRPanelViewController.h"
+#import "upscale/MacLCUpscalingPanelViewController.h"
 #import "menus/VLCStatusBarIcon.h"
 
 #import "os-integration/VLCClickerManager.h"
@@ -630,7 +631,7 @@ static VLCMain *sharedInstance = nil;
             }
         });
     }
-    /* MACLC_DEBUG_SHOW_PANEL=sound|sound-panel|sdr2hdr|hdr|settings-<pane>[+advanced][:y] opens, after
+    /* MACLC_DEBUG_SHOW_PANEL=sound|sound-panel|sdr2hdr|hdr|upscale|settings-<pane>[+advanced][:y] opens, after
      * MACLC_DEBUG_SHOW_PANEL_DELAY seconds (6 by default), the SDR to HDR
      * popover, the HDR popover or the HDR & Colour settings pane, anchored to
      * the library window, so headless captures can see them. */
@@ -651,6 +652,8 @@ static VLCMain *sharedInstance = nil;
                 [MacLCSDRToHDRPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
             } else if ([panel isEqualToString:@"hdr"]) {
                 [MacLCHDRPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
+            } else if ([panel isEqualToString:@"upscale"]) {
+                [MacLCUpscalingPanelViewController showRelativeToView:anchor preferredEdge:NSRectEdgeMinY];
             } else if ([panel hasPrefix:@"settings-"]) {
                 /* settings-<pane identifier>; settings-hdr is the HDR & Colour pane. */
                 NSString *pane = [[panel substringFromIndex:9] componentsSeparatedByCharactersInSet:

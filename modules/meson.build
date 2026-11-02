@@ -100,6 +100,7 @@ framework_conditions = [
             'Metal',
             'MetalPerformanceShaders',
             'MetalPerformanceShadersGraph',
+            'MetalFX',
             'CoreML',
             'Accelerate',
         ],

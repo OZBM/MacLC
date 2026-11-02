@@ -110,9 +110,17 @@ libsamplebufferdisplay_plugin_la_SOURCES += \
 	video_output/apple/MacLCMetalDovi.m video_output/apple/MacLCMetalDovi.h \
 	video_output/apple/maclc_dovi.h \
 	video_output/apple/MacLCMetalColorPass.m video_output/apple/MacLCMetalColorPass.h \
-	video_output/apple/maclc_tonecurves.c video_output/apple/maclc_tonecurves.h
+	video_output/apple/maclc_tonecurves.c video_output/apple/maclc_tonecurves.h \
+	video_output/apple/MacLCMetalUpscaler.m video_output/apple/MacLCMetalUpscaler.h \
+	video_output/apple/MacLCMetalArtCNN.m video_output/apple/MacLCMetalArtCNN.h \
+	video_output/apple/maclc_artcnn_c4f16.h \
+	video_output/apple/MacLCMetalFSR.m video_output/apple/MacLCMetalFSR.h \
+	video_output/apple/MacLCMetalNIS.m video_output/apple/MacLCMetalNIS.h \
+	video_output/apple/MacLCMetalHookShader.m video_output/apple/MacLCMetalHookShader.h \
+	video_output/apple/maclc_anime4k_cnn_x2_m.h \
+	video_output/apple/maclc_upscale_vars.h
 libsamplebufferdisplay_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(vout_RPATH) \
-	-Wl,-framework,AVFoundation,-framework,AVKit,-framework,Cocoa,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,MetalPerformanceShaders,-framework,MetalPerformanceShadersGraph,-framework,IOSurface,-framework,IOKit
+	-Wl,-framework,AVFoundation,-framework,AVKit,-framework,Cocoa,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,MetalPerformanceShaders,-framework,MetalPerformanceShadersGraph,-framework,IOSurface,-framework,IOKit,-weak_framework,MetalFX
 else
 libsamplebufferdisplay_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(vout_RPATH) \
 	-Wl,-framework,AVFoundation,-framework,Foundation,-framework,AVKit,-framework,UIKit,-framework,CoreMedia,-framework,QuartzCore,-framework,CoreGraphics,-framework,CoreVideo,-framework,VideoToolbox,-framework,CoreImage,-framework,Metal,-framework,MetalPerformanceShaders,-framework,MetalPerformanceShadersGraph,-framework,IOSurface

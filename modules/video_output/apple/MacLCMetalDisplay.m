@@ -37,6 +37,7 @@
 
 #include "codec/vt_utils.h"
 #include "maclc_hdr_vars.h"
+#include "maclc_upscale_vars.h"
 #include "maclc_tonemap.h"
 #include "MacLCHDRToneMapper.h"
 #include "MacLCSDR2HDRSession.h"
@@ -46,6 +47,9 @@
 #import "MacLCMetalLUT.h"
 #import "MacLCMetalDovi.h"
 #import "MacLCMetalColorPass.h"
+#import "MacLCMetalUpscaler.h"
+#import "MacLCMetalFSR.h"
+#import "MacLCMetalNIS.h"
 
 #pragma mark - Embedding Protocol
 
@@ -101,6 +105,16 @@ typedef struct vout_display_sys_t {
      * the texture above reads its IOSurface, which its pool must not recycle
      * before Display has drawn it. */
     CVPixelBufferRef stageABuffer;
+
+    MacLCMetalUpscaler *upscaler;
+    bool upscale;          /* maclc-upscale */
+    enum maclc_upscale_method upscaleMethod;
+    MacLCMetalFSR *fsr;               /* "sharp", made on first use */
+    MacLCMetalNIS *nis;               /* "nis", made on first use */
+    MacLCMetalScaler *userScaler;     /* gl-upscaler / gl-downscaler, or nil */
+    MacLCMetalScaler *classicScaler;  /* "classic": EWA Lanczos, made on first use */
+    CGSize upscaleScale;   /* stage A texture over decoded buffer, 1 when not upscaled */
+    char publishedUpscale[64];
 
     /* Change tracking for debug logging */
     BOOL hasLoggedOutputMode;
@@ -533,6 +547,29 @@ static int MacLCHLGCallback(vlc_object_t *obj, char const *name,
     return VLC_SUCCESS;
 }
 
+static int MacLCUpscaleCallback(vlc_object_t *obj, char const *name,
+                                vlc_value_t prev, vlc_value_t cur, void *data)
+{
+    VLC_UNUSED(obj); VLC_UNUSED(prev);
+    vout_display_sys_t *sys = ((vout_display_t *)data)->sys;
+    if (strcmp(name, MACLC_UPSCALE_VAR_ENABLED) == 0)
+        sys->upscale = cur.b_bool;
+    else
+        sys->upscaleMethod = maclc_upscale_parse_method(cur.psz_string);
+    return VLC_SUCCESS;
+}
+
+static void PublishUpscaleState(vout_display_t *vd, vout_display_sys_t *sys,
+                                const char *state)
+{
+    vlc_object_t *vout_obj = vlc_object_parent(vd);
+    if (vout_obj == NULL || strcmp(state, sys->publishedUpscale) == 0)
+        return;
+    strlcpy(sys->publishedUpscale, state, sizeof(sys->publishedUpscale));
+    msg_Dbg(vd, "Upscaling: %s", state);
+    var_SetString(vout_obj, MACLC_UPSCALE_VAR_STATE, state);
+}
+
 static void PublishHdrState(vout_display_t *vd, vout_display_sys_t *sys,
                             int64_t caps, const char *active)
 {
@@ -627,7 +664,7 @@ static void SetUpOptionalStages(vout_display_t *vd)
         MacLCMetalScaler *scaler = [[MacLCMetalScaler alloc] initWithDevice:sys->renderer.device];
         scaler.upscaler = up;
         scaler.downscaler = down;
-        sys->renderer.scaler = scaler;
+        sys->renderer.scaler = sys->userScaler = scaler;
         msg_Dbg(vd, "Metal output: upscaler %d, downscaler %d", up, down);
     }
     char *lutPath = var_InheritString(vd, "gl-lut-file");
@@ -841,6 +878,70 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
         sys->lastLoggedHeadroom = headroom;
     }
 
+    /* Placement first: upscaling aims at the size the picture is shown at. */
+    CGSize dsize = [sys->view currentDrawableSize];
+    struct vout_display_placement cfg_display = vd->cfg->display;
+    cfg_display.width = (unsigned)dsize.width;
+    cfg_display.height = (unsigned)dsize.height;
+    vout_display_place_t place;
+    @synchronized (sys->view) {
+        vout_display_PlacePicture(&sys->place, vd->source, &cfg_display);
+        place = sys->place;
+    }
+
+    /* How much larger than the decoded picture it is shown, along the
+     * buffer's own axes (a rotated video swaps them). */
+    const size_t buf_w = CVPixelBufferGetWidth(pixelBuffer);
+    const size_t buf_h = CVPixelBufferGetHeight(pixelBuffer);
+    const unsigned vis_w = vd->source->i_visible_width, vis_h = vd->source->i_visible_height;
+    const bool swap = ORIENT_IS_SWAP(vd->source->orientation);
+    const float sx = vis_w ? (float)(swap ? place.height : place.width) / vis_w : 0.0f;
+    const float sy = vis_h ? (float)(swap ? place.width : place.height) / vis_h : 0.0f;
+    const bool upscale = sys->upscale && sys->upscaler != nil
+                      && sys->renderer.projector == nil && fminf(sx, sy) >= 1.2f;
+    /* First pass, on the decoded 8-bit picture: neural or anime. */
+    const enum maclc_upscale_method method = sys->upscaleMethod;
+    const char *first = NULL, *why = NULL;
+    if (upscale && (method == MACLC_UPSCALE_AUTO || method == MACLC_UPSCALE_APPLE4X
+                 || method == MACLC_UPSCALE_ANIME || method == MACLC_UPSCALE_ANIME4K
+                 || method == MACLC_UPSCALE_FSRCNNX)) {
+        /* It takes 8-bit SDR before it is decoded; HDR, and SDR the
+         * expander turns into HDR, go to the second pass alone. */
+        if (source_is_hdr || (is_edr && sys->sdr2hdrSession.enabled))
+            why = "hdr";
+        else {
+            const double interval = vd->source->i_frame_rate && vd->source->i_frame_rate_base
+                ? (double)vd->source->i_frame_rate_base / vd->source->i_frame_rate : 1.0 / 30.0;
+            CVPixelBufferRef big;
+            if (method != MACLC_UPSCALE_AUTO && method != MACLC_UPSCALE_APPLE4X) {
+                big = [sys->upscaler animeUpscale:pixelBuffer network:method
+                                         maxRatio:fminf(sx, sy) frameInterval:interval why:&why];
+                first = maclc_upscale_method_names[method];
+            } else {
+                BOOL used4x = method == MACLC_UPSCALE_APPLE4X;
+                big = [sys->upscaler neuralUpscale:pixelBuffer maxRatio:fminf(sx, sy)
+                                           apple4x:&used4x frameInterval:interval why:&why];
+                first = used4x ? "neural4x" : "neural";
+            }
+            if (big != NULL) {
+                CVPixelBufferRelease(pixelBuffer);
+                pixelBuffer = big;
+            } else
+                first = NULL;
+        }
+    }
+
+    /* Classic draws with EWA Lanczos instead of a second pass. */
+    const bool classic = upscale && method == MACLC_UPSCALE_CLASSIC;
+    if (classic && sys->classicScaler == nil) {
+        sys->classicScaler = [[MacLCMetalScaler alloc] initWithDevice:sys->renderer.device];
+        sys->classicScaler.upscaler = VLC_GLSCALE_EWA_LANCZOS;
+        sys->classicScaler.downscaler = var_InheritInteger(vd, "gl-downscaler");
+    }
+    MacLCMetalScaler *drawScaler = classic ? sys->classicScaler : sys->userScaler;
+    if (sys->renderer.scaler != drawScaler)
+        sys->renderer.scaler = drawScaler;
+
     id<MTLCommandBuffer> stageACmdBuf = [sys->renderer createCommandBuffer];
     id<MTLTexture> resultingTexture = nil;
     CVPixelBufferRef processed = NULL;
@@ -991,6 +1092,63 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
         rendered = MACLC_HDR_PRESENTATION_SDR;
     }
 
+    /* Second pass, on the linear-light texture, the rest of the way:
+     * FSR 1 for "sharp", NIS for "nis", MetalFX otherwise (and when they
+     * cannot). */
+    const char *second = NULL;
+    if (upscale && !classic && resultingTexture != nil) {
+        const NSUInteger out_w = MIN((NSUInteger)lroundf(buf_w * sx), 16384);
+        const NSUInteger out_h = MIN((NSUInteger)lroundf(buf_h * sy), 16384);
+        if (out_w > resultingTexture.width || out_h > resultingTexture.height) {
+            id<MTLTexture> big = nil;
+            if (method == MACLC_UPSCALE_SHARP) {
+                if (sys->fsr == nil)
+                    sys->fsr = [[MacLCMetalFSR alloc] initWithDevice:sys->renderer.device];
+                big = [sys->fsr encodeFrom:resultingTexture width:out_w height:out_h
+                             commandBuffer:stageACmdBuf];
+                second = "sharp";
+            } else if (method == MACLC_UPSCALE_NIS) {
+                if (sys->nis == nil)
+                    sys->nis = [[MacLCMetalNIS alloc] initWithDevice:sys->renderer.device];
+                big = [sys->nis encodeFrom:resultingTexture width:out_w height:out_h
+                             commandBuffer:stageACmdBuf];
+                second = "nis";
+            }
+            if (big == nil) {
+                big = [sys->upscaler encodeSpatialFrom:resultingTexture width:out_w height:out_h
+                                         commandBuffer:stageACmdBuf];
+                second = "fast";
+            }
+            if (big != nil)
+                resultingTexture = big;
+            else
+                second = NULL;
+        }
+    }
+    sys->upscaleScale = (first != NULL || second != NULL) && resultingTexture != nil
+        ? CGSizeMake((CGFloat)resultingTexture.width / buf_w,
+                     (CGFloat)resultingTexture.height / buf_h)
+        : CGSizeMake(1.0, 1.0);
+
+    char upscale_state[64], path[16];
+    snprintf(path, sizeof(path), "%s%s%s", first ? first : "", first && second ? "+" : "",
+             second ? second : "");
+    if (!sys->upscale)
+        strlcpy(upscale_state, "idle off", sizeof(upscale_state));
+    else if (classic && vd->source->orientation == ORIENT_NORMAL)
+        /* the renderer only scales unrotated pictures itself */
+        snprintf(upscale_state, sizeof(upscale_state), "classic %ux%u %ldx%ld",
+                 vis_w, vis_h, lroundf(vis_w * sx), lroundf(vis_h * sy));
+    else if (path[0] == '\0')
+        strlcpy(upscale_state, "idle fits", sizeof(upscale_state));
+    else
+        snprintf(upscale_state, sizeof(upscale_state), "%s %ux%u %lux%lu%s%s",
+                 path, vis_w, vis_h,
+                 lround(vis_w * sys->upscaleScale.width),
+                 lround(vis_h * sys->upscaleScale.height),
+                 why ? " " : "", why ? why : "");
+    PublishUpscaleState(vd, sys, upscale_state);
+
     [stageACmdBuf commit];
     [stageACmdBuf waitUntilCompleted];
 
@@ -1024,16 +1182,7 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
                     maclc_hdr_presentation_name(rendered));
 
     /* Update subpictures */
-    CGSize dsize = [sys->view currentDrawableSize];
     [sys->renderer updateSubpicture:subpic outputWidth:(unsigned)dsize.width outputHeight:(unsigned)dsize.height];
-
-    /* Recompute placement */
-    struct vout_display_placement cfg_display = vd->cfg->display;
-    cfg_display.width = (unsigned)dsize.width;
-    cfg_display.height = (unsigned)dsize.height;
-    @synchronized (sys->view) {
-        vout_display_PlacePicture(&sys->place, vd->source, &cfg_display);
-    }
 
     CVPixelBufferRelease(pixelBuffer);
 }
@@ -1071,8 +1220,11 @@ static void DisplayFrame(vout_display_t *vd, picture_t *pic)
         sys->lastLoggedPlacement = placeRect;
     }
 
-    CGPoint cropOrigin = CGPointMake(vd->source->i_x_offset, vd->source->i_y_offset);
-    CGSize cropSize = CGSizeMake(vd->source->i_visible_width, vd->source->i_visible_height);
+    /* An upscaled texture is larger than the source the crop is given in. */
+    const CGSize k = sys->upscaleScale;
+    CGPoint cropOrigin = CGPointMake(vd->source->i_x_offset * k.width, vd->source->i_y_offset * k.height);
+    CGSize cropSize = CGSizeMake(vd->source->i_visible_width * k.width,
+                                 vd->source->i_visible_height * k.height);
 
     float headroom = [sys->view effectiveHeadroom];
     const int hdr_mode = EffectiveHdrMode(sys);
@@ -1118,17 +1270,20 @@ static void Close(vout_display_t *vd)
         var_DelCallback(vout_obj, MACLC_HDR_VAR_PRESENTATION, MacLCPresentationCallback, vd);
         var_DelCallback(vout_obj, MACLC_HDR_VAR_PICTURE, MacLCPictureCallback, vd);
         var_DelCallback(vout_obj, MACLC_HDR_VAR_HLG, MacLCHLGCallback, vd);
+        var_DelCallback(vout_obj, MACLC_UPSCALE_VAR_ENABLED, MacLCUpscaleCallback, vd);
+        var_DelCallback(vout_obj, MACLC_UPSCALE_VAR_METHOD, MacLCUpscaleCallback, vd);
     }
 
     /* 2. Wait for in-flight command buffers */
     if (sys->renderer != nil)
         [sys->renderer waitUntilCompleted];
 
-    /* 3. Remove view on main thread */
+    /* 3. Detach the view. vlcClose is safe from any thread (it drops vd
+     * under its lock and removes the view asynchronously); waiting for the
+     * main thread here deadlocked at quit, when main() blocks on wait_quit
+     * while the input thread closes the display. */
     if (sys->view != nil) {
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            [sys->view vlcClose];
-        });
+        [sys->view vlcClose];
         sys->view = nil;
     }
 
@@ -1138,6 +1293,10 @@ static void Close(vout_display_t *vd)
     sys->dovi = nil;
     sys->colorPass = nil;
     sys->toneMapper = nil;
+    sys->upscaler = nil;
+    sys->fsr = nil;
+    sys->nis = nil;
+    sys->userScaler = sys->classicScaler = nil;
 
     /* 4. Release renderer resources */
     if (sys->renderer != nil) {
@@ -1167,6 +1326,9 @@ static void Close(vout_display_t *vd)
         var_Destroy(vout_obj, MACLC_HDR_VAR_HLG);
         var_Destroy(vout_obj, MACLC_HDR_VAR_CAPS);
         var_Destroy(vout_obj, MACLC_HDR_VAR_ACTIVE);
+        var_Destroy(vout_obj, MACLC_UPSCALE_VAR_ENABLED);
+        var_Destroy(vout_obj, MACLC_UPSCALE_VAR_METHOD);
+        var_Destroy(vout_obj, MACLC_UPSCALE_VAR_STATE);
     }
 
     free(sys);
@@ -1257,9 +1419,7 @@ int MacLCMetalOpen(vout_display_t *vd,
     sys->renderer = [[MacLCMetalRenderer alloc] initWithDevice:metalLayer.device];
     if (sys->renderer == nil) {
         msg_Err(vd, "Metal output: could not create the renderer");
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            [videoView vlcClose];
-        });
+        [videoView vlcClose];
         sys->view = nil; /* ARC does not see free() */
         var_Destroy(vd, "edr-headroom-effective");
         free(sys);
@@ -1331,6 +1491,22 @@ int MacLCMetalOpen(vout_display_t *vd,
         var_Create(vout_obj, MACLC_HDR_VAR_CAPS, VLC_VAR_INTEGER);
         var_Create(vout_obj, MACLC_HDR_VAR_ACTIVE, VLC_VAR_STRING);
     }
+
+    sys->upscaler = [[MacLCMetalUpscaler alloc] initWithDevice:sys->renderer.device];
+    sys->upscaleScale = CGSizeMake(1.0, 1.0);
+    sys->upscale = var_InheritBool(vd, MACLC_UPSCALE_VAR_ENABLED);
+    char *method = var_InheritString(vd, MACLC_UPSCALE_VAR_METHOD);
+    sys->upscaleMethod = maclc_upscale_parse_method(method);
+    free(method);
+    if (vout_obj != NULL) {
+        var_Create(vout_obj, MACLC_UPSCALE_VAR_ENABLED, VLC_VAR_BOOL | VLC_VAR_DOINHERIT);
+        var_AddCallback(vout_obj, MACLC_UPSCALE_VAR_ENABLED, MacLCUpscaleCallback, vd);
+        var_Create(vout_obj, MACLC_UPSCALE_VAR_METHOD, VLC_VAR_STRING | VLC_VAR_DOINHERIT);
+        var_AddCallback(vout_obj, MACLC_UPSCALE_VAR_METHOD, MacLCUpscaleCallback, vd);
+        var_Create(vout_obj, MACLC_UPSCALE_VAR_STATE, VLC_VAR_STRING);
+    }
+    /* The interface learns at once that no track restart is needed. */
+    PublishUpscaleState(vd, sys, sys->upscale ? "idle fits" : "idle off");
 
     /* Say what this output can do before the first picture: the interface
      * knows at once that no track restart is needed for any presentation. */

@@ -42,6 +42,7 @@
 #endif
 #import "MacLCHDRToneMapper.h"
 #include "maclc_hdr_vars.h"
+#include "maclc_upscale_vars.h"
 #include "maclc_sdr2hdr.h"
 
 #if TARGET_OS_OSX
@@ -2567,6 +2568,13 @@ static int Open (vout_display_t *vd,
      * libplacebo output can. Step aside for what only that output renders
      * correctly, so the module election picks it. */
     if (!vd->obj.force) {
+#if TARGET_OS_OSX
+        /* Upscaling runs in the Metal output. */
+        if (var_InheritBool(vd, MACLC_UPSCALE_VAR_ENABLED)) {
+            msg_Dbg(vd, "Upscaling is on; leaving the video to the Metal output");
+            return VLC_EGENERIC;
+        }
+#endif
         char *request = var_InheritString(vd, MACLC_HDR_VAR_PRESENTATION);
         const enum maclc_hdr_presentation presentation =
             maclc_hdr_presentation_parse(request);
@@ -2895,6 +2903,21 @@ static const char *const hdr_mode_names[] = {
     N_("Disable HDR"),
 };
 
+#define UPSCALE_TEXT N_("Upscale the video")
+#define UPSCALE_LONGTEXT N_("Shows a video smaller than its window sharper: " \
+    "neural super resolution (macOS 26) then MetalFX. Uses the Metal output.")
+#define UPSCALE_METHOD_TEXT N_("Upscaling method")
+#define UPSCALE_METHOD_LONGTEXT N_("Auto adds a neural pass for SDR videos up " \
+    "to 720p on mains power; Efficient uses MetalFX alone. FSRCNNX is " \
+    "downloaded from the upscaling panel once its licence is accepted.")
+static const char *const upscale_method_values[] = {
+    "auto", "apple4x", "anime", "anime4k", "fsrcnnx", "sharp", "nis", "fast",
+    "classic" };
+static const char *const upscale_method_names[] = {
+    N_("Auto"), N_("Apple Neural 4x"), N_("Anime (ArtCNN)"), N_("Anime4K"),
+    N_("FSRCNNX"), N_("Sharp (FSR 1)"), N_("NIS (NVIDIA Image Scaling)"),
+    N_("Efficient (MetalFX)"), N_("Classic (EWA Lanczos)") };
+
 #define HELP_TEXT N_("This display handles hardware decoded pixel buffers "\
                      "and renders them in a view/layer. "\
                      "It can also convert and display software decoded frame buffers. "\
@@ -2927,6 +2950,9 @@ vlc_module_begin()
         change_string_list(deband_values, deband_names)
     add_bool(MACLC_SDR2HDR_VAR_PROTECT, true,
              SDR_TO_HDR_PROTECT_TEXT, SDR_TO_HDR_PROTECT_LONGTEXT)
+    add_bool(MACLC_UPSCALE_VAR_ENABLED, false, UPSCALE_TEXT, UPSCALE_LONGTEXT)
+    add_string(MACLC_UPSCALE_VAR_METHOD, "auto", UPSCALE_METHOD_TEXT, UPSCALE_METHOD_LONGTEXT)
+        change_string_list(upscale_method_values, upscale_method_names)
     set_help(HELP_TEXT)
     set_callback_display(Open, 600)
 

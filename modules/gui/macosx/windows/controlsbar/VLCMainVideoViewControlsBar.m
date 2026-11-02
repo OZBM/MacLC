@@ -47,6 +47,8 @@
 #import "coreinteraction/MacLCOSDController.h"
 #import "frameinterp/MacLCFrameInterpolation.h"
 #import "frameinterp/MacLCFrameInterpolationPanelViewController.h"
+#import "upscale/MacLCUpscaling.h"
+#import "upscale/MacLCUpscalingPanelViewController.h"
 #import "cast/MacLCCastController.h"
 #import "sound/MacLCSoundMode.h"
 #import "sound/MacLCSoundPanelViewController.h"
@@ -63,6 +65,7 @@
     VLCPlayQueueController *_playQueueController;
     VLCPlayerController *_playerController;
     NSButton *_soundButton;
+    NSButton *_upscaleButton;
     NSView *_airPlayButton;
     NSButton *_castButton;
 }
@@ -245,6 +248,19 @@
     [stack insertArrangedSubview:sound atIndex:index == NSNotFound ? stack.arrangedSubviews.count : index + 1];
     [MacLCSoundPanelViewController registerAnchorView:sound];
 
+    /* Upscaling sits between FPS and Sound, a badge like them. */
+    VLCImageButton * const upscale = [[VLCImageButton alloc] initWithFrame:NSMakeRect(0, 0, 49, 28)];
+    upscale.bezelStyle = NSBezelStyleRecessed;
+    upscale.font = MacLCDesign.badgeFont;
+    upscale.title = @"RES";
+    upscale.target = self;
+    upscale.action = @selector(openUpscaling:);
+    upscale.translatesAutoresizingMaskIntoConstraints = NO;
+    [upscale setContentHuggingPriority:500 forOrientation:NSLayoutConstraintOrientationHorizontal];
+    _upscaleButton = upscale;
+    [stack insertArrangedSubview:upscale atIndex:index == NSNotFound ? stack.arrangedSubviews.count : index + 1];
+    [MacLCUpscaling startWatching];
+
     MacLCCastController * const cast = MacLCCastController.sharedController;
     _airPlayButton = [cast makeAirPlayButtonWithTint:MacLCDesign.primaryLabel];
     _airPlayButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -271,6 +287,51 @@
                            selector:@selector(castStateChanged:)
                                name:MacLCCastStateDidChangeNotification
                              object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(upscalingChanged:)
+                               name:MacLCUpscalingChangedNotification
+                             object:nil];
+}
+
+- (void)upscalingChanged:(NSNotification *)notification
+{
+    [self updateUpscaleButton];
+}
+
+/* The badge names the size the picture is shown at once upscaled ("4K");
+ * off, or with nothing to upscale, it reads RES. */
+- (void)updateUpscaleButton
+{
+    if (_upscaleButton == nil)
+        return;
+    _upscaleButton.hidden = _playerController.currentMediaIsAudioOnly;
+
+    const BOOL enabled = MacLCUpscaling.isEnabled;
+    NSString * const output = MacLCUpscaling.badgeTitle;
+    [self styleBadge:_upscaleButton
+           withTitle:output ?: @"RES"
+              filled:output != nil
+              dimmed:enabled && output == nil];
+    _upscaleButton.toolTip = [NSString stringWithFormat:@"%@ %@", MacLCUpscaling.statusText,
+        enabled ? _NS("Click for the settings, or hold Option and click to switch it off.")
+                : _NS("Click for the settings, or hold Option and click to switch it on.")];
+    _upscaleButton.accessibilityLabel = output != nil
+        ? [NSString stringWithFormat:_NS("Upscaling on, showing %@"), output]
+        : (enabled ? _NS("Upscaling on, nothing to upscale") : _NS("Upscaling off"));
+}
+
+- (IBAction)openUpscaling:(id)sender
+{
+    if ((NSApp.currentEvent.modifierFlags & NSEventModifierFlagOption) != 0) {
+        const BOOL on = !MacLCUpscaling.isEnabled;
+        MacLCUpscaling.enabled = on;
+        [[MacLCOSDController sharedController]
+            showMessage:on ? _NS("Upscaling On") : _NS("Upscaling Off")
+             symbolName:@"arrow.up.left.and.arrow.down.right"];
+        return;
+    }
+    [MacLCUpscalingPanelViewController showRelativeToView:_upscaleButton
+                                            preferredEdge:NSRectEdgeMaxY];
 }
 
 - (IBAction)openSound:(id)sender
@@ -316,6 +377,7 @@
     [self updateLyricsButton:nil];
     [self updateHdrButton];
     [self updateFrameRateButton];
+    [self updateUpscaleButton];
 }
 
 - (void)floatOnTopChanged:(NSNotification *)notification

@@ -80,6 +80,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) enum maclc_sdr2hdr_quality activeQuality;
 @property (nonatomic, readonly) enum maclc_sdr2hdr_reason activeReason;
 @property (nonatomic, readonly) float activePeakNits;
+/** Whether SDR to HDR is switched on (it still waits for EDR headroom). */
+@property (nonatomic, readonly, getter=isEnabled) BOOL enabled;
 
 @end
 

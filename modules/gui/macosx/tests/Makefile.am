@@ -22,6 +22,7 @@ VLCMacOSXTests_SOURCES = \
 	gui/macosx/tests/MacLCVideoFitGeometryTest.m \
 	gui/macosx/tests/MacLCVolumePathTest.m \
 	gui/macosx/tests/MacLCFrameInterpolationTest.m \
+	gui/macosx/tests/MacLCUpscalingTest.m \
 	gui/macosx/tests/NSMenuVLCAdditionsTest.m \
 	gui/macosx/tests/MacLCSDRToHDRTest.m \
 	gui/macosx/tests/MacLCToneCurvesTest.m \

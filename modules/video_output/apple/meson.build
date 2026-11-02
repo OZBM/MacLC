@@ -42,6 +42,11 @@ vlc_modules += {
         'MacLCMetalLUT.m',
         'MacLCMetalDovi.m',
         'MacLCMetalColorPass.m',
+        'MacLCMetalUpscaler.m',
+        'MacLCMetalArtCNN.m',
+        'MacLCMetalFSR.m',
+        'MacLCMetalNIS.m',
+        'MacLCMetalHookShader.m',
         'maclc_tonecurves.c',
         'MacLCSDR2HDRSession.m',
         'VLCHDRExpander.m',
@@ -66,6 +71,7 @@ vlc_modules += {
         frameworks['MetalPerformanceShaders'],
         frameworks['MetalPerformanceShadersGraph'],
         frameworks['IOKit'],
+        frameworks['MetalFX'],
     ],
 }
 

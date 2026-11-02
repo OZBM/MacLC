@@ -96,6 +96,7 @@ libmacosx_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(gui_RPATH) \
 	-Wl,-framework,Metal \
 	-Wl,-framework,MetalKit \
 	-Wl,-framework,UniformTypeIdentifiers \
+	-Wl,-framework,VideoToolbox \
 	-Wl,-weak_framework,MediaPlayer
 
 if HAVE_SPARKLE
@@ -537,6 +538,10 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/frameinterp/MacLCFrameInterpolation.m \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.h \
 	gui/macosx/frameinterp/MacLCFrameInterpolationPanelViewController.m \
+	gui/macosx/upscale/MacLCUpscaling.h \
+	gui/macosx/upscale/MacLCUpscaling.m \
+	gui/macosx/upscale/MacLCUpscalingPanelViewController.h \
+	gui/macosx/upscale/MacLCUpscalingPanelViewController.m \
 	gui/macosx/addons/MacLCAddons.h \
 	gui/macosx/addons/MacLCAddons.m \
 	gui/macosx/addons/MacLCStreamFacts.h \
