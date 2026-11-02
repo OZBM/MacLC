@@ -208,7 +208,10 @@ NS_ASSUME_NONNULL_BEGIN
 ///   (MacLCWatchEpisodeItem, MacLCWatchLayout episodeShelf) of that season;
 ///   activating an episode opens the stream picker for it;
 /// - "About": the description in full (body), with "Genres", "Released",
-///   "Runtime", "Rating" in a two-column grid of small labels.
+///   "Runtime", "Rating" in a two-column grid of small labels;
+/// - "More Like This": a poster shelf from the "top" catalog of the item's
+///   type for its first genre that catalog offers, without the item; hidden
+///   until it loads, and when empty. A poster opens its page on the section.
 /// Loading: the item's own fields show at once; meta fills the rest; a meta
 /// error keeps the page with a "Can't load episodes" inline message and Try
 /// Again for shows.
@@ -219,6 +222,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface MacLCWatchDetailViewController : NSViewController
 - (instancetype)initWithItem:(MacLCAddonItem *)item showStreams:(BOOL)showStreams;
 @property (readonly) MacLCAddonItem *item;
+/// The section it is pushed on; "More Like This" pushes the next page there.
+@property (nonatomic, weak, nullable) MacLCWatchSectionViewController *section;
 @end
 
 NS_ASSUME_NONNULL_END

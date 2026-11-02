@@ -453,6 +453,13 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     NSTextField *_aboutRuntimeValueLabel;
     NSTextField *_aboutRatingKeyLabel;
     NSTextField *_aboutRatingValueLabel;
+
+    // More Like This
+    NSView *_similarContainerView;
+    NSLayoutConstraint *_similarCollapsedConstraint;
+    NSCollectionView *_similarCollectionView;
+    NSArray<MacLCAddonItem *> *_similarItems;
+    MacLCAddonRequest *_similarRequest;
 }
 
 @property (nonatomic, nullable, strong) MacLCAddonMeta *meta;
@@ -479,6 +486,7 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     [_metaRequest cancel];
     [_pictureRequest cancel];
     [_logoRequest cancel];
+    [_similarRequest cancel];
     if (_descriptionPopover) {
         [_descriptionPopover performClose:nil];
     }
@@ -539,6 +547,7 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
         [self setUpEpisodesView];
     }
     [self setUpAboutView];
+    [self setUpSimilarView];
     [self installMainConstraints];
 }
 
@@ -977,6 +986,97 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     }
 }
 
+- (void)setUpSimilarView
+{
+    _similarItems = @[];
+    _similarContainerView = [[NSView alloc] initWithFrame:NSZeroRect];
+    _similarContainerView.translatesAutoresizingMaskIntoConstraints = NO;
+    _similarContainerView.hidden = YES;
+    [_documentView addSubview:_similarContainerView];
+
+    NSTextField * const title = [NSTextField labelWithString:_NS("More Like This")];
+    title.translatesAutoresizingMaskIntoConstraints = NO;
+    title.font = _aboutTitleLabel.font;
+    title.textColor = MacLCDesign.primaryLabel;
+    [_similarContainerView addSubview:title];
+
+    NSCollectionViewCompositionalLayout * const layout = [[NSCollectionViewCompositionalLayout alloc]
+        initWithSectionProvider:^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
+        NSCollectionLayoutSection * const section = [MacLCWatchLayout posterShelfSectionWithEnvironment:environment];
+        section.boundarySupplementaryItems = @[];
+        section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, 40.0, 0.0, 40.0);
+        return section;
+    }];
+    _similarCollectionView = [[NSCollectionView alloc] initWithFrame:NSZeroRect];
+    _similarCollectionView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    _similarCollectionView.collectionViewLayout = layout;
+    _similarCollectionView.dataSource = self;
+    _similarCollectionView.backgroundColors = @[NSColor.clearColor];
+    [_similarCollectionView registerClass:[MacLCWatchPosterItem class] forItemWithIdentifier:MacLCWatchPosterItemIdentifier];
+
+    NSScrollView * const scrollView = [[NSScrollView alloc] initWithFrame:NSZeroRect];
+    scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+    scrollView.documentView = _similarCollectionView;
+    scrollView.drawsBackground = NO;
+    scrollView.hasVerticalScroller = NO;
+    scrollView.hasHorizontalScroller = NO;
+    [_similarContainerView addSubview:scrollView];
+
+    /* Collapsed to nothing until the shelf has posters; the content's own
+     * bottom gives way meanwhile. */
+    _similarCollapsedConstraint = [_similarContainerView.heightAnchor constraintEqualToConstant:0.0];
+    NSLayoutConstraint * const contentBottom = [scrollView.bottomAnchor constraintEqualToAnchor:_similarContainerView.bottomAnchor];
+    contentBottom.priority = NSLayoutPriorityDefaultHigh;
+    [NSLayoutConstraint activateConstraints:@[
+        _similarCollapsedConstraint,
+        [title.topAnchor constraintEqualToAnchor:_similarContainerView.topAnchor constant:36.0],
+        [title.leadingAnchor constraintEqualToAnchor:_similarContainerView.leadingAnchor constant:40.0],
+        [scrollView.topAnchor constraintEqualToAnchor:title.bottomAnchor constant:MacLCDesign.spacingM],
+        [scrollView.leadingAnchor constraintEqualToAnchor:_similarContainerView.leadingAnchor],
+        [scrollView.trailingAnchor constraintEqualToAnchor:_similarContainerView.trailingAnchor],
+        [scrollView.heightAnchor constraintEqualToConstant:[MacLCWatchLayout posterItemHeightForWidth:168.0]],
+        contentBottom,
+    ]];
+}
+
+/// The "top" catalog of the item's type, fetched for the first of the
+/// item's genres it offers; the item itself left out.
+- (void)loadSimilar
+{
+    if (_similarRequest != nil || _similarItems.count > 0)
+        return;
+    NSArray<NSString *> * const genres = _meta.genres.count > 0 ? _meta.genres : _item.genres;
+    for (MacLCAddonTitleCatalog *catalog in MacLCAddonStore.sharedStore.titleCatalogs) {
+        if (![catalog.identifier isEqualToString:@"top"] || ![catalog.type isEqualToString:_item.type])
+            continue;
+        NSUInteger const index = [genres indexOfObjectPassingTest:^BOOL(NSString *genre, NSUInteger i, BOOL *stop) {
+            return [catalog.genres containsObject:genre];
+        }];
+        if (index == NSNotFound)
+            continue;
+        __weak typeof(self) weakSelf = self;
+        _similarRequest = [MacLCAddonStore.sharedStore fetchTitleCatalog:catalog genre:genres[index] skip:0
+                                                             completion:^(NSArray<MacLCAddonItem *> *items, NSError *error) {
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (!strongSelf)
+                return;
+            strongSelf->_similarRequest = nil;
+            NSString * const own = strongSelf->_item.identifier;
+            NSArray<MacLCAddonItem *> * const others = [items filteredArrayUsingPredicate:
+                [NSPredicate predicateWithBlock:^BOOL(MacLCAddonItem *item, NSDictionary *bindings) {
+                return ![item.identifier isEqualToString:own];
+            }]];
+            if (others.count == 0)
+                return;
+            strongSelf->_similarItems = [others subarrayWithRange:NSMakeRange(0, MIN(others.count, (NSUInteger)20))];
+            [strongSelf->_similarCollectionView reloadData];
+            strongSelf->_similarCollapsedConstraint.active = NO;
+            strongSelf->_similarContainerView.hidden = NO;
+        }];
+        return;
+    }
+}
+
 - (void)setUpAboutView
 {
     _aboutContainerView = [[NSView alloc] initWithFrame:NSZeroRect];
@@ -1103,16 +1203,20 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
             [_aboutContainerView.topAnchor constraintEqualToAnchor:_episodesContainerView.bottomAnchor constant:36.0],
             [_aboutContainerView.leadingAnchor constraintEqualToAnchor:_documentView.leadingAnchor constant:40.0],
             [_aboutContainerView.trailingAnchor constraintEqualToAnchor:_documentView.trailingAnchor constant:-40.0],
-            [_aboutContainerView.bottomAnchor constraintEqualToAnchor:_documentView.bottomAnchor constant:-48.0],
         ]];
     } else {
         [NSLayoutConstraint activateConstraints:@[
             [_aboutContainerView.topAnchor constraintEqualToAnchor:_headerView.bottomAnchor constant:36.0],
             [_aboutContainerView.leadingAnchor constraintEqualToAnchor:_documentView.leadingAnchor constant:40.0],
             [_aboutContainerView.trailingAnchor constraintEqualToAnchor:_documentView.trailingAnchor constant:-40.0],
-            [_aboutContainerView.bottomAnchor constraintEqualToAnchor:_documentView.bottomAnchor constant:-48.0],
         ]];
     }
+    [NSLayoutConstraint activateConstraints:@[
+        [_similarContainerView.topAnchor constraintEqualToAnchor:_aboutContainerView.bottomAnchor],
+        [_similarContainerView.leadingAnchor constraintEqualToAnchor:_documentView.leadingAnchor],
+        [_similarContainerView.trailingAnchor constraintEqualToAnchor:_documentView.trailingAnchor],
+        [_similarContainerView.bottomAnchor constraintEqualToAnchor:_documentView.bottomAnchor constant:-48.0],
+    ]];
 }
 
 - (void)viewDidLoad
@@ -1192,6 +1296,8 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
 
 - (void)updateViewsWithMeta
 {
+    [self loadSimilar];
+
     // Background picture (meta might have a better background)
     [self loadBackgroundPicture];
 
@@ -1689,11 +1795,22 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
 
 - (NSInteger)collectionView:(NSCollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
 {
+    if (collectionView == _similarCollectionView)
+        return _similarItems.count;
     return _episodesForCurrentSeason.count;
 }
 
 - (NSCollectionViewItem *)collectionView:(NSCollectionView *)collectionView itemForRepresentedObjectAtIndexPath:(NSIndexPath *)indexPath
 {
+    if (collectionView == _similarCollectionView) {
+        MacLCWatchPosterItem * const poster = [collectionView makeItemWithIdentifier:MacLCWatchPosterItemIdentifier forIndexPath:indexPath];
+        [poster configureWithItem:_similarItems[indexPath.item] rank:0];
+        __weak typeof(self) weakSelf = self;
+        poster.activationHandler = ^(MacLCAddonItem *item) {
+            [weakSelf.section showDetailForItem:item showStreams:NO];
+        };
+        return poster;
+    }
     MacLCWatchEpisodeItem *item = [collectionView makeItemWithIdentifier:MacLCWatchEpisodeItemIdentifier forIndexPath:indexPath];
     if (indexPath.item < (NSInteger)_episodesForCurrentSeason.count) {
         MacLCAddonVideo *video = _episodesForCurrentSeason[indexPath.item];

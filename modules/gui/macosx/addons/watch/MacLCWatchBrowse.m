@@ -253,6 +253,7 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
         return;
     }
     MacLCWatchDetailViewController *detailVC = [[MacLCWatchDetailViewController alloc] initWithItem:item showStreams:showStreams];
+    detailVC.section = self;
     [self pushViewController:detailVC];
 }
 
