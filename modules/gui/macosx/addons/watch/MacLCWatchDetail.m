@@ -31,6 +31,7 @@
 #import "settings/MacLCSettingsWindowController.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "windows/VLCOpenInputMetadata.h"
+#import "webvideo/MacLCWebVideoResolver.h"
 #import "extensions/NSString+Helpers.h"
 
 #import <QuartzCore/QuartzCore.h>
@@ -1934,12 +1935,32 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
 
 - (void)trailerButtonAction:(id)sender
 {
-    if (_meta.trailerYouTubeIdentifier.length == 0) return;
-    NSString *mrl = [NSString stringWithFormat:@"https://www.youtube.com/watch?v=%@", _meta.trailerYouTubeIdentifier];
-    VLCOpenInputMetadata *metadata = [[VLCOpenInputMetadata alloc] init];
-    metadata.MRLString = mrl;
-    metadata.itemName = [NSString stringWithFormat:_NS("%@ — Trailer"), _meta.name ?: _item.name];
-    [VLCMain.sharedInstance.playQueueController addPlayQueueItems:@[metadata] atPosition:(size_t)-1 startPlayback:YES];
+    NSString *raw = _meta.trailerYouTubeIdentifier;
+    if (raw.length == 0) return;
+    /* Add-ons give either a bare YouTube id or a full address. Resolve it like
+     * the YouTube section does: the core cannot play a watch page directly. */
+    NSString *mrl = [raw hasPrefix:@"http"] ? raw
+        : [NSString stringWithFormat:@"https://www.youtube.com/watch?v=%@", raw];
+    NSString *name = [NSString stringWithFormat:_NS("%@ — Trailer"), _meta.name ?: _item.name];
+    NSButton *button = [sender isKindOfClass:[NSButton class]] ? sender : nil;
+    button.enabled = NO;
+    __weak typeof(self) weakSelf = self;
+    [MacLCWebVideoResolver.sharedResolver resolveAddress:mrl completion:^(MacLCWebVideoItem *item, NSError *error) {
+        button.enabled = YES;
+        VLCOpenInputMetadata *metadata = item.playQueueItem;
+        if (metadata != nil) {
+            metadata.itemName = name;
+            [VLCMain.sharedInstance.playQueueController addPlayQueueItems:@[metadata] atPosition:(size_t)-1 startPlayback:YES];
+            return;
+        }
+        NSWindow *window = weakSelf.view.window;
+        if (window == nil) return;
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.alertStyle = NSAlertStyleWarning;
+        alert.messageText = _NS("Could Not Play Trailer");
+        alert.informativeText = error.localizedDescription ?: _NS("This trailer is not available.");
+        [alert beginSheetModalForWindow:window completionHandler:nil];
+    }];
 }
 
 - (void)showMoreDescription:(id)sender

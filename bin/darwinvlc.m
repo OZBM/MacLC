@@ -376,8 +376,11 @@ int main(int i_argc, const char *ppsz_argv[])
         goto out;
 
     ret = 0;
-    /* Cleanup */
-    vlc_sem_wait(&context.wait_quit);
+    /* Cleanup. Keep draining the main queue while libvlc shuts down: a
+     * module closing on another thread may still wait for the main thread,
+     * and a bare semaphore wait here deadlocked until the quit watchdog. */
+    while (vlc_sem_trywait(&context.wait_quit) != 0)
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.05, true);
 
 out:
 

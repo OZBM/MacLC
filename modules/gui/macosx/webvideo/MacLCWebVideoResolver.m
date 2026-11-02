@@ -54,6 +54,35 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
 @property (nonatomic, strong) dispatch_queue_t resolveQueue;
 @end
 
+/* yt-dlp writes null for what it does not know (the height of an audio
+ * format, the duration of a live stream); NSJSONSerialization turns that into
+ * NSNull, which answers no NSNumber or NSString message. Drop those keys so a
+ * missing value reads as nil. */
+static void MacLCWebVideoDropNulls(id node)
+{
+    if ([node isKindOfClass:[NSMutableDictionary class]]) {
+        [node removeObjectsForKeys:[node allKeysForObject:[NSNull null]]];
+        for (id value in [node allValues])
+            MacLCWebVideoDropNulls(value);
+    } else if ([node isKindOfClass:[NSMutableArray class]]) {
+        [node removeObjectIdenticalTo:[NSNull null]];
+        for (id value in node)
+            MacLCWebVideoDropNulls(value);
+    }
+}
+
+static id MacLCWebVideoJSON(NSData *data, NSError **error)
+{
+    id json = nil;
+    @try {
+        json = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:error];
+    } @catch (NSException *e) {
+        return nil;
+    }
+    MacLCWebVideoDropNulls(json);
+    return json;
+}
+
 @implementation MacLCWebVideoResolver
 
 + (instancetype)sharedResolver {
@@ -396,7 +425,7 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
     NSError *jsonError = nil;
     NSDictionary *json = nil;
     if (finalOut.length > 0) {
-        json = [NSJSONSerialization JSONObjectWithData:finalOut options:0 error:&jsonError];
+        json = MacLCWebVideoJSON(finalOut, &jsonError);
     }
 
     if (!json || ![json isKindOfClass:[NSDictionary class]] || task.terminationStatus != 0) {
@@ -491,7 +520,7 @@ NSErrorDomain const MacLCWebVideoErrorDomain = @"MacLCWebVideoErrorDomain";
                     [dataLock unlock];
                     
                     if (!cancelled && finalOut.length > 0) {
-                        NSDictionary *fj = [NSJSONSerialization JSONObjectWithData:finalOut options:0 error:nil];
+                        NSDictionary *fj = MacLCWebVideoJSON(finalOut, NULL);
                         if ([fj isKindOfClass:[NSDictionary class]]) {
                             firstFull = fj;
                         }

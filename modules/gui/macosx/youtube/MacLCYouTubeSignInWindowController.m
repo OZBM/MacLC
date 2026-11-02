@@ -51,10 +51,25 @@ static BOOL HostMatches(NSString *host, NSArray<NSString *> *bases)
 }
 
 /* Where the sign-in view may navigate; everything else opens in the browser. */
+/* google.fr, google.co.uk, google.com.tn…: sign-in bounces through the
+ * country domain to set its cookies. Sending that hop to the browser left the
+ * sheet stuck on the first page. */
+static BOOL IsRegionalGoogleHost(NSString *host)
+{
+    NSArray<NSString *> *labels = [host.lowercaseString componentsSeparatedByString:@"."];
+    NSUInteger i = [labels indexOfObject:@"google"];
+    if (i == NSNotFound || labels.lastObject.length != 2)
+        return NO; /* country code only: google.xyz is not Google's */
+    if (labels.count - i == 2)
+        return YES;
+    return labels.count - i == 3 && [@[@"co", @"com"] containsObject:labels[i + 1]];
+}
+
 static BOOL IsAllowedHost(NSString *host)
 {
     return HostMatches(host, @[@"google.com", @"youtube.com", @"gstatic.com",
-                               @"googleusercontent.com", @"youtube-nocookie.com"]);
+                               @"googleusercontent.com", @"youtube-nocookie.com"])
+        || IsRegionalGoogleHost(host);
 }
 
 static BOOL IsYouTubeHost(NSString *host)
@@ -494,8 +509,13 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
     } else if (IsWebURL(url) && IsAllowedHost(url.host)) {
         decisionHandler(WKNavigationActionPolicyAllow);
     } else {
-        if (IsWebURL(url))
+        if (IsWebURL(url)) {
             [NSWorkspace.sharedWorkspace openURL:url];
+            /* Say so rather than leave the sheet sitting on the old page. */
+            if (navigationAction.targetFrame.mainFrame && !_finalizing)
+                [self showError:[NSString stringWithFormat:_NS("Sign-in moved to %@, which opened in your browser. Try again here, or sign in with your browser’s session."), url.host]
+                     failingURL:nil];
+        }
         decisionHandler(WKNavigationActionPolicyCancel);
     }
 }

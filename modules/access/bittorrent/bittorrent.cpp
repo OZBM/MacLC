@@ -294,7 +294,16 @@ void OnInterrupt(void *data)
     Broadcast();
 }
 
-enum class Waited { Ready, Stopped, Cancelled, Failed, TimedOut };
+enum class Waited { Ready, Stopped, Cancelled, Failed, TimedOut, Superseded };
+
+/* The input sets this while a seek waits behind the current read. */
+bool SeekPending(vlc_object_t *obj)
+{
+    for (; obj != NULL; obj = vlc_object_parent(obj))
+        if (var_Type(obj, "maclc-seek-pending") != 0)
+            return var_GetBool(obj, "maclc-seek-pending");
+    return false;
+}
 
 /* The macOS interface draws the progress of a torrent itself and says so. */
 bool InterfaceDrawsProgress(vlc_object_t *obj)
@@ -310,7 +319,8 @@ bool InterfaceDrawsProgress(vlc_object_t *obj)
 Waited WaitFor(vlc_object_t *obj, const TorrentRef &t,
                const std::function<bool()> &ready,
                const std::function<std::string()> &describe,
-               vlc_tick_t timeout, vlc_dialog_id **dialog)
+               vlc_tick_t timeout, vlc_dialog_id **dialog,
+               bool yield_to_seek = false)
 {
     const bool silent = InterfaceDrawsProgress(obj);
     WaitState state;
@@ -333,6 +343,11 @@ Waited WaitFor(vlc_object_t *obj, const TorrentRef &t,
         if (state.killed || vlc_killed())
         {
             result = Waited::Stopped;
+            break;
+        }
+        if (yield_to_seek && SeekPending(obj))
+        {
+            result = Waited::Superseded;
             break;
         }
         vlc_tick_t now = vlc_tick_now();
@@ -1302,7 +1317,7 @@ struct WaitMark
 
 /* Waits for the piece to be verified, then for libtorrent to read it back,
  * and keeps it in the reader. */
-bool FetchPiece(stream_extractor_t *extractor, Reader *r, int piece)
+Waited FetchPiece(stream_extractor_t *extractor, Reader *r, int piece)
 {
     const TorrentRef &t = r->torrent;
     const WaitMark mark(r);
@@ -1313,7 +1328,7 @@ bool FetchPiece(stream_extractor_t *extractor, Reader *r, int piece)
     const vlc_tick_t start = vlc_tick_now();
     Waited waited = WaitFor(VLC_OBJECT(extractor), t,
                             [&] { return t->have[piece] != 0; }, buffering,
-                            VLC_TICK_INVALID, &r->dialog);
+                            VLC_TICK_INVALID, &r->dialog, true);
     const vlc_tick_t waited_for = vlc_tick_now() - start;
     if (waited == Waited::Ready && waited_for > VLC_TICK_FROM_MS(100))
     {
@@ -1339,7 +1354,7 @@ bool FetchPiece(stream_extractor_t *extractor, Reader *r, int piece)
             {
                 msg_Err(extractor, "libtorrent could not read piece %d", piece);
                 r->failed = true;
-                return false;
+                return Waited::Failed;
             }
             r->cur_piece = piece;
             r->cur_data = data.data;
@@ -1349,7 +1364,7 @@ bool FetchPiece(stream_extractor_t *extractor, Reader *r, int piece)
                 vlc_dialog_release(VLC_OBJECT(extractor), r->dialog);
                 r->dialog = NULL;
             }
-            return true;
+            return Waited::Ready;
         }
         if (t->read_requested.insert(piece).second)
             request = true;
@@ -1361,11 +1376,11 @@ bool FetchPiece(stream_extractor_t *extractor, Reader *r, int piece)
             t->read_requested.erase(piece);
             Unlock();
             r->failed = true;
-            return false;
+            return Waited::Failed;
         }
         waited = WaitFor(VLC_OBJECT(extractor), t,
                          [&] { return t->read_pieces.count(piece) > 0; }, buffering,
-                         VLC_TICK_INVALID, &r->dialog);
+                         VLC_TICK_INVALID, &r->dialog, true);
     }
 
     if (waited == Waited::Failed)
@@ -1377,9 +1392,9 @@ bool FetchPiece(stream_extractor_t *extractor, Reader *r, int piece)
     }
     /* Stopped: the input is going away, or a stream filter above woke us
      * up; neither is a failure of the torrent. */
-    if (waited != Waited::Stopped)
+    if (waited != Waited::Stopped && waited != Waited::Superseded)
         r->failed = true;
-    return false;
+    return waited == Waited::Ready ? Waited::Failed : waited;
 }
 
 ssize_t ExtractorRead(stream_extractor_t *extractor, void *buf, size_t len)
@@ -1395,8 +1410,16 @@ ssize_t ExtractorRead(stream_extractor_t *extractor, void *buf, size_t len)
         const int piece = PieceOf(r, r->pos);
         Schedule(r, piece);
 
-        if (piece != r->cur_piece && !FetchPiece(extractor, r, piece))
-            return -1;
+        if (piece != r->cur_piece)
+        {
+            const Waited got = FetchPiece(extractor, r, piece);
+            /* A newer seek is waiting: end this read like the end of the
+             * stream so that the demux unwinds now; the seek moves on. */
+            if (got == Waited::Superseded)
+                return 0;
+            if (got != Waited::Ready)
+                return -1;
+        }
 
         /* Where the piece starts, counted in the file: before the file
          * for the first piece when the file does not start on a piece. */

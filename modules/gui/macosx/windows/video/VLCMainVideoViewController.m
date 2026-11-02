@@ -414,11 +414,17 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         NSLayoutConstraint * const coverWidth = [button.widthAnchor constraintGreaterThanOrEqualToConstant:diameter];
         NSLayoutConstraint * const coverHeight = [button.heightAnchor constraintGreaterThanOrEqualToConstant:diameter];
         coverWidth.priority = coverHeight.priority = NSLayoutPriorityDefaultHigh;
+        /* In the transparent title bar the button is pinned to the bar's
+         * height (28-32 pt): the circle shrinks to it instead of spilling
+         * past the window's top edge. */
+        NSLayoutConstraint * const preferredSize = [circle.heightAnchor constraintEqualToConstant:diameter];
+        preferredSize.priority = NSLayoutPriorityDefaultHigh - 1;
         [NSLayoutConstraint activateConstraints:@[
             [circle.centerXAnchor constraintEqualToAnchor:button.centerXAnchor],
             [circle.centerYAnchor constraintEqualToAnchor:button.centerYAnchor],
-            [circle.widthAnchor constraintEqualToConstant:diameter],
-            [circle.heightAnchor constraintEqualToConstant:diameter],
+            [circle.widthAnchor constraintEqualToAnchor:circle.heightAnchor],
+            [circle.heightAnchor constraintLessThanOrEqualToAnchor:button.heightAnchor],
+            preferredSize,
             coverWidth,
             coverHeight,
         ]];

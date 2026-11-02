@@ -339,6 +339,10 @@ input_thread_t * input_Create( vlc_object_t *p_parent, input_item_t *p_item,
     vlc_object_InitInputConfig(VLC_OBJECT(p_input),
                                input_priv(p_input)->type != INPUT_TYPE_PREPARSING,
                                true);
+    /* MacLC: true while a seek waits in the control queue, so that a module
+     * blocked on data that is not there yet (a torrent piece) can give up and
+     * let the newer seek run. */
+    var_Create( p_input, "maclc-seek-pending", VLC_VAR_BOOL );
 
     priv->b_low_delay = var_InheritBool( p_input, "low-delay" );
     priv->i_jitter_max = VLC_TICK_FROM_MS(var_InheritInteger( p_input, "clock-jitter" ));
@@ -1557,6 +1561,8 @@ int input_ControlPush( input_thread_t *p_input,
 
     sys->control[i_next_control_idx] = c;
     sys->i_control = i_next_control_idx + 1;
+    if( ControlIsSeekRequest( i_type ) )
+        var_SetBool( p_input, "maclc-seek-pending", true );
 
     vlc_cond_signal( &sys->wait_control );
     vlc_mutex_unlock( &sys->lock_control );
@@ -1600,6 +1606,10 @@ static inline int ControlPop( input_thread_t *p_input,
     if( p_sys->i_control > 0 )
         memmove( &p_sys->control[0], &p_sys->control[1],
                  sizeof(*p_sys->control) * p_sys->i_control );
+    bool seek_pending = false;
+    for( size_t i = 0; i < p_sys->i_control && !seek_pending; i++ )
+        seek_pending = ControlIsSeekRequest( p_sys->control[i].i_type );
+    var_SetBool( p_input, "maclc-seek-pending", seek_pending );
     vlc_mutex_unlock( &p_sys->lock_control );
 
     return VLC_SUCCESS;
