@@ -1295,6 +1295,9 @@ static CALayer *MLCPerforations(void)
         self->_barTrack.frame = CGRectMake(0, 54, w, 10);
         self->_glow.position = CGPointMake(0, 54);
         self->_fill.position = CGPointMake(0, 54);
+        /* Constant, and set outside the animated block: an implicit position
+         * animation would override the running sweep. */
+        self->_shimmer.frame = CGRectMake(-80, 0, 80, 10);
         self->_startCaption.frame = CGRectMake(0, 66, 120, 13);
         self->_tailCaption.frame = CGRectMake(w - 220, 66, 220, 13);
         self->_percent.frame = NSMakeRect(0, 2, 124, 46);
@@ -1316,7 +1319,11 @@ static CALayer *MLCPerforations(void)
     const CGFloat winW = MAX(8.0, _windowFraction * w);
     const CGFloat tailW = MAX(8.0, _tailFraction * w);
 
-    MLCAnimated(0.45, ^{
+    MLCAnimated(0.25, ^{
+        /* Linear over one monitor poll (250 ms): the samples join into one
+         * continuous motion instead of an ease that restarts four times a second. */
+        [CATransaction setAnimationTimingFunction:
+         [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear]];
         NSArray<NSNumber *> *fractions = self->_rangeFractions ?: @[];
         for (NSInteger i = 0; i < 64; i++) {
             CALayer * const layer = self->_ranges[i];
@@ -1345,7 +1352,6 @@ static CALayer *MLCPerforations(void)
         self->_fill.bounds = CGRectMake(0, 0, fillW, 10);
         self->_glow.bounds = CGRectMake(0, 0, fillW, 10);
         self->_glow.opacity = fillW > 1 ? (self->_progress >= 1.0 ? 0.5f : 1.0f) : 0.0f;
-        self->_shimmer.frame = CGRectMake(-80, 0, 80, 10);
     });
     [self installShimmer];
 }
@@ -1360,14 +1366,19 @@ static CALayer *MLCPerforations(void)
 
 - (void)installShimmer
 {
-    [_shimmer removeAnimationForKey:@"mlc.loop"];
     const CGFloat fillW = _fill.bounds.size.width;
-    if (!_animating || fillW < 40 || _progress >= 1.0)
+    if (!_animating || fillW < 40 || _progress >= 1.0) {
+        [_shimmer removeAnimationForKey:@"mlc.loop"];
+        return;
+    }
+    /* Runs on: restarting it at every poll cut each sweep short. It crosses
+     * the whole track, and the fill's mask shows the part under the fill. */
+    if ([_shimmer animationForKey:@"mlc.loop"] != nil)
         return;
     MLCNoActions(^{ self->_shimmer.opacity = 1.0; });
     CABasicAnimation * const sweep = [CABasicAnimation animationWithKeyPath:@"position.x"];
     sweep.fromValue = @(-40);
-    sweep.toValue = @(fillW + 40);
+    sweep.toValue = @(NSWidth(self.bounds) + 40);
     sweep.duration = 1.8;
     sweep.repeatCount = HUGE_VALF;
     sweep.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
