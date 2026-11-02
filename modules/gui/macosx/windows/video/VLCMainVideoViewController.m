@@ -415,15 +415,15 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
         NSLayoutConstraint * const coverHeight = [button.heightAnchor constraintGreaterThanOrEqualToConstant:diameter];
         coverWidth.priority = coverHeight.priority = NSLayoutPriorityDefaultHigh;
         /* In the transparent title bar the button is pinned to the bar's
-         * height (28-32 pt): the circle shrinks to it instead of spilling
-         * past the window's top edge. */
+         * height (28-32 pt): the circle shrinks to fit inside it, with a
+         * 3 pt margin, instead of touching the window's top edge. */
         NSLayoutConstraint * const preferredSize = [circle.heightAnchor constraintEqualToConstant:diameter];
         preferredSize.priority = NSLayoutPriorityDefaultHigh - 1;
         [NSLayoutConstraint activateConstraints:@[
             [circle.centerXAnchor constraintEqualToAnchor:button.centerXAnchor],
             [circle.centerYAnchor constraintEqualToAnchor:button.centerYAnchor],
             [circle.widthAnchor constraintEqualToAnchor:circle.heightAnchor],
-            [circle.heightAnchor constraintLessThanOrEqualToAnchor:button.heightAnchor],
+            [circle.heightAnchor constraintLessThanOrEqualToAnchor:button.heightAnchor constant:-6.0],
             preferredSize,
             coverWidth,
             coverHeight,
@@ -820,7 +820,9 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     const NSRect windowButtonBox = [self windowButtonsRect];
 
     _returnButtonLeadingConstraint.constant = placeInFakeToolbar ? windowButtonBox.size.width + VLCUIUnits.mediumSpacing + realButtonSpace : VLCUIUnits.largeSpacing;
-    _playQueueButtonTrailingConstraint.constant = placeInFakeToolbar ? realButtonSpace: VLCUIUnits.largeSpacing;
+    /* Mirror the traffic lights' left margin so the button stays clear of the rounded corner. */
+    const CGFloat closeButtonMargin = NSMinX([viewWindow standardWindowButton:NSWindowCloseButton].frame);
+    _playQueueButtonTrailingConstraint.constant = placeInFakeToolbar ? MAX(realButtonSpace, closeButtonMargin) : VLCUIUnits.largeSpacing;
 
     _overlayView.drawGradientForTopControls = !placeInFakeToolbar;
     [_overlayView setNeedsDisplay:YES];
