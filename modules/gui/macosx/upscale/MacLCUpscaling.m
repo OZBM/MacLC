@@ -269,7 +269,62 @@ static NSString *SHA256Hex(NSData *data)
     Changed();
 }
 
++ (NSInteger)sharpness
+{
+    return MacLCConfigGetInt(MACLC_UPSCALE_VAR_SHARPNESS, 50);
+}
+
++ (void)setSharpness:(NSInteger)sharpness
+{
+    sharpness = MAX(0, MIN(100, sharpness));
+    MacLCConfigPutInt(MACLC_UPSCALE_VAR_SHARPNESS, sharpness);
+    config_SaveConfigFile(getIntf());
+    [Player() setVideoOutputInteger:sharpness forVariable:MACLC_UPSCALE_VAR_SHARPNESS];
+    Changed();
+}
+
++ (NSInteger)target
+{
+    return MacLCConfigGetInt(MACLC_UPSCALE_VAR_TARGET, 0);
+}
+
++ (void)setTarget:(NSInteger)target
+{
+    MacLCConfigPutInt(MACLC_UPSCALE_VAR_TARGET, MAX(0, target));
+    config_SaveConfigFile(getIntf());
+    [Player() setVideoOutputInteger:MAX(0, target) forVariable:MACLC_UPSCALE_VAR_TARGET];
+    Changed();
+}
+
 #pragma mark - state
+
+static NSString *PassName(NSString *pass)
+{
+    NSDictionary<NSString *, NSString *> * const names = @{
+        @"neural": _NS("Neural super resolution"),
+        @"neural4x": _NS("Apple Neural 4x"),
+        @"anime": _NS("ArtCNN"),
+        @"anime4k": _NS("Anime4K"),
+        @"fsrcnnx": _NS("FSRCNNX"),
+        @"sharp": _NS("FSR 1"),
+        @"nis": _NS("NIS"),
+        @"fast": _NS("MetalFX"),
+        @"classic": _NS("EWA Lanczos"),
+    };
+    return names[pass] ?: pass;
+}
+
++ (nullable NSString *)activeMethodName
+{
+    if (!self.isEnabled)
+        return nil;
+    const struct maclc_upscale_state st = State();
+    if (!st.active)
+        return nil;
+    /* the first pass is the one that names the look; "neural" is too long for a badge */
+    NSString * const first = [toNSStr(st.path) componentsSeparatedByString:@"+"].firstObject;
+    return [first isEqualToString:@"neural"] ? _NS("Neural") : PassName(first);
+}
 
 + (BOOL)isActive
 {
@@ -299,20 +354,8 @@ static NSString *SHA256Hex(NSData *data)
                    "nothing to upscale. Make the window larger to upscale it.");
 
     NSMutableArray<NSString *> * const passes = [NSMutableArray array];
-    for (NSString *pass in [toNSStr(st.path) componentsSeparatedByString:@"+"]) {
-        NSDictionary<NSString *, NSString *> * const names = @{
-            @"neural": _NS("Neural super resolution"),
-            @"neural4x": _NS("Apple Neural 4x"),
-            @"anime": _NS("ArtCNN"),
-            @"anime4k": _NS("Anime4K"),
-            @"fsrcnnx": _NS("FSRCNNX"),
-            @"sharp": _NS("FSR 1"),
-            @"nis": _NS("NIS"),
-            @"fast": _NS("MetalFX"),
-            @"classic": _NS("EWA Lanczos"),
-        };
-        [passes addObject:names[pass] ?: pass];
-    }
+    for (NSString *pass in [toNSStr(st.path) componentsSeparatedByString:@"+"])
+        [passes addObject:PassName(pass)];
     NSString * const how = [passes componentsJoinedByString:@" + "];
 
     NSString * const playing =
@@ -340,6 +383,8 @@ static NSString *SHA256Hex(NSData *data)
             : _NS("Apple Neural 4x needs its model: download it in this panel.");
     else if (strcmp(st.why, "format") == 0)
         why = _NS("This video's pixel format cannot go through the first pass.");
+    else if (strcmp(st.why, "rotated") == 0)
+        why = _NS("EWA Lanczos cannot draw a rotated video, so MetalFX scales it.");
 
     return why != nil ? [NSString stringWithFormat:@"%@ %@", playing, why] : playing;
 }

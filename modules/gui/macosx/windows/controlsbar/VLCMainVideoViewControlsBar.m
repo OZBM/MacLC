@@ -66,6 +66,7 @@
     VLCPlayerController *_playerController;
     NSButton *_soundButton;
     NSButton *_upscaleButton;
+    NSString *_upscaleBadge;      /* last title shown, to announce changes */
     NSView *_airPlayButton;
     NSButton *_castButton;
 }
@@ -298,8 +299,9 @@
     [self updateUpscaleButton];
 }
 
-/* The badge names the size the picture is shown at once upscaled ("4K");
- * off, or with nothing to upscale, it reads RES. */
+/* The badge names the method drawing and the size the picture is shown at
+ * once upscaled ("NIS 4K"); off, or with nothing to upscale, it reads RES.
+ * A change while a video plays is announced on screen. */
 - (void)updateUpscaleButton
 {
     if (_upscaleButton == nil)
@@ -307,9 +309,20 @@
     _upscaleButton.hidden = _playerController.currentMediaIsAudioOnly;
 
     const BOOL enabled = MacLCUpscaling.isEnabled;
-    NSString * const output = MacLCUpscaling.badgeTitle;
+    NSString * const size = MacLCUpscaling.badgeTitle;
+    NSString * const method = MacLCUpscaling.activeMethodName;
+    NSString * const output = size != nil && method != nil
+        ? [NSString stringWithFormat:@"%@ %@", method, size] : size;
+    NSString * const badge = output ?: @"RES";
+    if (_upscaleBadge != nil && ![badge isEqualToString:_upscaleBadge] && enabled
+        && _playerController.selectedVideoTrack != nil)
+        [[MacLCOSDController sharedController]
+            showMessage:output != nil ? [NSString stringWithFormat:_NS("Upscaling: %@"), output]
+                                      : _NS("Upscaling idle: the video fits the window")
+             symbolName:@"arrow.up.left.and.arrow.down.right"];
+    _upscaleBadge = badge;
     [self styleBadge:_upscaleButton
-           withTitle:output ?: @"RES"
+           withTitle:badge
               filled:output != nil
               dimmed:enabled && output == nil];
     _upscaleButton.toolTip = [NSString stringWithFormat:@"%@ %@", MacLCUpscaling.statusText,

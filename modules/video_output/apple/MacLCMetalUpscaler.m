@@ -544,7 +544,7 @@ static MacLCSRSession *StartSession(size_t w, size_t h, float factor, BOOL full,
         *why = "format";
         return NULL;
     }
-    if (maxRatio < 1.9f) {
+    if (maxRatio < 1.4f) { /* x2 then the draw downscales a little; below 1.4 it is wasted work */
         *why = "size";
         return NULL;
     }

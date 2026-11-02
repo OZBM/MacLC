@@ -2910,6 +2910,15 @@ static const char *const hdr_mode_names[] = {
 #define UPSCALE_METHOD_LONGTEXT N_("Auto adds a neural pass for SDR videos up " \
     "to 720p on mains power; Efficient uses MetalFX alone. FSRCNNX is " \
     "downloaded from the upscaling panel once its licence is accepted.")
+#define UPSCALE_SHARPNESS_TEXT N_("Upscaling sharpness")
+#define UPSCALE_SHARPNESS_LONGTEXT N_("How much the Sharp (FSR) and NIS " \
+    "methods sharpen, from 0 to 100.")
+#define UPSCALE_TARGET_TEXT N_("Upscaling target")
+#define UPSCALE_TARGET_LONGTEXT N_("Largest resolution the upscaler makes; " \
+    "the window size by default.")
+static const int upscale_target_values[] = { 0, 1080, 1440, 2160 };
+static const char *const upscale_target_names[] = {
+    N_("Window size"), N_("1080p"), N_("1440p"), N_("4K") };
 static const char *const upscale_method_values[] = {
     "auto", "apple4x", "anime", "anime4k", "fsrcnnx", "sharp", "nis", "fast",
     "classic" };
@@ -2953,6 +2962,10 @@ vlc_module_begin()
     add_bool(MACLC_UPSCALE_VAR_ENABLED, false, UPSCALE_TEXT, UPSCALE_LONGTEXT)
     add_string(MACLC_UPSCALE_VAR_METHOD, "auto", UPSCALE_METHOD_TEXT, UPSCALE_METHOD_LONGTEXT)
         change_string_list(upscale_method_values, upscale_method_names)
+    add_integer_with_range(MACLC_UPSCALE_VAR_SHARPNESS, 50, 0, 100,
+                           UPSCALE_SHARPNESS_TEXT, UPSCALE_SHARPNESS_LONGTEXT)
+    add_integer(MACLC_UPSCALE_VAR_TARGET, 0, UPSCALE_TARGET_TEXT, UPSCALE_TARGET_LONGTEXT)
+        change_integer_list(upscale_target_values, upscale_target_names)
     set_help(HELP_TEXT)
     set_callback_display(Open, 600)
 

@@ -34,6 +34,11 @@
 /* Requests */
 #define MACLC_UPSCALE_VAR_ENABLED "maclc-upscale"        /* bool */
 #define MACLC_UPSCALE_VAR_METHOD  "maclc-upscale-method" /* see the enum below */
+/* integer 0..100, default 50: sharpening of "sharp" (FSR 1) and "nis" */
+#define MACLC_UPSCALE_VAR_SHARPNESS "maclc-upscale-sharpness"
+/* integer, lines of the short side the upscaler aims at at most:
+ * 0 = the window's size (default), else 1080, 1440 or 2160 */
+#define MACLC_UPSCALE_VAR_TARGET    "maclc-upscale-target"
 
 /* State published by the Metal output (string):
  *   "idle off"      upscaling is switched off
@@ -49,7 +54,8 @@
  *       thermal, slow (too slow for the frame rate), unsupported (not on this
  *       Mac or this macOS), loading (the model is starting), model (the
  *       Apple 4x model is not downloaded, or the FSRCNNX file is missing),
- *       format (not 8-bit 4:2:0). */
+ *       format (not 8-bit 4:2:0), rotated (classic cannot draw a rotated
+ *       picture, MetalFX scales it instead). */
 #define MACLC_UPSCALE_VAR_STATE   "maclc-upscale-state"
 
 #include <stdbool.h>

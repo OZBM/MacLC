@@ -1884,6 +1884,13 @@ static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
     var_SetFloat(obj, name, value);
 }
 
+static void SetObjectInteger(vlc_object_t *obj, const char *name, int64_t value)
+{
+    if (var_Type(obj, name) == 0)
+        var_Create(obj, name, VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+    var_SetInteger(obj, name, value);
+}
+
 /* The main video output, or the player's dummy output when none runs. Its
  * parent is where outputs created later - including the one a track restart
  * brings up - inherit their variables from, so the value is set on both. */
@@ -1927,6 +1934,13 @@ static void SetObjectFloat(vlc_object_t *obj, const char *name, float value)
 {
     [self applyToVideoOutputs:^(vlc_object_t *obj) {
         SetObjectFloat(obj, name, value);
+    }];
+}
+
+- (void)setVideoOutputInteger:(int64_t)value forVariable:(const char *)name
+{
+    [self applyToVideoOutputs:^(vlc_object_t *obj) {
+        SetObjectInteger(obj, name, value);
     }];
 }
 

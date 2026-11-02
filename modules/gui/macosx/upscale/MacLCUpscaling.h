@@ -36,6 +36,12 @@ extern NSString * const MacLCUpscalingChangedNotification;
 @property (class, readwrite, getter=isEnabled) BOOL enabled;   /* maclc-upscale */
 /** An enum maclc_upscale_method value. */
 @property (class, readwrite) NSInteger method;                  /* maclc-upscale-method */
+/** 0..100, sharpening of FSR 1 and NIS. */
+@property (class, readwrite) NSInteger sharpness;               /* maclc-upscale-sharpness */
+/** Short-side lines the upscaler aims at at most, 0 for the window size. */
+@property (class, readwrite) NSInteger target;                  /* maclc-upscale-target */
+/** Short name of the method that is drawing ("NIS", "MetalFX"), nil when not upscaling. */
+@property (class, readonly, nullable) NSString *activeMethodName;
 
 typedef NS_ENUM(NSInteger, MacLCUpscalingModelState) {
     MacLCUpscalingModelUnsupported,   /* no full super resolution on this Mac */

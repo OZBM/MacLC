@@ -853,6 +853,9 @@ extern const CGFloat VLCVolumeDefault;
 /** Same as setVideoOutputString:forVariable: for a float variable. */
 - (void)setVideoOutputFloat:(float)value forVariable:(const char *)name;
 
+/** Same as setVideoOutputString:forVariable: for an integer variable. */
+- (void)setVideoOutputInteger:(int64_t)value forVariable:(const char *)name;
+
 /** Reads an integer variable published on the main video output.
  *  \return fallback when there is no output or no such variable. */
 - (int64_t)mainVideoOutputInteger:(const char *)name fallback:(int64_t)fallback;

@@ -109,6 +109,8 @@ typedef struct vout_display_sys_t {
     MacLCMetalUpscaler *upscaler;
     bool upscale;          /* maclc-upscale */
     enum maclc_upscale_method upscaleMethod;
+    int upscaleSharpness;  /* maclc-upscale-sharpness, 0..100 */
+    int upscaleTarget;     /* maclc-upscale-target, short-side lines, 0 = window */
     MacLCMetalFSR *fsr;               /* "sharp", made on first use */
     MacLCMetalNIS *nis;               /* "nis", made on first use */
     MacLCMetalScaler *userScaler;     /* gl-upscaler / gl-downscaler, or nil */
@@ -554,6 +556,10 @@ static int MacLCUpscaleCallback(vlc_object_t *obj, char const *name,
     vout_display_sys_t *sys = ((vout_display_t *)data)->sys;
     if (strcmp(name, MACLC_UPSCALE_VAR_ENABLED) == 0)
         sys->upscale = cur.b_bool;
+    else if (strcmp(name, MACLC_UPSCALE_VAR_SHARPNESS) == 0)
+        sys->upscaleSharpness = (int)VLC_CLIP(cur.i_int, 0, 100);
+    else if (strcmp(name, MACLC_UPSCALE_VAR_TARGET) == 0)
+        sys->upscaleTarget = (int)VLC_CLIP(cur.i_int, 0, 16384);
     else
         sys->upscaleMethod = maclc_upscale_parse_method(cur.psz_string);
     return VLC_SUCCESS;
@@ -895,8 +901,12 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
     const size_t buf_h = CVPixelBufferGetHeight(pixelBuffer);
     const unsigned vis_w = vd->source->i_visible_width, vis_h = vd->source->i_visible_height;
     const bool swap = ORIENT_IS_SWAP(vd->source->orientation);
-    const float sx = vis_w ? (float)(swap ? place.height : place.width) / vis_w : 0.0f;
-    const float sy = vis_h ? (float)(swap ? place.width : place.height) / vis_h : 0.0f;
+    /* A target resolution caps what the upscaler makes; the draw scales the rest. */
+    const unsigned short_side = MIN(place.width, place.height);
+    const float cap = sys->upscaleTarget > 0 && short_side > (unsigned)sys->upscaleTarget
+        ? (float)sys->upscaleTarget / short_side : 1.0f;
+    const float sx = vis_w ? cap * (swap ? place.height : place.width) / vis_w : 0.0f;
+    const float sy = vis_h ? cap * (swap ? place.width : place.height) / vis_h : 0.0f;
     const bool upscale = sys->upscale && sys->upscaler != nil
                       && sys->renderer.projector == nil && fminf(sx, sy) >= 1.2f;
     /* First pass, on the decoded 8-bit picture: neural or anime. */
@@ -931,8 +941,12 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
         }
     }
 
-    /* Classic draws with EWA Lanczos instead of a second pass. */
-    const bool classic = upscale && method == MACLC_UPSCALE_CLASSIC;
+    /* Classic draws with EWA Lanczos instead of a second pass; the renderer
+     * only scales unrotated pictures itself, so MetalFX takes rotated ones. */
+    const bool classic = upscale && method == MACLC_UPSCALE_CLASSIC
+                      && vd->source->orientation == ORIENT_NORMAL;
+    if (upscale && method == MACLC_UPSCALE_CLASSIC && !classic)
+        why = "rotated";
     if (classic && sys->classicScaler == nil) {
         sys->classicScaler = [[MacLCMetalScaler alloc] initWithDevice:sys->renderer.device];
         sys->classicScaler.upscaler = VLC_GLSCALE_EWA_LANCZOS;
@@ -1104,12 +1118,16 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
             if (method == MACLC_UPSCALE_SHARP) {
                 if (sys->fsr == nil)
                     sys->fsr = [[MacLCMetalFSR alloc] initWithDevice:sys->renderer.device];
+                /* RCAS stops, 0 sharpest: 50 maps to FSR's default 0.25. */
+                const float soft = 1.0f - sys->upscaleSharpness / 100.0f;
+                sys->fsr.sharpness = 2.0f * soft * soft * soft;
                 big = [sys->fsr encodeFrom:resultingTexture width:out_w height:out_h
                              commandBuffer:stageACmdBuf];
                 second = "sharp";
             } else if (method == MACLC_UPSCALE_NIS) {
                 if (sys->nis == nil)
                     sys->nis = [[MacLCMetalNIS alloc] initWithDevice:sys->renderer.device];
+                sys->nis.sharpness = sys->upscaleSharpness / 100.0f;
                 big = [sys->nis encodeFrom:resultingTexture width:out_w height:out_h
                              commandBuffer:stageACmdBuf];
                 second = "nis";
@@ -1135,8 +1153,7 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
              second ? second : "");
     if (!sys->upscale)
         strlcpy(upscale_state, "idle off", sizeof(upscale_state));
-    else if (classic && vd->source->orientation == ORIENT_NORMAL)
-        /* the renderer only scales unrotated pictures itself */
+    else if (classic)
         snprintf(upscale_state, sizeof(upscale_state), "classic %ux%u %ldx%ld",
                  vis_w, vis_h, lroundf(vis_w * sx), lroundf(vis_h * sy));
     else if (path[0] == '\0')
@@ -1272,6 +1289,8 @@ static void Close(vout_display_t *vd)
         var_DelCallback(vout_obj, MACLC_HDR_VAR_HLG, MacLCHLGCallback, vd);
         var_DelCallback(vout_obj, MACLC_UPSCALE_VAR_ENABLED, MacLCUpscaleCallback, vd);
         var_DelCallback(vout_obj, MACLC_UPSCALE_VAR_METHOD, MacLCUpscaleCallback, vd);
+        var_DelCallback(vout_obj, MACLC_UPSCALE_VAR_SHARPNESS, MacLCUpscaleCallback, vd);
+        var_DelCallback(vout_obj, MACLC_UPSCALE_VAR_TARGET, MacLCUpscaleCallback, vd);
     }
 
     /* 2. Wait for in-flight command buffers */
@@ -1328,6 +1347,8 @@ static void Close(vout_display_t *vd)
         var_Destroy(vout_obj, MACLC_HDR_VAR_ACTIVE);
         var_Destroy(vout_obj, MACLC_UPSCALE_VAR_ENABLED);
         var_Destroy(vout_obj, MACLC_UPSCALE_VAR_METHOD);
+        var_Destroy(vout_obj, MACLC_UPSCALE_VAR_SHARPNESS);
+        var_Destroy(vout_obj, MACLC_UPSCALE_VAR_TARGET);
         var_Destroy(vout_obj, MACLC_UPSCALE_VAR_STATE);
     }
 
@@ -1498,7 +1519,13 @@ int MacLCMetalOpen(vout_display_t *vd,
     char *method = var_InheritString(vd, MACLC_UPSCALE_VAR_METHOD);
     sys->upscaleMethod = maclc_upscale_parse_method(method);
     free(method);
+    sys->upscaleSharpness = (int)VLC_CLIP(var_InheritInteger(vd, MACLC_UPSCALE_VAR_SHARPNESS), 0, 100);
+    sys->upscaleTarget = (int)VLC_CLIP(var_InheritInteger(vd, MACLC_UPSCALE_VAR_TARGET), 0, 16384);
     if (vout_obj != NULL) {
+        var_Create(vout_obj, MACLC_UPSCALE_VAR_SHARPNESS, VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+        var_AddCallback(vout_obj, MACLC_UPSCALE_VAR_SHARPNESS, MacLCUpscaleCallback, vd);
+        var_Create(vout_obj, MACLC_UPSCALE_VAR_TARGET, VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+        var_AddCallback(vout_obj, MACLC_UPSCALE_VAR_TARGET, MacLCUpscaleCallback, vd);
         var_Create(vout_obj, MACLC_UPSCALE_VAR_ENABLED, VLC_VAR_BOOL | VLC_VAR_DOINHERIT);
         var_AddCallback(vout_obj, MACLC_UPSCALE_VAR_ENABLED, MacLCUpscaleCallback, vd);
         var_Create(vout_obj, MACLC_UPSCALE_VAR_METHOD, VLC_VAR_STRING | VLC_VAR_DOINHERIT);
