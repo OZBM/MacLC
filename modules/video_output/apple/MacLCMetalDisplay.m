@@ -909,6 +909,9 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
     const float sy = vis_h ? cap * (swap ? place.width : place.height) / vis_h : 0.0f;
     const bool upscale = sys->upscale && sys->upscaler != nil
                       && sys->renderer.projector == nil && fminf(sx, sy) >= 1.2f;
+    /* Split comparison keeps the picture as decoded, for the left half. */
+    CVPixelBufferRef original = maclc_split_compare(VLC_OBJECT(vd))
+        ? CVPixelBufferRetain(pixelBuffer) : NULL;
     /* First pass, on the decoded 8-bit picture: neural or anime. */
     const enum maclc_upscale_method method = sys->upscaleMethod;
     const char *first = NULL, *why = NULL;
@@ -1109,6 +1112,7 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
     /* Second pass, on the linear-light texture, the rest of the way:
      * FSR 1 for "sharp", NIS for "nis", MetalFX otherwise (and when they
      * cannot). */
+    id<MTLTexture> beforeSecond = resultingTexture;
     const char *second = NULL;
     if (upscale && !classic && resultingTexture != nil) {
         const NSUInteger out_w = MIN((NSUInteger)lroundf(buf_w * sx), 16384);
@@ -1148,6 +1152,21 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
                      (CGFloat)resultingTexture.height / buf_h)
         : CGSizeMake(1.0, 1.0);
 
+    /* Without the effect: the decoded picture when the first pass or the
+     * expander replaced it, the texture before the second pass, or for
+     * classic the unscaled texture itself. */
+    id<MTLTexture> originalTexture = nil;
+    if (original != NULL && resultingTexture != nil) {
+        if (first != NULL || strcmp(stageAPath, "expander") == 0)
+            originalTexture = [sys->renderer decodeOriginalBuffer:original
+                                                           format:&render_fmt
+                                                    commandBuffer:stageACmdBuf];
+        else if (second != NULL)
+            originalTexture = beforeSecond;
+        else if (classic)
+            originalTexture = resultingTexture;
+    }
+
     char upscale_state[64], path[16];
     snprintf(path, sizeof(path), "%s%s%s", first ? first : "", first && second ? "+" : "",
              second ? second : "");
@@ -1168,11 +1187,13 @@ static void Prepare(vout_display_t *vd, picture_t *pic,
 
     [stageACmdBuf commit];
     [stageACmdBuf waitUntilCompleted];
+    CVPixelBufferRelease(original);
 
     /* Dolby Vision decodes to BT.2020 whatever the base layer says. */
     sys->renderer.sourceGamutIsWide = use_rpu
         || render_fmt.primaries == COLOR_PRIMARIES_BT2020;
     sys->stageATexture = resultingTexture;
+    sys->renderer.originalTexture = originalTexture;
     /* The previous picture's buffer goes back to its pool, where another
      * queue may write it: only once its frame has been drawn. */
     [sys->renderer waitUntilCompleted];

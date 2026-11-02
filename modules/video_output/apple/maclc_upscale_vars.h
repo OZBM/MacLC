@@ -58,6 +58,21 @@
  *       picture, MetalFX scales it instead). */
 #define MACLC_UPSCALE_VAR_STATE   "maclc-upscale-state"
 
+/* Bool the interface creates on the vout: the left half of the picture is
+ * shown without SDR-to-HDR, upscaling or frame interpolation. */
+#define MACLC_SPLIT_COMPARE_VAR   "maclc-split-compare"
+
+#include <vlc_common.h>
+/* The var has no option behind it, so var_Inherit* would assert: look it up
+ * on the object and its parents. */
+static inline bool maclc_split_compare(vlc_object_t *obj)
+{
+    for (; obj != NULL; obj = vlc_object_parent(obj))
+        if (var_Type(obj, MACLC_SPLIT_COMPARE_VAR) != 0)
+            return var_GetBool(obj, MACLC_SPLIT_COMPARE_VAR);
+    return false;
+}
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>

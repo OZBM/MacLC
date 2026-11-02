@@ -67,6 +67,8 @@
 #import "windows/controlsbar/VLCMainWindowControlsBar.h"
 #import "windows/extensions/VLCExtensionsManager.h"
 #import "webvideo/MacLCWebVideoPanelController.h"
+
+#include "../../../video_output/apple/maclc_upscale_vars.h"
 #import "addons/MacLCAddons.h"
 #import "addons/MacLCAddonSearchWindowController.h"
 #import "windows/convertandsave/VLCConvertAndSaveWindowController.h"
@@ -137,6 +139,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
     __strong VLCTimeSelectionPanelController *_timeSelectionPanel;
     __strong VLCCustomCropArWindowController *_customARController;
     NSMenuItem *_addonSearchMenuItem;
+    NSMenuItem *_splitCompareItem;
 }
 
 @end
@@ -215,6 +218,14 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
         equalizerItem.target = self;
         [_audioMenu insertItem:soundModeItem atIndex:channelsIndex + 1];
         [_audioMenu insertItem:equalizerItem atIndex:channelsIndex + 2];
+    }
+
+    /* Video > Compare Before and After, the picture split down the middle. */
+    NSInteger snapshotIndex = [_videoMenu indexOfItem:_snapshot];
+    if (snapshotIndex != -1) {
+        _splitCompareItem = [[NSMenuItem alloc] initWithTitle:_NS("Compare Before and After") action:@selector(toggleSplitCompare:) keyEquivalent:@""];
+        _splitCompareItem.target = self;
+        [_videoMenu insertItem:_splitCompareItem atIndex:snapshotIndex + 1];
     }
 
     /* configure playback / controls menu */
@@ -1362,6 +1373,18 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
                                             symbolName:@"camera.fill"];
 }
 
+- (IBAction)toggleSplitCompare:(id)sender
+{
+    vout_thread_t * const p_vout = _playerController.videoOutputThreadForKeyWindow;
+    if (p_vout == NULL)
+        return;
+    var_Create(p_vout, MACLC_SPLIT_COMPARE_VAR, VLC_VAR_BOOL);
+    const bool on = var_ToggleBool(p_vout, MACLC_SPLIT_COMPARE_VAR);
+    vout_Release(p_vout);
+    [[MacLCOSDController sharedController] showMessage:on ? _NS("Original | Enhanced") : _NS("Comparison Off")
+                                            symbolName:@"rectangle.split.2x1"];
+}
+
 - (void)_disablePostProcessing
 {
     [_playerController enableVideoFilterWithName:@"postproc" state:NO];
@@ -2185,7 +2208,8 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
                mi == self.postprocessing            ||
                mi == self.fullscreenItem            ||
                mi == self.voutMenufullscreen        ||
-               mi == self.floatontop) {
+               mi == self.floatontop                ||
+               mi == _splitCompareItem) {
         vout_thread_t * const p_vout = _playerController.videoOutputThreadForKeyWindow;
         if (p_vout != NULL) {
             if (mi == self.floatontop) {
@@ -2196,6 +2220,9 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
                 }
             } else if (mi == self.fullscreenItem || mi == self.voutMenufullscreen) {
                 mi.state = _playerController.fullscreen ? NSControlStateValueOn : NSControlStateValueOff;
+            } else if (mi == _splitCompareItem) {
+                mi.state = maclc_split_compare(VLC_OBJECT(p_vout))
+                    ? NSControlStateValueOn : NSControlStateValueOff;
             }
             vout_Release(p_vout);
         }

@@ -60,6 +60,7 @@
 #include "vt_utils.h"
 #include "maclc_frc_geometry.h"
 #include "maclc_frc_backend.h"
+#include "../video_output/apple/maclc_upscale_vars.h"
 
 #define CFG_PREFIX "maclc-frc-"
 
@@ -1516,6 +1517,54 @@ static void BudgetAccount(MacLCFrcContext *ctx, vlc_tick_t spent)
     }
 }
 
+/* Split comparison: the left half of an interpolated frame becomes the held
+ * frame, as it shows without interpolation. Same-size 4:2:0 biplanar only. */
+static void CopyLeftHalf(CVPixelBufferRef dst, CVPixelBufferRef src)
+{
+    const OSType format = CVPixelBufferGetPixelFormatType(dst);
+    size_t luma_bytes;
+    switch (format)
+    {
+        case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
+        case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
+            luma_bytes = 1;
+            break;
+        case kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange:
+        case kCVPixelFormatType_420YpCbCr10BiPlanarFullRange:
+            luma_bytes = 2;
+            break;
+        default:
+            return;
+    }
+    if (CVPixelBufferGetPixelFormatType(src) != format
+     || CVPixelBufferGetWidth(src) != CVPixelBufferGetWidth(dst)
+     || CVPixelBufferGetHeight(src) != CVPixelBufferGetHeight(dst)
+     || CVPixelBufferGetPlaneCount(dst) != 2)
+        return;
+    if (CVPixelBufferLockBaseAddress(dst, 0) != kCVReturnSuccess)
+        return;
+    if (CVPixelBufferLockBaseAddress(src, kCVPixelBufferLock_ReadOnly) == kCVReturnSuccess)
+    {
+        for (size_t plane = 0; plane < 2; plane++)
+        {
+            uint8_t *d = CVPixelBufferGetBaseAddressOfPlane(dst, plane);
+            const uint8_t *s = CVPixelBufferGetBaseAddressOfPlane(src, plane);
+            if (d == NULL || s == NULL)
+                continue;
+            const size_t d_stride = CVPixelBufferGetBytesPerRowOfPlane(dst, plane);
+            const size_t s_stride = CVPixelBufferGetBytesPerRowOfPlane(src, plane);
+            /* A chroma sample is two values (Cb, Cr) of the luma's size. */
+            const size_t bytes = CVPixelBufferGetWidthOfPlane(dst, plane) / 2
+                               * luma_bytes * (plane + 1);
+            const size_t rows = CVPixelBufferGetHeightOfPlane(dst, plane);
+            for (size_t y = 0; y < rows; y++)
+                memcpy(d + y * d_stride, s + y * s_stride, bytes);
+        }
+        CVPixelBufferUnlockBaseAddress(src, kCVPixelBufferLock_ReadOnly);
+    }
+    CVPixelBufferUnlockBaseAddress(dst, 0);
+}
+
 static picture_t *Filter(filter_t *filter, picture_t *source)
 {
     MacLCFrcContext *ctx = (__bridge MacLCFrcContext *)filter->p_sys;
@@ -1628,8 +1677,11 @@ static picture_t *Filter(filter_t *filter, picture_t *source)
         /* The previous frame has already been shown; hand back the frames that
          * come between it and this one, then this one. */
         picture_t *first = NULL, **tail = &first;
+        const bool split = maclc_split_compare(VLC_OBJECT(filter));
         for (unsigned i = 0; i < count; i++)
         {
+            if (split && produced[i] != NULL && ctx->_prev_buffer != NULL)
+                CopyLeftHalf(produced[i], ctx->_prev_buffer);
             const vlc_tick_t when = prev_date
                 + (date - prev_date) * (int64_t)(i + 1) / (int64_t)ctx->_factor;
             /* Takes the buffer's reference whether it succeeds or not. */

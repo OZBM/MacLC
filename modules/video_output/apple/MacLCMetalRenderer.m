@@ -524,6 +524,7 @@ static NSString * const kMacLCMetalShaderSource =
     id<MTLSamplerState> _samplerLinear;
 
     id<MTLTexture> _cachedStageATexture;
+    id<MTLTexture> _cachedOriginalTexture;
 
     NSMutableArray<MetalSubpicRegion *> *_activeSubpicRegions;
     NSMutableArray<id<MTLTexture>> *_subpicTexturePool;
@@ -679,6 +680,19 @@ static NSString * const kMacLCMetalShaderSource =
         return nil;
     [_displayHeldTextures addObject:(__bridge_transfer id)cvTexture];
     return CVMetalTextureGetTexture(cvTexture);
+}
+
+- (nullable id<MTLTexture>)decodeOriginalBuffer:(CVPixelBufferRef)pixelBuffer
+                                         format:(const video_format_t *)fmt
+                                  commandBuffer:(id<MTLCommandBuffer>)commandBuffer
+{
+    id<MTLTexture> main = _cachedStageATexture;
+    _cachedStageATexture = _cachedOriginalTexture;
+    id<MTLTexture> texture = [self decodeSourceBuffer:pixelBuffer format:fmt
+                                        commandBuffer:commandBuffer];
+    _cachedOriginalTexture = _cachedStageATexture;
+    _cachedStageATexture = main;
+    return texture;
 }
 
 - (nullable id<MTLTexture>)decodeSourceBuffer:(CVPixelBufferRef)pixelBuffer
@@ -1105,6 +1119,17 @@ static NSString * const kMacLCMetalShaderSource =
         [cmdBuf commit]; /* runs the completion handler above */
         return NO;
     }
+    /* Split comparison: the original left of the middle of the picture,
+     * the enhanced one right of it, a 2-pixel black gap between them.
+     * shortcut: the gap is black, invisible on a black picture; draw a light
+     * line if users miss it. */
+    id<MTLTexture> original = _projector == nil ? _originalTexture : nil;
+    const NSUInteger dw = drawable.texture.width, dh = drawable.texture.height;
+    const NSUInteger split = original != nil && dw > 4
+        ? (NSUInteger)MIN(MAX(lround(placement.origin.x + placement.size.width / 2), 2L), (long)dw - 2)
+        : 0;
+    if (split != 0)
+        [encoder setScissorRect:(MTLScissorRect){ split + 1, 0, dw - split - 1, dh }];
     [self encodeScaleFrom:source
             renderEncoder:encoder
                 placement:sourcePlacement
@@ -1114,6 +1139,22 @@ static NSString * const kMacLCMetalShaderSource =
                  headroom:headroom
                     isEDR:isEDR
              drawableSize:drawableSize];
+    if (split != 0) {
+        /* The crop is given for stageATexture; the original may be smaller. */
+        const CGFloat rx = (CGFloat)original.width / stageATexture.width;
+        const CGFloat ry = (CGFloat)original.height / stageATexture.height;
+        [encoder setScissorRect:(MTLScissorRect){ 0, 0, split - 1, dh }];
+        [self encodeScaleFrom:original
+                renderEncoder:encoder
+                    placement:placement
+                   cropOrigin:CGPointMake(cropOrigin.x * rx, cropOrigin.y * ry)
+                     cropSize:CGSizeMake(cropSize.width * rx, cropSize.height * ry)
+                  orientation:orientation
+                     headroom:headroom
+                        isEDR:isEDR
+                 drawableSize:drawableSize];
+        [encoder setScissorRect:(MTLScissorRect){ 0, 0, dw, dh }];
+    }
     if (target == drawable.texture)
         [self renderSubpicturesWithEncoder:encoder drawableSize:drawableSize];
     [encoder endEncoding];

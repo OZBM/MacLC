@@ -95,6 +95,18 @@ NS_ASSUME_NONNULL_BEGIN
                                 commandBuffer:(id<MTLCommandBuffer>)commandBuffer;
 
 /**
+ * Decodes like decodeSourceBuffer:, into a texture of its own, so a second
+ * picture of the same frame does not overwrite the first.
+ */
+- (nullable id<MTLTexture>)decodeOriginalBuffer:(CVPixelBufferRef)pixelBuffer
+                                         format:(const video_format_t *)fmt
+                                  commandBuffer:(id<MTLCommandBuffer>)commandBuffer;
+
+/* Split comparison: the picture without the effect, drawn over the left
+ * half of the placement. nil draws the whole picture as usual. */
+@property (nonatomic, strong, nullable) id<MTLTexture> originalTexture;
+
+/**
  * Updates subpicture regions, uploading RGBA region pixel data into recycled or new
  * Metal textures.
  */
