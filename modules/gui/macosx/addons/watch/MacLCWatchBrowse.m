@@ -1351,32 +1351,6 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
         [snapshot appendItemsWithIdentifiers:itemIDs intoSectionWithIdentifier:continueSectionID];
     }
 
-    /* Favorites shelf (hidden while a service scope is selected) */
-    if (_selectedServiceCode == nil) {
-        NSArray<MacLCWatchEntry *> *favEntries = [self filteredFavoriteEntries];
-        if (favEntries.count > 0) {
-            NSString *favSectionID = [NSString stringWithFormat:@"%@favorites_section", scopePrefix];
-            [_activeSections addObject:favSectionID];
-            [snapshot appendSectionsWithIdentifiers:@[favSectionID]];
-            _shelfTitlesBySectionID[favSectionID] = _NS("Favorites");
-            _shelfActionTitlesBySectionID[favSectionID] = _NS("See All");
-            _shelfActionsBySectionID[favSectionID] = ^{
-                [VLCMain sharedInstance].libraryWindow.librarySegmentType = VLCLibraryWatchFavoritesSegmentType;
-            };
-            _shelfShowsPagingBySectionID[favSectionID] = @YES;
-
-            NSMutableArray<NSString *> *itemIDs = [NSMutableArray arrayWithCapacity:favEntries.count];
-            for (NSUInteger idx = 0; idx < favEntries.count; idx++) {
-                MacLCWatchEntry *entry = favEntries[idx];
-                NSString *itemID = [NSString stringWithFormat:@"%@fav/%lu_%@", scopePrefix, (unsigned long)idx, entry.identifier];
-                [itemIDs addObject:itemID];
-                _itemsByID[itemID] = entry.item;
-                _ranksByID[itemID] = @0;
-            }
-            [snapshot appendItemsWithIdentifiers:itemIDs intoSectionWithIdentifier:favSectionID];
-        }
-    }
-
     if (_selectedServiceCode != nil) {
         /* Scoped to a service */
         MacLCWatchService *service = [MacLCWatchDiscovery serviceForCode:_selectedServiceCode];
@@ -1464,7 +1438,26 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
     } else {
         /* Unscoped ("All") */
 
-        /* 3. The Edit */
+        /* 3. Browse by Genre, right under Continue Watching: the page's genre selector */
+        NSArray<NSString *> *genres = [[MacLCWatchDiscovery sharedDiscovery] genresForMediaType:self.section.mediaType];
+        if (genres.count > 0) {
+            NSString *genreTilesSectionID = [NSString stringWithFormat:@"%@genre_tiles_section", scopePrefix];
+            [_activeSections addObject:genreTilesSectionID];
+            [snapshot appendSectionsWithIdentifiers:@[genreTilesSectionID]];
+
+            _shelfTitlesBySectionID[genreTilesSectionID] = _NS("Browse by Genre");
+            _shelfShowsPagingBySectionID[genreTilesSectionID] = @YES;
+
+            NSMutableArray<NSString *> *tileIDs = [NSMutableArray arrayWithCapacity:genres.count];
+            for (NSString *genre in genres) {
+                NSString *tileID = [NSString stringWithFormat:@"%@genre_tile/%@", scopePrefix, genre];
+                [tileIDs addObject:tileID];
+                _genresByID[tileID] = genre;
+            }
+            [snapshot appendItemsWithIdentifiers:tileIDs intoSectionWithIdentifier:genreTilesSectionID];
+        }
+
+        /* 4. The Edit */
         NSString *editSectionID = [NSString stringWithFormat:@"%@edit_section", scopePrefix];
         NSArray<MacLCWatchCollection *> *collections = [[MacLCWatchDiscovery sharedDiscovery] editForDate:[NSDate date]
                                                                                                 mediaType:self.section.mediaType
@@ -1492,7 +1485,37 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
             [snapshot appendItemsWithIdentifiers:cardIDs intoSectionWithIdentifier:editSectionID];
         }
 
-        /* 4. Top 10 */
+        /* More collections from the pool, two after every second shelf below. A larger
+         * count is another deterministic pick for the same period; the top three are dropped. */
+        NSMutableArray<MacLCWatchCollection *> *moreEdit =
+            [[[MacLCWatchDiscovery sharedDiscovery] editForDate:[NSDate date]
+                                                      mediaType:self.section.mediaType
+                                                          count:9] mutableCopy];
+        [moreEdit filterUsingPredicate:[NSPredicate predicateWithFormat:@"NOT (identifier IN %@)",
+                                        [collections valueForKey:@"identifier"]]];
+        __block NSUInteger shelvesSinceEdit = 0;
+        void (^appendMoreEdit)(void) = ^{
+            if (++shelvesSinceEdit < 2 || moreEdit.count == 0)
+                return;
+            shelvesSinceEdit = 0;
+            NSRange range = NSMakeRange(0, MIN((NSUInteger)2, moreEdit.count));
+            NSArray<MacLCWatchCollection *> *group = [moreEdit subarrayWithRange:range];
+            [moreEdit removeObjectsInRange:range];
+            NSString *sectionID = [NSString stringWithFormat:@"%@edit_section_more_%@", scopePrefix, group.firstObject.identifier];
+            [self->_activeSections addObject:sectionID];
+            [snapshot appendSectionsWithIdentifiers:@[sectionID]];
+            self->_shelfTitlesBySectionID[sectionID] = _NS("More from The Edit");
+            self->_shelfShowsPagingBySectionID[sectionID] = @YES;
+            NSMutableArray<NSString *> *cardIDs = [NSMutableArray arrayWithCapacity:group.count];
+            for (MacLCWatchCollection *coll in group) {
+                NSString *cardID = [NSString stringWithFormat:@"%@edit/%@", scopePrefix, coll.identifier];
+                [cardIDs addObject:cardID];
+                self->_collectionsByID[cardID] = coll;
+            }
+            [snapshot appendItemsWithIdentifiers:cardIDs intoSectionWithIdentifier:sectionID];
+        };
+
+        /* 5. Top 10 */
         for (MacLCAddonTitleCatalog *topCat in _topCatalogs) {
             NSString *catKey = CatalogKey(topCat);
             if ([_catalogFailed[catKey] boolValue]) {
@@ -1544,25 +1567,6 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
                 }
                 [snapshot appendItemsWithIdentifiers:placeholders intoSectionWithIdentifier:sectionID];
             }
-        }
-
-        /* 5. Browse by Genre */
-        NSArray<NSString *> *genres = [[MacLCWatchDiscovery sharedDiscovery] genresForMediaType:self.section.mediaType];
-        if (genres.count > 0) {
-            NSString *genreTilesSectionID = [NSString stringWithFormat:@"%@genre_tiles_section", scopePrefix];
-            [_activeSections addObject:genreTilesSectionID];
-            [snapshot appendSectionsWithIdentifiers:@[genreTilesSectionID]];
-
-            _shelfTitlesBySectionID[genreTilesSectionID] = _NS("Browse by Genre");
-            _shelfShowsPagingBySectionID[genreTilesSectionID] = @YES;
-
-            NSMutableArray<NSString *> *tileIDs = [NSMutableArray arrayWithCapacity:genres.count];
-            for (NSString *genre in genres) {
-                NSString *tileID = [NSString stringWithFormat:@"%@genre_tile/%@", scopePrefix, genre];
-                [tileIDs addObject:tileID];
-                _genresByID[tileID] = genre;
-            }
-            [snapshot appendItemsWithIdentifiers:tileIDs intoSectionWithIdentifier:genreTilesSectionID];
         }
 
         /* 6. Other catalog shelves */
@@ -1626,6 +1630,7 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
                 }
                 [snapshot appendItemsWithIdentifiers:placeholders intoSectionWithIdentifier:sectionID];
             }
+            appendMoreEdit();
         }
 
         /* 7. Genre shelves (Movies and TV Shows only) */
@@ -1678,6 +1683,7 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
                     }
                     [snapshot appendItemsWithIdentifiers:placeholders intoSectionWithIdentifier:sectionID];
                 }
+                appendMoreEdit();
             }
         }
     }
@@ -2044,22 +2050,6 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
     return filtered;
 }
 
-- (NSArray<MacLCWatchEntry *> *)filteredFavoriteEntries
-{
-    NSArray<MacLCWatchEntry *> *all = [MacLCWatchLibrary sharedLibrary].favoriteEntries;
-    NSString *type = self.section.mediaType;
-    NSMutableArray<MacLCWatchEntry *> *filtered = [NSMutableArray arrayWithCapacity:all.count];
-    for (MacLCWatchEntry *entry in all) {
-        if (!type || [entry.type isEqualToString:type]) {
-            [filtered addObject:entry];
-            if (filtered.count == 20) {
-                break;
-            }
-        }
-    }
-    return filtered;
-}
-
 - (void)watchLibraryDidChange:(NSNotification *)notification
 {
     if (_isSearching) {
@@ -2083,25 +2073,6 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
                 }
             }
         }
-        if (!relevant && _selectedServiceCode == nil) {
-            for (MacLCWatchEntry *entry in [self filteredFavoriteEntries]) {
-                if ([changedTitles containsObject:entry.identifier]) {
-                    relevant = YES;
-                    break;
-                }
-            }
-        }
-        if (!relevant && _selectedServiceCode == nil) {
-            for (NSString *key in _itemsByID.allKeys) {
-                if ([key containsString:@"favorites_section"] || [key containsString:@"fav/"]) {
-                    MacLCAddonItem *item = _itemsByID[key];
-                    if ([changedTitles containsObject:item.identifier]) {
-                        relevant = YES;
-                        break;
-                    }
-                }
-            }
-        }
         if (!relevant) {
             return;
         }
@@ -2121,7 +2092,6 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
     NSString *scopePrefix = _selectedServiceCode ? [NSString stringWithFormat:@"service_%@:", _selectedServiceCode] : @"all:";
     NSString *barSectionID = [NSString stringWithFormat:@"%@services_bar_section", scopePrefix];
     NSString *continueSectionID = [NSString stringWithFormat:@"%@continue_section", scopePrefix];
-    NSString *favSectionID = [NSString stringWithFormat:@"%@favorites_section", scopePrefix];
 
     NSArray<MacLCWatchEntry *> *newContinue = [self filteredContinueWatchingEntries];
     if (newContinue.count > 0) {
@@ -2164,78 +2134,6 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *servi
             [_activeSections removeObject:continueSectionID];
             [_shelfTitlesBySectionID removeObjectForKey:continueSectionID];
             [_shelfShowsPagingBySectionID removeObjectForKey:continueSectionID];
-        }
-    }
-
-    if (_selectedServiceCode == nil) {
-        NSArray<MacLCWatchEntry *> *newFavs = [self filteredFavoriteEntries];
-        if (newFavs.count > 0) {
-            if ([snapshot.sectionIdentifiers containsObject:favSectionID]) {
-                NSArray<NSString *> *oldItems = [snapshot itemIdentifiersInSectionWithIdentifier:favSectionID];
-                for (NSString *oID in oldItems) {
-                    [_itemsByID removeObjectForKey:oID];
-                    [_ranksByID removeObjectForKey:oID];
-                }
-                [snapshot deleteItemsWithIdentifiers:oldItems];
-            } else {
-                if ([snapshot.sectionIdentifiers containsObject:continueSectionID]) {
-                    [snapshot insertSectionsWithIdentifiers:@[favSectionID] afterSectionWithIdentifier:continueSectionID];
-                    NSUInteger cIdx = [_activeSections indexOfObject:continueSectionID];
-                    [_activeSections insertObject:favSectionID atIndex:cIdx + 1];
-                } else if ([snapshot.sectionIdentifiers containsObject:barSectionID]) {
-                    [snapshot insertSectionsWithIdentifiers:@[favSectionID] afterSectionWithIdentifier:barSectionID];
-                    NSUInteger bIdx = [_activeSections indexOfObject:barSectionID];
-                    [_activeSections insertObject:favSectionID atIndex:bIdx + 1];
-                } else {
-                    [snapshot appendSectionsWithIdentifiers:@[favSectionID]];
-                    [_activeSections addObject:favSectionID];
-                }
-
-                _shelfTitlesBySectionID[favSectionID] = _NS("Favorites");
-                _shelfActionTitlesBySectionID[favSectionID] = _NS("See All");
-                _shelfActionsBySectionID[favSectionID] = ^{
-                    [VLCMain sharedInstance].libraryWindow.librarySegmentType = VLCLibraryWatchFavoritesSegmentType;
-                };
-                _shelfShowsPagingBySectionID[favSectionID] = @YES;
-            }
-
-            NSMutableArray<NSString *> *itemIDs = [NSMutableArray arrayWithCapacity:newFavs.count];
-            for (NSUInteger idx = 0; idx < newFavs.count; idx++) {
-                MacLCWatchEntry *entry = newFavs[idx];
-                NSString *itemID = [NSString stringWithFormat:@"%@fav/%lu_%@", scopePrefix, (unsigned long)idx, entry.identifier];
-                [itemIDs addObject:itemID];
-                _itemsByID[itemID] = entry.item;
-                _ranksByID[itemID] = @0;
-            }
-            [snapshot appendItemsWithIdentifiers:itemIDs intoSectionWithIdentifier:favSectionID];
-        } else {
-            if ([snapshot.sectionIdentifiers containsObject:favSectionID]) {
-                NSArray<NSString *> *oldItems = [snapshot itemIdentifiersInSectionWithIdentifier:favSectionID];
-                for (NSString *oID in oldItems) {
-                    [_itemsByID removeObjectForKey:oID];
-                    [_ranksByID removeObjectForKey:oID];
-                }
-                [snapshot deleteSectionsWithIdentifiers:@[favSectionID]];
-                [_activeSections removeObject:favSectionID];
-                [_shelfTitlesBySectionID removeObjectForKey:favSectionID];
-                [_shelfActionTitlesBySectionID removeObjectForKey:favSectionID];
-                [_shelfActionsBySectionID removeObjectForKey:favSectionID];
-                [_shelfShowsPagingBySectionID removeObjectForKey:favSectionID];
-            }
-        }
-    } else {
-        if ([snapshot.sectionIdentifiers containsObject:favSectionID]) {
-            NSArray<NSString *> *oldItems = [snapshot itemIdentifiersInSectionWithIdentifier:favSectionID];
-            for (NSString *oID in oldItems) {
-                [_itemsByID removeObjectForKey:oID];
-                [_ranksByID removeObjectForKey:oID];
-            }
-            [snapshot deleteSectionsWithIdentifiers:@[favSectionID]];
-            [_activeSections removeObject:favSectionID];
-            [_shelfTitlesBySectionID removeObjectForKey:favSectionID];
-            [_shelfActionTitlesBySectionID removeObjectForKey:favSectionID];
-            [_shelfActionsBySectionID removeObjectForKey:favSectionID];
-            [_shelfShowsPagingBySectionID removeObjectForKey:favSectionID];
         }
     }
 
