@@ -24,6 +24,7 @@
 #import "settings/panes/MacLCGeneralSettingsViewController.h"
 #import "settings/panes/MacLCPlaybackSettingsViewController.h"
 #import "settings/panes/MacLCVideoSettingsViewController.h"
+#import "settings/panes/MacLCUpscalingSettingsViewController.h"
 #import "settings/panes/MacLCAudioSettingsViewController.h"
 #import "settings/panes/MacLCSubtitlesSettingsViewController.h"
 #import "settings/panes/MacLCInterfaceSettingsViewController.h"
@@ -113,6 +114,7 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
     }
     // =========================================================================
 
+    [panes addObject:[[MacLCUpscalingSettingsViewController alloc] initWithIntf:_p_intf]];
     [panes addObject:[[MacLCAudioSettingsViewController alloc] initWithIntf:_p_intf]];
     [panes addObject:[[MacLCSubtitlesSettingsViewController alloc] initWithIntf:_p_intf]];
     [panes addObject:[[MacLCInterfaceSettingsViewController alloc] initWithIntf:_p_intf]];
@@ -387,7 +389,9 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
     _currentPaneConstraints = @[
         [paneView.leadingAnchor constraintEqualToAnchor:clipView.leadingAnchor],
         [paneView.trailingAnchor constraintEqualToAnchor:clipView.trailingAnchor],
-        [paneView.topAnchor constraintEqualToAnchor:clipView.topAnchor]
+        [paneView.topAnchor constraintEqualToAnchor:clipView.topAnchor],
+        /* A pane shorter than the window would otherwise sit at the bottom. */
+        [paneView.heightAnchor constraintGreaterThanOrEqualToAnchor:clipView.heightAnchor]
     ];
     [NSLayoutConstraint activateConstraints:_currentPaneConstraints];
 

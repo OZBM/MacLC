@@ -34,6 +34,13 @@ NS_ASSUME_NONNULL_BEGIN
  *  badge. Toggles it closed when already shown there. */
 + (void)showRelativeToView:(NSView *)view preferredEdge:(NSRectEdge)edge;
 
+/** The name of an enum maclc_upscale_method value, as the panel shows it. */
++ (NSString *)titleForMethod:(NSInteger)method;
+/** One line on a method, or on what it still needs (a download). */
++ (NSString *)summaryForMethod:(NSInteger)method;
+/** NO while a method still needs its model downloaded. */
++ (BOOL)isMethodAvailable:(NSInteger)method;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -505,6 +505,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/settings/panes/MacLCShortcutsSettingsViewController.m \
 	gui/macosx/settings/panes/MacLCSubtitlesSettingsViewController.h \
 	gui/macosx/settings/panes/MacLCSubtitlesSettingsViewController.m \
+	gui/macosx/settings/panes/MacLCUpscalingSettingsViewController.h \
+	gui/macosx/settings/panes/MacLCUpscalingSettingsViewController.m \
 	gui/macosx/settings/panes/MacLCVideoSettingsViewController.h \
 	gui/macosx/settings/panes/MacLCVideoSettingsViewController.m \
 	gui/macosx/shaders/VLCShaderTypes.h \

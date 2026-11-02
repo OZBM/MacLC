@@ -726,4 +726,8 @@ static BOOL Available(NSInteger method)
         [NSURL URLWithString:@"https://www.gnu.org/licenses/lgpl-3.0.html"]];
 }
 
++ (NSString *)titleForMethod:(NSInteger)method { return _NS(Copy(method).title); }
++ (NSString *)summaryForMethod:(NSInteger)method { return Summary(method); }
++ (BOOL)isMethodAvailable:(NSInteger)method { return Available(method); }
+
 @end
