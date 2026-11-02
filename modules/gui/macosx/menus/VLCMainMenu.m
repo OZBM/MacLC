@@ -1339,28 +1339,26 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 - (IBAction)resizeVideoWindow:(id)sender
 {
     vout_thread_t *p_vout = [_playerController videoOutputThreadForKeyWindow];
-    if (p_vout) {
-        if (sender == _half_window)
-            var_SetFloat(p_vout, "zoom", 0.5);
-        else if (sender == _normal_window)
-            var_SetFloat(p_vout, "zoom", 1.0);
-        else if (sender == _double_window)
-            var_SetFloat(p_vout, "zoom", 2.0);
-        else
-        {
-            [[NSApp keyWindow] performZoom:sender];
-        }
+    if (!p_vout)
+        return;
+    const float zoom = sender == _half_window ? 0.5f : sender == _normal_window ? 1.f
+                     : sender == _double_window ? 2.f : 0.f;
+    if (zoom == 0.f) {
+        [[NSApp keyWindow] performZoom:sender];
         vout_Release(p_vout);
+        return;
     }
+    /* Zoom takes the display lock, which a stuck video output keeps. */
+    [_playerController performVideoOutputRequest:^{ var_SetFloat(p_vout, "zoom", zoom); }
+                                         cleanup:^{ vout_Release(p_vout); }];
 }
 
 - (IBAction)floatOnTop:(id)sender
 {
     vout_thread_t *p_vout = [_playerController videoOutputThreadForKeyWindow];
-    if (p_vout) {
-        var_ToggleBool(p_vout, "video-on-top");
-        vout_Release(p_vout);
-    }
+    if (p_vout)
+        [_playerController performVideoOutputRequest:^{ var_ToggleBool(p_vout, "video-on-top"); }
+                                             cleanup:^{ vout_Release(p_vout); }];
 }
 
 - (IBAction)createVideoSnapshot:(id)sender
@@ -2089,8 +2087,11 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 
                              vout_thread_t *p_vout = [self->_playerController videoOutputThreadForKeyWindow];
                              if (p_vout) {
-                                 var_SetString(p_vout, variable, [geometry UTF8String]);
-                                 vout_Release(p_vout);
+                                 char *value = strdup(geometry.UTF8String);
+                                 [self->_playerController performVideoOutputRequest:^{
+                                     if (value)
+                                         var_SetString(p_vout, variable, value);
+                                 } cleanup:^{ free(value); vout_Release(p_vout); }];
                              }
                          }];
 }

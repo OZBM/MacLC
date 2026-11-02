@@ -290,6 +290,19 @@
     }
 }
 
+/* Wheel actions run off the main thread: some take the display lock, which a
+ * stuck video output keeps. */
+- (void)sendKeyPressed:(int)key
+{
+    intf_thread_t * const p_intf = getIntf();
+    if (!p_intf)
+        return;
+    libvlc_int_t * const libvlc = vlc_object_instance(p_intf);
+    [VLCMain.sharedInstance.playQueueController.playerController performVideoOutputRequest:^{
+        var_SetInteger(libvlc, "key-pressed", key);
+    }];
+}
+
 - (void)scrollWheel:(NSEvent *)theEvent
 {
     const CGFloat f_xThreshold = 0.8;
@@ -330,7 +343,7 @@
 
         while (ABS(f_cumulatedYScrollValue) >= f_yThreshold) {
             f_cumulatedYScrollValue -= (f_cumulatedYScrollValue > 0 ? f_yThreshold : -f_yThreshold);
-            var_SetInteger(vlc_object_instance(p_intf), "key-pressed", key);
+            [self sendKeyPressed:key];
             msg_Dbg(p_intf, "Scrolling in y direction");
         }
 
@@ -344,7 +357,7 @@
 
         while (ABS(f_cumulatedXScrollValue) >= f_xThreshold) {
             f_cumulatedXScrollValue -= (f_cumulatedXScrollValue > 0 ? f_xThreshold : -f_xThreshold);
-            var_SetInteger(vlc_object_instance(p_intf), "key-pressed", key);
+            [self sendKeyPressed:key];
             msg_Dbg(p_intf, "Scrolling in x direction");
         }
     }

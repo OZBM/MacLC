@@ -149,6 +149,18 @@
 {
     [self activate];
     libvlc_Quit(vlc_object_instance(_intf));
+
+    /* A stuck input or video output can keep the core from ever finishing
+     * its teardown: past this deadline, end the process anyway so Quit always
+     * quits. Preferences were already written by applicationWillTerminate. */
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 15 * NSEC_PER_SEC),
+                       dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+            fprintf(stderr, "MacLC: teardown still running after 15 s, exiting\n");
+            _exit(0);
+        });
+    });
 }
 
 @end

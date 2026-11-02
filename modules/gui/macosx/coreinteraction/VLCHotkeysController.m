@@ -138,7 +138,13 @@
                 [playerController toggleFullscreen];
             } else if (p_vout) {
                 val.i_int |= (int)CocoaKeyToVLC(key);
-                var_Set(vlc_object_instance(p_vout), "key-pressed", val);
+                /* Hotkey actions (zoom, crop, aspect) take the display lock,
+                 * which a stuck video output keeps. */
+                libvlc_int_t * const libvlc = vlc_object_instance(p_vout);
+                const int64_t keyValue = val.i_int;
+                [playerController performVideoOutputRequest:^{
+                    var_SetInteger(libvlc, "key-pressed", keyValue);
+                }];
             }
             else
                 msg_Dbg(getIntf(), "could not send keyevent to VLC core");
@@ -306,7 +312,11 @@
         }
 
         if (b_found_key) {
-            var_SetInteger(vlc_object_instance(p_intf), "key-pressed", val.i_int);
+            libvlc_int_t * const libvlc = vlc_object_instance(p_intf);
+            const int64_t keyValue = val.i_int;
+            [VLCMain.sharedInstance.playQueueController.playerController performVideoOutputRequest:^{
+                var_SetInteger(libvlc, "key-pressed", keyValue);
+            }];
             return YES;
         }
     }

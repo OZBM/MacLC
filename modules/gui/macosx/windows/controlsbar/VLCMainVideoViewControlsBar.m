@@ -772,8 +772,8 @@
     if (!p_vout) {
         return;
     }
-    var_ToggleBool(p_vout, "video-on-top");
-    vout_Release(p_vout);
+    [_playerController performVideoOutputRequest:^{ var_ToggleBool(p_vout, "video-on-top"); }
+                                         cleanup:^{ vout_Release(p_vout); }];
 }
 
 - (IBAction)toggleLyrics:(id)sender

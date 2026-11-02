@@ -247,14 +247,21 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     }
     [VLCVideoFilterHelper setVideoFilterProperty: "hue" forFilter: "adjust" withValue: hueValue];
 
-    if ([items count] >= VLCVideoEffectsProfileCountV4 && vout) { // version >=4 of profile string
-        var_SetInteger(vout, "crop-top", [[items objectAtIndex:VLCVideoEffectsProfileFieldCropTop] intValue]);
-        var_SetInteger(vout, "crop-bottom", [[items objectAtIndex:VLCVideoEffectsProfileFieldCropBottom] intValue]);
-        var_SetInteger(vout, "crop-left", [[items objectAtIndex:VLCVideoEffectsProfileFieldCropLeft] intValue]);
-        var_SetInteger(vout, "crop-right", [[items objectAtIndex:VLCVideoEffectsProfileFieldCropRight] intValue]);
-    }
-
-    if (vout)
+    if (!vout)
+        return;
+    if ([items count] >= VLCVideoEffectsProfileCountV4) { // version >=4 of profile string
+        const int top = [[items objectAtIndex:VLCVideoEffectsProfileFieldCropTop] intValue];
+        const int bottom = [[items objectAtIndex:VLCVideoEffectsProfileFieldCropBottom] intValue];
+        const int left = [[items objectAtIndex:VLCVideoEffectsProfileFieldCropLeft] intValue];
+        const int right = [[items objectAtIndex:VLCVideoEffectsProfileFieldCropRight] intValue];
+        /* Crop takes the display lock, which a stuck video output keeps. */
+        [playerController performVideoOutputRequest:^{
+            var_SetInteger(vout, "crop-top", top);
+            var_SetInteger(vout, "crop-bottom", bottom);
+            var_SetInteger(vout, "crop-left", left);
+            var_SetInteger(vout, "crop-right", right);
+        } cleanup:^{ vout_Release(vout); }];
+    } else
         vout_Release(vout);
 }
 
@@ -1102,11 +1109,14 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     VLCPlayerController *playerController = VLCMain.sharedInstance.playQueueController.playerController;
     vout_thread_t *p_vout = [playerController mainVideoOutputThread];
     if (p_vout) {
-        var_SetInteger(p_vout, "crop-top", [_cropTopTextField intValue]);
-        var_SetInteger(p_vout, "crop-bottom", [_cropBottomTextField intValue]);
-        var_SetInteger(p_vout, "crop-left", [_cropLeftTextField intValue]);
-        var_SetInteger(p_vout, "crop-right", [_cropRightTextField intValue]);
-        vout_Release(p_vout);
+        const int top = _cropTopTextField.intValue, bottom = _cropBottomTextField.intValue;
+        const int left = _cropLeftTextField.intValue, right = _cropRightTextField.intValue;
+        [playerController performVideoOutputRequest:^{
+            var_SetInteger(p_vout, "crop-top", top);
+            var_SetInteger(p_vout, "crop-bottom", bottom);
+            var_SetInteger(p_vout, "crop-left", left);
+            var_SetInteger(p_vout, "crop-right", right);
+        } cleanup:^{ vout_Release(p_vout); }];
     }
 }
 
