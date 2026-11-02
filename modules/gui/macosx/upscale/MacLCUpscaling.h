@@ -38,6 +38,8 @@ extern NSString * const MacLCUpscalingChangedNotification;
 @property (class, readwrite) NSInteger method;                  /* maclc-upscale-method */
 /** 0..100, sharpening of FSR 1 and NIS. */
 @property (class, readwrite) NSInteger sharpness;               /* maclc-upscale-sharpness */
+/** Applies a sharpness to the playing video without saving it (slider drag). */
++ (void)previewSharpness:(NSInteger)sharpness;
 /** Short-side lines the upscaler aims at at most, 0 for the window size. */
 @property (class, readwrite) NSInteger target;                  /* maclc-upscale-target */
 /** Short name of the method that is drawing ("NIS", "MetalFX"), nil when not upscaling. */

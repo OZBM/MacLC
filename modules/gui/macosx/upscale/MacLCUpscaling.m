@@ -283,6 +283,12 @@ static NSString *SHA256Hex(NSData *data)
     Changed();
 }
 
++ (void)previewSharpness:(NSInteger)sharpness
+{
+    [Player() setVideoOutputInteger:MAX(0, MIN(100, sharpness))
+                        forVariable:MACLC_UPSCALE_VAR_SHARPNESS];
+}
+
 + (NSInteger)target
 {
     return MacLCConfigGetInt(MACLC_UPSCALE_VAR_TARGET, 0);
