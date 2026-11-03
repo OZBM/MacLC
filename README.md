@@ -1,470 +1,405 @@
-<div align="center">
+<!--
+  MacLC's GitHub page. Pictures live in .github/readme/.
+  banner.jpg and sdr-to-hdr-split.jpg carry HDR gain maps (ISO 21496-1): keep them as they are,
+  re-encoding them drops the glow. On each release, update the version numbers in "Install".
+  The translations (README.<lang>.md) follow this file: update them when it changes.
+-->
 
-# MacLC
+<h1 align="center">
+  <a href="https://github.com/OZBM/MacLC/releases/latest">
+    <img src=".github/readme/banner.jpg" width="100%" alt="MacLC. Plays everything. Makes it shine. Free, open source, real HDR, Apple Silicon.">
+  </a>
+</h1>
 
-**A media player built for one platform, and finished for it.**
+<p align="center">
+  <b>The free video player for Mac that plays everything, and makes it shine.</b><br>
+  Real HDR, SDR&nbsp;to&nbsp;HDR, nine upscalers, smooth motion, Voice&nbsp;Boost and a library in the style of the Apple&nbsp;TV app, in one native app for Apple&nbsp;Silicon.
+</p>
 
-MacLC is a macOS-only fork of [VLC](https://www.videolan.org/vlc/) 4.0 for Apple Silicon.
-It keeps everything VLC can play, and rebuilds the parts VLC never had the resources to
-make native: HDR on Apple displays, a settings window a person can actually read, and an
-interface that uses the system's own materials instead of drawing its own.
+<p align="center">
+  <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="Download MacLC for Mac" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download%20for%20Mac&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
+  <a href="https://www.hazenstudio.com/maclc/donate/"><img alt="Donate to MacLC" src="https://img.shields.io/badge/Donate-PayPal%20or%20card-2f343c?style=for-the-badge&logo=githubsponsors&logoColor=ff8a3d"></a>
+</p>
 
-[Features](#what-maclc-adds) · [HDR](#1-hdr-that-actually-uses-your-display) · [Installation](#installation) · [Building](#building) · [Status](#project-status--honesty-section) · [License](#license-and-trademarks)
+<p align="center">
+  <img alt="macOS 26 Tahoe or later" src="https://img.shields.io/badge/macOS-26%20Tahoe%20or%20later-24292f?logo=apple&logoColor=white">
+  <img alt="Apple Silicon, M1 or newer" src="https://img.shields.io/badge/Apple%20Silicon-M1%20or%20newer-24292f">
+  <img alt="Free, no ads, no tracking" src="https://img.shields.io/badge/free-no%20ads%20%C2%B7%20no%20tracking-24292f">
+  <a href="COPYING"><img alt="Licence: GPL 2.0 or later" src="https://img.shields.io/badge/licence-GPL--2.0--or--later-24292f"></a>
+</p>
 
-</div>
+<p align="center">
+  <b>English</b> · <a href="README.fr.md">Français</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.es.md">Español</a> · <a href="README.de.md">Deutsch</a>
+</p>
 
----
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme/library-dark.webp">
+  <img src=".github/readme/library-light.webp" alt="MacLC's library window on macOS 26: Continue Watching, Recently Added and a Now Playing capsule, with 4K, HDR10, HLG and Dolby Vision badges on the videos.">
+</picture>
 
-## Why this fork exists
+## Why MacLC
 
-VLC plays everything. That is not in question, and nothing here changes it — MacLC ships
-the same demuxers, the same decoders, the same protocol stack, the same `libvlccore`.
+<table>
+<tr>
+<td width="50%" valign="top">
 
-What VLC does *not* do well is be a Mac app. It runs on Windows, Linux, BSD, Android, iOS,
-Haiku and OS/2, and every macOS decision has to survive contact with all of them. The
-result on macOS is an interface that draws its own furniture, a preferences window that is
-a wall of unexplained checkboxes, and — most consequentially — an HDR path that hands
-100% of tone mapping to the operating system and then gets several of the hand-off details
-wrong.
+**Plays everything.** MKV, MP4, AVI, WebM, TS, AV1, HEVC, FLAC, DTS, subtitles in SRT, ASS and more, and the odd file other players refuse. No codecs to install.
 
-MacLC drops every other platform from consideration. Windows, Linux, Qt, skins2 and
-ncurses code paths are still in the tree, untouched and unbuilt; they simply stop
-constraining macOS design decisions. What is left is a player that can assume Metal,
-AVFoundation, CoreVideo, SF Symbols, `NSVisualEffectView` and an Apple Silicon GPU are
-always there.
+</td>
+<td width="50%" valign="top">
 
----
+**Real HDR.** Dolby Vision, HDR10+, HDR10 and HLG with their real highlights on a MacBook Pro or any HDR screen, and subtitles kept at a comfortable white.
 
-## What MacLC adds
+</td>
+</tr>
+<tr>
+<td valign="top">
 
-### 1. HDR that actually uses your display
+**SDR to HDR.** Ordinary videos use the extra brightness of your screen: lamps, skies and reflections start to glow, while faces and shadows stay close to how they were filmed.
 
-This is the reason the fork exists. An audit of VLC 4.0.0-dev on Apple Silicon
-(2026‑09‑02, against baseline `99034f9`) found **6 confirmed defects and 9 missing
-capabilities** in the macOS HDR path. All six defects are fixed here, and most of the
-missing capabilities are now present.
+</td>
+<td valign="top">
 
-**Fixed defects**
+**Sharper, smoother.** Nine GPU upscalers (MetalFX, FSR, NIS, Anime4K…) for small videos on big screens, and frame interpolation up to your screen's refresh rate, 120&nbsp;Hz on ProMotion.
 
-| Defect in upstream VLC | What you saw | Fixed |
-|---|---|---|
-| EDR headroom read once, from `[NSScreen mainScreen]` | Drag the window to a second display and HDR brightness stayed wrong | Headroom is re-evaluated on `NSApplicationDidChangeScreenParameters`, `NSWindowDidChangeScreen` and `NSWindowDidChangeScreenProfile` |
-| The HDR mode selector and EDR slider in Preferences did nothing | Settings were decorative | Both are wired to live `var_` callbacks and take effect during playback |
-| No SDR tone-mapping branch | HDR film on an SDR display clipped to flat white | Mode 2 applies `CADynamicRangeStandard` + `CAToneMapModeAutomatic`, with a BT.709 buffer-retag fallback on macOS < 14 |
-| Subtitles untagged over PQ video | White subtitle text rendered at full PQ luminance — painfully bright over dark HDR scenes | Subtitle layer is tagged sRGB, `wantsExtendedDynamicRangeContent = NO`, `contentsHeadroom = 1.0`, and opacity is scaled to the ITU‑R BT.2408 203‑nit reference white relative to measured headroom |
-| >10-bit HEVC downsampled to 8-bit BGRA | 12-bit and 16-bit sources lost four to eight bits before they reached the screen | Routed to P010 (`kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange`); 16-bit 4:2:2 (`sv22`) wired through the CVPX helpers |
-| Sub-4K HDR mis-tagged BT.709; zero-nit mastering volume emitted | Wide-gamut content played through the wrong primaries | Correct tagging per stream, mastering volume never emitted as zero |
+</td>
+</tr>
+<tr>
+<td valign="top">
 
-**New capabilities**
+**A real Mac app.** Liquid Glass, Mac menus and shortcuts, a library in the style of the Apple TV app, and settings that say what each switch does.
 
-- **Hardware AV1 decoding on M3 and M4.** Gated on `VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)`, `__aarch64__`, macOS 14+. Falls back to dav1d elsewhere. (Confirmed available on M3 Max / macOS 26.2 by the bundled probe.)
-- **HDR10+ dynamic metadata**, carried as `VLC_ANCILLARY_ID_HDR10PLUS` through the OpenGL filter chain into `vlc_placebo_HdrMetadata`.
-- **Dolby Vision metadata extraction** from the VideoToolbox bitstream, with hardened HDR10+ and Dolby Vision parsers, and a fix for Dolby Vision being lost to a stray bit on the first frame.
-- **ARM64 NEON chroma conversions** — hand-vectorised NV12/P010 ↔ I420/I420_10L split and interleave paths (`vld2q_u16` / `vshlq_u16` / `vst2q_u16` and friends), replacing scalar loops on the software-decode path.
-- **OpenGL 4.1 / 3.2 Core profile negotiation** with 64-bit RGBA16F colour in `caopengllayer`, which is what unblocks libplacebo's GL shaders. Upstream failed with *"OpenGL version too old (2 < 3)"*.
-- **ST 2086 mastering-display and CTA‑861.3 content-light-level metadata** forwarded from the source format into the display layer.
-- **Per-window ICC profile** taken from the window's own screen, not the main one, with a dedicated Darwin ICC dirty flag.
+</td>
+<td valign="top">
 
-### 2. SDR → HDR: the feature no other player has
+**And more.** Voice Boost for clearer dialogue, Watch for add-on catalogs, torrents that play while they download, YouTube (with the free yt-dlp), and Play on TV (beta).
 
-An XDR display can go five to six times brighter than SDR white. Play an ordinary file and
-none of that is used, because an ordinary file carries no HDR signal at all.
+</td>
+</tr>
+</table>
 
-Retagging an SDR buffer as PQ is not a solution — the same code words mean roughly five
-times the luminance under PQ, so the mid-tones blow out and faces go white.
+<p align="center"><b>Free. No ads, no account, no tracking.</b> Open source under the GPL.</p>
 
-**`VLCHDRExpander`** (`modules/video_output/apple/VLCHDRExpander.{h,m}`, 895 lines) does it
-properly, as a Metal compute pass:
+## HDR that uses your whole screen
 
-```
-Y'CbCr or BGRA  →  R'G'B'  →  linear (BT.1886 / sRGB)  →  highlight expansion
-                →  BT.2020 primaries  →  PQ  →  10-bit x420
-```
+A MacBook Pro screen can show highlights several times brighter than white. MacLC is built around that.
 
-The expansion curve is **the identity at and below a knee at half SDR white**, and
-quadratic above it — chosen so value *and* slope match the identity at the knee, and SDR
-white lands exactly on the boost. It is applied to the largest of the three components and
-the triplet is scaled by the result, so **hue and saturation do not move**.
+- **Dolby Vision, HDR10+, HDR10 and HLG**, each shown the way your screen can best display it, including the HDR videos your iPhone records.
+- **The right brightness on every screen.** MacLC measures the screen each window is on, and measures again when you move the window to another display.
+- **HDR on ordinary screens too**, fitted to what the screen can show instead of clipped to flat white.
+- **Subtitles you can look at.** They stay at a calm white instead of shining like the brightest highlight of the film.
+- **Hardware AV1** on M3 and newer, and software AV1 everywhere else.
 
-The consequence is the point: shadows and mid-tones reach your eye at exactly the
-luminance SDR playback would have produced. Nothing is "brightened". Only highlights —
-specular glints, skies, practical lights, explosions — are lifted into the range the panel
-has spare. The effective boost is `min(your setting, the screen's actual headroom)`, and
-the output carries mastering-display metadata describing the volume that was generated, so
-the compositor has no reason to tone-map it back down.
+MacLC's own Metal video engine renders Dolby Vision and HDR10+, and the six HDR defects found in the code it builds on are fixed ([details](#under-the-hood)).
 
-**Measured**, on an M3 Max with 6.15× display headroom, against a separately written CPU
-reference implementation of the same transform:
-
-- Luma and chroma agree with the reference to the code over an eight-step ramp.
-- The bottom six bits of every 16-bit word are clear (true 10-bit output, no noise in the pad bits).
-- Decoding the result back through PQ returns the exact SDR luminance for every input at or below the knee, rising monotonically to exactly the boost at SDR white.
-- **0.53 ms at 1080p, 0.91 ms at 4K**, including the synchronous wait.
-- A 60-second 4K run finishes in the same wall-clock time as with the switch off, and its memory is flat against a 20-second one.
-- All four accepted input formats play (`420v`, `420f`, `x420`, `BGRA`); an HDR10 clip under the same switch is left untouched.
-
-It is skipped automatically for sources that are already PQ or HLG, and for the two HDR
-modes that ask for an SDR presentation. Both options (`macosx-sdr-to-hdr`,
-`macosx-sdr-to-hdr-boost`) are registered on the video output thread as well as the
-display, so the switch takes effect on *what is playing* rather than only on the next file.
-
-### 3. A settings window built on the System Settings model
-
-VLC's macOS preferences are a five-icon toolbar over five XIB-driven panes, plus an
-"Advanced" tree that walks the entire module registry and builds one widget per option —
-thousands of them, unexplained.
-
-MacLC's settings window (`modules/gui/macosx/settings/`) is:
-
-- **One window, a sidebar of categories, and a search field** that filters by label, description *and* per-pane keywords.
-- **Eight panes** — General, Playback, Video, HDR & Colour, Audio, Subtitles, Interface, Shortcuts.
-- Each pane is a stack of **titled cards**. Each row is a label, a control on the trailing edge, and **a one-sentence explanation underneath** of what it does *in terms of what you will see or hear*: "highlights keep detail but the picture is dimmer overall", never "applies a BT.2390 EETF".
-- Advanced controls live behind a collapsed disclosure. Anything that can break playback carries a warning glyph and a sentence saying what will happen.
-- **The old advanced tree is untouched and still reachable.** Nothing was taken away.
-
-**Nothing decorative.** Every control is verified to be wired to a config option that
-exists in this build — and where an option is genuinely absent, the row is not built at
-all. This is not cosmetic: opening the Interface pane in a `--disable-lua` build used to
-call `config_GetPsz("http-password")`, which is an `assert()` inside `libvlccore` — a hard
-process abort that no `@try` could catch. All 240 config accesses in the panes now go
-through `MacLCConfigSafe` wrappers that check `config_FindConfig` first.
-
-### 4. The HDR pane, in detail
-
-The flagship pane (`MacLCHDRSettingsViewController.m`, 1,499 lines) is built so a
-non-expert reaches a correct result without reading a manual:
-
-- **A live status block** — connected display, measured EDR headroom, active video engine, and during playback the transfer function of the stream and whether tone mapping is on. When nothing is playing, it says so.
-- **Four named playback modes**, each with a plain sentence: *Automatic (recommended)* · *Always use HDR* · *Convert HDR to SDR* · *Turn HDR off*.
-- **SDR → HDR** with a highlight-boost slider that shows the peak your setting reaches and the headroom the screen actually allows — and tells you when the OpenGL engine is selected instead, because that path has its own inverse tone mapping under Advanced.
-- **Brightness headroom**, automatic or manual.
-- **Advanced**: tone-mapping curve (10 algorithms, from hard clip to BT.2390 EETF, Reinhard, Mobius, Hable, BT.2446A, single-pivot spline), tone-mapping parameter, gamut mapping (7 modes), inverse tone mapping, dithering, ICC colour management.
-
-Thirteen options, each one verified against the module that declares it.
-
-### 5. Interface, rebuilt on system materials
-
-- **Unified toolbar**, transparent titlebar, `NSSearchToolbarItem` that collapses the way the system's does.
-- **A real source-list sidebar** (`+splitViewItemWithSidebarWithViewController:`), which is what brings vibrancy, the correct material, collapse behaviour and the toolbar tracking separator — rather than a table styled to look like one.
-- **Floating HUD playback controls** over video, inset from the edges on the `.hudWindow` material, with SF Symbol transport glyphs at one weight and size, and **monospaced-digit time labels** so the numbers stop shifting as the seconds tick.
-- **Empty states** that are a symbol, a headline, a sentence and an action — not a bare label.
-- **Six layout metrics moved onto the 8-point grid.** The small row height went from 25 pt to 32 pt; 25 pt was below a comfortable click target.
-
-### 6. `MacLCDesign` — a real token layer
-
-Upstream had eleven literal colours in the colour category alone, font sizes typed at the
-call site, and radii that landed wherever they landed. `modules/gui/macosx/theme/MacLCDesign.{h,m}`
-now defines every colour, type style, spacing, radius, material, SF Symbol configuration
-and animation duration as a class property, mapped to AppKit semantics
-(`labelColor`, `controlAccentColor`, `separatorColor`, `selectedContentBackgroundColor`, …)
-with named asset-catalogue colours where a brand value is genuinely needed.
-
-Which means MacLC follows your **accent colour, light/dark appearance, Reduce
-Transparency, Reduce Motion, Increase Contrast, VoiceOver and full keyboard access** —
-because it never hardcoded around them in the first place.
-
-### 7. A real app identity
-
-- Renamed throughout — bundle name, display name, executable, packaging rules, `Info.plist`.
-- **Its own icon.** An original mark: a graphite superellipse on Apple's 824-of-1024 grid with a warm play triangle, a highlight bloom behind it and a specular edge along the lit face. A superellipse, not a rounded rectangle — circular corners look visibly wrong beside system icons, and at 16 points that difference is most of what makes an icon look native. The artwork is **generated by a committed Swift program** (`extras/package/macosx/asset_sources/maclc_app_icon.swift`), so it can be regenerated, adjusted and diffed rather than being an opaque binary.
-- **Its own bundle identifier**, `org.maclc.MacLC`. This matters more than it sounds: while it claimed `org.videolan.vlc`, macOS resolved the running app to `/Applications/VLC.app` — Stage Manager and the Dock drew VLC's cone on MacLC's windows, and MacLC was reading and writing the real VLC's `vlcrc` and media library.
-- **`-migrateFromLegacyBundleIdentifier`** copies the preferences directory, application-support directory and user-defaults domain across on first launch. It only ever *copies*, so an older VLC install still finds everything where it left it.
-- **Translations survive.** Visible strings are substituted *after* `vlc_gettext` returns, so French still resolves "Hide VLC" and then renders "Masquer MacLC". Every catalogue in `po/` stays valid. The substitution deliberately does not run inside `toNSStr`, which also converts option names, option values, font names and media titles.
-- **Sparkle's update feed is blanked**, so the app cannot replace itself with upstream VLC on its first update check.
-
-### 8. Stability and correctness fixes
-
-- Use-after-free on teardown — a 100%-reproducible crash on quit at the end of playback.
-- A playback stall, a teardown deadlock and swapped subtitle channels.
-- `caopengllayer` clearing the view's display pointer before the variable dies.
-- The layer wait ending as soon as no attempt is in flight.
-- Display headroom tracked for the life of the OpenGL filter, not sampled once.
-- `pl_scale` given a real render target instead of default assumptions.
-- Plane-splitting bounds comparing like with like in `video_chroma`.
-- A duplicated toolbar tracking separator.
-
-### 9. Tests and a startup self-check
-
-- `test/src/misc/cvpx_hdr_metadata.c` — CoreVideo PQ/HLG/mastering metadata round-trips, including negative unattached cases.
-- `copy_neon` — the NEON chroma SIMD routines, plus a copy self-test able to run the 4:2:2 conversions.
-- Bare HLG and sub-nit mastering luminance coverage.
-- `tools/hdr-probe/vt_probe.m` — a standalone VideoToolbox/EDR capability probe. Deliberately not wired into the build.
-- **`MACLC_SELFTEST=1`** builds every settings pane at startup and reports what appeared:
-
-```
-pane=General    title="General"      symbol=YES views=136 controls=45 status=OK
-pane=Playback   title="Playback"     symbol=YES views=223 controls=76 status=OK
-pane=Video      title="Video"        symbol=YES views=281 controls=96 status=OK
-pane=HDR        title="HDR & Colour" symbol=YES views=204 controls=77 status=OK
-pane=Audio      title="Audio"        symbol=YES views=237 controls=80 status=OK
-pane=Subtitles  title="Subtitles"    symbol=YES views=200 controls=68 status=OK
-pane=Interface  title="Interface"    symbol=YES views=145 controls=49 status=OK
-pane=Shortcuts  title="Shortcuts"    symbol=YES views= 78 controls=13 status=OK
-window status=OK
-summary: 8 panes, 8 ok, 0 failed
-```
-
-### 10. A native media library
-
-Upstream VLC 4 ships a library interface but this build never compiled its engine, so only
-Browse ever appeared. MacLC now builds the engine — VideoLAN's `libmedialibrary`, linked
-statically into its plugin — and puts a new AppKit interface on top of it
-(`modules/gui/macosx/medialib/`):
-
-- **Home**: the video you are most likely to resume, edge to edge under the toolbar, then
-  Continue Watching, Recently Added and your albums as shelves.
-- **Videos, Shows, Artists, Albums, Songs, Genres, Favorites, Playlists**, each with its own
-  sort options and search; albums, shows, artists, genres and playlists open detail screens
-  with Play, Shuffle and a track list.
-- **Up Next** in the window's inspector (queue, chapters when the media has them, reorder by
-  dragging), and a floating **Now Playing** capsule that keeps a live picture of the video
-  when you go back to the library.
-- **Liquid Glass where macOS 26 puts it** — sidebar, toolbar, inspector and the one Now
-  Playing capsule — and nowhere in the content. Every toolbar command is also in the menu
-  bar (File ▸ New Playlist…, Add Folder to Library…, Library Folders…; a View menu).
-- **HDR stays visible in the library**: video cards carry *Dolby Vision*, *HDR10*, *HLG*,
-  *4K* badges, read from the colour metadata when a file is indexed.
-- **Tags come from TagLib**, linked statically as well, so genres, track numbers, years and
-  embedded artwork need nothing installed.
-
-### 11. Watch and add-ons
-
-MacLC hosts add-ons that speak the [Stremio add-on protocol](https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/protocol.md)
-(`modules/gui/macosx/addons/`). MacLC itself ships no films, shows or streams: add-ons are
-third-party services, to be used only for content you have the right to watch.
-
-- **Cinemeta** is built in and cannot be removed: title search, posters and details, and the
-  lists of Official and Community add-ons. **Settings ▸ Add-ons** installs from those lists in
-  one click (Stremio's Community list no longer carries Torrentio, so MacLC lists it first
-  there), or from an address or a `stremio://` link, with Configure… for add-ons that have
-  settings.
-- **Watch** (Home, Movies, TV Shows in the sidebar) browses the add-ons' catalogs in the style
-  of the Apple TV app: a carousel of featured titles, shelves, a Top 10, genres, See All grids,
-  title pages with cast, seasons and episodes, and a stream picker with quality badges.
-- **File ▸ Search Add-ons…** finds a title and plays a stream. Streams become MRLs: magnet
-  links go through the BitTorrent module (with the file name the add-on gives), web links play
-  as they are, YouTube ids go through yt-dlp.
-- **Discovery** (1.4): Home can be narrowed to the streaming services you use, with genre tiles
-  and *The Edit*, editorial collections renewed over time. **Choose a Version** turns each
-  stream into plain facts (resolution, HDR, sound, language, size, peers) with filters, and
-  short animated tips explain the jargon.
-- **History and favorites** (1.4): Favorites and History in the sidebar, Continue Watching on
-  Home, playback that resumes where it stopped (also after relaunching), and Mark as Watched.
-- **Torrents you can follow** (1.4): playback starts once a few seconds are verified, the
-  buffer adapts to the swarm, an animated screen explains what is happening while a torrent
-  opens, and a marker on the playback bar shows what is buffered, the speed and the peers.
-- **YouTube** (1.4): Home, Subscriptions, History, Watch Later, Liked Videos and Playlists, with
-  search, channels and playlists, on [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). Signing in
-  is optional: Google's own page in a private web view (MacLC never sees the password), or the
-  session of a browser where you are already signed in.
-
-### 12. Sound modes, equalizer and Play on TV
-
-- **Sound modes** (Audio ▸ Sound Mode, and a Sound button in the playback controls): Voice
-  Boost, Night, Cinema, Music, Bass Boost, Spoken Word, Headphones, Small Speakers and Custom,
-  each with an Intensity slider, plus a **10-band equalizer** (Audio ▸ Equalizer…, ⌥⌘E). The
-  chain is equalizer (ISO bands) → optional compressor → `maclc_dialogue` → limiter (−1.5 dB).
-- **`maclc_dialogue`** (`modules/audio_filter/maclc_dialogue.c`) rebalances 5.1 towards the
-  centre channel (+7.4 dB of dialogue advantage measured) and extracts the centre of a stereo
-  mix with an STFT on vDSP (1024 points, 16 ms latency; +4.8 dB in the 1–4 kHz band measured on
-  a real mix).
-- **Play on TV (beta)**: the Play On button sends playback to a Chromecast (VLC's renderer) or
-  to an AirPlay receiver through a new `airplay` stream output (HLS in fragmented MP4, handed to
-  AVPlayer). Fixed upstream on the way: the Chromecast demuxer stopped before the end of a file,
-  HLS published only one final segment and advertised `BANDWIDTH=0`, the fragmented MP4 muxer
-  never flushed a removed track, and stream outputs did not forward the clock.
-
----
-
-## Options added
-
-| Option | Type | Default | What it does |
-|---|---|---|---|
-| `--macosx-hdr-mode` | integer 0–3 | `0` | 0 Auto · 1 Force native EDR/HDR · 2 Tone-map to SDR · 3 Disable HDR |
-| `--macosx-edr-headroom` | float | `0.0` | `0.0` follows the screen; `≥ 1.0` forces a specific headroom |
-| `--macosx-sdr-to-hdr` | bool | `false` | Expand SDR video into the display's extended range |
-| `--macosx-sdr-to-hdr-boost` | float 1.0–16.0 | `4.0` | How far above SDR white highlights may go. `1.0` disables; `4.0` is natural; higher is dramatic and less faithful |
-
----
-
-## Requirements
-
-- **Apple Silicon** (M1 or newer, arm64). Intel Macs are out of scope — not blocked, just never targeted or tested.
-- **macOS 26 Tahoe** or later for the pre-built application bundle (the bundled libraries require macOS 26). The underlying interface code builds for macOS 13+.
-- Full HDR feature set wants **macOS 14+** (`preferredDynamicRange`) and **macOS 15+** (`toneMapMode`); older systems fall back to a BT.709 retag.
-- Hardware AV1 decoding needs an **M3 or M4** and macOS 14+.
-- SDR → HDR needs a display with real extended range (XDR, or an HDR external panel). On an SDR display it does nothing.
-
-Developed and measured on an **M3 Max (Mac15,9), macOS 26.2**.
-
----
-
-## Installation
-
-Download the disk image (`.dmg`) from the [Releases](https://github.com/OZBM/MacLC/releases) page.
-
-1. Open the downloaded `.dmg`.
-2. Drag **MacLC.app** into your **/Applications** folder. Do not run it directly from the disk image.
-
-The application is self-contained: all required third-party libraries (~150 dylibs including FFmpeg, libass, FreeType, libmatroska, libplacebo, libtorrent-rasterbar) are bundled in `MacLC.app/Contents/Frameworks/`. Third-party licences are in `MacLC.app/Contents/Resources/Licenses/`. Nothing else needs to be installed to run the player.
-
-### First launch: why macOS asks you to click Open Anyway
-
-MacLC is a free, open-source, non-commercial project. It is signed "ad hoc" on Apple Silicon (guaranteeing file integrity since compilation), but it is not signed with a paid Apple Developer ID certificate (99 USD per year) and is not notarized by Apple.
-
-On macOS 15 and later (including macOS 26 Tahoe), Gatekeeper blocks the first launch of downloaded apps that lack notarization, and the legacy Control-click > Open shortcut no longer works. To authorize MacLC on its first launch:
-
-1. Double-click **MacLC** in `/Applications`. macOS will display an alert stating that it could not verify MacLC is free of malware. Click **Done**.
-2. Open **System Settings** > **Privacy & Security** and scroll down to the **Security** section.
-3. Next to **"MacLC was blocked to protect your Mac"**, click **Open Anyway**.
-4. Confirm **Open Anyway** and authenticate with Touch ID or your password.
-
-The "Open Anyway" button remains available in System Settings for about an hour after the blocked launch attempt. This step is only required on the first launch. Afterward, MacLC opens normally; a newly downloaded version asks once again.
-
-#### Terminal alternative
-
-If you prefer using Terminal, you can strip the quarantine flag before opening the application:
+### SDR to HDR: light where your screen has some to spare
+
+**Reading this on a MacBook Pro? Look at the picture below in Safari.** It carries a real HDR version: the right copy went through MacLC's SDR to HDR curve, and its sun and sky glow brighter than the white of this page. On other screens both copies look the same, and that is the point: MacLC keeps the picture you know and spends your screen's extra light on its highlights.
+
+<p align="center">
+  <img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="The same frame of the open movie Sintel twice: on the left as filmed, on the right through MacLC's SDR to HDR. On an HDR screen, in a browser that shows HDR images, the sun and sky on the right glow.">
+</p>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme/sdr-to-hdr-curve-dark.svg">
+  <img src=".github/readme/sdr-to-hdr-curve-light.svg" width="100%" alt="Chart: with SDR to HDR at the Balanced level, the bottom 90 percent of the signal is shown exactly as in the original video; above it, small highlights rise to 400 cd/m² and large bright areas to 190, where the original stops at 100.">
+</picture>
+
+Choose a level from Fast to Maximum, or let Auto pick one your Mac can keep up with. High and Maximum use small networks trained for MacLC, about half a millisecond a frame on an M3 Max. You set how bright highlights may go, and **Hold to Compare** shows the original while you press.
+
+<p align="center">
+  <img src=".github/readme/sdr-to-hdr.webp" width="100%" alt="MacLC playing Sintel with the SDR to HDR panel open: quality levels, a curve of the effect, and a slider for how bright highlights may go.">
+</p>
+
+## Sharper and smoother
+
+**Upscaling.** A 720p episode on a 5K display deserves better than a blur. MacLC enlarges small videos on the GPU, with nine methods to choose from, each explained in plain words in its panel:
+
+| Method | Best for |
+|---|---|
+| Auto | Picks for you: Apple's super resolution on small videos, then MetalFX |
+| Apple Neural 4x | Apple's 4× neural model (a one-time download from Apple); steps back to 2× when the Mac cannot keep up |
+| Anime and Anime4K | Drawn animation: clean lines, flat colours |
+| FSRCNNX | Fine detail (downloaded only after you accept its licence) |
+| Sharp (AMD FSR 1) and NIS (NVIDIA Image Scaling) | Crisp edges at almost no cost |
+| Efficient (MetalFX) | Battery life |
+| Classic (EWA Lanczos) | Staying as true to the source as possible |
+
+Apple's neural passes, Anime, Anime4K and FSRCNNX work on 8-bit SDR video. On HDR and 10-bit video, and with SDR to HDR on, MacLC uses the other methods.
+
+**Compare Before and After.** Split the picture down the middle, on the video you are watching: on the left without SDR to HDR, upscaling and interpolation, on the right with them.
+
+**Smooth motion.** Frame interpolation raises 24 fps to your screen's refresh rate: 60 Hz, 120 Hz on a ProMotion MacBook Pro, or more on a fast external display. Automatic picks a method that keeps up in real time; optical flow and RIFE, a neural network, can be chosen by hand. It is off by default, because cinema purists are right too.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme/motion-demo-dark.svg">
+  <img src=".github/readme/motion-demo-light.svg" width="100%" alt="Animated illustration: a dot crossing in visible steps at 24 frames per second, and smoothly when interpolated to 120 frames per second.">
+</picture>
+
+<p align="center">
+  <img src=".github/readme/motion.webp" width="100%" alt="MacLC's Motion Interpolation panel over a scene from Sintel: Interpolate Frames on, method Automatic, frame rate Match the Display, playing 24 fps as 120 fps.">
+</p>
+
+## A library worth opening
+
+Point MacLC at your folders and it builds a library in the style of the Apple TV app: **Home** with what you were watching, then **Videos, Shows, Artists, Albums, Songs, Genres, Favorites and Playlists**. Episodes named like `Show S01E02` group into seasons, cards carry **Dolby Vision, HDR10, HLG and 4K** badges, and a floating Now Playing capsule keeps the picture alive while you browse. Your files never move.
+
+**Watch** browses film and series catalogs in the style of the Apple TV app, with featured titles, shelves, a Top 10, genres and title pages with cast and episodes. Cinemeta, built in, provides posters, details and search; what you can play depends on the add-ons you install, which speak the [Stremio add-on protocol](https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/protocol.md). Favorites, history and Continue Watching stay on your Mac.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme/watch-dark.webp">
+  <img src=".github/readme/watch-light.webp" alt="MacLC's Watch section: a featured carousel and a Top 10 shelf of Blender open movies.">
+</picture>
+
+- **Torrents that play while they download.** Open a `.torrent` file or paste a magnet link: playback starts once a few seconds are verified, and a marker on the playback bar shows what is buffered, the speed and the peers.
+- **YouTube** with Home, Subscriptions, Watch Later, playlists and search. It needs the free [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), and MacLC shows you the one command that installs it. Signing in is optional: on Google's own page, or with the session of a browser where you are already signed in. MacLC keeps only the session cookies yt-dlp needs, in a private file on your Mac, and Sign Out deletes it.
+- **Play on TV (beta).** Send what is playing to an Apple TV or another AirPlay receiver, or to a Chromecast.
+
+MacLC ships no films, shows or streams. Add-ons are third-party services: use them only for content you have the right to watch.
+
+## Dialogue you can follow
+
+<img src=".github/readme/sound-dark.webp" align="right" width="260" alt="MacLC's Sound panel: Voice Boost selected, an Intensity slider and the list of sound modes.">
+
+**Voice Boost** makes dialogue clearer without raising the music. On 5.1 films it lifts the centre channel (+7.4&nbsp;dB of dialogue advantage, measured). On stereo it isolates the voice in the centre of the mix, in real time on Apple's vDSP (+4.8&nbsp;dB in the 1 to 4&nbsp;kHz speech band, measured on a real mix, about 16&nbsp;ms of latency).
+
+Also: **Night, Cinema, Music, Bass Boost, Spoken Word, Headphones and Small Speakers** modes, each with an Intensity slider, a **10-band equalizer** (⌥⌘E) and a limiter that keeps loud scenes from clipping.
+
+<br clear="right">
+
+## Settings that explain themselves
+
+One window, a sidebar and a search field. Every row says what the switch does in terms of what you will see or hear. Expert settings are still there, behind a disclosure.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme/settings-hdr-dark.webp">
+  <img src=".github/readme/settings-hdr-light.webp" alt="MacLC's HDR and Colour settings: a live status of the display's brightness headroom, four named playback modes with a sentence each, and SDR to HDR options.">
+</picture>
+
+## How it compares
+
+|  | **MacLC** | IINA | Infuse | QuickTime Player |
+|---|:---:|:---:|:---:|:---:|
+| Plays almost any video file | ✅ | ✅ | ✅ some audio needs Pro | ❌ mostly MP4 and MOV |
+| HDR video on HDR screens | ✅ | ✅ | ✅ | ✅ |
+| Makes ordinary video glow on HDR screens (SDR to HDR) | ✅ | ❌ | ❌ | ❌ |
+| Upscaling methods built in | ✅ nine | ➖ shaders you install | ✅ one AI mode | ❌ |
+| Smooth motion (frame interpolation) | ✅ built in | ➖ through mpv options | ❌ | ❌ |
+| One-click dialogue boost | ✅ Voice Boost | ❌ filters by hand | ❌ volume boost only | ❌ |
+| Library for your own videos | ✅ and music | ❌ playlists and history | ✅ its speciality | ❌ |
+| Add-on catalogs and torrents | ✅ | ❌ | ❌ | ❌ |
+| YouTube and web video | ✅ with yt-dlp | ✅ with yt-dlp | ❌ | ❌ |
+| Free | ✅ | ✅ | ➖ Pro is paid | ✅ with macOS |
+| Open source | ✅ GPL | ✅ GPL | ❌ | ❌ |
+
+<sub>Checked on 3 November 2026 against each player's own documentation and release notes. IINA is excellent, free and open source too.</sub>
+
+## Install
+
+<p>
+  <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="Download MacLC" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
+</p>
+
+1. Download `maclc-1.6.dmg` (57.8 MB) from [the latest release](https://github.com/OZBM/MacLC/releases/latest).
+2. Open it and drag **MacLC** into **Applications**.
+3. Open MacLC. The first time, macOS stops it: click **Done**, then open **System Settings › Privacy & Security**, scroll to **Security** and click **Open Anyway** next to "MacLC was blocked". Confirm with Touch ID or your password. You only do this once per version.
+
+> [!NOTE]
+> **Why the extra click?** macOS opens apps with a double-click only when their developer pays Apple €99 a year for a Developer ID and has each version notarised. MacLC is free and has not raised that money yet. **The first €99 of donations removes this step for everyone.** [Donate](https://www.hazenstudio.com/maclc/donate/)
+
+<details>
+<summary>Terminal alternative, checksum and requirements</summary>
+
+Instead of **Open Anyway**, you can remove the "downloaded from the internet" flag:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-This removes the "downloaded from the internet" extended attribute and produces the exact same result as clicking Open Anyway.
-
-#### Integrity verification & damaged downloads
-
-The source code is public at [github.com/OZBM/MacLC](https://github.com/OZBM/MacLC). Each release provides the SHA-256 checksum of the disk image so you can verify its integrity in Terminal:
+Check that your copy is exactly the published one (the expected value is on the release page; for 1.6 it is `194de0b42a836985dba92a75d283264e21b4285f5a24934769b0e2aad5aae805`):
 
 ```bash
-shasum -a 256 maclc-1.4.dmg
+shasum -a 256 ~/Downloads/maclc-1.6.dmg
 ```
 
-If macOS ever reports that MacLC **"is damaged and can't be opened"**, do not attempt to bypass it: this means the download was incomplete or corrupted in transit. Delete the file, download it again, and check the SHA-256 hash.
+If macOS ever says MacLC "is damaged and can't be opened", the download is incomplete: delete it and download it again. Do not bypass that message.
 
-#### Optional extras
+**Requirements**
 
-Media playback requires no external tools or libraries. Two optional features can use external tools if they are present on your system:
+- A Mac with Apple Silicon (M1 or newer). Intel Macs are not supported.
+- macOS 26 Tahoe or later.
+- SDR to HDR needs a screen that can go brighter than white (a MacBook Pro with an XDR display, a Pro Display XDR, an HDR monitor). Everything else works on any screen.
+- Optional: [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) for YouTube and web video (`brew install yt-dlp`).
 
-- **Open Web Video and YouTube**: use [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to resolve streaming URLs (`brew install yt-dlp`; keep it up to date, as YouTube changes often).
-- **SVP motion interpolation**: Interacts with [SVP 4 Mac](https://www.svp-team.com/) and VapourSynth if you use the SmoothVideo Project interpolation engine.
+The app is self-contained: FFmpeg, libass, libplacebo, libtorrent and about 140 other libraries are inside it, with their licences in `MacLC.app/Contents/Resources/Licenses/`.
 
----
+</details>
 
-## Building
+## Support MacLC
 
-MacLC builds through VLC's own autotools system. The macOS GUI is **autotools only** —
-`modules/gui/meson.build` does not build `modules/gui/macosx` at all, so new GUI sources go
-in `modules/gui/macosx/Makefile.am` and nowhere else.
+MacLC is a personal project: no ads, no subscription, no data to sell. Donations pay for what a free app cannot get on its own, in this order:
 
-MacLC is built on an Apple Silicon Mac against Homebrew's libraries (see the build notes
-below), not with VideoLAN's prebuilt contribs: `extras/package/macosx/build.sh` is VLC's
-original script and does not produce MacLC. Configure a development build in `build/` once,
-then make a release with:
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme/donation-milestones-dark.svg">
+  <img src=".github/readme/donation-milestones-light.svg" width="100%" alt="What donations unlock: 99 euros, no more Open Anyway (Apple notarisation); 400 euros, Play on TV out of beta; 900 euros, a second HDR screen for testing; 1,600 euros, a full accessibility pass; 2,500 euros, an app that updates itself.">
+</picture>
+
+**Every gift comes with a wish.** Tell me what MacLC should do next, or back a wish already on the list: the wishes with the most supporters go first. Pay with PayPal or a card on [the donation page](https://www.hazenstudio.com/maclc/donate/), where the total raised is live.
+
+<p align="center">
+  <a href="https://www.hazenstudio.com/maclc/donate/"><img alt="Donate and make a wish" src="https://img.shields.io/badge/Donate%20and%20make%20a%20wish-%E2%82%AC5%20%C2%B7%20%E2%82%AC15%20%C2%B7%20%E2%82%AC30%20%C2%B7%20%E2%82%AC99-e8640c?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
+</p>
+
+**No money? These help just as much:**
+
+- ⭐ **Star this repository.** Stars are how people find MacLC on GitHub.
+- **Tell someone.** Share on [X](https://x.com/intent/post?text=MacLC%3A%20the%20free%20video%20player%20for%20Mac%20that%20plays%20everything%2C%20with%20real%20HDR%2C%20SDR%20to%20HDR%2C%20upscaling%20and%20smooth%20motion.&url=https%3A%2F%2Fgithub.com%2FOZBM%2FMacLC), [Bluesky](https://bsky.app/intent/compose?text=MacLC%3A%20the%20free%20video%20player%20for%20Mac%20that%20plays%20everything%2C%20with%20real%20HDR%2C%20SDR%20to%20HDR%2C%20upscaling%20and%20smooth%20motion.%20https%3A//github.com/OZBM/MacLC), [Reddit](https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2FOZBM%2FMacLC&title=MacLC%3A%20a%20free%2C%20open-source%20video%20player%20for%20Mac%20with%20real%20HDR%20and%20SDR%20to%20HDR) or [LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2FOZBM%2FMacLC).
+- **Report what you see.** A file that will not play, a crash, a wrong colour: [open an issue](https://github.com/OZBM/MacLC/issues/new) with what you did and what you expected.
+- **Test on your screen.** Only one MacBook Pro has checked MacLC's HDR so far. If you own another HDR display, tell me how it looks.
+
+## Questions
+
+<details>
+<summary><b>Is MacLC really free?</b></summary>
+
+Yes. No paid version, no subscription, no ads, no account, and nothing held back. It is open source under the GPL 2.0 or later.
+</details>
+
+<details>
+<summary><b>Is it safe? Why does macOS block it the first time?</b></summary>
+
+The whole source code is public in this repository, and MacLC has no analytics or tracking: it does not report what you watch to its developer or to anyone else. Watch, YouTube and torrents connect to the services they use, as any app would. macOS blocks MacLC the first time only because it is not notarised by Apple, which costs €99 a year (see [Install](#install)). Each release publishes the SHA-256 checksum of the disk image, so you can check your copy.
+</details>
+
+<details>
+<summary><b>Do I need an HDR screen?</b></summary>
+
+No. MacLC plays every video on any Mac screen, and fits HDR films to ordinary screens. Only SDR to HDR needs a screen that can go brighter than white.
+</details>
+
+<details>
+<summary><b>Does it work on Intel Macs, or on macOS 15 and earlier?</b></summary>
+
+No. MacLC targets Apple Silicon and macOS 26 Tahoe or later, and its bundled libraries require macOS 26.
+</details>
+
+<details>
+<summary><b>How do I update?</b></summary>
+
+Download the new disk image from [Releases](https://github.com/OZBM/MacLC/releases) and replace the app. Updates that install themselves are on the donation roadmap. To hear about new versions, click GitHub's **Watch** button at the top of this page, then **Custom › Releases**.
+</details>
+
+<details>
+<summary><b>Won't smooth motion make films look like a soap opera?</b></summary>
+
+It can, which is why it is off by default. Many people like it for sport, nature and animation, and keep the classic 24-frame look for cinema. Try both on the same scene.
+</details>
+
+<details>
+<summary><b>Does MacLC come with films or shows?</b></summary>
+
+No. MacLC plays your own files and what you open. Watch shows the catalogs of the add-ons you choose to install, which are third-party services: use them only for content you have the right to watch.
+</details>
+
+## Under the hood
+
+MacLC is built on part of VLC 4's open-source code, chiefly its playback engine (`libVLC`). The interface, the library and Watch, the Metal video output, the HDR pipeline, SDR to HDR, upscaling, motion interpolation, Voice Boost and AirPlay were written or rebuilt for MacLC, for macOS on Apple Silicon only.
+
+<details>
+<summary><b>HDR pipeline: six defects fixed in the inherited code</b></summary>
+
+From an audit of the macOS HDR path of VLC 4.0.0-dev on Apple Silicon (2026-09-02, baseline `99034f9`):
+
+| Defect | What you saw | Fix |
+|---|---|---|
+| EDR headroom read once, from `[NSScreen mainScreen]` | Moving the window to another display left HDR at the wrong brightness | Headroom re-evaluated on screen, profile and parameter changes |
+| HDR mode and EDR headroom preferences did nothing | Settings were decorative | Wired to live variable callbacks, applied during playback |
+| No SDR tone-mapping branch | HDR films on SDR screens clipped to flat white | `CADynamicRangeStandard` with `CAToneMapModeAutomatic`, BT.709 retag fallback |
+| Subtitles untagged over PQ video | White subtitles at full PQ luminance over dark scenes | Subtitle layer tagged sRGB, scaled to BT.2408 reference white |
+| HEVC above 10 bits downsampled to 8-bit BGRA | 12-bit and 16-bit sources lost bits before the screen | Routed to P010; 16-bit 4:2:2 wired through the CVPX helpers |
+| Sub-4K HDR tagged BT.709, zero-nit mastering volume emitted | Wide-gamut content shown through the wrong primaries | Correct tagging per stream, mastering volume never zero |
+
+Also: HDR10+ dynamic metadata through the filter chain, Dolby Vision metadata from the VideoToolbox bitstream (profiles 5 and 8.1 in MacLC's Metal engine, 8.4 from iPhone), ST 2086 and CTA-861.3 metadata forwarded to the display layer, a per-window ICC profile, hardware AV1 on M3 and newer, and ARM64 NEON chroma conversions.
+</details>
+
+<details>
+<summary><b>How SDR to HDR works</b></summary>
+
+The picture is linearised and each pixel's drive is taken as the larger of its luminance and 85 % of its brightest channel. Fast lifts the drive above half of SDR white along a fixed quadratic; Balanced lifts only what lies above diffuse white, by an amount that shrinks when large areas are bright. In both, the whole triplet is scaled by the same factor, so hue and saturation do not move. High and Maximum use two small networks trained for MacLC, which predict a grid of brightness gains for each scene, with per-channel gains kept within 0.2 (log) of the luminance gain. The result is limited to the screen's actual headroom, with a rolloff below it, and tagged so the compositor does not tone-map it back down. Sources that are already HDR are left alone. The maths are in [`maclc_sdr2hdr.h`](modules/video_output/apple/maclc_sdr2hdr.h) and the Metal kernels in [`VLCHDRExpander.m`](modules/video_output/apple/VLCHDRExpander.m).
+</details>
+
+<details>
+<summary><b>Upscaling engine, cost and licences</b></summary>
+
+Upscaling runs in MacLC's Metal video output when the window is at least 1.2 times larger than the video. Measured on an M3 Max: MetalFX spatial 0.4 to 0.84 ms per frame, AMD FSR 1 from 720p to 1440p about 0.5 ms, NIS from 720p to 4K 1.19 ms, ArtCNN from 540p to 1080p about 2.1 ms. Neural passes stand down on battery, in Low Power Mode, when the Mac is hot, or when a frame would take more than 60 % of its time. A translator runs mpv-style hook shaders, which is how Anime4K and FSRCNNX run in Metal.
+
+Licences: NIS and FSR 1 (MIT, with NVIDIA's and AMD's notices kept verbatim), Anime4K and ArtCNN (MIT), FSRCNNX (LGPL-3.0, downloaded only after you accept its licence), MetalFX and VideoToolbox super resolution (Apple system frameworks).
+</details>
+
+<details>
+<summary><b>Command-line options added</b></summary>
+
+| Option | Values | What it does |
+|---|---|---|
+| `--macosx-hdr-mode` | 0 to 3 | 0 Auto, 1 force native HDR, 2 tone-map to SDR, 3 HDR off |
+| `--macosx-edr-headroom` | float | 0 follows the screen; 1 or more forces a headroom |
+| `--macosx-sdr-to-hdr` | bool | Expand SDR video into the screen's extended range |
+| `--macosx-sdr-to-hdr-boost` | 1 to 16 | How far above SDR white highlights may go (default 4) |
+| `--macosx-sdr-to-hdr-quality` | auto, fast, balanced, high, maximum | SDR to HDR level |
+| `--maclc-upscale`, `--maclc-upscale-method` | bool, string | Upscaling on or off, and the method |
+
+</details>
+
+<details>
+<summary><b>Building from source</b></summary>
+
+MacLC builds on an Apple Silicon Mac with autotools against Homebrew's libraries. Meson does not build the macOS interface: use autotools, or the Xcode project for interface work.
 
 ```bash
+# once: the media library engine, TagLib and libdvbpsi, built from contrib/src's pinned versions
+extras/package/macosx/build-medialibrary.sh
+extras/package/macosx/build-taglib.sh
+extras/package/macosx/build-dvbpsi.sh
+
+# configure a development build in build/, then:
+make -C build -j12
+make -C build package-macosx          # signed MacLC.app and maclc-<version>.dmg
+
+# interface work in Xcode (deploys the plugin into build/MacLC.app)
+xcodebuild -project extras/package/macosx/MacLC.xcodeproj -scheme MacLC build
+
+# a release: clean build in build-release/, checks, smoke test on sample files, SHA-256
 extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
 ```
 
-It reuses `build/`'s configure flags with debugging off, builds from scratch in
-`build-release/`, makes `maclc-<version>.dmg`, checks the signature and version of the app and
-of the image, plays every file in `--samples` with the app in the image (failing on any crash
-or hang; MacLC must not be running, and its preferences are put back afterwards), then writes
-the image's `.sha256`. A clean build needs bison 3: the script uses the one `extras/tools`
-builds when macOS only has its own 2.3.
+Configure with `build-deps/prefix/lib/pkgconfig` and `build-deps/pkgconfig` first in `PKG_CONFIG_PATH`; `automake` 1.18 is required to regenerate `Makefile.in`; any file using `_NS("…")` must be listed in `po/POTFILES.in`. The unit tests (308, XCTest) run with `make check-macosx` from `build/modules`, and `MACLC_SELFTEST=1` builds the main settings panes at startup and reports what appeared. The app icon is drawn by a committed Swift program, [`maclc_app_icon.swift`](extras/package/macosx/asset_sources/maclc_app_icon.swift).
+</details>
 
-To rebuild just the interface plugin during development:
+## Releases
 
-```bash
-make -C build/modules libmacosx_plugin.la
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="Timeline: eight releases from 1.0 on 22 September 2026 to 1.6 on 2 November 2026.">
+</picture>
 
-**Build notes**
+What changed in each version is in [Releases](https://github.com/OZBM/MacLC/releases). To hear about the next one, click GitHub's **Watch** button at the top of this page, then **Custom › Releases**.
 
-- The media library engine and TagLib are built from the versions and checksums of
-  `contrib/src` into `build-deps/prefix` and linked statically, so the app carries them. Run
-  `extras/package/macosx/build-medialibrary.sh` and `extras/package/macosx/build-taglib.sh`
-  once, then configure with `build-deps/prefix/lib/pkgconfig` and `build-deps/pkgconfig`
-  first in `PKG_CONFIG_PATH`. Library thumbnails also need the PNG and JPEG encoders: pass
-  Homebrew's headers in `CPPFLAGS` (`-I$(brew --prefix jpeg-turbo)/include
-  -I$(brew --prefix libpng)/include`).
-- `automake` 1.18 is required — the tree's `aclocal.m4` declares `am__api_version='1.18'`. Without it, `Makefile.in` cannot be regenerated when source files are added.
-- Any file containing `_NS("…")` must also be listed in `po/POTFILES.in`.
-- `make MacLC.app` installs into `macos-install/`, assembles `MacLC.app` and signs it ad hoc; `make package-macosx` wraps it in `maclc-<version>.dmg`. `pseudo-bundle` fails here, because `CONTRIB_DIR` is empty and `build/Frameworks` already exists.
+## Status
 
-To regenerate the app icon, see the header comment of
-`extras/package/macosx/asset_sources/maclc_app_icon.swift` — it gives the two commands.
+MacLC is in beta and moves fast. It is developed and measured on an M3 Max MacBook Pro, and every release plays a set of sample files before it ships. Not verified yet: Play on TV with real AirPlay and Chromecast receivers (hence the beta label), VoiceOver and Reduce Motion across the library and Watch, a very large real library, and HDR on displays other than that MacBook Pro's. Most of those are donation milestones above.
 
----
+## Licence, trademarks and credits
 
-## Project status — honesty section
+MacLC is released under the **GNU General Public License 2.0 or later**. It contains code from VLC, whose engine `libVLC` remains under the LGPL 2.1 or later: see [`COPYING`](COPYING) and [`COPYING.LIB`](COPYING.LIB). As with VLC on some platforms, the distributed app is de facto under the GPL 3.0 because of the licences of some bundled libraries. The complete corresponding source is this repository. The app also contains VideoLAN's `libmedialibrary` and `libdvbpsi` (LGPL 2.1 or later) and TagLib (LGPL 2.1 or MPL 1.1), built from their pinned sources by the scripts above. The SDR to HDR networks were designed and trained for MacLC on Poly Haven's CC0 HDR photographs and are distributed under the LGPL 2.1 or later; the RIFE v4.25 interpolation network comes from [Practical-RIFE](https://github.com/hzwer/Practical-RIFE) (MIT, © 2021 hzwer).
 
-This is a working fork under active development, not a shipped 1.0. What follows is what
-has and has not actually been checked, because a README that overstates its own testing is
-worse than no README.
+**MacLC is not affiliated with, endorsed by or supported by VideoLAN.** VLC, VideoLAN and the traffic-cone logo are trademarks of VideoLAN; MacLC does not use them. Please report MacLC bugs here, not to VideoLAN. Dolby Vision is a trademark of Dolby Laboratories; other names belong to their owners.
 
-**Verified by building and running:**
+MacLC builds on more than twenty years of work on VLC by the VideoLAN project and many volunteers: thank you. See [`AUTHORS`](AUTHORS) and [`THANKS`](THANKS); the upstream README is kept as [`README.upstream.md`](README.upstream.md).
 
-- `make -C build/modules libmacosx_plugin.la` succeeds; the app launches, loads the macOS interface and stays up.
-- HDR10 playback (HEVC 10-bit, PQ/BT.2020, mastering metadata) drives `samplebufferdisplay` with EDR on and correct PQ/BT.2020 buffer tagging.
-- An SDR clip under the same Auto mode is tagged BT.709 — no false HDR.
-- `--macosx-hdr-mode=2` produces `preferredDynamicRange=Standard`, EDR off.
-- `--macosx-edr-headroom=2.0` is picked up as a user override and propagated.
-- Brand substitution passes 22 cases, including `VLC.app`, `VLCKit`, `libvlccore`, `vlc://quit`, `VLC_PLUGIN_PATH` and a French UI string.
-- SDR → HDR, as described above.
-- All eight settings panes construct, with every SF Symbol resolving.
-- The media library indexes a synthetic library (movies with HDR10 and HLG colour tags, a
-  show, three tagged albums with embedded covers); every section, detail screen, Up Next
-  and the Now Playing capsule render as designed on screenshots (light mode; Home also in
-  dark mode); playing a video embedded and going back to the library keeps the live
-  picture; the app quits cleanly.
-- Release 1.3, on the app inside the disk image: Torrentio installed from Settings ▸ Add-ons ▸
-  Community, a public-domain film found with Search Add-ons and its Torrentio stream handed to
-  the BitTorrent module; a local torrent streamed and seeked; Watch with the real Cinemeta
-  catalogs; 26 sample files played without a crash.
+Pictures on this page show open movies: *Sintel*, *Big Buck Bunny*, *Tears of Steel* and *Elephants Dream* (© Blender Foundation, CC BY), *Cosmos Laundromat* (Andy Goralczyk and the Blender Foundation, CC BY 4.0), *Spring* (Francesco Siddi, Blender Foundation, CC BY 4.0), *Sprite Fright* (Blender Studio, CC BY 4.0) and *Caminandes: Llama Drama* (Pablo Vazquez, Beorn Leonard, Francesco Siddi, CC BY 3.0), and Poly Haven panoramas (CC0).
 
-**Known debt**
-
-- Play on TV has not been tried with a real AirPlay receiver or Chromecast: only its whole
-  renderer path without a receiver. It is labelled beta in the app's release notes and site.
-- Watch and the add-on windows have been driven with real clicks but not with VoiceOver or
-  Reduce Motion.
-- The media library has only been driven headlessly: dragging and dropping, context menus
-  and resizing with the mouse, VoiceOver and a large real library are still untested.
-- The Edit menu lists AppKit's *Start Dictation…* and *Emoji & Symbols* more than once.
-- `MacLCHDRSettingsViewController` defines its own `MacLCSettingsRowView` and `MacLCStatusRowView` while the settings window has `MacLCSettingsRow`. Written in parallel; should be consolidated onto the shared builder.
-- Config hardening was applied where it was needed (the web-remote card). Other panes cannot abort, but a row whose option is missing is still shown and does nothing. Making every row declare its option name would let `MacLCSettingsRow` skip it generically.
-- Adding a `_Nullable` declaration to `NSString+Helpers.h` outside any `NS_ASSUME_NONNULL` region produces 38 nullability warnings across the module.
-- The seasonal Xmas icon is still upstream art — it belongs to an easter egg, and replacing it is a separate piece of drawing.
-- The Dolby Vision RPU bitstream parser on `dovi-rpu-wip` desynchronises at partition fields.
-- libplacebo's Vulkan backend still cannot be elected on Darwin: there is no Vulkan windowing platform module (`VK_EXT_metal_surface` / `CAMetalLayer` bridge).
-
----
-
-## License and trademarks
-
-MacLC is a fork of VLC and is released under the **GNU General Public License v2 or
-later**, the same terms as VLC. `libVLC`, the engine, remains **LGPLv2.1 or later**. See
-[`COPYING`](COPYING) and [`COPYING.LIB`](COPYING.LIB). Complete corresponding source is
-this repository.
-
-The app statically includes VideoLAN's `libmedialibrary` (LGPLv2.1 or later) and TagLib
-(LGPLv2.1 or MPL 1.1). `extras/package/macosx/build-medialibrary.sh` and
-`build-taglib.sh` download their exact sources, check them against `contrib/src/*/SHA512SUMS`
-and build them.
-
-**MacLC is not affiliated with, endorsed by, or supported by VideoLAN.**
-"VLC", "VideoLAN" and the traffic-cone logo are trademarks of the VideoLAN organisation.
-MacLC uses none of them: it has its own name, its own bundle identifier and its own,
-originally drawn icon. Please do not report MacLC bugs to VideoLAN — they are not
-responsible for this fork, and cannot fix it.
-
-Please do report VLC bugs to VideoLAN. Almost everything that works here works because
-they built it.
-
-## Credits
-
-VLC is the work of the VideoLAN project and a very large community of volunteers, over
-more than two decades. See [`AUTHORS`](AUTHORS) and [`THANKS`](THANKS). The upstream
-README is preserved at [`README.upstream.md`](README.upstream.md).
-
-MacLC is the macOS-specific work layered on top of that, and nothing more.
+<p align="center">
+  <a href="https://github.com/OZBM/MacLC/releases/latest"><b>Download MacLC</b></a> ·
+  <a href="https://www.hazenstudio.com/maclc/"><b>Website</b></a> ·
+  <a href="https://www.hazenstudio.com/maclc/donate/"><b>Donate</b></a>
+</p>

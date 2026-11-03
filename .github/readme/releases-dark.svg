@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 250" width="960" height="250" role="img" aria-label="Timeline: MacLC 1.0 on 22 September 2026 to 1.6 on 2 November 2026, eight releases." font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif">
+<text x="24.0" y="40.0" font-size="22" fill="#f0f6fc" text-anchor="start" font-weight="600" >8 releases in 6 weeks</text>
+<text x="24.0" y="64.0" font-size="14" fill="#9198a1" text-anchor="start" font-weight="400" >Every version since the first beta, with what it brought.</text>
+<line x1="60" y1="142" x2="930" y2="142" stroke="#30363d" stroke-width="2"/>
+<line x1="272.7" y1="136" x2="272.7" y2="148" stroke="#656c76" stroke-width="1"/>
+<line x1="872.0" y1="136" x2="872.0" y2="148" stroke="#656c76" stroke-width="1"/>
+<text x="79.3" y="226.0" font-size="12" fill="#6e7681" text-anchor="start" font-weight="400" >Sep 2026</text>
+<text x="272.7" y="226.0" font-size="12" fill="#6e7681" text-anchor="middle" font-weight="400" >Oct</text>
+<text x="872.0" y="226.0" font-size="12" fill="#6e7681" text-anchor="middle" font-weight="400" >Nov</text>
+<circle cx="98.7" cy="142" r="6" fill="#9198a1" stroke="#0d1117" stroke-width="2.5"/>
+<text x="104.7" y="97.0" font-size="15" fill="#f0f6fc" text-anchor="end" font-weight="600" >1.0</text>
+<text x="104.7" y="114.0" font-size="12" fill="#9198a1" text-anchor="end" font-weight="400" >first release</text>
+<circle cx="118.0" cy="142" r="6" fill="#9198a1" stroke="#0d1117" stroke-width="2.5"/>
+<text x="112.0" y="176.0" font-size="15" fill="#f0f6fc" text-anchor="start" font-weight="600" >1.1</text>
+<text x="112.0" y="193.0" font-size="12" fill="#9198a1" text-anchor="start" font-weight="400" >torrent streaming</text>
+<circle cx="118.0" cy="142" r="6" fill="#9198a1" stroke="#0d1117" stroke-width="2.5"/>
+<text x="114.0" y="97.0" font-size="15" fill="#f0f6fc" text-anchor="start" font-weight="600" >1.1.1</text>
+<text x="114.0" y="114.0" font-size="12" fill="#9198a1" text-anchor="start" font-weight="400" >self-contained app</text>
+<circle cx="311.3" cy="142" r="6" fill="#9198a1" stroke="#0d1117" stroke-width="2.5"/>
+<text x="311.3" y="176.0" font-size="15" fill="#f0f6fc" text-anchor="middle" font-weight="600" >1.2</text>
+<text x="311.3" y="193.0" font-size="12" fill="#9198a1" text-anchor="middle" font-weight="400" >library, Metal engine</text>
+<circle cx="388.7" cy="142" r="6" fill="#9198a1" stroke="#0d1117" stroke-width="2.5"/>
+<text x="388.7" y="97.0" font-size="15" fill="#f0f6fc" text-anchor="middle" font-weight="600" >1.3</text>
+<text x="388.7" y="114.0" font-size="12" fill="#9198a1" text-anchor="middle" font-weight="400" >Watch, add-ons, sound</text>
+<circle cx="446.7" cy="142" r="6" fill="#9198a1" stroke="#0d1117" stroke-width="2.5"/>
+<text x="446.7" y="176.0" font-size="15" fill="#f0f6fc" text-anchor="middle" font-weight="600" >1.4</text>
+<text x="446.7" y="193.0" font-size="12" fill="#9198a1" text-anchor="middle" font-weight="400" >history, YouTube</text>
+<circle cx="872.0" cy="142" r="6" fill="#9198a1" stroke="#0d1117" stroke-width="2.5"/>
+<text x="878.0" y="97.0" font-size="15" fill="#f0f6fc" text-anchor="end" font-weight="600" >1.5</text>
+<text x="878.0" y="114.0" font-size="12" fill="#9198a1" text-anchor="end" font-weight="400" >Xcode, macOS 27</text>
+<circle cx="891.3" cy="142" r="7" fill="#d95926" stroke="#0d1117" stroke-width="2.5"/>
+<text x="901.3" y="176.0" font-size="15" fill="#f0f6fc" text-anchor="end" font-weight="600" >1.6</text>
+<text x="901.3" y="193.0" font-size="12" fill="#9198a1" text-anchor="end" font-weight="400" >upscaling, compare</text>
+</svg>

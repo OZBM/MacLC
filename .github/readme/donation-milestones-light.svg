@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 270" width="960" height="270" role="img" aria-label="Donation milestones: 99 euros for Apple notarisation, 400 for Play on TV out of beta, 900 for a second HDR screen, 1,600 for an accessibility pass, 2,500 for self-updating releases." font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif">
+<text x="24.0" y="40.0" font-size="22" fill="#1f2328" text-anchor="start" font-weight="600" >What your donation unlocks</text>
+<text x="24.0" y="64.0" font-size="14" fill="#59636e" text-anchor="start" font-weight="400" >Totals raised across all donors. Each step ships when its total is reached.</text>
+<line x1="96" y1="128" x2="864" y2="128" stroke="#d1d9e0" stroke-width="4" stroke-linecap="round"/>
+<circle cx="96.0" cy="128" r="9" fill="#eb6834" stroke="#ffffff" stroke-width="3"/>
+<text x="96.0" y="106.0" font-size="16" fill="#1f2328" text-anchor="middle" font-weight="600" font-variant-numeric="tabular-nums">€99</text>
+<text x="96.0" y="164.0" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="600" >No more “Open Anyway”</text>
+<text x="96.0" y="182.0" font-size="12" fill="#59636e" text-anchor="middle" font-weight="400" >Apple notarisation</text>
+<circle cx="288.0" cy="128" r="7" fill="#59636e" stroke="#ffffff" stroke-width="3"/>
+<text x="288.0" y="106.0" font-size="16" fill="#1f2328" text-anchor="middle" font-weight="600" font-variant-numeric="tabular-nums">€400</text>
+<text x="288.0" y="164.0" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="400" >Play on TV out of beta</text>
+<text x="288.0" y="182.0" font-size="12" fill="#59636e" text-anchor="middle" font-weight="400" >real Apple TV + Chromecast</text>
+<circle cx="480.0" cy="128" r="7" fill="#59636e" stroke="#ffffff" stroke-width="3"/>
+<text x="480.0" y="106.0" font-size="16" fill="#1f2328" text-anchor="middle" font-weight="600" font-variant-numeric="tabular-nums">€900</text>
+<text x="480.0" y="164.0" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="400" >A second HDR screen</text>
+<text x="480.0" y="182.0" font-size="12" fill="#59636e" text-anchor="middle" font-weight="400" >tested on more panels</text>
+<circle cx="672.0" cy="128" r="7" fill="#59636e" stroke="#ffffff" stroke-width="3"/>
+<text x="672.0" y="106.0" font-size="16" fill="#1f2328" text-anchor="middle" font-weight="600" font-variant-numeric="tabular-nums">€1,600</text>
+<text x="672.0" y="164.0" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="400" >MacLC for everyone</text>
+<text x="672.0" y="182.0" font-size="12" fill="#59636e" text-anchor="middle" font-weight="400" >full accessibility pass</text>
+<circle cx="864.0" cy="128" r="7" fill="#59636e" stroke="#ffffff" stroke-width="3"/>
+<text x="864.0" y="106.0" font-size="16" fill="#1f2328" text-anchor="middle" font-weight="600" font-variant-numeric="tabular-nums">€2,500</text>
+<text x="864.0" y="164.0" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="400" >Self-updating app</text>
+<text x="864.0" y="182.0" font-size="12" fill="#59636e" text-anchor="middle" font-weight="400" >signed in-app updates</text>
+<text x="24.0" y="252.0" font-size="11.5" fill="#818b98" text-anchor="start" font-weight="400" >Milestones as published on hazenstudio.com/maclc/donate (live total there).</text>
+</svg>
