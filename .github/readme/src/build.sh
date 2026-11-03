@@ -40,4 +40,12 @@ if [[ -n "${SPLIT_OFF:-}" && -n "${SPLIT_ON:-}" ]]; then
   ./gainmap base.raw hdr.raw $(cut -d' ' -f1,2 split.txt) $out/sdr-to-hdr-split.jpg
 fi
 
+# The SDR/HDR illustration: a made-up frame rendered by Blender (about 10 minutes on an M3 Max),
+# then graded for SDR and HDR. Skipped unless ILLUSTRATION is set.
+if [[ -n "${ILLUSTRATION:-}" ]]; then
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P $src/hdr_scene.py -- $tmp/frame.exr 2000 834 128 >/dev/null
+  python3 $src/grade_illustration.py $tmp/frame.exr 0.75 $tmp
+  ./gainmap split-base.raw split-hdr.raw 2000 834 $out/hdr-illustration.jpg
+fi
+
 rm -rf $tmp

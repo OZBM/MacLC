@@ -77,6 +77,12 @@
 
 ## 充分释放屏幕潜力的 HDR
 
+**正在用 MacBook Pro 阅读本页？不妨用 Safari 看看下面这张图。** 这是一张示意图：一帧虚构的电影画面，完全由计算机渲染而成，左半边按 SDR 调色，右半边按 HDR 调色。SDR 会把霓虹和太阳洗成一片平淡的白色；而在 HDR 屏幕上，右半边保留了它们的色彩，并且真的比本页的白色更亮。
+
+<p align="center">
+  <img src=".github/readme/hdr-illustration.jpg" width="100%" alt="示意图：一帧虚构的电影画面——黄昏时分街道被水淹没的霓虹都市，天空中悬着一颗带环的行星，画面从中间一分为二。左边为 SDR，霓虹和太阳被洗成平淡的白色；右边为 HDR，保留了它们的色彩。在 HDR 屏幕上、支持 HDR 图片的浏览器中，右半边会发光。">
+</p>
+
 MacBook Pro 的屏幕能呈现出比普通白色亮数倍的高光，MacLC 正是围绕这一特性打造的。
 
 - **Dolby Vision、HDR10+、HDR10 和 HLG**，均以当前屏幕最理想的方式呈现，包括 iPhone 拍摄的 HDR 视频。
@@ -89,11 +95,7 @@ MacLC 自研的 Metal 视频引擎负责渲染 Dolby Vision 和 HDR10+，并修�
 
 ### SDR 转 HDR：善用屏幕富余的亮度
 
-**正在用 MacBook Pro 阅读本页？不妨用 Safari 看看下面这张图。** 图中内嵌了真正的 HDR 版本：右侧画面是 MacLC 在 MacBook Pro 上以 Maximum 档位开启 SDR 转 HDR 时的实际显示效果，直接从应用中截取，太阳及其周围的天空比本页的白色还要明亮。在其他屏幕上，左右两幅画面看起来一致——这正是设计初衷：MacLC 保留你熟悉的画面观感，只把屏幕多出来的亮度留给高光。
-
-<p align="center">
-  <img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="开源电影 Sintel 同一帧画面的左右对比：左侧为原始画面，右侧为 MacLC 的 SDR 转 HDR 实际显示效果，直接从应用中截取。在支持 HDR 图片的浏览器与 HDR 屏幕上，右侧的太阳会呈现明亮光感。">
-</p>
+大多数视频都是 SDR：即便屏幕能显示更亮的画面，它们的高光也止步于普通的白色。SDR 转 HDR 会把这些高光提升到屏幕额外的亮度空间中，同时让人脸和阴影尽量保持拍摄时的样子。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/sdr-to-hdr-curve-dark.svg">
@@ -101,6 +103,14 @@ MacLC 自研的 Metal 视频引擎负责渲染 Dolby Vision 和 HDR10+，并修�
 </picture>
 
 你可以从 Fast 到 Maximum 之间选择档位，或交给 Auto 挑选你的 Mac 能跟得上的档位。High 和 Maximum 使用专为 MacLC 训练的轻量神经网络，在 M3 Max 上每帧仅需约半毫秒。你可以自行设定高光亮度上限，按住 **Hold to Compare** 即可随时对比原片。
+
+<details>
+<summary>在真实视频上看看效果</summary>
+
+开源电影 *Sintel* 同一帧画面的两份：左侧为原始画面，右侧为 MacLC 在 MacBook Pro 上以 Maximum 档位开启 SDR 转 HDR 时的实际显示效果，直接从应用中截取。在 HDR 屏幕上用 Safari 查看，右侧的太阳会发光。
+
+<img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="开源电影 Sintel 同一帧画面的左右对比：左侧为原始画面，右侧为 MacLC 的 SDR 转 HDR 实际显示效果，直接从应用中截取。在支持 HDR 图片的浏览器与 HDR 屏幕上，右侧的太阳会呈现明亮光感。">
+</details>
 
 <p align="center">
   <img src=".github/readme/sdr-to-hdr.webp" width="100%" alt="MacLC 播放 Sintel 并打开 SDR 转 HDR 面板：显示画质档位、效果曲线，以及调节高光亮度上限的滑块。">
@@ -391,7 +401,7 @@ MacLC 基于 **GNU 通用公共许可证 2.0 或更高版本**发布。其中包
 
 感谢 VideoLAN 项目以及众多志愿者二十年来在 VLC 上的付出，MacLC 正是建立在这些成果之上：详见 [`AUTHORS`](AUTHORS) 与 [`THANKS`](THANKS)；上游 README 保留为 [`README.upstream.md`](README.upstream.md)。
 
-本页图片展示了以下开源电影：*Sintel*、*Big Buck Bunny*、*Tears of Steel* 和 *Elephants Dream*（© Blender Foundation，CC BY），*Cosmos Laundromat*（Andy Goralczyk 与 Blender Foundation，CC BY 4.0），*Spring*（Francesco Siddi、Blender Foundation，CC BY 4.0），*Sprite Fright*（Blender Studio，CC BY 4.0）以及 *Caminandes: Llama Drama*（Pablo Vazquez、Beorn Leonard、Francesco Siddi，CC BY 3.0），另有 Poly Haven 全景图（CC0）。
+HDR 一节开头的示意图是一个虚构场景，完全在 Blender 中从零渲染而成。本页其他图片展示了以下开源电影：*Sintel*、*Big Buck Bunny*、*Tears of Steel* 和 *Elephants Dream*（© Blender Foundation，CC BY），*Cosmos Laundromat*（Andy Goralczyk 与 Blender Foundation，CC BY 4.0），*Spring*（Francesco Siddi、Blender Foundation，CC BY 4.0），*Sprite Fright*（Blender Studio，CC BY 4.0）以及 *Caminandes: Llama Drama*（Pablo Vazquez、Beorn Leonard、Francesco Siddi，CC BY 3.0），另有 Poly Haven 全景图（CC0）。
 
 <p align="center">
   <a href="https://github.com/OZBM/MacLC/releases/latest"><b>下载 MacLC</b></a> ·

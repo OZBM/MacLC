@@ -77,6 +77,12 @@
 
 ## 画面の力をすべて引き出すHDR
 
+**MacBook Proでお読みですか？ 下の画像をSafariで見てみてください。** これはイラストです。架空の映画のワンシーンをゼロからレンダリングし、左半分をSDR向け、右半分をHDR向けにグレーディングしています。SDRではネオンと太陽が平坦な白に飛んでしまいますが、HDR画面では右半分がその色を保ったまま、このページの白よりも本当に明るく輝きます。
+
+<p align="center">
+  <img src=".github/readme/hdr-illustration.jpg" width="100%" alt="イラスト：夕暮れの冠水した通りに広がるネオンの街と、空に浮かぶ環のある惑星を描いた架空の映画のワンシーンを中央で分割した画像。左のSDRではネオンと太陽が平坦な白に飛び、右のHDRでは色が保たれている。HDR画像を表示できるブラウザとHDR画面で見ると、右半分が輝く。">
+</p>
+
 MacBook Proの画面は、通常の白の数倍もの明るさでハイライトを表示できます。MacLCは、その性能を前提に設計されています。
 
 - **Dolby Vision、HDR10+、HDR10、HLG** — iPhoneで撮影したHDRビデオを含め、お使いの画面に最も適した形で表示します。
@@ -89,11 +95,7 @@ MacLC独自のMetalビデオエンジンがDolby VisionとHDR10+を描画し、�
 
 ### SDR to HDR：画面の余力を光に変える
 
-**MacBook Proでこのページをご覧なら、下の画像をSafariで見てみてください。** 実際のHDRデータが埋め込まれており、右側の画像はMacBook ProでSDR to HDRをMaximumレベルにしたときにMacLCが実際に表示した映像をアプリから取り込んだもので、太陽とその周りの空がこのページの白よりも明るく輝いて見えます。それ以外の画面では左右どちらも同じに見えますが、まさにそこがポイントです。MacLCは元の映像の印象をそのまま保ち、画面が持つ余剰の光だけをハイライトに注ぎます。
-
-<p align="center">
-  <img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="オープンムービー Sintel の同じフレームを2つ並べた比較：左は撮影されたままの映像、右は MacLC の SDR to HDR が実際に表示した映像をアプリから取り込んだもの。HDR画像を表示できるブラウザとHDR画面で見ると、右側の太陽が輝いて見える。">
-</p>
+ほとんどの映像はSDRです。画面がもっと明るく表示できても、ハイライトはただの白で止まってしまいます。SDR to HDRはそうしたハイライトを画面の余力の明るさまで引き上げ、顔や影は撮影されたときの姿に近いまま保ちます。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/sdr-to-hdr-curve-dark.svg">
@@ -101,6 +103,14 @@ MacLC独自のMetalビデオエンジンがDolby VisionとHDR10+を描画し、�
 </picture>
 
 レベルは Fast から Maximum まで選べるほか、Auto に任せればお使いのMacで処理が追いつくレベルが自動で選ばれます。High と Maximum ではMacLC専用に学習された軽量ニューラルネットワークを使用し、M3 Maxでの処理時間は1フレームあたり約0.5ミリ秒です。ハイライトの明るさの上限も自分で設定でき、**Hold to Compare** を押している間は元の映像を表示して比較できます。
+
+<details>
+<summary>実際の映像で見る</summary>
+
+オープンムービー『Sintel』の同じフレームを2つ並べたもの：左は撮影されたまま、右はMacBook ProでSDR to HDRをMaximumレベルにしたときにMacLCが実際に表示した映像をアプリから取り込んだものです。HDR画面のSafariで見ると、右側の太陽が輝きます。
+
+<img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="オープンムービー Sintel の同じフレームを2つ並べた比較：左は撮影されたままの映像、右は MacLC の SDR to HDR が実際に表示した映像をアプリから取り込んだもの。HDR画像を表示できるブラウザとHDR画面で見ると、右側の太陽が輝いて見える。">
+</details>
 
 <p align="center">
   <img src=".github/readme/sdr-to-hdr.webp" width="100%" alt="SDR to HDR パネルを開いて Sintel を再生中の MacLC：品質レベル、効果のカーブ、ハイライトの明るさの上限を調整するスライダーが表示されている。">
@@ -391,7 +401,7 @@ MacLCは **GNU General Public License 2.0 以降** のもとで公開されて�
 
 MacLCの基盤となっているVLCに20年にわたり取り組んできたVideoLANプロジェクトと多くのボランティアの皆様に感謝いたします（[`AUTHORS`](AUTHORS) および [`THANKS`](THANKS) を参照。アップストリームのREADMEは [`README.upstream.md`](README.upstream.md) として保持されています）。
 
-このページの画像にはオープンムービーが表示されています：*Sintel*、*Big Buck Bunny*、*Tears of Steel*、*Elephants Dream*（© Blender Foundation, CC BY）、*Cosmos Laundromat*（Andy Goralczyk and the Blender Foundation, CC BY 4.0）、*Spring*（Francesco Siddi, Blender Foundation, CC BY 4.0）、*Sprite Fright*（Blender Studio, CC BY 4.0）、*Caminandes: Llama Drama*（Pablo Vazquez, Beorn Leonard, Francesco Siddi, CC BY 3.0）、およびPoly Havenのパノラマ（CC0）。
+HDRセクション冒頭のイラストは、Blenderでゼロからレンダリングした架空のシーンです。このページのほかの画像にはオープンムービーが表示されています：*Sintel*、*Big Buck Bunny*、*Tears of Steel*、*Elephants Dream*（© Blender Foundation, CC BY）、*Cosmos Laundromat*（Andy Goralczyk and the Blender Foundation, CC BY 4.0）、*Spring*（Francesco Siddi, Blender Foundation, CC BY 4.0）、*Sprite Fright*（Blender Studio, CC BY 4.0）、*Caminandes: Llama Drama*（Pablo Vazquez, Beorn Leonard, Francesco Siddi, CC BY 3.0）、およびPoly Havenのパノラマ（CC0）。
 
 <p align="center">
   <a href="https://github.com/OZBM/MacLC/releases/latest"><b>MacLC をダウンロード</b></a> ·

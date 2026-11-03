@@ -77,6 +77,12 @@
 
 ## Un HDR qui exploite tout votre écran
 
+**Vous lisez ceci sur un MacBook Pro ? Regardez l'image ci-dessous dans Safari.** C'est une illustration : une image de film inventée, entièrement rendue par ordinateur, étalonnée pour le SDR à gauche et pour le HDR à droite. Le SDR délave le néon et le soleil en un blanc uniforme ; sur un écran HDR, la moitié droite garde leurs couleurs et brille vraiment plus fort que le blanc de cette page.
+
+<p align="center">
+  <img src=".github/readme/hdr-illustration.jpg" width="100%" alt="Illustration : une image de film inventée, une ville de néons aux rues inondées au crépuscule, avec une planète à anneaux dans le ciel, coupée en deux. À gauche, en SDR, le néon et le soleil sont délavés en un blanc uniforme ; à droite, en HDR, ils gardent leurs couleurs. Sur un écran HDR, dans un navigateur compatible avec les images HDR, la moitié droite brille.">
+</p>
+
 L'écran d'un MacBook Pro peut afficher des hautes lumières plusieurs fois plus lumineuses que le blanc. MacLC a été conçu autour de cette capacité.
 
 - **Dolby Vision, HDR10+, HDR10 et HLG**, chacun restitué de la meilleure façon pour votre écran, y compris les vidéos HDR filmées à l'iPhone.
@@ -89,11 +95,7 @@ Le moteur vidéo Metal propre à MacLC assure le rendu Dolby Vision et HDR10+, e
 
 ### SDR vers HDR : de la lumière là où votre écran en a en réserve
 
-**Vous lisez ceci sur un MacBook Pro ? Regardez l'image ci-dessous dans Safari.** Elle contient une vraie version HDR : la copie de droite est ce que MacLC a affiché sur un MacBook Pro avec SDR vers HDR au niveau Maximum, capturé depuis l'app, et son soleil comme le ciel qui l'entoure y rayonnent au-delà du blanc de cette page. Sur les autres écrans, les deux copies sont identiques, et c'est tout l'intérêt : MacLC préserve l'image que vous connaissez et consacre la réserve lumineuse de votre écran aux hautes lumières.
-
-<p align="center">
-  <img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="La même image du film libre Sintel en double : à gauche telle que filmée, à droite telle que l'affiche SDR vers HDR de MacLC, capturée depuis l'app. Sur un écran HDR, dans un navigateur compatible avec les images HDR, le soleil à droite rayonne.">
-</p>
+La plupart des vidéos sont en SDR : leurs hautes lumières s'arrêtent au blanc, même sur un écran capable d'aller bien au-delà. SDR vers HDR élève ces hautes lumières dans la réserve de luminosité de votre écran, et garde les visages et les ombres proches de ce qui a été filmé.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/sdr-to-hdr-curve-dark.svg">
@@ -101,6 +103,14 @@ Le moteur vidéo Metal propre à MacLC assure le rendu Dolby Vision et HDR10+, e
 </picture>
 
 Choisissez un niveau de Fast à Maximum, ou laissez Auto retenir celui que votre Mac peut tenir. High et Maximum font appel à de petits réseaux neuronaux entraînés pour MacLC, soit environ une demi-milliseconde par image sur un M3 Max. Vous réglez l'intensité maximale des hautes lumières, et **Hold to Compare** affiche l'original tant que vous maintenez le bouton.
+
+<details>
+<summary>Le voir sur une vraie vidéo</summary>
+
+Une image du film libre *Sintel* en double : à gauche telle que filmée, à droite telle que MacLC l'a affichée sur un MacBook Pro avec SDR vers HDR au niveau Maximum, capturée depuis l'app. Sur un écran HDR dans Safari, le soleil à droite rayonne.
+
+<img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="La même image du film libre Sintel en double : à gauche telle que filmée, à droite telle que l'affiche SDR vers HDR de MacLC, capturée depuis l'app. Sur un écran HDR, dans un navigateur compatible avec les images HDR, le soleil à droite rayonne.">
+</details>
 
 <p align="center">
   <img src=".github/readme/sdr-to-hdr.webp" width="100%" alt="MacLC lisant Sintel avec le panneau SDR vers HDR ouvert : niveaux de qualité, courbe de l'effet et curseur d'intensité maximale des hautes lumières.">
@@ -391,7 +401,7 @@ MacLC est publié sous la **GNU General Public License 2.0 ou ultérieure**. Il 
 
 Merci au projet VideoLAN et aux nombreux bénévoles dont les deux décennies de travail sur VLC servent de fondation à MacLC : voir [`AUTHORS`](AUTHORS) et [`THANKS`](THANKS) ; le README d'origine est conservé sous [`README.upstream.md`](README.upstream.md).
 
-Les images de cette page montrent des films libres : *Sintel*, *Big Buck Bunny*, *Tears of Steel* et *Elephants Dream* (© Blender Foundation, CC BY), *Cosmos Laundromat* (Andy Goralczyk et la Blender Foundation, CC BY 4.0), *Spring* (Francesco Siddi, Blender Foundation, CC BY 4.0), *Sprite Fright* (Blender Studio, CC BY 4.0) et *Caminandes: Llama Drama* (Pablo Vazquez, Beorn Leonard, Francesco Siddi, CC BY 3.0), ainsi que des panoramas de Poly Haven (CC0).
+L'illustration en tête de la section HDR est une scène inventée, rendue de toutes pièces dans Blender. Les autres images de cette page montrent des films libres : *Sintel*, *Big Buck Bunny*, *Tears of Steel* et *Elephants Dream* (© Blender Foundation, CC BY), *Cosmos Laundromat* (Andy Goralczyk et la Blender Foundation, CC BY 4.0), *Spring* (Francesco Siddi, Blender Foundation, CC BY 4.0), *Sprite Fright* (Blender Studio, CC BY 4.0) et *Caminandes: Llama Drama* (Pablo Vazquez, Beorn Leonard, Francesco Siddi, CC BY 3.0), ainsi que des panoramas de Poly Haven (CC0).
 
 <p align="center">
   <a href="https://github.com/OZBM/MacLC/releases/latest"><b>Télécharger MacLC</b></a> ·
