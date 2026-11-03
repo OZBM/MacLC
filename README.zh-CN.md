@@ -89,10 +89,10 @@ MacLC 自研的 Metal 视频引擎负责渲染 Dolby Vision 和 HDR10+，并修�
 
 ### SDR 转 HDR：善用屏幕富余的亮度
 
-**正在用 MacBook Pro 阅读本页？不妨用 Safari 看看下面这张图。** 图中内嵌了真正的 HDR 版本：右侧画面经过 MacLC 的 SDR 转 HDR 曲线处理，太阳与天空比本页的白色还要明亮。在其他屏幕上，左右两幅画面看起来一致——这正是设计初衷：MacLC 保留你熟悉的画面观感，只把屏幕多出来的亮度留给高光。
+**正在用 MacBook Pro 阅读本页？不妨用 Safari 看看下面这张图。** 图中内嵌了真正的 HDR 版本：右侧画面是 MacLC 在 MacBook Pro 上以 Maximum 档位开启 SDR 转 HDR 时的实际显示效果，直接从应用中截取，太阳及其周围的天空比本页的白色还要明亮。在其他屏幕上，左右两幅画面看起来一致——这正是设计初衷：MacLC 保留你熟悉的画面观感，只把屏幕多出来的亮度留给高光。
 
 <p align="center">
-  <img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="开源电影 Sintel 同一帧画面的左右对比：左侧为原始画面，右侧经 MacLC 的 SDR 转 HDR 处理。在支持 HDR 图片的浏览器与 HDR 屏幕上，右侧的太阳和天空会呈现明亮光感。">
+  <img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="开源电影 Sintel 同一帧画面的左右对比：左侧为原始画面，右侧为 MacLC 的 SDR 转 HDR 实际显示效果，直接从应用中截取。在支持 HDR 图片的浏览器与 HDR 屏幕上，右侧的太阳会呈现明亮光感。">
 </p>
 
 <picture>

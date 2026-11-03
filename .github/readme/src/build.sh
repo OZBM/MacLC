@@ -32,8 +32,12 @@ sed "s/ART/art-banner.jpg/" social.html > s.html
 shot --window-size=1280,640 --screenshot=s.png "file://$tmp/s.html"
 sips -s format jpeg -s formatOptions 88 s.png --out $out/social-preview.jpg >/dev/null
 
-# SDR to HDR demo: two copies of a Sintel frame, the right one through the Fast curve.
-python3 $src/make_hdr.py $src/sintel-rooftops.jpg 2000 4.0
-./gainmap base.png hdr.raw 2000 $(sips -g pixelHeight base.png | awk '/pixelHeight/{print $2}') $out/sdr-to-hdr-split.jpg
+# SDR to HDR demo, from two HDR captures of MacLC playing a still clip of sintel-rooftops.jpg
+# (cropped from x = 900, scaled to 1280x872, H.264 BT.709), with SDR to HDR off and at Maximum:
+# raw float32 RGBA, extended-linear Display P3, 1.0 = SDR white. Skipped unless both are given.
+if [[ -n "${SPLIT_OFF:-}" && -n "${SPLIT_ON:-}" ]]; then
+  python3 $src/make_split.py $SPLIT_OFF $SPLIT_ON ${SPLIT_SIZE:-1500x872} ${SPLIT_CROP:-20,20,1260,852} "MacLC SDR to HDR" 2000 > split.txt
+  ./gainmap base.raw hdr.raw $(cut -d' ' -f1,2 split.txt) $out/sdr-to-hdr-split.jpg
+fi
 
 rm -rf $tmp

@@ -89,10 +89,10 @@ El propio motor de video en Metal de MacLC renderiza Dolby Vision y HDR10+, y co
 
 ### SDR a HDR: luz donde tu pantalla tiene de sobra
 
-**¿Estás leyendo esto en un MacBook Pro? Mira la imagen de abajo en Safari.** Incluye una versión HDR real: la copia de la derecha pasó por la curva SDR a HDR de MacLC, y el sol y el cielo brillan con más intensidad que el blanco de esta página. En otras pantallas ambas copias se ven iguales, y esa es precisamente la idea: MacLC conserva la imagen que conoces y dedica la luz extra de tu pantalla a sus altas luces.
+**¿Estás leyendo esto en un MacBook Pro? Mira la imagen de abajo en Safari.** Incluye una versión HDR real: la copia de la derecha es lo que MacLC mostró en un MacBook Pro con SDR a HDR en el nivel Maximum, capturado desde la app, y su sol y el cielo que lo rodea brillan con más intensidad que el blanco de esta página. En otras pantallas ambas copias se ven iguales, y esa es precisamente la idea: MacLC conserva la imagen que conoces y dedica la luz extra de tu pantalla a sus altas luces.
 
 <p align="center">
-  <img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="El mismo fotograma de la película abierta Sintel dos veces: a la izquierda tal como se filmó, a la derecha pasado por SDR a HDR de MacLC. En una pantalla HDR, en un navegador compatible con imágenes HDR, el sol y el cielo de la derecha resplandecen.">
+  <img src=".github/readme/sdr-to-hdr-split.jpg" width="100%" alt="El mismo fotograma de la película abierta Sintel dos veces: a la izquierda tal como se filmó, a la derecha tal como lo muestra SDR a HDR de MacLC, capturado desde la app. En una pantalla HDR, en un navegador compatible con imágenes HDR, el sol de la derecha resplandece.">
 </p>
 
 <picture>
