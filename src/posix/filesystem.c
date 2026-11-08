@@ -45,7 +45,7 @@
 #include <vlc_common.h>
 #include <vlc_fs.h>
 
-#if !defined(HAVE_ACCEPT4)
+#if !defined(HAVE_ACCEPT4) || defined(__APPLE__)
 static inline void vlc_cloexec(int fd)
 {
     fcntl(fd, F_SETFD, FD_CLOEXEC | fcntl(fd, F_GETFD));
@@ -191,8 +191,14 @@ int vlc_dup (int oldfd)
 int vlc_dup2(int oldfd, int newfd)
 {
 #ifdef HAVE_DUP3
-    return dup3(oldfd, newfd, O_CLOEXEC);
-#else
+# ifdef __APPLE__
+    /* The SDK exports this function even for older deployment targets. */
+    if (__builtin_available(macOS 27.0, iOS 27.0, tvOS 27.0,
+                            watchOS 27.0, visionOS 27.0, *))
+# endif
+        return dup3(oldfd, newfd, O_CLOEXEC);
+#endif
+#if !defined(HAVE_DUP3) || defined(__APPLE__)
     int ret = dup2(oldfd, newfd);
     if (ret >= 0)
         vlc_cloexec(newfd);
@@ -203,8 +209,14 @@ int vlc_dup2(int oldfd, int newfd)
 int vlc_pipe (int fds[2])
 {
 #ifdef HAVE_PIPE2
-    return pipe2(fds, O_CLOEXEC);
-#else
+# ifdef __APPLE__
+    /* The SDK exports this function even for older deployment targets. */
+    if (__builtin_available(macOS 27.0, iOS 27.0, tvOS 27.0,
+                            watchOS 27.0, visionOS 27.0, *))
+# endif
+        return pipe2(fds, O_CLOEXEC);
+#endif
+#if !defined(HAVE_PIPE2) || defined(__APPLE__)
     int ret = pipe(fds);
     if (ret == 0)
     {
