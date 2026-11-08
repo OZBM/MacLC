@@ -318,12 +318,26 @@ SegmentSeeker::get_seekpoints( matroska_segment_c& ms, vlc_tick_t target_pts,
         if ( start.fpos == std::numeric_limits<fptr_t>::max() )
             return tracks_seekpoint_t();
 
-        if ( ms.sys.b_fastseekable &&
-             (end.fpos != std::numeric_limits<fptr_t>::max() || !ms.b_cues) &&
+        const bool seekable_cues = ms.sys.b_seekable && ms.b_cues;
+        fptr_t index_end = end.fpos;
+        if (!ms.sys.b_fastseekable && seekable_cues &&
+            index_end == std::numeric_limits<fptr_t>::max())
+        {
+            const int64_t size = stream_Size(ms.sys.demuxer.s);
+            if (size > 0)
+                index_end = static_cast<fptr_t>(size);
+        }
+
+        /* A remote seek is expensive, but validating the bounded cue range
+         * is necessary before an untrusted cue can be used for seeking. */
+        if ( (ms.sys.b_fastseekable ||
+              (seekable_cues && index_end != std::numeric_limits<fptr_t>::max() &&
+               index_end > start.fpos)) &&
+             (index_end != std::numeric_limits<fptr_t>::max() || !ms.b_cues) &&
              (needle_pts != start.pts || start.trust_level < Seekpoint::TRUSTED))
             // do not read the whole (infinite?) file to get seek indexes
             // do not generate an index if we already have the correct seekpoint
-            index_range( ms, Range( start.fpos, end.fpos ), needle_pts );
+            index_range( ms, Range( start.fpos, index_end ), needle_pts );
 
         tracks_seekpoint_t tpoints = find_greatest_seekpoints_in_range( start.fpos, target_pts, filter_tracks );
 
