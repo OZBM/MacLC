@@ -12,7 +12,8 @@
 #
 # Configure flags: taken from MACLC_CONFIGURE_FLAGS if set, otherwise from the
 # development build's build/config.status, with debugging turned off (assertions
-# compiled out, frame pointers kept for crash reports).
+# compiled out, frame pointers kept for crash reports) and dup3 and pipe2, which
+# macOS 26 lacks, never detected.
 #
 # The app is signed ad hoc: there is no Developer ID, so users confirm the
 # first launch with Open Anyway (see the README and the read-me in the image).
@@ -26,7 +27,7 @@ while [ $# -gt 0 ]; do
     case $1 in
         --samples) SAMPLES=$(cd "$2" && pwd); shift 2 ;;
         --build-dir) BUILD=$(mkdir -p "$2" && cd "$2" && pwd); shift 2 ;;
-        -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
@@ -107,6 +108,13 @@ FLAGS+=(--disable-debug)
 # The dmgbuild path of package-macosx leaves out the read-me files that tell
 # users how to get past Gatekeeper; always make the plain image.
 FLAGS+=(DMGBUILD=no)
+# A newer SDK links functions that macOS 26 lacks, so configure detects them and
+# a call without an availability check is a NULL weak import there (OZBM/MacLC#5).
+# Only vlcSetSymbolEnvironment's (env.build.sh) entries newer than macOS 26: its
+# other functions date from macOS 10.12-10.15, and overriding those would only
+# swap working system ones (clock_gettime, mkostemp, aligned_alloc...) for compat
+# code.
+FLAGS+=(ac_cv_func_dup3=no ac_cv_func_pipe2=no)
 echo "configure flags: ${FLAGS[*]}"
 
 export PATH=/opt/homebrew/bin:$PATH
@@ -167,6 +175,14 @@ app_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$A
 [ "$app_version" = "$VERSION" ] || die "Info.plist says $app_version, expected $VERSION"
 lipo -archs "$APP/Contents/MacOS/MacLC" | grep -q arm64 || die "the executable is not arm64"
 echo "MacLC.app $app_version: signature valid"
+
+# A weak import is NULL on a macOS that lacks the symbol, so each one needs an
+# availability check where it is called: look at any new one before publishing.
+step "Weak imports in libvlccore and the plug-ins"
+weak=$(for lib in "$APP"/Contents/Frameworks/libvlccore.dylib "$APP"/Contents/Frameworks/plugins/*.dylib; do
+    xcrun nm -m "$lib" | sed -n "s/^ *(undefined) weak external /${lib##*/}: /p"
+done)
+echo "${weak:-none}"
 
 # ------------------------------------------------------------- disk image
 step "Checking the disk image"
