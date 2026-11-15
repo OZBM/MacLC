@@ -665,6 +665,17 @@ static int ModuleThread_UpdateAudioFormat( decoder_t *p_dec )
 
         audio_sample_format_t format = p_dec->fmt_out.audio;
         aout_FormatPrepare( &format );
+        /* Object-audio bed rendered to 7.1.4 in CoreAudio Atmos order. */
+        if( format.channel_type == AUDIO_CHANNEL_TYPE_BITMAP
+         && format.i_channels == 12
+         && (p_dec->fmt_out.audio.i_physical_channels == 0
+          || p_dec->fmt_out.audio.i_physical_channels == AOUT_CHANS_7_1_4) )
+        {
+            format.i_physical_channels = p_dec->fmt_out.audio.i_physical_channels;
+            format.i_channels = 12;
+            format.i_bytes_per_frame = (format.i_bitspersample / 8) * 12;
+            format.i_frame_length = 1;
+        }
 
         const int i_force_dolby = var_InheritInteger( p_dec, "force-dolby-surround" );
         if( i_force_dolby &&
@@ -706,6 +717,18 @@ static int ModuleThread_UpdateAudioFormat( decoder_t *p_dec )
 
         DecoderUpdateFormatLocked( p_owner );
         aout_FormatPrepare( &p_owner->fmt.audio );
+        if( p_owner->fmt.audio.channel_type == AUDIO_CHANNEL_TYPE_BITMAP
+         && p_dec->fmt_out.audio.i_channels == 12
+         && (p_dec->fmt_out.audio.i_physical_channels == 0
+          || p_dec->fmt_out.audio.i_physical_channels == AOUT_CHANS_7_1_4) )
+        {
+            p_owner->fmt.audio.i_physical_channels =
+                p_dec->fmt_out.audio.i_physical_channels;
+            p_owner->fmt.audio.i_channels = 12;
+            p_owner->fmt.audio.i_bytes_per_frame =
+                (p_owner->fmt.audio.i_bitspersample / 8) * 12;
+            p_owner->fmt.audio.i_frame_length = 1;
+        }
 
         if( p_aout == NULL )
         {
@@ -713,6 +736,10 @@ static int ModuleThread_UpdateAudioFormat( decoder_t *p_dec )
             return -1;
         }
 
+        p_dec->fmt_out.audio.i_physical_channels =
+            p_owner->fmt.audio.i_physical_channels;
+        p_dec->fmt_out.audio.i_channels =
+            p_owner->fmt.audio.i_channels;
         p_dec->fmt_out.audio.i_bytes_per_frame =
             p_owner->fmt.audio.i_bytes_per_frame;
         p_dec->fmt_out.audio.i_bitspersample =

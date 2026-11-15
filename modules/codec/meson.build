@@ -22,6 +22,23 @@ vlc_modules += {
     'sources' : files('spdif.c')
 }
 
+# Dolby TrueHD Atmos (LibTrueHD + 7.1 object render)
+if have_osx
+    truehd_lib = cc.find_library('truehd_atmos',
+                                 dirs: meson.current_source_dir() / 'truehd',
+                                 required: true)
+    vlc_modules += {
+        'name' : 'truehd_atmos',
+        'sources' : files('truehd/truehd_atmos.c', 'truehd/atmos_render.c'),
+        'dependencies' : [
+            truehd_lib,
+            frameworks['CoreFoundation'],
+            frameworks['Security'],
+        ],
+        'link_args' : ['-lresolv', '-lm'],
+    }
+endif
+
 # adpcm codec
 vlc_modules += {
     'name' : 'adpcm',

@@ -105,6 +105,19 @@ struct audio_format_t
 #define AOUT_CHAN_MIDDLERIGHT       0x200
 #define AOUT_CHAN_LFE               0x1000
 
+/* Discrete height channels, used by the 7.1.4 object-audio bed. The bits are
+ * free in the 16-bit physical-channel mask and are not part of the WG4 order;
+ * a decoder that outputs Atmos_7_1_4 emits the channels in CoreAudio order
+ * and the output module skips the reorder for this mask. */
+#define AOUT_CHAN_TOP_FRONT_LEFT    0x0008
+#define AOUT_CHAN_TOP_FRONT_RIGHT   0x0010
+#define AOUT_CHAN_TOP_REAR_LEFT     0x0080
+#define AOUT_CHAN_TOP_REAR_RIGHT    0x0400
+
+#define AOUT_CHANS_7_1_4 (AOUT_CHANS_7_1 | AOUT_CHAN_TOP_FRONT_LEFT \
+                        | AOUT_CHAN_TOP_FRONT_RIGHT | AOUT_CHAN_TOP_REAR_LEFT \
+                        | AOUT_CHAN_TOP_REAR_RIGHT)
+
 #define AOUT_CHANS_FRONT  (AOUT_CHAN_LEFT       | AOUT_CHAN_RIGHT)
 #define AOUT_CHANS_MIDDLE (AOUT_CHAN_MIDDLELEFT | AOUT_CHAN_MIDDLERIGHT)
 #define AOUT_CHANS_REAR   (AOUT_CHAN_REARLEFT   | AOUT_CHAN_REARRIGHT)
@@ -131,7 +144,7 @@ struct audio_format_t
 
 /* Maximum number of mapped channels (or the maximum of bits set in
  * i_physical_channels) */
-#define AOUT_CHAN_MAX               9
+#define AOUT_CHAN_MAX               16
 /* Maximum number of unmapped channels */
 #define INPUT_CHAN_MAX              64
 

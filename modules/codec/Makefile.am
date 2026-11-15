@@ -26,6 +26,18 @@ endif
 libspdif_plugin_la_SOURCES = codec/spdif.c
 codec_PLUGINS += libspdif_plugin.la
 
+if HAVE_OSX
+libtruehd_atmos_plugin_la_SOURCES = codec/truehd/truehd_atmos.c \
+	codec/truehd/atmos_render.c
+libtruehd_atmos_plugin_la_LIBADD = codec/truehd/libtruehd_atmos.a $(LIBM)
+libtruehd_atmos_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(codec_RPATH) \
+	-Wl,-framework,CoreFoundation,-framework,Security -lresolv
+codec_PLUGINS += libtruehd_atmos_plugin.la
+EXTRA_DIST += codec/truehd/libtruehd_atmos.a codec/truehd/truehd_atmos.h \
+	codec/truehd/LICENSE.truehd codec/truehd/LICENSE-APACHE.truehd \
+	codec/truehd/NOTICE.truehd
+endif
+
 libadpcm_plugin_la_SOURCES = codec/adpcm.c
 codec_PLUGINS += libadpcm_plugin.la
 

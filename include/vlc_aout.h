@@ -558,6 +558,13 @@ typedef enum
     AOUT_CHANIDX_REARCENTER,
     AOUT_CHANIDX_CENTER,
     AOUT_CHANIDX_LFE,
+    AOUT_CHANIDX_9,
+    AOUT_CHANIDX_10,
+    AOUT_CHANIDX_11,
+    AOUT_CHANIDX_12,
+    AOUT_CHANIDX_13,
+    AOUT_CHANIDX_14,
+    AOUT_CHANIDX_15,
     AOUT_CHANIDX_MAX
 } vlc_chan_order_idx_t;
 
@@ -573,6 +580,13 @@ static_assert(AOUT_CHANIDX_MAX == AOUT_CHAN_MAX, "channel count mismatch");
     AOUT_CHANIDX_REARCENTER, \
     AOUT_CHANIDX_CENTER, \
     AOUT_CHANIDX_LFE, \
+    AOUT_CHANIDX_9, \
+    AOUT_CHANIDX_10, \
+    AOUT_CHANIDX_11, \
+    AOUT_CHANIDX_12, \
+    AOUT_CHANIDX_13, \
+    AOUT_CHANIDX_14, \
+    AOUT_CHANIDX_15, \
 }
 
 typedef struct

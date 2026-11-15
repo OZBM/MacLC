@@ -465,11 +465,8 @@ foreach module : vlc_modules
         kwargs += { 'link_language': module.get('link_language') }
     endif
 
-    shortname = ''
-
-    if module.has_key('shortname')
-        shortname = module['shortname']
-    endif
+    # 'shortname' handling varies across meson versions; omit for compatibility.
+    lib_kwargs = kwargs
 
     vlc_plugin = library(
         module['name'] + '_plugin',
@@ -488,8 +485,7 @@ foreach module : vlc_modules
         build_by_default: true,
         install: true,
         install_dir: plugins_path,
-        kwargs: kwargs,
-        shortname: shortname,
+        kwargs: lib_kwargs,
     )
     if is_disabler(vlc_plugin)
         # Report the plugin as disabled, or every target listing it in

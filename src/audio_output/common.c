@@ -270,7 +270,7 @@ unsigned aout_CheckChannelReorder( const uint32_t *chans_in,
             continue;
 
         unsigned index = 0;
-        for( unsigned j = 0; chan != chans_out[j]; j++ )
+        for( unsigned j = 0; chans_out[j] && chan != chans_out[j]; j++ )
             if( mask & chans_out[j] )
                 index++;
 
@@ -298,16 +298,21 @@ void aout_ChannelReorder( void *ptr, size_t bytes, uint8_t channels,
 do { \
     const size_t frames = (bytes / sizeof (type)) / channels; \
     type *buf = ptr; \
+    type stack_tmp[AOUT_CHAN_MAX]; \
+    type *tmp = (channels <= AOUT_CHAN_MAX) ? stack_tmp \
+                                            : malloc(sizeof (type) * channels); \
+    if( unlikely(tmp == NULL) ) \
+        return; \
 \
     for( size_t i = 0; i < frames; i++ ) \
     { \
-        type tmp[AOUT_CHAN_MAX]; \
-\
         for( size_t j = 0; j < channels; j++ ) \
             tmp[chans_table[j]] = buf[j]; \
         memcpy( buf, tmp, sizeof (type) * channels ); \
         buf += channels; \
     } \
+    if( tmp != stack_tmp ) \
+        free(tmp); \
 } while(0)
 
     if( likely(channels <= AOUT_CHAN_MAX) )

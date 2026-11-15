@@ -714,8 +714,14 @@ int aout_OutputNew(audio_output_t *aout, vlc_aout_stream *stream,
      * But that scheme would not really play well with digital pass-through. */
     if (AOUT_FMT_LINEAR(fmt))
     {
+        const bool atmos_714 = (fmt->channel_type == AUDIO_CHANNEL_TYPE_BITMAP
+                             && fmt->i_channels == 12
+                             && (aout_FormatNbChannels(fmt) == 0
+                              || fmt->i_physical_channels == AOUT_CHANS_7_1_4));
+
         if (fmt->channel_type == AUDIO_CHANNEL_TYPE_BITMAP
-         && aout_FormatNbChannels(fmt) == 0)
+         && aout_FormatNbChannels(fmt) == 0
+         && !atmos_714)
         {
             /* The output channel map is unknown, use the WAVE one. */
             assert(fmt->i_channels > 0);
@@ -734,15 +740,26 @@ int aout_OutputNew(audio_output_t *aout, vlc_aout_stream *stream,
         fmt->i_format = (fmt->i_bitspersample > 16) ? VLC_CODEC_FL32
                                                     : VLC_CODEC_S16N;
 
-        aout_SetupMixModeChoices(aout, fmt);
+        if (!atmos_714)
+        {
+            aout_SetupMixModeChoices(aout, fmt);
 
-        /* Prefer the user requested mode if available, otherwise, use the
-         * default one */
-        if (aout_HasMixModeChoice(aout, owner->requested_mix_mode))
-            aout_UpdateMixMode(aout, owner->requested_mix_mode, fmt);
+            /* Prefer the user requested mode if available, otherwise, use the
+             * default one */
+            if (aout_HasMixModeChoice(aout, owner->requested_mix_mode))
+                aout_UpdateMixMode(aout, owner->requested_mix_mode, fmt);
 
-        aout_FormatPrepare (fmt);
-        assert (aout_FormatNbChannels(fmt) > 0);
+            aout_FormatPrepare (fmt);
+            assert (aout_FormatNbChannels(fmt) > 0);
+        }
+        else
+        {
+            fmt->i_format = VLC_CODEC_FL32;
+            aout_FormatPrepare (fmt);
+            fmt->i_channels = 12;
+            fmt->i_bytes_per_frame = fmt->i_channels * sizeof(float);
+            fmt->i_frame_length = 1;
+        }
     }
     else
     {

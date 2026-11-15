@@ -148,7 +148,11 @@ aout_PLUGINS += libwaveout_plugin.la
 endif
 
 libavsamplebuffer_plugin_la_SOURCES = audio_output/apple/avsamplebuffer.m \
-	audio_output/apple/channel_layout.c
+	audio_output/apple/channel_layout.c \
+	audio_output/apple/eac3_dec3.c
+if HAVE_OSX
+libavsamplebuffer_plugin_la_SOURCES += audio_output/apple/atmos_prime.m
+endif
 if HAVE_IOS
 libavsamplebuffer_plugin_la_SOURCES += audio_output/apple/avaudiosession_common.m
 endif

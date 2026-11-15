@@ -101,7 +101,13 @@ if have_osx or have_ios or have_tvos
     avsamplebuffer_sources = files(
         'apple/avsamplebuffer.m',
         'apple/channel_layout.c',
+        'apple/eac3_dec3.c',
     )
+    if have_osx
+        avsamplebuffer_sources += files(
+            'apple/atmos_prime.m',
+        )
+    endif
     if have_ios or have_tvos
         avsamplebuffer_sources += files(
             'apple/avaudiosession_common.m',
