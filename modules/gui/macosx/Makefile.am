@@ -587,6 +587,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/addons/watch/MacLCWatchLibraryViews.m \
 	gui/macosx/addons/watch/MacLCWatchLibrarySections.h \
 	gui/macosx/addons/watch/MacLCWatchLibrarySections.m \
+	gui/macosx/torrent/MacLCTorrentSwarmView.h \
+	gui/macosx/torrent/MacLCTorrentSwarmView.m \
 	gui/macosx/torrent/MacLCTorrentStats.h \
 	gui/macosx/torrent/MacLCTorrentStats.m \
 	gui/macosx/torrent/MacLCTorrentMonitor.h \
