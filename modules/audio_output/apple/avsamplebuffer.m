@@ -1006,7 +1006,11 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
 #if TARGET_OS_OSX
     if (fmt->i_format == VLC_CODEC_EAC3)
     {
-        if (fmt->i_rate == 0 || fmt->i_channels < 2 || fmt->i_channels > 8)
+        /* Some demuxers (e.g. MP4/M4A) do not report the channel count for
+         * E-AC-3; the real count (and JOC flag) come from the first packet's
+         * dec3 parsing below. */
+        if (fmt->i_rate == 0
+         || (fmt->i_channels != 0 && (fmt->i_channels < 2 || fmt->i_channels > 8)))
             return NO;
 
         _encoded = YES;
