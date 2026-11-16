@@ -3,9 +3,9 @@
  *****************************************************************************
  * Renders standard DTS:X presentations (7.1 bed + 4 fixed heights) to a 7.1
  * bed by folding heights at -3 dB. LibDTSX refuses alternate/object
- * presentations, so this decoder is registered below avcodec's DTS decoder and
- * should be selected explicitly (e.g. --codec=dtsx) for known-compatible
- * streams to avoid breaking general DTS playback.
+ * presentations; in that case (and for plain DTS-HD without an X extension)
+ * the decoder requests a reload so VLC falls back to avcodec automatically.
+ * It scores above avcodec but below the S/PDIF passthrough decoder.
  *****************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -26,9 +26,10 @@ static void CloseDecoder(vlc_object_t *);
 vlc_module_begin()
     set_shortname("dtsx")
     set_description(N_("DTS:X decoder (experimental, standard presentation)"))
-    /* Below avcodec by default to avoid breaking unsupported DTS presentations;
-     * select explicitly with --codec dtsx for standard DTS:X streams. */
-    set_capability("audio decoder", 60)
+    /* Above avcodec (70), below S/PDIF passthrough (120). Unsupported streams
+     * trigger a decoder reload with the "dtsx-unsupported" flag set, so the
+     * next Open() declines and avcodec is selected instead. */
+    set_capability("audio decoder", 80)
     set_callbacks(OpenDecoder, CloseDecoder)
     set_subcategory(SUBCAT_INPUT_ACODEC)
 vlc_module_end()
@@ -39,12 +40,16 @@ typedef struct
     date_t end_date;
     bool have_date;
     bool dead;
+    bool forced; /* --codec dtsx: do not reload, report the error instead */
 } decoder_sys_t;
+
+#define DTSX_UNSUPPORTED_VAR "dtsx-unsupported"
 
 static int
 DecodeBlock(decoder_t *dec, block_t *block)
 {
     decoder_sys_t *sys = dec->p_sys;
+    bool refuse = false;
 
     if (block == NULL) /* drain */
         goto drain;
@@ -78,7 +83,7 @@ DecodeBlock(decoder_t *dec, block_t *block)
         {
             msg_Warn(dec, "DTS:X stream not supported by LibDTSX: %s",
                      dtsx_decoder_last_error(sys->handle));
-            sys->dead = true;
+            refuse = true;
         }
         else if (status != DTSX_OK && status != DTSX_ERR_BUFFER_FULL)
         {
@@ -86,8 +91,6 @@ DecodeBlock(decoder_t *dec, block_t *block)
                      dtsx_decoder_last_error(sys->handle));
         }
     }
-
-    block_Release(block);
 
 drain:
     for (;;)
@@ -100,12 +103,12 @@ drain:
         {
             msg_Warn(dec, "DTS:X stream not supported by LibDTSX: %s",
                      dtsx_decoder_last_error(sys->handle));
-            sys->dead = true;
+            refuse = true;
             break;
         }
         if (status != DTSX_OK)
         {
-            if (!sys->dead)
+            if (!refuse)
                 msg_Dbg(dec, "LibDTSX pull: %s", dtsx_decoder_last_error(sys->handle));
             break;
         }
@@ -136,6 +139,23 @@ drain:
         decoder_QueueAudio(dec, pcm);
     }
 
+    /* On refusal the frame must be handed untouched to the replacement
+     * decoder, so do not release it in that case. */
+    if (block != NULL && !refuse)
+        block_Release(block);
+
+    if (refuse)
+    {
+        if (sys->forced)
+            sys->dead = true; /* explicit --codec dtsx: keep the error local */
+        else
+        {
+            var_SetBool(dec, DTSX_UNSUPPORTED_VAR, true);
+            msg_Warn(dec, "reloading with a different DTS decoder");
+            return VLCDEC_RELOAD;
+        }
+    }
+
     return VLCDEC_SUCCESS;
 }
 
@@ -155,6 +175,21 @@ OpenDecoder(vlc_object_t *obj)
     if (dec->fmt_in->i_codec != VLC_CODEC_DTS)
         return VLC_EGENERIC;
 
+    /* A previous instance of this decoder refused the stream (no X extension,
+     * or an unsupported presentation). On reload, decline so the next module
+     * (avcodec) is selected instead of looping back here. */
+    if (var_Create(obj, DTSX_UNSUPPORTED_VAR, VLC_VAR_BOOL) != VLC_SUCCESS)
+        return VLC_EGENERIC;
+    if (var_GetBool(obj, DTSX_UNSUPPORTED_VAR))
+        return VLC_EGENERIC;
+
+    /* DTS:X is carried in a DTS-HD extension (profile 1). A plain DTS core
+     * or DTS Express cannot carry it; do not probe those at all unless the
+     * user explicitly forced this decoder. */
+    if (!dec->obj.force && dec->fmt_in->i_profile >= 0
+     && dec->fmt_in->i_profile != 1)
+        return VLC_EGENERIC;
+
     DTSXDecoder *handle = dtsx_decoder_create();
     if (handle == NULL)
         return VLC_EGENERIC;
@@ -168,6 +203,7 @@ OpenDecoder(vlc_object_t *obj)
     sys->handle = handle;
     sys->have_date = false;
     sys->dead = false;
+    sys->forced = dec->obj.force;
     date_Init(&sys->end_date, 48000, 1);
 
     dec->fmt_out.i_codec = VLC_CODEC_FL32;
