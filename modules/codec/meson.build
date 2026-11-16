@@ -36,6 +36,24 @@ if have_osx
             frameworks['Security'],
         ],
         'link_args' : ['-lresolv', '-lm'],
+        # Discrete 7.1.4 bed requires the patched libvlccore in this tree.
+        'c_args' : ['-DATMOS_714=1'],
+    }
+
+    # DTS:X (LibDTSX, standard presentations). The framework is vendored in
+    # codec/truehd and is copied into the app bundle at packaging time.
+    dtsx_dir = meson.current_source_dir() / 'truehd'
+    dtsx_fw_dep = declare_dependency(
+        compile_args: ['-F' + dtsx_dir],
+        link_args: ['-F' + dtsx_dir, '-framework', 'DTSX',
+                    '-Wl,-rpath,@loader_path/../../Frameworks'],
+    )
+    vlc_modules += {
+        'name' : 'dtsx',
+        'sources' : files('truehd/dtsx.c', 'truehd/dtsx_render.c',
+                          'truehd/atmos_render.c'),
+        'dependencies' : [dtsx_fw_dep, frameworks['CoreFoundation']],
+        'link_args' : ['-lm'],
     }
 endif
 

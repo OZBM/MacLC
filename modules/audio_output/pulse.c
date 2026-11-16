@@ -1059,7 +1059,9 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
         if (fmt->i_physical_channels & AOUT_CHAN_LFE)
             map.map[map.channels++] = PA_CHANNEL_POSITION_LFE;
 
-        static_assert(AOUT_CHAN_MAX == 9, "Missing channels");
+        /* The extra mapped slots (up to AOUT_CHAN_MAX) are emitted as AUX
+         * positions below, so only the named channels need explicit mapping. */
+        static_assert(AOUT_CHAN_MAX >= 9, "Missing channels");
 
         for (unsigned i = 0; map.channels < ss.channels; i++) {
             map.map[map.channels++] = PA_CHANNEL_POSITION_AUX0 + i;

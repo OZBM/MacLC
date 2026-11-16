@@ -150,6 +150,7 @@ static block_t *Extract( filter_t *p_filter, block_t *p_in_buf )
 
     static const int pi_selections[] = {
         0, 1, 2, 3, 4, 5, 6, 7, 8,
+        9, 10, 11, 12, 13, 14, 15,
     };
     static_assert(sizeof(pi_selections)/sizeof(int) == AOUT_CHAN_MAX,
                   "channel max size mismatch!");

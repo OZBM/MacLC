@@ -121,6 +121,7 @@ if have_osx or have_ios or have_tvos
             frameworks['CoreMedia'],
             frameworks['Foundation'],
             frameworks['AVFoundation'],
+            frameworks['CoreAudio'], # device hotplug / default-device UID
         ],
         'objc_args' : ['-fobjc-arc']
     }

@@ -120,7 +120,11 @@ drain:
         if (pcm == NULL)
             continue;
 
+#ifdef ATMOS_714
+        atmos_render_block(&out, (float *) pcm->p_buffer);
+#else
         atmos_render_block_71(&out, (float *) pcm->p_buffer);
+#endif
         pcm->i_pts = date_Get(&sys->end_date);
         date_Increment(&sys->end_date, samples);
         pcm->i_length = date_Get(&sys->end_date) - pcm->i_pts;
@@ -167,11 +171,20 @@ OpenDecoder(vlc_object_t *obj)
     dec->fmt_out.i_codec = VLC_CODEC_FL32;
     dec->fmt_out.audio.i_format = VLC_CODEC_FL32;
     dec->fmt_out.audio.i_rate = 48000;
+#ifdef ATMOS_714
+    dec->fmt_out.audio.i_physical_channels = AOUT_CHANS_7_1_4;
+#else
     dec->fmt_out.audio.i_physical_channels = AOUT_CHANS_7_1;
+#endif
     dec->fmt_out.audio.channel_type = AUDIO_CHANNEL_TYPE_BITMAP;
     dec->fmt_out.audio.i_chan_mode = 0;
     dec->fmt_out.audio.i_bitspersample = 32;
     aout_FormatPrepare(&dec->fmt_out.audio);
+#ifdef ATMOS_714
+    dec->fmt_out.audio.i_channels = ATMOS_BED_CHANNELS;
+    dec->fmt_out.audio.i_bytes_per_frame = ATMOS_BED_CHANNELS * sizeof(float);
+    dec->fmt_out.audio.i_frame_length = 1;
+#endif
 
     dec->pf_decode = DecodeBlock;
     dec->pf_flush = FlushDecoder;

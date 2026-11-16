@@ -71,6 +71,7 @@ vlc_modules += {
         frameworks['MetalPerformanceShaders'],
         frameworks['MetalPerformanceShadersGraph'],
         frameworks['IOKit'],
+        frameworks['IOSurface'], # HDR tone mapper IOSurface accessors
         frameworks['MetalFX'],
     ],
 }

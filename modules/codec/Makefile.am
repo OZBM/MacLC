@@ -36,6 +36,18 @@ codec_PLUGINS += libtruehd_atmos_plugin.la
 EXTRA_DIST += codec/truehd/libtruehd_atmos.a codec/truehd/truehd_atmos.h \
 	codec/truehd/LICENSE.truehd codec/truehd/LICENSE-APACHE.truehd \
 	codec/truehd/NOTICE.truehd
+
+libdtsx_plugin_la_SOURCES = codec/truehd/dtsx.c codec/truehd/dtsx_render.c \
+	codec/truehd/atmos_render.c
+libdtsx_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/codec/truehd \
+	-F$(srcdir)/codec/truehd
+libdtsx_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(codec_RPATH) \
+	-F$(srcdir)/codec/truehd -framework DTSX \
+	-Wl,-rpath,@loader_path/../../Frameworks
+libdtsx_plugin_la_LIBADD = $(LIBM)
+codec_PLUGINS += libdtsx_plugin.la
+EXTRA_DIST += codec/truehd/dtsx.h codec/truehd/dtsx_render.h \
+	codec/truehd/DTSX.framework codec/truehd/LICENSE.dtsx
 endif
 
 libadpcm_plugin_la_SOURCES = codec/adpcm.c
