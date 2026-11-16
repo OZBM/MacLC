@@ -514,7 +514,7 @@ static NSString *PlaylistIdentifierFromURL(NSURL *url)
         };
         reader(out.fileHandleForReading, outData, outDone);
         reader(err.fileHandleForReading, errData, errDone);
-        task.terminationHandler = ^(NSTask *t) {
+        task.terminationHandler = ^(NSTask *__unused t) {
             dispatch_semaphore_signal(exited);
         };
 
@@ -783,7 +783,7 @@ static NSString *PlaylistIdentifierFromURL(NSURL *url)
     token = [[NSNotificationCenter defaultCenter] addObserverForName:VLCPlayerCurrentMediaItemChanged
                                                               object:player
                                                                queue:NSOperationQueue.mainQueue
-                                                          usingBlock:^(NSNotification *note) {
+                                                          usingBlock:^(NSNotification *__unused note) {
         VLCInputItem * const current = weakPlayer.currentMedia;
         if (current == nil) {
             return;

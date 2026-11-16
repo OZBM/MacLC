@@ -115,7 +115,7 @@ static dispatch_once_t sScrollerNotificationOnce;
         [NSNotificationCenter.defaultCenter addObserverForName:NSPreferredScrollerStyleDidChangeNotification
                                                         object:nil
                                                          queue:[NSOperationQueue mainQueue]
-                                                    usingBlock:^(NSNotification * _Nonnull note) {
+                                                    usingBlock:^(NSNotification * _Nonnull __unused note) {
             for (NSScrollView *sv in sConfiguredShelfScrollViews.allObjects) {
                 sv.hasHorizontalScroller = NO;
                 sv.hasVerticalScroller = NO;

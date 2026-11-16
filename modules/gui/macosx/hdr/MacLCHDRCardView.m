@@ -220,7 +220,7 @@ static const CGFloat kCardPadding = 16.0;
     __weak typeof(self) weakSelf = self;
     _lingerTimer = [NSTimer scheduledTimerWithTimeInterval:MacLCDesign.hdrCardLinger
                                                    repeats:NO
-                                                     block:^(NSTimer *timer) {
+                                                     block:^(NSTimer *__unused timer) {
         typeof(self) strongSelf = weakSelf;
         if (strongSelf != nil && !strongSelf->_hovered)
             [strongSelf dismissAnimated:YES];

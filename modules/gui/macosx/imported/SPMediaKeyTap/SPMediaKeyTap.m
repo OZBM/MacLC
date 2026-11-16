@@ -256,6 +256,7 @@ static CGEventRef tapEventCallback(CGEventTapProxy proxy, CGEventType type, CGEv
 
 static CGEventRef tapEventCallback2(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon)
 {
+    (void)proxy;
     SPMediaKeyTap *self = (__bridge SPMediaKeyTap *)refcon;
 
     if(type == kCGEventTapDisabledByTimeout) {

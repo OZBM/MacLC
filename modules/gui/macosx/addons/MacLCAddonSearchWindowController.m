@@ -1690,10 +1690,10 @@ static NSString *SingularNameForType(NSString *type)
     // Sort received groups by addon index in installedAddons
     NSArray<MacLCAddon *> *installed = MacLCAddonStore.sharedStore.installedAddons;
     [_streamGroups sortUsingComparator:^NSComparisonResult(MacLCAddonStreamGroup *g1, MacLCAddonStreamGroup *g2) {
-        NSUInteger idx1 = [installed indexOfObjectPassingTest:^BOOL(MacLCAddon *a, NSUInteger idx, BOOL *stop) {
+        NSUInteger idx1 = [installed indexOfObjectPassingTest:^BOOL(MacLCAddon *a, NSUInteger __unused idx, BOOL *__unused stop) {
             return [a.identifier isEqualToString:g1.addon.identifier];
         }];
-        NSUInteger idx2 = [installed indexOfObjectPassingTest:^BOOL(MacLCAddon *a, NSUInteger idx, BOOL *stop) {
+        NSUInteger idx2 = [installed indexOfObjectPassingTest:^BOOL(MacLCAddon *a, NSUInteger __unused idx, BOOL *__unused stop) {
             return [a.identifier isEqualToString:g2.addon.identifier];
         }];
         if (idx1 < idx2) return NSOrderedAscending;
@@ -1960,7 +1960,7 @@ static NSString *SingularNameForType(NSString *type)
     }
 
     __weak typeof(self) weakSelf = self;
-    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable __unused response, NSError * _Nullable __unused error) {
         dispatch_async(dispatch_get_main_queue(), ^{
             __strong typeof(weakSelf) strongSelf = weakSelf;
             if (!strongSelf) return;

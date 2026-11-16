@@ -114,7 +114,7 @@
     _completionHandler = handler;
 
     [window beginSheet:self.window
-        completionHandler:^(NSModalResponse returnCode) {
+        completionHandler:^(NSModalResponse __unused returnCode) {
             if (self->_keyMonitor) {
                 [NSEvent removeMonitor:self->_keyMonitor];
             }
@@ -214,7 +214,7 @@
         return;
     }
 
-    NSInteger count = MIN(parts.count, 3 - startingField);
+    NSInteger count = MIN((NSInteger)parts.count, 3 - startingField);
 
     NSInteger newPosition = 0;
     NSInteger timeDifference = currentFieldSecs;

@@ -25,7 +25,6 @@
 #import "NSString+Helpers.h"
 #import "theme/MacLCDesign.h"
 
-#import <QuickLook/QuickLook.h>
 #import <QuickLookThumbnailing/QuickLookThumbnailing.h>
 #import <vlc_block.h>
 #import <vlc_picture.h>
@@ -256,37 +255,28 @@ static NSImage *EmptyStateImage(NSString *symbolName, NSString *fallbackName)
     [self quickLookPreviewForLocalURL:pathUrl withSize:size completionHandler:completionHandler];
 }
 
-+ (void)quickLookPreviewForLocalURL:(NSURL *)url 
-                           withSize:(NSSize)size 
++ (void)quickLookPreviewForLocalURL:(NSURL *)url
+                           withSize:(NSSize)size
                   completionHandler:(void (^)(NSImage *))completionHandler
 {
-    if (@available(macOS 10.15, *)) {
-        const QLThumbnailGenerationRequestRepresentationTypes type = 
-            QLThumbnailGenerationRequestRepresentationTypeAll;
-        QLThumbnailGenerator * const generator = QLThumbnailGenerator.sharedGenerator;
-        QLThumbnailGenerationRequest * const request = 
-            [[QLThumbnailGenerationRequest alloc] initWithFileAtURL:url 
-                                                               size:size 
-                                                              scale:1. 
-                                                representationTypes:type];
-        [generator generateBestRepresentationForRequest:request 
-                                      completionHandler:^(QLThumbnailRepresentation * const thumbnail, 
-                                                          NSError * const error) {
-            if (error != nil) {
-                NSLog(@"Error generating thumbnail: %@", error);
-                completionHandler(nil);
-                return;
-            }
-            completionHandler(thumbnail.NSImage);
-        }];
-    } else {
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
-            NSImage * const image = [self quickLookPreviewForLocalURL:url withSize:size];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                completionHandler(image);
-            });
-        });
-    }
+    const QLThumbnailGenerationRequestRepresentationTypes type =
+        QLThumbnailGenerationRequestRepresentationTypeAll;
+    QLThumbnailGenerator * const generator = QLThumbnailGenerator.sharedGenerator;
+    QLThumbnailGenerationRequest * const request =
+        [[QLThumbnailGenerationRequest alloc] initWithFileAtURL:url
+                                                           size:size
+                                                          scale:1.
+                                            representationTypes:type];
+    [generator generateBestRepresentationForRequest:request
+                                  completionHandler:^(QLThumbnailRepresentation * const thumbnail,
+                                                      NSError * const error) {
+        if (error != nil) {
+            NSLog(@"Error generating thumbnail: %@", error);
+            completionHandler(nil);
+            return;
+        }
+        completionHandler(thumbnail.NSImage);
+    }];
 }
 
 + (instancetype)quickLookPreviewForLocalPath:(NSString *)path withSize:(NSSize)size
@@ -297,42 +287,20 @@ static NSImage *EmptyStateImage(NSString *symbolName, NSString *fallbackName)
 
 + (instancetype)quickLookPreviewForLocalURL:(NSURL *)url withSize:(NSSize)size
 {
-    NSDictionary *dict = @{(NSString*)kQLThumbnailOptionIconModeKey : [NSNumber numberWithBool:NO]};
-    CFDictionaryRef dictRef = CFBridgingRetain(dict);
-    if (dictRef == NULL) {
-        NSLog(@"Got null dict for quickLook preview");
+    if (url == nil) {
         return nil;
     }
 
-    CFURLRef urlRef = CFBridgingRetain(url);
-    if (urlRef == NULL) {
-        NSLog(@"Got null url ref for quickLook preview");
-        CFRelease(dictRef);
-        return nil;
-    }
-
-    CGImageRef qlThumbnailRef = QLThumbnailImageCreate(kCFAllocatorDefault,
-                                                       urlRef,
-                                                       size,
-                                                       dictRef);
-
-    CFRelease(dictRef);
-    CFRelease(urlRef);
-
-    if (qlThumbnailRef == NULL) {
-        return nil;
-    }
-
-    NSBitmapImageRep *bitmapImageRep = [[NSBitmapImageRep alloc] initWithCGImage:qlThumbnailRef];
-    if (bitmapImageRep == nil) {
-        CFRelease(qlThumbnailRef);
-        return nil;
-    }
-
-    NSImage *image = [[NSImage alloc] initWithSize:[bitmapImageRep size]];
-    [image addRepresentation:bitmapImageRep];
-    CFRelease(qlThumbnailRef);
-    return image;
+    __block NSImage *resultImage = nil;
+    dispatch_semaphore_t const semaphore = dispatch_semaphore_create(0);
+    [self quickLookPreviewForLocalURL:url
+                             withSize:size
+                    completionHandler:^(NSImage * _Nullable image) {
+        resultImage = image;
+        dispatch_semaphore_signal(semaphore);
+    }];
+    dispatch_semaphore_wait(semaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)));
+    return resultImage;
 }
 
 + (NSImage *)imageFromVLCPicture:(picture_t *)picture

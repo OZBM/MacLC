@@ -689,10 +689,8 @@
                             </connections>
                         </button>
                     </toolbarItem>
-                    <toolbarItem implicitItemIdentifier="068A0B88-812C-44BE-8997-704367CF5226" label="MacLC" paletteLabel="MacLC" image="MacLC" title="MacLC" id="XND-sc-TDa">
+                    <toolbarItem implicitItemIdentifier="068A0B88-812C-44BE-8997-704367CF5226" label="MacLC" paletteLabel="MacLC" image="MacLC" title="MacLC" sizingBehavior="auto" id="XND-sc-TDa">
                         <nil key="toolTip"/>
-                        <size key="minSize" width="28" height="28"/>
-                        <size key="maxSize" width="28" height="28"/>
                         <imageView key="view" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="KR4-pI-siG">
                             <rect key="frame" x="0.0" y="0.0" width="28" height="28"/>
                             <constraints>
@@ -790,7 +788,6 @@
                 <outlet property="muteVolumeButton" destination="IAy-58-UPp" id="dDN-pE-Vmj"/>
                 <outlet property="openMainVideoViewButtonOverlay" destination="CzG-0S-Kke" id="6BY-BQ-72f"/>
                 <outlet property="playButton" destination="WgO-zh-k4s" id="0yC-Yh-H4V"/>
-                <outlet property="playbackStateTrackingView" destination="Ktr-qT-1fr" id="QgM-di-DFw"/>
                 <outlet property="playingItemDisplayField" destination="d0e-29-yNq" id="QUe-1S-TQO"/>
                 <outlet property="thumbnailTrackingView" destination="SM6-nx-NKD" id="el1-jM-Jo2"/>
                 <outlet property="timeField" destination="zOB-QJ-TUy" id="mJL-1V-2lQ"/>

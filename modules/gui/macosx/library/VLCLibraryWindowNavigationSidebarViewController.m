@@ -184,15 +184,15 @@ static NSString * const VLCLibrarySegmentCellIdentifier = @"VLCLibrarySegmentCel
             continue;
         }
         NSURL * const locationUrl = [NSURL URLWithString:locationMrl];
-        const uintptr_t descriptor = open(locationUrl.path.UTF8String, O_EVTONLY);
-        if (descriptor == (uintptr_t)-1) {
+        const int descriptor = open(locationUrl.path.UTF8String, O_EVTONLY);
+        if (descriptor == -1) {
             continue;
         }
         struct stat fileStat;
         const int statResult = fstat(descriptor, &fileStat);
 
         const dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-        const dispatch_source_t fileDispatchSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, descriptor, DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME, globalQueue);
+        const dispatch_source_t fileDispatchSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, (uintptr_t)descriptor, DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME, globalQueue);
         dispatch_source_set_event_handler(fileDispatchSource, ^{
             const unsigned long eventFlags = dispatch_source_get_data(fileDispatchSource);
             if (eventFlags & DISPATCH_VNODE_RENAME && statResult != -1) {

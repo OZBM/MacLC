@@ -115,7 +115,7 @@
     _enabledRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Upscale Videos Smaller Than the Window")
                                              explanation:_NS("Sharpens a video that is smaller than its window, so a DVD or a 720p stream looks closer to the screen it is shown on.")
                                                    state:NO
-                                                  action:^(BOOL checked) {
+                                                  action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
         [weakSelf updateEnabledRows];
     }];
@@ -133,7 +133,7 @@
                                                items:titles
                                                 tags:tags
                                        selectedIndex:0
-                                              action:^(NSInteger selectedIndex, NSInteger tag) {
+                                              action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
         [weakSelf updateEnabledRows];
     }];
@@ -149,7 +149,7 @@
                                                 maxValue:100
                                             initialValue:50
                                              valueFormat:@"%.0f"
-                                                  action:^(double value) {
+                                                  action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _sharpnessRow.defaultHint = _NS("Default: 50");
@@ -161,7 +161,7 @@
                                                         _NS("Up to 1440p"), _NS("Up to 4K")]
                                                 tags:@[@0, @1080, @1440, @2160]
                                        selectedIndex:0
-                                              action:^(NSInteger selectedIndex, NSInteger tag) {
+                                              action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _targetRow.defaultHint = _NS("Default: Window Size");

@@ -95,7 +95,7 @@ static const double kJumpThresholdSeconds = 2.5;
             VLCPlayerCoreOSDMessage: NSStringFromSelector(@selector(coreMessage:)),
         };
         NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
-        [observed enumerateKeysAndObjectsUsingBlock:^(NSNotificationName name, NSString *selector, BOOL *stop) {
+        [observed enumerateKeysAndObjectsUsingBlock:^(NSNotificationName name, NSString *selector, BOOL *__unused stop) {
             [center addObserver:self selector:NSSelectorFromString(selector) name:name object:nil];
         }];
     }

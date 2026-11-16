@@ -349,7 +349,7 @@ NSString * const MacLCSDRToHDRStateDidChangeNotification = @"MacLCSDRToHDRStateD
         __weak typeof(self) weakSelf = self;
         _pollTimer = [NSTimer scheduledTimerWithTimeInterval:1.0
                                                      repeats:YES
-                                                       block:^(NSTimer *timer) {
+                                                       block:^(NSTimer *__unused timer) {
             [weakSelf refresh];
         }];
     }

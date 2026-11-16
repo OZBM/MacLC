@@ -743,7 +743,7 @@ static void libraryCallback(void *p_data, const vlc_ml_event_t *p_event)
 {
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
         vlc_ml_query_params_t queryParameters = vlc_ml_query_params_create();
-        queryParameters.i_nbResults = countLimit;
+        queryParameters.i_nbResults = (uint32_t)MIN(countLimit, (size_t)UINT32_MAX);
         queryParameters.psz_pattern = self->_filterString.length > 0 ? self->_filterString.UTF8String : NULL;
         // we don't set the sorting criteria here as they are not applicable to history
         vlc_ml_media_list_t *p_media_list = NULL;
@@ -766,7 +766,7 @@ static void libraryCallback(void *p_data, const vlc_ml_event_t *p_event)
 - (size_t)countOfRecentVideoMediaWithCountLimit:(size_t)countLimit
 {
     vlc_ml_query_params_t queryParameters = vlc_ml_query_params_create();
-    queryParameters.i_nbResults = countLimit;
+    queryParameters.i_nbResults = (uint32_t)MIN(countLimit, (size_t)UINT32_MAX);
     queryParameters.psz_pattern = self->_filterString.length > 0 ? self->_filterString.UTF8String : NULL;
     return vlc_ml_count_video_history(self->_p_mediaLibrary, &queryParameters);
 }

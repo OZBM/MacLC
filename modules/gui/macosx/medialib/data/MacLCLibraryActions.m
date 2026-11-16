@@ -422,7 +422,7 @@
 + (void)removeItemsAtIndexes:(NSIndexSet *)indexes fromPlaylist:(VLCMediaLibraryPlaylist *)playlist
 {
     NSMutableArray<NSNumber *> * const positions = [NSMutableArray arrayWithCapacity:indexes.count];
-    [indexes enumerateIndexesUsingBlock:^(NSUInteger index, BOOL * const stop) {
+    [indexes enumerateIndexesUsingBlock:^(NSUInteger index, BOOL * const __unused stop) {
         [positions addObject:@(index)];
     }];
     dispatch_async([self actionQueue], ^{

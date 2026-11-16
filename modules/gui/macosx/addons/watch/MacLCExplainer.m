@@ -1037,7 +1037,7 @@ static const char kMacLCExplainerAttachmentKey = 0;
     __weak typeof(self) weakSelf = self;
     _hoverTimer = [NSTimer scheduledTimerWithTimeInterval:0.6
                                                   repeats:NO
-                                                    block:^(NSTimer * _Nonnull timer) {
+                                                    block:^(NSTimer * _Nonnull __unused timer) {
         typeof(weakSelf) strongSelf = weakSelf;
         if (strongSelf && view.window != nil) {
             NSPoint mouseLoc = [NSEvent mouseLocation];
@@ -1061,7 +1061,7 @@ static const char kMacLCExplainerAttachmentKey = 0;
     __weak typeof(self) weakSelf = self;
     _dismissTimer = [NSTimer scheduledTimerWithTimeInterval:0.25
                                                     repeats:NO
-                                                      block:^(NSTimer * _Nonnull timer) {
+                                                      block:^(NSTimer * _Nonnull __unused timer) {
         typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf || !strongSelf.popover.isShown) return;
 

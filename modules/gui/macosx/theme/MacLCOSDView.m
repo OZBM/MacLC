@@ -193,7 +193,7 @@ static const CGFloat kOSDLevelBarHeight = 4.0;
     __weak typeof(self) weakAnnouncer = self;
     _announceTimer = [NSTimer scheduledTimerWithTimeInterval:0.6
                                                      repeats:NO
-                                                       block:^(NSTimer *timer) {
+                                                       block:^(NSTimer *__unused timer) {
         typeof(self) strongSelf = weakAnnouncer;
         if (strongSelf == nil)
             return;
@@ -212,7 +212,7 @@ static const CGFloat kOSDLevelBarHeight = 4.0;
     __weak typeof(self) weakSelf = self;
     _lingerTimer = [NSTimer scheduledTimerWithTimeInterval:MacLCDesign.hudLinger
                                                    repeats:NO
-                                                     block:^(NSTimer * _Nonnull timer) {
+                                                     block:^(NSTimer * _Nonnull __unused timer) {
         [weakSelf dismiss];
     }];
 }

@@ -41,6 +41,10 @@ void fsEventCallback(ConstFSEventStreamRef streamRef,
                      const FSEventStreamEventFlags eventFlags[],
                      const FSEventStreamEventId eventIds[])
 {
+    (void)streamRef;
+    (void)eventPaths;
+    (void)eventFlags;
+
     if (numEvents == 0) {
         return;
     }

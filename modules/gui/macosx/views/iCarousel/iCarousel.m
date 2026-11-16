@@ -129,7 +129,7 @@
 @property NSTimer *postInteractTimer;
 @property CGFloat priorAutoscroll;
 
-NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *self);
+NSInteger compareViewDepth(id obj1, id obj2, void *context);
 
 @end
 
@@ -383,7 +383,7 @@ NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *sel
 
 - (UIView *)itemViewAtPoint:(CGPoint)point
 {
-    for (UIView *view in [[[_itemViews allValues] sortedArrayUsingFunction:(NSInteger (*)(id, id, void *))compareViewDepth context:(__bridge void *)self] reverseObjectEnumerator])
+    for (UIView *view in [[[_itemViews allValues] sortedArrayUsingFunction:compareViewDepth context:(__bridge void *)self] reverseObjectEnumerator])
     {
         if ([view.superview.layer hitTest:point])
         {
@@ -699,8 +699,12 @@ NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *sel
     }
 }
 
-NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *self)
+NSInteger compareViewDepth(id obj1, id obj2, void *context)
 {
+    UIView * const view1 = obj1;
+    UIView * const view2 = obj2;
+    iCarousel * const self = (__bridge iCarousel *)context;
+
     //compare depths
     CATransform3D t1 = view1.superview.layer.transform;
     CATransform3D t2 = view2.superview.layer.transform;
@@ -734,7 +738,7 @@ NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *sel
 
 - (void)depthSortViews
 {
-    for (UIView *view in [[_itemViews allValues] sortedArrayUsingFunction:(NSInteger (*)(id, id, void *))compareViewDepth context:(__bridge void *)self])
+    for (UIView *view in [[_itemViews allValues] sortedArrayUsingFunction:compareViewDepth context:(__bridge void *)self])
     {
         [_contentView bringSubviewToFront:(UIView *__nonnull)view.superview];
     }
@@ -2231,7 +2235,7 @@ NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *sel
                 self.postInteractTimer = nil;
             }
 
-            self.postInteractTimer = [NSTimer scheduledTimerWithTimeInterval:self.reenablePostInteractAutoscrollTimeout repeats:NO block:^(NSTimer * const timer){
+            self.postInteractTimer = [NSTimer scheduledTimerWithTimeInterval:self.reenablePostInteractAutoscrollTimeout repeats:NO block:^(NSTimer * const __unused timer){
                 self.lastTime = CACurrentMediaTime();
                 self.autoscroll = self.priorAutoscroll;
             }];

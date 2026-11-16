@@ -395,7 +395,7 @@ NS_ASSUME_NONNULL_BEGIN
     [self.window close];
 }
 
-- (void)playAction:(id)sender {
+- (void)playAction:(nullable id)sender {
     if (_resolvedItem) {
         [self enqueueItemAndClose:_resolvedItem startPlayback:YES];
     } else if (_lastErrorCode == MacLCWebVideoErrorExtractorMissing) {
@@ -706,7 +706,7 @@ NS_ASSUME_NONNULL_BEGIN
             /* The image goes to this preview's own view: a slow download
              * for an earlier address must not land on a later preview. */
             __weak NSImageView * const thumbnailView = _thumbnailView;
-            _thumbnailTask = [_session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+            _thumbnailTask = [_session dataTaskWithURL:url completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable __unused response, NSError * _Nullable __unused error) {
                 if (data) {
                     NSImage *image = [[NSImage alloc] initWithData:data];
                     if (image) {

@@ -1907,7 +1907,7 @@ o_moduleenabled = [NSNumber numberWithBool:NO];\
  */
 -(void)resetValues
 {
-#warning Reset prefs of the module selector is broken atm.
+// FIXME: Reset prefs of the module selector is broken atm.
     msg_Err(getIntf(), "don't forget about modulelistconfig");
     [super resetValues];
 }

@@ -95,7 +95,7 @@
         }
 
         [NSAnimationContext runAnimationRespectingPreferencesWithDuration:0.3
-                                                                  changes:^(NSAnimationContext * const context) {
+                                                                  changes:^(NSAnimationContext * const __unused context) {
             for (NSView * const view in weakSelf.viewsToHide) {
                 view.animator.alphaValue = hideVTH ? 0.0 : 1.0;
             }

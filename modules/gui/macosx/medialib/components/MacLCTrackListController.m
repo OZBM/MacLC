@@ -268,7 +268,7 @@ static NSUserInterfaceItemIdentifier const MacLCColumnFormat = @"format";
 {
     NSArray<VLCMediaLibraryMediaItem *> * const previouslySelected =
         [_visibleItems objectsAtIndexes:[_tableView.selectedRowIndexes indexesPassingTest:
-            ^BOOL(NSUInteger index, BOOL * const stop) { return index < self->_visibleItems.count; }]];
+            ^BOOL(NSUInteger index, BOOL * const __unused stop) { return index < self->_visibleItems.count; }]];
     _items = [items copy] ?: @[];
     [self rebuildVisibleItems];
     [_tableView reloadData];
@@ -276,7 +276,7 @@ static NSUserInterfaceItemIdentifier const MacLCColumnFormat = @"format";
     NSMutableIndexSet * const selection = [NSMutableIndexSet indexSet];
     for (VLCMediaLibraryMediaItem * const item in previouslySelected) {
         const NSUInteger index = [_visibleItems indexOfObjectPassingTest:
-            ^BOOL(VLCMediaLibraryMediaItem * const candidate, NSUInteger idx, BOOL * const stop) {
+            ^BOOL(VLCMediaLibraryMediaItem * const candidate, NSUInteger __unused idx, BOOL * const __unused stop) {
                 return candidate.libraryID == item.libraryID;
             }];
         if (index != NSNotFound) {
@@ -616,7 +616,7 @@ static NSUserInterfaceItemIdentifier const MacLCColumnFormat = @"format";
 - (NSMenu *)menuForRow:(NSInteger)row
 {
     NSIndexSet * const rows = [_tableView.selectedRowIndexes indexesPassingTest:
-        ^BOOL(NSUInteger index, BOOL * const stop) { return index < self->_visibleItems.count; }];
+        ^BOOL(NSUInteger index, BOOL * const __unused stop) { return index < self->_visibleItems.count; }];
     NSArray * const items = [_visibleItems objectsAtIndexes:rows];
     return [MacLCLibraryActions contextMenuForItems:items window:_tableView.window];
 }

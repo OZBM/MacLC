@@ -149,7 +149,7 @@
     _statusIconRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Show Status Bar Menu Icon")
                                                 explanation:_NS("Place a playback control menu icon in the macOS status menu bar.")
                                                       state:YES
-                                                     action:^(BOOL checked) {
+                                                     action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _statusIconRow.defaultHint = _NS("Default: On");
@@ -158,7 +158,7 @@
     _mediaKeysRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Use Hardware Media Keys")
                                                explanation:_NS("Respond to keyboard Play/Pause, Fast Forward, and Rewind media keys.")
                                                      state:YES
-                                                    action:^(BOOL checked) {
+                                                    action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _mediaKeysRow.defaultHint = _NS("Default: On");
@@ -178,7 +178,7 @@
     _appleRemoteSysVolRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Apple Remote Controls System Volume")
                                                        explanation:_NS("Adjust macOS master sound volume instead of MacLC internal volume.")
                                                              state:NO
-                                                            action:^(BOOL checked) {
+                                                            action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _appleRemoteSysVolRow.defaultHint = _NS("Default: Off");
@@ -187,7 +187,7 @@
     _appleRemotePrevNextRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Apple Remote Next/Prev Track Mode")
                                                          explanation:_NS("Jump directly to adjacent playlist tracks instead of seeking.")
                                                                state:NO
-                                                              action:^(BOOL checked) {
+                                                              action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _appleRemotePrevNextRow.defaultHint = _NS("Default: Off");
@@ -204,7 +204,7 @@
                                                       items:@[_NS("Do Nothing"), _NS("Pause Music / Spotify"), _NS("Pause and Resume Music / Spotify")]
                                                        tags:@[@0, @1, @2]
                                               selectedIndex:1
-                                                     action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                     action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _controlItunesRow.defaultHint = _NS("Default: Pause Music / Spotify");
@@ -219,7 +219,7 @@
     _trackNumberRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Show Track Numbers in Play Queue")
                                                  explanation:_NS("Display index numbers next to media items in the playlist sidebar.")
                                                        state:YES
-                                                      action:^(BOOL checked) {
+                                                      action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _trackNumberRow.defaultHint = _NS("Default: On");
@@ -228,7 +228,7 @@
     _endOfPlaybackRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Show End-of-Playback Screen")
                                                    explanation:_NS("Display suggestions and replay shortcuts when a video reaches its end.")
                                                          state:YES
-                                                        action:^(BOOL checked) {
+                                                        action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _endOfPlaybackRow.defaultHint = _NS("Default: On");
@@ -237,7 +237,7 @@
     _notificationsRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Post Notifications on Track Change")
                                                    explanation:_NS("Show macOS banner alerts when a new song or video begins playing.")
                                                          state:NO
-                                                        action:^(BOOL checked) {
+                                                        action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _notificationsRow.defaultHint = _NS("Default: Off");
@@ -274,7 +274,7 @@
                                                               text:@""
                                                        placeholder:@"Password"
                                                           isSecure:YES
-                                                            action:^(NSString *text) {
+                                                            action:^(NSString *__unused text) {
             weakSelf.hasUnsavedChanges = YES;
         }];
         [_advancedCard.contentStackView addArrangedSubview:_httpPasswordRow];

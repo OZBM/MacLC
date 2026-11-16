@@ -130,7 +130,7 @@
         // The launch is asynchronous: quit only once the new instance is requested.
         [NSWorkspace.sharedWorkspace openApplicationAtURL:_appLocationURL.absoluteURL
                                             configuration:configuration
-                                        completionHandler:^(NSRunningApplication * const app, NSError * const error) {
+                                        completionHandler:^(NSRunningApplication * const __unused app, NSError * const __unused error) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self terminate:self];
             });

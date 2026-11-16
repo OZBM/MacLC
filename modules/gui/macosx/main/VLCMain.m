@@ -792,7 +792,7 @@ static VLCMain *sharedInstance = nil;
                     continue;
                 dispatch_group_enter(installs);
                 [MacLCAddonStore.sharedStore installFromAddress:address
-                                                     completion:^(MacLCAddon *addon, BOOL replaced, NSError *error) {
+                                                     completion:^(MacLCAddon *addon, BOOL __unused replaced, NSError *error) {
                     if (addon != nil)
                         msg_Dbg(getIntf(), "addons: debug hook installed \"%s\"", addon.name.UTF8String);
                     else

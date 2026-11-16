@@ -109,7 +109,6 @@ Gw
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
-                    <constraint firstItem="16" firstAttribute="top" secondItem="15" secondAttribute="bottom" constant="-21" id="RxG-QG-83V"/>
                     <constraint firstAttribute="bottom" secondItem="16" secondAttribute="bottom" constant="16" id="Zsd-2P-O34" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">

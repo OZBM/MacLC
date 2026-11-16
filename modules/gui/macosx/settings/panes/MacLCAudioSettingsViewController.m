@@ -152,7 +152,7 @@
     _audioEnableRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Enable Audio")
                                                  explanation:_NS("Output sound during media playback.")
                                                        state:YES
-                                                      action:^(BOOL checked) {
+                                                      action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _audioEnableRow.defaultHint = _NS("Default: On");
@@ -174,7 +174,7 @@
                                                     maxValue:200
                                                 initialValue:100
                                                  valueFormat:@"%.0f%%"
-                                                      action:^(double value) {
+                                                      action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _defaultVolumeRow.defaultHint = _NS("Default: 100%");
@@ -187,7 +187,7 @@
                                              initialValue:125
                                                 stepValue:5
                                               valueFormat:@"%.0f%%"
-                                                   action:^(double value) {
+                                                   action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _maxVolumeRow.defaultHint = _NS("Default: 125%");
@@ -198,7 +198,7 @@
                                                        text:@""
                                                 placeholder:@"en, ja"
                                                    isSecure:NO
-                                                     action:^(NSString *text) {
+                                                     action:^(NSString *__unused text) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _audioLangRow.defaultHint = _NS("Default: Empty");
@@ -215,7 +215,7 @@
                                                    items:@[_NS("Disabled"), _NS("Track"), _NS("Album")]
                                                     tags:@[@0, @1, @2]
                                            selectedIndex:0
-                                                  action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                  action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _replayGainRow.defaultHint = _NS("Default: Disabled");
@@ -237,7 +237,7 @@
                                                    maxValue:10.0
                                                initialValue:2.0
                                                 valueFormat:@"%.1fx"
-                                                     action:^(double value) {
+                                                     action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _normMaxLevelRow.defaultHint = _NS("Default: 2.0x");
@@ -273,7 +273,7 @@
                                                 initialValue:10
                                                    stepValue:1
                                                  valueFormat:@"%.0f m"
-                                                      action:^(double value) {
+                                                      action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _headphoneDimRow.defaultHint = _NS("Default: 10 m");
@@ -284,7 +284,7 @@
                                                items:@[_NS("Disabled"), @"Goom", @"Visualizer"]
                                                 tags:@[@0, @1, @2]
                                        selectedIndex:0
-                                              action:^(NSInteger selectedIndex, NSInteger tag) {
+                                              action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _visualRow.defaultHint = _NS("Default: Disabled");
@@ -313,7 +313,7 @@
                                                             text:@""
                                                      placeholder:@"Username"
                                                         isSecure:NO
-                                                          action:^(NSString *text) {
+                                                          action:^(NSString *__unused text) {
             weakSelf.hasUnsavedChanges = YES;
         }];
         [_lastfmCard.contentStackView addArrangedSubview:_lastfmUserRow];
@@ -323,7 +323,7 @@
                                                                 text:@""
                                                          placeholder:@"Password"
                                                             isSecure:YES
-                                                              action:^(NSString *text) {
+                                                              action:^(NSString *__unused text) {
             weakSelf.hasUnsavedChanges = YES;
         }];
         [_lastfmCard.contentStackView addArrangedSubview:_lastfmPasswordRow];

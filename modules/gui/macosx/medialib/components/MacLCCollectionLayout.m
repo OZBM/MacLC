@@ -156,7 +156,7 @@ static CGFloat MacLCItemHeight(MacLCArtworkShape shape, CGFloat width, BOOL hasS
                                                  hasSubtitle:(BOOL)hasSubtitle
 {
     return [[NSCollectionViewCompositionalLayout alloc] initWithSectionProvider:
-        ^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex,
+        ^NSCollectionLayoutSection * _Nullable(NSInteger __unused sectionIndex,
                                                id<NSCollectionLayoutEnvironment> environment) {
         return [MacLCCollectionLayout gridSectionWithShape:shape
                                                environment:environment

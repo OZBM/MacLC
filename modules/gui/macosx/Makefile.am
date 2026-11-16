@@ -18,18 +18,33 @@ ASSET_CATALOG_DEPS = \
 	gui/macosx/Resources/Assets.xcassets/dropzone.imageset/dropzone.png \
 	gui/macosx/Resources/Assets.xcassets/dropzone.imageset/dropzone@2x.png
 
-gui/macosx/Resources/Assets.car: gui/macosx/Resources/Assets.xcassets $(ASSET_CATALOG_DEPS)
+ICON_COMPOSER_DEPS = \
+	gui/macosx/Resources/App-Icons/MacLC.icon/icon.json \
+	gui/macosx/Resources/App-Icons/MacLC.icon/Assets/hdr-bloom.svg \
+	gui/macosx/Resources/App-Icons/MacLC.icon/Assets/lens-ring.svg \
+	gui/macosx/Resources/App-Icons/MacLC.icon/Assets/play-core.svg \
+	gui/macosx/Resources/App-Icons/MacLC.icon/Assets/play-prism.svg
+
+gui/macosx/Resources/Assets.car: gui/macosx/Resources/Assets.xcassets gui/macosx/Resources/App-Icons/MacLC.icon $(ASSET_CATALOG_DEPS) $(ICON_COMPOSER_DEPS)
 	$(AM_V_at)$(MKDIR_P) "gui/macosx/Resources"
 	$(actool_verbose)$(ACTOOL) --errors --warnings --notices \
 	  --platform macosx --target-device mac --skip-app-store-deployment \
-	  --minimum-deployment-target 10.13 --output-format human-readable-text \
-	  --compile $(@D) $<
+	  --minimum-deployment-target 26.0 --app-icon MacLC \
+	  --output-partial-info-plist "$(@D)/AssetCatalog-Info.plist" \
+	  --output-format human-readable-text \
+	  --compile $(@D) \
+	  "$(srcdir)/gui/macosx/Resources/Assets.xcassets" \
+	  "$(srcdir)/gui/macosx/Resources/App-Icons/MacLC.icon"
 
 if ENABLE_MACOSX_UI
 BUILT_SOURCES += gui/macosx/Resources/Assets.car
+CLEANFILES += \
+	gui/macosx/Resources/Assets.car \
+	gui/macosx/Resources/MacLC.icns \
+	gui/macosx/Resources/AssetCatalog-Info.plist
 endif
 
-EXTRA_DIST += $(ASSET_CATALOG_DEPS)
+EXTRA_DIST += $(ASSET_CATALOG_DEPS) $(ICON_COMPOSER_DEPS)
 
 SUFFIXES += .xib .nib
 

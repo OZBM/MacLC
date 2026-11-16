@@ -166,7 +166,7 @@ static struct {
                                                  items:langNames
                                                   tags:nil
                                          selectedIndex:0
-                                                action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _languageRow.defaultHint = _NS("Default: System Default");
@@ -177,7 +177,7 @@ static struct {
                                                    items:@[_NS("System"), _NS("Light"), _NS("Dark")]
                                                     tags:@[@0, @1, @2]
                                            selectedIndex:0
-                                                  action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                  action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _appearanceRow.defaultHint = _NS("Default: System");
@@ -186,7 +186,7 @@ static struct {
     _iconChangeRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Dynamic Application Icon")
                                                 explanation:_NS("Allow the Dock icon to change for festive occasions or playback states.")
                                                       state:YES
-                                                     action:^(BOOL checked) {
+                                                     action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _iconChangeRow.defaultHint = _NS("Default: On");
@@ -203,7 +203,7 @@ static struct {
                                                          items:@[_NS("Ask"), _NS("Always"), _NS("Never")]
                                                           tags:@[@0, @1, @2]
                                                  selectedIndex:0
-                                                        action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                        action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _continuePlaybackRow.defaultHint = _NS("Default: Ask");
@@ -222,7 +222,7 @@ static struct {
     _autoloadExtensionsRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Load Extensions on Launch")
                                                         explanation:_NS("Automatically enable installed MacLC extensions when the app starts.")
                                                               state:YES
-                                                             action:^(BOOL checked) {
+                                                             action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _autoloadExtensionsRow.defaultHint = _NS("Default: On");
@@ -237,7 +237,7 @@ static struct {
     _metadataNetworkRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Fetch Artwork and Metadata Online")
                                                      explanation:_NS("Allow MacLC to query the internet for cover artwork and track information.")
                                                            state:NO
-                                                          action:^(BOOL checked) {
+                                                          action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _metadataNetworkRow.defaultHint = _NS("Default: Off");

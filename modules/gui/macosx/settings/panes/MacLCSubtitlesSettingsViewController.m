@@ -198,7 +198,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
     _osdRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Enable On-Screen Display (OSD)")
                                          explanation:_NS("Show subtitles, volume adjustments, and playback state indicators over video.")
                                                state:YES
-                                              action:^(BOOL checked) {
+                                              action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _osdRow.defaultHint = _NS("Default: On");
@@ -209,7 +209,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                      text:@""
                                               placeholder:@"en, fr"
                                                  isSecure:NO
-                                                   action:^(NSString *text) {
+                                                   action:^(NSString *__unused text) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _subLangRow.defaultHint = _NS("Default: Empty");
@@ -221,7 +221,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                  items:encodings
                                                   tags:nil
                                          selectedIndex:0
-                                                action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _encodingRow.defaultHint = _NS("Default: UTF-8");
@@ -230,7 +230,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
     _autodetectRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Auto-Detect Subtitle Files")
                                                 explanation:_NS("Automatically load external subtitle files (.srt, .vtt) located next to the video.")
                                                       state:YES
-                                                     action:^(BOOL checked) {
+                                                     action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _autodetectRow.defaultHint = _NS("Default: On");
@@ -247,7 +247,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                   text:@"Helvetica Neue"
                                            placeholder:@"Helvetica Neue"
                                               isSecure:NO
-                                                action:^(NSString *text) {
+                                                action:^(NSString *__unused text) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _fontRow.defaultHint = _NS("Default: Arial / Helvetica Neue");
@@ -259,7 +259,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                maxValue:200
                                            initialValue:100
                                             valueFormat:@"%.0f%%"
-                                                 action:^(double value) {
+                                                 action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _fontSizeRow.defaultHint = _NS("Default: 100%");
@@ -275,7 +275,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                    tags:@[@0x00FFFFFF, @0x00FFFF00, @0x0000FFFF, @0x0000FF00,
                                                           @0x00FF00FF, @0x00FF0000, @0x000000FF, @0x00000000]
                                           selectedIndex:0
-                                                 action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                 action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _fontColorRow.defaultHint = _NS("Default: White");
@@ -287,7 +287,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                   maxValue:100
                                               initialValue:100
                                                valueFormat:@"%.0f%%"
-                                                    action:^(double value) {
+                                                    action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _fontOpacityRow.defaultHint = _NS("Default: 100%");
@@ -296,7 +296,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
     _fontBoldRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Bold Text")
                                               explanation:_NS("Draw subtitle characters with heavier stroke weight for improved contrast.")
                                                     state:NO
-                                                   action:^(BOOL checked) {
+                                                   action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _fontBoldRow.defaultHint = _NS("Default: Off");
@@ -320,7 +320,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                          items:@[_NS("None"), _NS("Thin"), _NS("Normal"), _NS("Thick")]
                                                           tags:@[@0, @1, @2, @3]
                                                  selectedIndex:2
-                                                        action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                        action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _outlineThicknessRow.defaultHint = _NS("Default: Normal");
@@ -331,7 +331,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                      items:@[_NS("Black"), _NS("Dark Gray"), _NS("Light Gray"), _NS("White")]
                                                       tags:@[@0x00000000, @0x00808080, @0x00C0C0C0, @0x00FFFFFF]
                                              selectedIndex:0
-                                                    action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                    action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _outlineColorRow.defaultHint = _NS("Default: Black");
@@ -343,7 +343,7 @@ static NSInteger indexForStoredEncoding(NSString *stored)
                                                     maxValue:100
                                                 initialValue:50
                                                  valueFormat:@"%.0f%%"
-                                                      action:^(double value) {
+                                                      action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _shadowOpacityRow.defaultHint = _NS("Default: 50%");

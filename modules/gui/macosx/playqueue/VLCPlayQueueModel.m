@@ -61,7 +61,7 @@
 
 - (VLCPlayQueueItem *)playQueueItemAtIndex:(NSInteger)index
 {
-    if (index < 0 || index > _playQueueArray.count) {
+    if (index < 0 || (NSUInteger)index >= _playQueueArray.count) {
         return nil;
     }
     

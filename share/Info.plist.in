@@ -12,6 +12,8 @@
 	<string>MacLC</string>
 	<key>CFBundleIconFile</key>
 	<string>MacLC.icns</string>
+	<key>CFBundleIconName</key>
+	<string>MacLC</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.maclc.MacLC</string>
 	<key>CFBundleInfoDictionaryVersion</key>

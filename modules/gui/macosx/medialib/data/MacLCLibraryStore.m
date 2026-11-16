@@ -423,7 +423,7 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
             return;
         }
         NSMutableDictionary<NSNumber *, NSArray *> * const results = [NSMutableDictionary dictionary];
-        [collections enumerateIndexesUsingBlock:^(NSUInteger collection, BOOL * const stop) {
+        [collections enumerateIndexesUsingBlock:^(NSUInteger collection, BOOL * const __unused stop) {
             NSArray * const items = [self fetchCollection:(MacLCLibraryCollection)collection];
             if (items != nil) {
                 results[@(collection)] = items;
@@ -434,7 +434,7 @@ static void MacLCLibraryStoreEventCallback(void *data, const vlc_ml_event_t *eve
             self->_refetchRunning = NO;
             const BOOL wasLoaded = self.isLoaded;
             NSMutableSet<NSNumber *> * const changed = [NSMutableSet set];
-            [results enumerateKeysAndObjectsUsingBlock:^(NSNumber * const key, NSArray * const items, BOOL * const stop) {
+            [results enumerateKeysAndObjectsUsingBlock:^(NSNumber * const key, NSArray * const items, BOOL * const __unused stop) {
                 const NSUInteger collection = key.unsignedIntegerValue;
                 if (collection == MacLCLibraryCollectionArtists) {
                     self->_artistNames = [MacLCLibraryStore namesByIDOfItems:items];

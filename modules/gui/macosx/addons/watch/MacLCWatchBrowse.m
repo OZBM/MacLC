@@ -79,7 +79,7 @@ static NSString *CatalogKey(MacLCAddonTitleCatalog *cat)
     return [NSString stringWithFormat:@"%@_%@_%@", cat.addon.identifier ?: @"", cat.type ?: @"", cat.identifier ?: @""];
 }
 
-static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *serviceName)
+static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unused serviceName)
 {
     NSString * const unresolvedHost = MacLCAddonsUnresolvedHost(error);
     if (unresolvedHost) {
@@ -2330,7 +2330,7 @@ forRepresentedObjectAtIndexPath:(NSIndexPath *)indexPath
 
     _scrollView.documentView = _collectionView;
 
-    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
+    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger __unused sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
         return [MacLCWatchLayout posterGridSectionWithEnvironment:environment hasHeader:YES];
     };
 

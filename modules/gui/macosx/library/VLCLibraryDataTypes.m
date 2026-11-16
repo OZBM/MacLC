@@ -770,7 +770,7 @@ static NSString *genreArrayDisplayString(NSArray<VLCMediaLibraryGenre *> * const
         self.secondaryActionableDetail = NO;
 
         _name = toNSStr(p_genre->psz_name);
-        _numberOfTracks = p_genre->i_nb_tracks;
+        _numberOfTracks = (unsigned int)p_genre->i_nb_tracks;
         _favorited = p_genre->b_is_favorite;
     }
     return self;

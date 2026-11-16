@@ -873,7 +873,7 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     _seasonPopUp.accessibilityLabel = _NS("Season");
     [_seasonShelfView addSubview:_seasonPopUp];
 
-    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
+    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger __unused sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
         NSCollectionLayoutSection *section = [MacLCWatchLayout episodeShelfSectionWithEnvironment:environment];
         section.boundarySupplementaryItems = @[];
         return section;
@@ -1001,7 +1001,7 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     [_similarContainerView addSubview:title];
 
     NSCollectionViewCompositionalLayout * const layout = [[NSCollectionViewCompositionalLayout alloc]
-        initWithSectionProvider:^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
+        initWithSectionProvider:^NSCollectionLayoutSection * _Nullable(NSInteger __unused sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
         NSCollectionLayoutSection * const section = [MacLCWatchLayout posterShelfSectionWithEnvironment:environment];
         section.boundarySupplementaryItems = @[];
         section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, 40.0, 0.0, 40.0);
@@ -1049,21 +1049,21 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     for (MacLCAddonTitleCatalog *catalog in MacLCAddonStore.sharedStore.titleCatalogs) {
         if (![catalog.identifier isEqualToString:@"top"] || ![catalog.type isEqualToString:_item.type])
             continue;
-        NSUInteger const index = [genres indexOfObjectPassingTest:^BOOL(NSString *genre, NSUInteger i, BOOL *stop) {
+        NSUInteger const index = [genres indexOfObjectPassingTest:^BOOL(NSString *genre, NSUInteger __unused i, BOOL *__unused stop) {
             return [catalog.genres containsObject:genre];
         }];
         if (index == NSNotFound)
             continue;
         __weak typeof(self) weakSelf = self;
         _similarRequest = [MacLCAddonStore.sharedStore fetchTitleCatalog:catalog genre:genres[index] skip:0
-                                                             completion:^(NSArray<MacLCAddonItem *> *items, NSError *error) {
+                                                             completion:^(NSArray<MacLCAddonItem *> *items, NSError *__unused error) {
             __strong typeof(weakSelf) strongSelf = weakSelf;
             if (!strongSelf)
                 return;
             strongSelf->_similarRequest = nil;
             NSString * const own = strongSelf->_item.identifier;
             NSArray<MacLCAddonItem *> * const others = [items filteredArrayUsingPredicate:
-                [NSPredicate predicateWithBlock:^BOOL(MacLCAddonItem *item, NSDictionary *bindings) {
+                [NSPredicate predicateWithBlock:^BOOL(MacLCAddonItem *item, NSDictionary *__unused bindings) {
                 return ![item.identifier isEqualToString:own];
             }]];
             if (others.count == 0)
@@ -2132,7 +2132,7 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
     _streamPickerController = picker;
 
     __weak typeof(self) weakSelf = self;
-    picker.completionHandler = ^(BOOL played) {
+    picker.completionHandler = ^(BOOL __unused played) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (strongSelf && strongSelf->_streamPickerController == picker) {
             strongSelf->_streamPickerController = nil;

@@ -52,7 +52,7 @@
     _albums = libraryModel.listOfAlbums;
     _artists = libraryModel.listOfArtists;
     _mediaItems = [libraryModel listOfMediaItemsForParentType:parentType];
-    _numberOfTracks = _mediaItems.count;
+    _numberOfTracks = (unsigned int)_mediaItems.count;
 
     const NSUInteger numberOfAlbums = libraryModel.numberOfAlbums;
     NSString * const albumString = _NPS("%li album", "%li albums", numberOfAlbums);

@@ -26,7 +26,7 @@
         <window title="GoTo Specific Time" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" visibleAtLaunch="NO" animationBehavior="default" id="Fqe-af-Tt9" userLabel="GoToTime">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
-            <rect key="contentRect" x="429" y="553" width="265" height="165"/>
+            <rect key="contentRect" x="429" y="553" width="280" height="165"/>
             <rect key="screenRect" x="0.0" y="0.0" width="3008" height="1662"/>
             <value key="minSize" type="size" width="280" height="165"/>
             <value key="minFullScreenContentSize" type="size" width="280" height="110"/>

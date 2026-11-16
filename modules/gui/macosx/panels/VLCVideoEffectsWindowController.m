@@ -635,10 +635,10 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
         [_wallCheckbox setState: NSControlStateValueOff];
     }
 
-    cropLeft = var_GetInteger(vout, "crop-left");
-    cropTop = var_GetInteger(vout, "crop-top");
-    cropRight = var_GetInteger(vout, "crop-right");
-    cropBottom = var_GetInteger(vout, "crop-bottom");
+    cropLeft = (int)var_GetInteger(vout, "crop-left");
+    cropTop = (int)var_GetInteger(vout, "crop-top");
+    cropRight = (int)var_GetInteger(vout, "crop-right");
+    cropBottom = (int)var_GetInteger(vout, "crop-bottom");
 
     vout_Release(vout);
 

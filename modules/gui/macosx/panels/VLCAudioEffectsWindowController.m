@@ -797,7 +797,7 @@ static bool GetEqualizerStatus(intf_thread_t *__unused p_custom_intf,
     NSArray *values = [preset componentsSeparatedByString:@" "];
     NSUInteger count = [values count];
     for (NSUInteger x = 0; x < count; x++)
-        [self setValue:[[values objectAtIndex:x] floatValue] forSlider:x];
+        [self setValue:[[values objectAtIndex:x] floatValue] forSlider:(int)x];
 }
 
 - (NSString *)generatePresetString

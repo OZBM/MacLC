@@ -114,7 +114,7 @@ static inline int64_t samples_from_vlc_tick(vlc_tick_t t, unsigned samp_rate)
 static inline vlc_tick_t vlc_tick_from_frac(uint64_t num, uint64_t den)
 {
     lldiv_t d = lldiv (num, den);
-    return vlc_tick_from_sec( d.quot ) + vlc_tick_from_samples(d.rem, den);
+    return vlc_tick_from_sec( d.quot ) + vlc_tick_from_samples(d.rem, (unsigned)den);
 }
 
 

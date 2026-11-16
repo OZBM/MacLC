@@ -39,7 +39,7 @@ NSNotificationName const MacLCLibraryRouterSectionDidChangeNotification =
     @"MacLCLibraryRouterSectionDidChangeNotification";
 
 // One router per library window, keyed by window pointer (value-wrapped).
-static NSMapTable<NSValue *, MacLCLibraryRouter *> *sRouterTable;
+static NSMapTable<VLCLibraryWindow *, MacLCLibraryRouter *> *sRouterTable;
 
 @interface MacLCLibraryRouter ()
 {

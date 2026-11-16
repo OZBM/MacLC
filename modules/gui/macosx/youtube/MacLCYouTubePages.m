@@ -1957,7 +1957,7 @@ static NSString * const MacLCYouTubeVideoHeaderItemIdentifier = @"MacLCYouTubeVi
     _collectionView.dataSource = self;
     _collectionView.delegate = self;
 
-    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
+    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> __unused environment) {
         if (sectionIndex == 0) {
             return [MacLCCollectionLayout fullWidthSectionWithHeight:240.0];
         } else {
@@ -2143,7 +2143,7 @@ static NSString * const MacLCYouTubeVideoHeaderItemIdentifier = @"MacLCYouTubeVi
         [rowItem configureWithVideo:video index:(NSUInteger)indexPath.item];
 
         __weak typeof(self) weakSelf = self;
-        rowItem.activationHandler = ^(MacLCYouTubeVideo *v, NSUInteger idx) {
+        rowItem.activationHandler = ^(MacLCYouTubeVideo *__unused v, NSUInteger idx) {
             __strong typeof(weakSelf) strongSelf = weakSelf;
             if (strongSelf) {
                 [MacLCYouTubeService.sharedService playVideos:strongSelf->_videos startingAtIndex:idx completion:nil];
@@ -2318,7 +2318,7 @@ static NSString * const MacLCYouTubeVideoHeaderItemIdentifier = @"MacLCYouTubeVi
     [_detailsRequest cancel];
     __weak typeof(self) weakSelf = self;
     _detailsRequest = [MacLCYouTubeService.sharedService detailsForVideo:_video
-                                                              completion:^(MacLCYouTubeVideo * _Nullable detailedVideo, NSError * _Nullable error) {
+                                                              completion:^(MacLCYouTubeVideo * _Nullable detailedVideo, NSError * _Nullable __unused error) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
 
@@ -2347,7 +2347,7 @@ static NSString * const MacLCYouTubeVideoHeaderItemIdentifier = @"MacLCYouTubeVi
     _moreVideosRequest = [MacLCYouTubeService.sharedService channel:_video.channelURL
                                                                tab:MacLCYouTubeChannelTabVideos
                                                              limit:12
-                                                        completion:^(MacLCYouTubePage * _Nullable page, NSError * _Nullable error) {
+                                                        completion:^(MacLCYouTubePage * _Nullable page, NSError * _Nullable __unused error) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
 

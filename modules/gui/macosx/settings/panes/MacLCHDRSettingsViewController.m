@@ -1606,10 +1606,13 @@ NSString * const MacLCHDRExpansionChangedNotification =
                         [NSStringFromClass(sub.class) containsString:@"SampleBuffer"]) {
                         activeEngineName = _NS("Native (Core Media)");
                         break;
-                    } else if ([sub.layer isKindOfClass:[CAOpenGLLayer class]] ||
-                               [NSStringFromClass(sub.class) containsString:@"VideoLayer"]) {
-                        activeEngineName = _NS("OpenGL (Legacy)");
-                        break;
+                    } else {
+                        Class openGLLayerClass = NSClassFromString(@"CAOpenGLLayer");
+                        if ((openGLLayerClass != Nil && [sub.layer isKindOfClass:openGLLayerClass]) ||
+                            [NSStringFromClass(sub.class) containsString:@"VideoLayer"]) {
+                            activeEngineName = _NS("OpenGL (Legacy)");
+                            break;
+                        }
                     }
                 }
             }

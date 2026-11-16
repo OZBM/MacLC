@@ -317,7 +317,7 @@ static NSString * const MacLCGridSectionIdentifier = @"grid";
         return;
     }
     NSUInteger index = [_visibleItems indexOfObjectPassingTest:^BOOL(id<VLCMediaLibraryItemProtocol> const candidate,
-                                                                     NSUInteger idx, BOOL * const stop) {
+                                                                     NSUInteger __unused idx, BOOL * const __unused stop) {
         return candidate.libraryID == item.libraryID && candidate.class == item.class;
     }];
     if (index == NSNotFound) {

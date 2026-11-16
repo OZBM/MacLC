@@ -980,7 +980,7 @@ static NSString *CollectionsCachePath(void)
 
     NSString *address = [self.class servicesAddonAddressForCodes:codes country:country];
     __weak typeof(self) weakSelf = self;
-    [[MacLCAddonStore sharedStore] installFromAddress:address completion:^(MacLCAddon * _Nullable addon, BOOL replaced, NSError * _Nullable error) {
+    [[MacLCAddonStore sharedStore] installFromAddress:address completion:^(MacLCAddon * _Nullable addon, BOOL __unused replaced, NSError * _Nullable error) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (error) {
             if (completion) {

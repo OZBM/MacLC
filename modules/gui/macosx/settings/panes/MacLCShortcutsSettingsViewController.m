@@ -162,7 +162,7 @@
     _mediaKeysRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Control with Mac Media Keys")
                                                explanation:_NS("Respond to keyboard Play/Pause, Fast Forward, and Rewind media keys.")
                                                      state:YES
-                                                    action:^(BOOL checked) {
+                                                    action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _mediaKeysRow.defaultHint = _NS("Default: On");

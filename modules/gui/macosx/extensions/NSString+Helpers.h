@@ -29,7 +29,9 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <vlc_input.h>
 
-NSString *toNSStr(const char *str);
+NS_ASSUME_NONNULL_BEGIN
+
+NSString *toNSStr(const char * _Nullable str);
 
 /**
  * The title a window shows for a playing item: "title — now playing" when the
@@ -176,7 +178,7 @@ bool fixIntfSettings(void);
  This method allocates and initializes an NSString with the
  provided C string encoded as base64.
  */
-+ (instancetype)base64StringWithCString:(const char *)cstring;
++ (nullable instancetype)base64StringWithCString:(nullable const char *)cstring;
 
 /**
  Base64 encoded copy of the string
@@ -184,7 +186,7 @@ bool fixIntfSettings(void);
  Encode the string as Base64 string and return the result or
  nil on failure.
  */
-- (NSString *)base64EncodedString;
+- (nullable NSString *)base64EncodedString;
 
 /**
  Base64 decoded copy of the string
@@ -192,7 +194,7 @@ bool fixIntfSettings(void);
  Decode the string as Base64 string and return the result or
  nil on failure.
  */
-- (NSString *)base64DecodedString;
+- (nullable NSString *)base64DecodedString;
 
 /**
  Returns a copy of the receiver string, wrapped to the specified width
@@ -216,7 +218,7 @@ bool fixIntfSettings(void);
  * Returns an array of file extensions from a semicolon-separated string of extensions,
  * stripping any leading "*." prefix.
  */
-+ (NSArray<NSString *> *)extensionsArrayFromVLCStyleString:(const char *)extensionsString;
++ (NSArray<NSString *> *)extensionsArrayFromVLCStyleString:(nullable const char *)extensionsString;
 
 /// UTTypes for file extensions, for NSSavePanel.allowedContentTypes.
 + (NSArray<UTType *> *)contentTypesFromExtensions:(NSArray<NSString *> *)extensions;
@@ -231,7 +233,7 @@ bool fixIntfSettings(void);
 
  \warning Compatibility function, do not use in new code!
  */
-static inline NSString *B64DecNSStr(NSString *s) {
+static inline NSString *B64DecNSStr(NSString * _Nullable s) {
     NSString *res = [s base64DecodedString];
 
     return (res == nil) ? @"" : res;
@@ -246,7 +248,7 @@ static inline NSString *B64DecNSStr(NSString *s) {
 
  \warning Compatibility function, do not use in new code!
  */
-static inline NSString *B64EncAndFree(char *cs) {
+static inline NSString *B64EncAndFree(char * _Nullable cs) {
     NSString *res = [NSString base64StringWithCString:cs];
     free(cs);
 
@@ -267,9 +269,11 @@ NSString * OSXStringKeyToString(NSString *theString);
 /**
  * Converts VLC key string to cocoa modifiers which can be used as setKeyEquivalent for menu items
  */
-NSString * VLCKeyToString(char *theChar);
+NSString * VLCKeyToString(char * _Nullable theChar);
 
 /**
  * Converts VLC key to cocoa string which can be used as setKeyEquivalentModifierMask for menu items
  */
-unsigned int VLCModifiersToCocoa(char *theChar);
+unsigned int VLCModifiersToCocoa(char * _Nullable theChar);
+
+NS_ASSUME_NONNULL_END

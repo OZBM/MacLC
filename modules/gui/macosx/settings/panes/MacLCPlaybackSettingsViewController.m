@@ -153,7 +153,7 @@
                                         initialValue:1.0
                                            stepValue:0.25
                                          valueFormat:@"%.2fx"
-                                              action:^(double value) {
+                                              action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _rateRow.defaultHint = _NS("Default: 1.00x");
@@ -162,7 +162,7 @@
     _fastSeekRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Fast Keyframe Seeking")
                                               explanation:_NS("Jump directly to keyframes when scrubbing for immediate response.")
                                                     state:NO
-                                                   action:^(BOOL checked) {
+                                                   action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _fastSeekRow.defaultHint = _NS("Default: Off");
@@ -171,7 +171,7 @@
     _autostartRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Auto-Start Playlist Items")
                                                explanation:_NS("Automatically begin playback as soon as media items are added.")
                                                      state:YES
-                                                    action:^(BOOL checked) {
+                                                    action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _autostartRow.defaultHint = _NS("Default: On");
@@ -186,7 +186,7 @@
     _loopRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Repeat Playlist")
                                           explanation:_NS("Restart playback from the beginning when the last playlist item finishes.")
                                                 state:NO
-                                               action:^(BOOL checked) {
+                                               action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _loopRow.defaultHint = _NS("Default: Off");
@@ -195,7 +195,7 @@
     _repeatRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Repeat Current Item")
                                             explanation:_NS("Continuously loop the currently playing video or audio track.")
                                                   state:NO
-                                                 action:^(BOOL checked) {
+                                                 action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _repeatRow.defaultHint = _NS("Default: Off");
@@ -204,7 +204,7 @@
     _randomRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Shuffle Playback")
                                             explanation:_NS("Play playlist tracks in randomized sequence by default.")
                                                   state:NO
-                                                 action:^(BOOL checked) {
+                                                 action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _randomRow.defaultHint = _NS("Default: Off");
@@ -223,7 +223,7 @@
                                                   initialValue:3
                                                      stepValue:1
                                                    valueFormat:@"%.0f s"
-                                                        action:^(double value) {
+                                                        action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _extraShortJumpRow.defaultHint = _NS("Default: 3 s");
@@ -236,7 +236,7 @@
                                              initialValue:10
                                                 stepValue:1
                                               valueFormat:@"%.0f s"
-                                                   action:^(double value) {
+                                                   action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _shortJumpRow.defaultHint = _NS("Default: 10 s");
@@ -249,7 +249,7 @@
                                               initialValue:60
                                                  stepValue:5
                                                valueFormat:@"%.0f s"
-                                                    action:^(double value) {
+                                                    action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _mediumJumpRow.defaultHint = _NS("Default: 60 s");
@@ -262,7 +262,7 @@
                                             initialValue:300
                                                stepValue:30
                                              valueFormat:@"%.0f s"
-                                                  action:^(double value) {
+                                                  action:^(double __unused value) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _longJumpRow.defaultHint = _NS("Default: 300 s");
@@ -284,7 +284,7 @@
     _hardwareDecRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Require Hardware Acceleration")
                                                  explanation:_NS("Use Apple VideoToolbox hardware decoding for smoother video and reduced battery usage.")
                                                        state:YES
-                                                      action:^(BOOL checked) {
+                                                      action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _hardwareDecRow.defaultHint = _NS("Default: On");
@@ -295,7 +295,7 @@
                                                  items:@[_NS("Ask"), _NS("Always Fix"), _NS("Never Fix")]
                                                   tags:@[@0, @1, @2]
                                          selectedIndex:0
-                                                action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _aviIndexRow.defaultHint = _NS("Default: Ask");
@@ -306,7 +306,7 @@
                                                  items:@[_NS("None"), _NS("Non-Reference"), _NS("Bidirectional"), _NS("Non-Key"), _NS("All")]
                                                   tags:@[@0, @1, @2, @3, @4]
                                          selectedIndex:0
-                                                action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _skipLoopRow.warning = YES;

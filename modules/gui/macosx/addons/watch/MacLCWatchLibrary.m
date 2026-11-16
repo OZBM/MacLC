@@ -472,7 +472,7 @@ static NSString *ProgressKey(NSString *title, NSString *video)
                 if (list && ![list isKindOfClass:[NSArray class]]) {
                     [raw removeObjectForKey:listKey];
                 } else if (list) {
-                    [list filterUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id element, NSDictionary *bindings) {
+                    [list filterUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id element, NSDictionary *__unused bindings) {
                         return [element isKindOfClass:[NSDictionary class]];
                     }]];
                 }

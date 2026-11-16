@@ -301,7 +301,7 @@ static BOOL HasSignedInSession(NSArray<NSHTTPCookie *> *cookies)
     [_webView loadRequest:[NSURLRequest requestWithURL:SignInURL()]];
     if (parent && !parent.attachedSheet && parent.visible) {
         _sheetParent = parent;
-        [parent beginSheet:self.window completionHandler:^(NSModalResponse response) {
+        [parent beginSheet:self.window completionHandler:^(NSModalResponse __unused response) {
             [self deliverCompletion];
         }];
     } else {
@@ -404,7 +404,7 @@ static BOOL HasSignedInSession(NSArray<NSHTTPCookie *> *cookies)
         proceed(nil);
         return;
     }
-    [_webView evaluateJavaScript:kAvatarScript completionHandler:^(id result, NSError *error) {
+    [_webView evaluateJavaScript:kAvatarScript completionHandler:^(id result, NSError *__unused error) {
         NSURL *url = [result isKindOfClass:NSString.class] ? [NSURL URLWithString:result] : nil;
         /* Only Google's image hosts: the URL is stored and later fetched. */
         if (![url.scheme isEqualToString:@"https"]

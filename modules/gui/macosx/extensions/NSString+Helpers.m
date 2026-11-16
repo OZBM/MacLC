@@ -136,7 +136,7 @@ NSString *const kVLCMediaUnknown = @"Unknown";
     return returnValue;
 }
 
-+ (instancetype)base64StringWithCString:(const char *)cstring
++ (nullable instancetype)base64StringWithCString:(nullable const char *)cstring
 {
     if (cstring == NULL)
         return nil;
@@ -151,7 +151,7 @@ NSString *const kVLCMediaUnknown = @"Unknown";
                                     freeWhenDone:YES];
 }
 
-- (NSString *)base64EncodedString
+- (nullable NSString *)base64EncodedString
 {
     char *encoded_cstring = vlc_b64_encode(self.UTF8String);
     if (encoded_cstring == NULL)
@@ -163,7 +163,7 @@ NSString *const kVLCMediaUnknown = @"Unknown";
                                     freeWhenDone:YES];
 }
 
-- (NSString *)base64DecodedString
+- (nullable NSString *)base64DecodedString
 {
     char *decoded_cstring = vlc_b64_decode(self.UTF8String);
     if (decoded_cstring == NULL)
@@ -250,7 +250,7 @@ NSString *const kVLCMediaUnknown = @"Unknown";
     return result.copy;
 }
 
-+ (NSArray<NSString *> *)extensionsArrayFromVLCStyleString:(const char *)extensionsString
++ (NSArray<NSString *> *)extensionsArrayFromVLCStyleString:(nullable const char *)extensionsString
 {
     if (extensionsString == NULL) {
         return @[];
@@ -400,7 +400,7 @@ NSString * _Nullable VLCSubstituteBrandNames(NSString * _Nullable input)
     [urlRegex enumerateMatchesInString:linked
                                options:0
                                  range:NSMakeRange(0, linked.length)
-                            usingBlock:^(NSTextCheckingResult *match, NSMatchingFlags flags, BOOL *stop) {
+                            usingBlock:^(NSTextCheckingResult *match, NSMatchingFlags __unused flags, BOOL * __unused stop) {
         NSRange text = NSMakeRange(cursor, match.range.location - cursor);
         [result appendString:VLCSubstituteBrandNamesInText([linked substringWithRange:text])];
         [result appendString:[linked substringWithRange:match.range]];
@@ -413,7 +413,7 @@ NSString * _Nullable VLCSubstituteBrandNames(NSString * _Nullable input)
 
 /* takes a good old const c string and converts it to NSString without UTF8 loss */
 
-NSString *toNSStr(const char *str) {
+NSString *toNSStr(const char * _Nullable str) {
     if (str == NULL) {
         return @"";
     }
@@ -630,7 +630,7 @@ NSString * OSXStringKeyToString(NSString *theString)
     return theString;
 }
 
-NSString * VLCKeyToString(char *theChar)
+NSString * VLCKeyToString(char * _Nullable theChar)
 {
     if (theChar == NULL) {
         return @"";
@@ -723,8 +723,11 @@ NSString * VLCKeyToString(char *theChar)
     return theString;
 }
 
-unsigned int VLCModifiersToCocoa(char *theChar)
+unsigned int VLCModifiersToCocoa(char * _Nullable theChar)
 {
+    if (theChar == NULL) {
+        return 0;
+    }
     unsigned int new = 0;
 
     if (strstr(theChar, "Command") != NULL)

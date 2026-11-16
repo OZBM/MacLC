@@ -198,15 +198,15 @@ NSString * const VLCLibraryWindowTrackingSeparatorToolbarItemIdentifier =
         }
     }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    self.vlcIconToolbarItem.minSize = NSMakeSize(18, 18);
-    self.vlcIconToolbarItem.maxSize = NSMakeSize(18, 18);
-#pragma clang diagnostic pop
     self.vlcIconToolbarItem.label = _NS("MacLC");
     self.vlcIconToolbarItem.paletteLabel = _NS("MacLC");
 
-    NSImageView * const vlcIconImageView = [[NSImageView alloc] initWithFrame:NSZeroRect];
+    NSImageView * const vlcIconImageView = [[NSImageView alloc] initWithFrame:NSMakeRect(0, 0, 18, 18)];
+    vlcIconImageView.translatesAutoresizingMaskIntoConstraints = NO;
+    [NSLayoutConstraint activateConstraints:@[
+        [vlcIconImageView.widthAnchor constraintEqualToConstant:18.0],
+        [vlcIconImageView.heightAnchor constraintEqualToConstant:18.0],
+    ]];
     vlcIconImageView.image = NSApp.applicationIconImage;
     self.vlcIconToolbarItem.view = vlcIconImageView;
 

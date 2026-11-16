@@ -338,7 +338,7 @@
             const NSRect savedFrame = _savedFrame;
             __weak typeof(self) weakSelf = self;
             [NSAnimationContext runAnimationRespectingPreferencesWithDuration:0.25
-                                                                      changes:^(NSAnimationContext * _Nonnull context) {
+                                                                      changes:^(NSAnimationContext * _Nonnull __unused context) {
                 [weakSelf.animator setFrame:savedFrame display:YES];
             } completionHandler:^{
                 VLCFullVideoViewWindow *strongSelf = weakSelf;
@@ -453,7 +453,7 @@
         _applyingVideoFrameCount++;
         __weak typeof(self) weakSelf = self;
         [NSAnimationContext runAnimationRespectingPreferencesWithDuration:0.25
-                                                                  changes:^(NSAnimationContext * _Nonnull context) {
+                                                                  changes:^(NSAnimationContext * _Nonnull __unused context) {
             [weakSelf.animator setFrame:targetFrame display:YES];
         } completionHandler:^{
             VLCFullVideoViewWindow *strongSelf = weakSelf;
@@ -488,7 +488,7 @@
             _applyingVideoFrameCount++;
             __weak typeof(self) weakSelf = self;
             [NSAnimationContext runAnimationRespectingPreferencesWithDuration:0.25
-                                                                      changes:^(NSAnimationContext * _Nonnull context) {
+                                                                      changes:^(NSAnimationContext * _Nonnull __unused context) {
                 [weakSelf.animator setFrame:frameToRestore display:YES];
             } completionHandler:^{
                 VLCFullVideoViewWindow *strongSelf = weakSelf;
@@ -617,7 +617,7 @@
     __weak typeof(self) weakSelf = self;
     _externalResizeTimer = [NSTimer scheduledTimerWithTimeInterval:0.3
                                                            repeats:NO
-                                                             block:^(NSTimer * _Nonnull timer) {
+                                                             block:^(NSTimer * _Nonnull __unused timer) {
         VLCFullVideoViewWindow *strongSelf = weakSelf;
         if (!strongSelf || !strongSelf->_videoFitSessionActive) {
             return;

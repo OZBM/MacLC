@@ -203,7 +203,7 @@
                             <autoresizingMask key="autoresizingMask"/>
                         </scroller>
                     </scrollView>
-                    <box boxType="oldStyle" borderType="none" title="Title" titlePosition="noTitle" translatesAutoresizingMaskIntoConstraints="NO" id="2410" userLabel="Bottom view">
+                    <box boxType="custom" borderType="none" title="Title" titlePosition="noTitle" translatesAutoresizingMaskIntoConstraints="NO" id="2410" userLabel="Bottom view">
                         <rect key="frame" x="0.0" y="0.0" width="580" height="44"/>
                         <view key="contentView" id="uTV-TS-NBc">
                             <rect key="frame" x="0.0" y="0.0" width="580" height="44"/>

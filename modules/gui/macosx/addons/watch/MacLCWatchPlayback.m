@@ -694,7 +694,7 @@ videoIdentifier:(NSString *)videoIdentifier
     [_metaRequest cancel];
     __weak typeof(self) weakSelf = self;
     _metaRequest = [MacLCAddonStore.sharedStore fetchMetaForItem:ctx.item
-                                                      completion:^(MacLCAddonMeta *meta, NSError *error) {
+                                                      completion:^(MacLCAddonMeta *meta, NSError *__unused error) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (strongSelf == nil || getIntf() == NULL) {
             return;
@@ -731,7 +731,7 @@ videoIdentifier:(NSString *)videoIdentifier
     _fallbackPicker = picker;
     __weak typeof(self) weakSelf = self;
     __weak MacLCStreamPickerController * const weakPicker = picker;
-    picker.completionHandler = ^(BOOL played) {
+    picker.completionHandler = ^(BOOL __unused played) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (strongSelf != nil && strongSelf->_fallbackPicker == weakPicker) {
             strongSelf->_fallbackPicker = nil;

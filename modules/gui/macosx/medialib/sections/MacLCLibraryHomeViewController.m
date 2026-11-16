@@ -225,7 +225,7 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
 - (NSCollectionLayoutSection *)sectionLayoutForIndex:(NSInteger)sectionIndex
                                          environment:(id<NSCollectionLayoutEnvironment>)environment
 {
-    if (sectionIndex >= _activeSections.count) {
+    if (sectionIndex < 0 || (NSUInteger)sectionIndex >= _activeSections.count) {
         return [MacLCCollectionLayout shelfSectionWithShape:MacLCArtworkShapeVideo environment:environment hasSubtitle:YES];
     }
 
@@ -268,7 +268,7 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
         id<VLCMediaLibraryItemProtocol> item = strongSelf->_itemsByID[itemID];
         if (!item) return cardItem;
 
-        if (indexPath.section < strongSelf->_activeSections.count) {
+        if (indexPath.section >= 0 && (NSUInteger)indexPath.section < strongSelf->_activeSections.count) {
             NSString *sectionID = strongSelf->_activeSections[indexPath.section];
             if ([sectionID isEqualToString:MacLCContinueWatchingSectionIdentifier]) {
                 [cardItem configureWithItem:item
@@ -300,7 +300,7 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
         MacLCSectionHeaderView *header = [collectionView makeSupplementaryViewOfKind:kind
                                                                       withIdentifier:MacLCSectionHeaderViewIdentifier
                                                                         forIndexPath:indexPath];
-        if (indexPath.section >= strongSelf->_activeSections.count) {
+        if (indexPath.section < 0 || (NSUInteger)indexPath.section >= strongSelf->_activeSections.count) {
             return header;
         }
 
@@ -410,10 +410,10 @@ static NSString * const MacLCHeroItemIdentifier = @"hero_item";
 
     // Filter if search active
     if (_searchString.length > 0) {
-        NSPredicate *mediaPredicate = [NSPredicate predicateWithBlock:^BOOL(VLCMediaLibraryMediaItem *item, NSDictionary *bindings) {
+        NSPredicate *mediaPredicate = [NSPredicate predicateWithBlock:^BOOL(VLCMediaLibraryMediaItem *item, NSDictionary *__unused bindings) {
             return [item.title localizedStandardContainsString:self->_searchString];
         }];
-        NSPredicate *albumPredicate = [NSPredicate predicateWithBlock:^BOOL(VLCMediaLibraryAlbum *item, NSDictionary *bindings) {
+        NSPredicate *albumPredicate = [NSPredicate predicateWithBlock:^BOOL(VLCMediaLibraryAlbum *item, NSDictionary *__unused bindings) {
             return [item.title localizedStandardContainsString:self->_searchString] ||
                    [item.artistName localizedStandardContainsString:self->_searchString];
         }];

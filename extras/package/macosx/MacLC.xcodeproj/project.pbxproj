@@ -18,25 +18,20 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		4D1C00000000000000000301 /* Exceptions for "macosx" folder in "macosx_plugin" target */ = {
+		4D1C00000000000000000301 /* Exceptions for "../../../modules/gui/macosx" folder in "macosx_plugin" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				.gitignore,
-				Makefile.am,
-				Resources,
-				UI,
 				shaders/VLCSnowShader.metal,
-				tests,
 			);
 			target = 4D1C00000000000000000601 /* macosx_plugin */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4D1C00000000000000000401 /* macosx */ = {
+		4D1C00000000000000000401 /* ../../../modules/gui/macosx */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				4D1C00000000000000000301 /* Exceptions for "macosx" folder in "macosx_plugin" target */,
+				4D1C00000000000000000301 /* Exceptions for "../../../modules/gui/macosx" folder in "macosx_plugin" target */,
 			);
 			path = ../../../modules/gui/macosx;
 			sourceTree = "<group>";
@@ -58,13 +53,13 @@
 			isa = PBXGroup;
 			children = (
 				4D1C00000000000000000203 /* MacLC.xcconfig */,
-				4D1C00000000000000000401 /* macosx */,
-				4D1C00000000000000000702 /* video_filter */,
+				4D1C00000000000000000401 /* ../../../modules/gui/macosx */,
+				4D1C00000000000000000702 /* ../../../modules/video_filter */,
 				4D1C00000000000000000703 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		4D1C00000000000000000702 /* video_filter */ = {
+		4D1C00000000000000000702 /* ../../../modules/video_filter */ = {
 			isa = PBXGroup;
 			children = (
 				4D1C00000000000000000201 /* maclc_frc_geometry.c */,
@@ -114,7 +109,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4D1C00000000000000000401 /* macosx */,
+				4D1C00000000000000000401 /* ../../../modules/gui/macosx */,
 			);
 			name = macosx_plugin;
 			productName = macosx_plugin;
@@ -144,6 +139,30 @@
 			knownRegions = (
 				en,
 				Base,
+				de,
+				he,
+				ar,
+				el,
+				"zh-Hans",
+				ja,
+				uk,
+				es,
+				sl,
+				gl,
+				it,
+				bg,
+				sk,
+				sv,
+				cs,
+				hu,
+				tr,
+				pl,
+				"pt-BR",
+				lv,
+				fr,
+				nl,
+				"pt-PT",
+				ca,
 			);
 			mainGroup = 4D1C00000000000000000701;
 			minimizedProjectReferenceProxies = 1;

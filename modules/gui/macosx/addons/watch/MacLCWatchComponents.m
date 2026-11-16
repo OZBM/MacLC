@@ -250,7 +250,7 @@ NSString *MacLCWatchFactsLine(NSString *type,
             decodeBlock(fileData);
         });
     } else {
-        NSURLSessionDataTask * const task = [_session dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        NSURLSessionDataTask * const task = [_session dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *__unused response, NSError *__unused error) {
             decodeBlock(data);
         }];
         @synchronized (request) {

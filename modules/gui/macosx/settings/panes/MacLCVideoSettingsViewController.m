@@ -163,7 +163,7 @@
     _videoEnableRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Enable Video")
                                                  explanation:_NS("Render visual output during video file playback.")
                                                        state:YES
-                                                      action:^(BOOL checked) {
+                                                      action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _videoEnableRow.defaultHint = _NS("Default: On");
@@ -184,7 +184,7 @@
                                                      items:screenTitles
                                                       tags:screenTags
                                              selectedIndex:0
-                                                    action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                    action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _targetScreenRow.defaultHint = _NS("Default: Default");
@@ -193,7 +193,7 @@
     _onTopRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Keep on Top")
                                            explanation:_NS("Keep the video window above other running application windows.")
                                                  state:NO
-                                                action:^(BOOL checked) {
+                                                action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _onTopRow.defaultHint = _NS("Default: Off");
@@ -202,7 +202,7 @@
     _autoResizeRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Resize Window to Video Size")
                                                 explanation:_NS("Automatically adjust the window dimensions to match the source video resolution.")
                                                       state:YES
-                                                     action:^(BOOL checked) {
+                                                     action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _autoResizeRow.defaultHint = _NS("Default: On");
@@ -211,7 +211,7 @@
     _pauseMinimizedRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Pause When Minimized")
                                                     explanation:_NS("Automatically pause video playback when the player window is minimized.")
                                                           state:NO
-                                                         action:^(BOOL checked) {
+                                                         action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _pauseMinimizedRow.defaultHint = _NS("Default: Off");
@@ -226,7 +226,7 @@
     _startFullscreenRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Start in Fullscreen")
                                                      explanation:_NS("Automatically expand newly played videos to fill the entire screen.")
                                                            state:NO
-                                                          action:^(BOOL checked) {
+                                                          action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _startFullscreenRow.defaultHint = _NS("Default: Off");
@@ -245,7 +245,7 @@
     _blackScreenRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Black Other Displays")
                                                  explanation:_NS("Blank connected secondary screens with solid black during fullscreen playback.")
                                                        state:NO
-                                                      action:^(BOOL checked) {
+                                                      action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _blackScreenRow.defaultHint = _NS("Default: Off");
@@ -254,7 +254,7 @@
     _dimKeyboardRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Dim Keyboard Backlight")
                                                  explanation:_NS("Turn off MacBook keyboard backlight illumination while video plays in fullscreen.")
                                                        state:NO
-                                                      action:^(BOOL checked) {
+                                                      action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _dimKeyboardRow.defaultHint = _NS("Default: Off");
@@ -271,7 +271,7 @@
                                                     items:@[_NS("Automatic"), _NS("On"), _NS("Off")]
                                                      tags:@[@-1, @1, @0]
                                             selectedIndex:0
-                                                   action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                   action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _deinterlaceRow.defaultHint = _NS("Default: Automatic");
@@ -282,7 +282,7 @@
                                                         items:@[_NS("Automatic"), _NS("Discard"), _NS("Blend"), _NS("Bob"), _NS("Linear"), _NS("Yadif"), _NS("Yadif (2x)")]
                                                          tags:@[@0, @1, @2, @3, @4, @5, @6]
                                                 selectedIndex:0
-                                                       action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                       action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _deinterlaceModeRow.defaultHint = _NS("Default: Automatic");
@@ -295,7 +295,7 @@
                                                     items:ratios
                                                      tags:nil
                                             selectedIndex:0
-                                                   action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                   action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _aspectRatioRow.defaultHint = _NS("Default: Default");
@@ -306,7 +306,7 @@
                                                   items:ratios
                                                    tags:nil
                                           selectedIndex:0
-                                                 action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                 action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _cropRatioRow.defaultHint = _NS("Default: Default");
@@ -315,7 +315,7 @@
     _lockAspectRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Lock Aspect Ratio on Resize")
                                                 explanation:_NS("Maintain correct width-to-height proportions when manually resizing windows.")
                                                       state:YES
-                                                     action:^(BOOL checked) {
+                                                     action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _lockAspectRow.defaultHint = _NS("Default: On");
@@ -340,7 +340,7 @@
                                                               _NS("RIFE neural network")]
                                                        tags:@[@-1, @0, @1, @2, @3, @4, @5, @6, @7]
                                               selectedIndex:0
-                                                     action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                     action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
         [weakSelf updateInterpolationRowEnablement];
     }];
@@ -353,7 +353,7 @@
                                                                     _NS("120 fps"), _NS("Twice the Source")]
                                                              tags:@[@0, @1, @2, @3]
                                                     selectedIndex:0
-                                                           action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                           action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _interpolationTargetRow.defaultHint = _NS("Default: Match the Display");
@@ -366,7 +366,7 @@
                                                                      _NS("Keep Going")]
                                                               tags:@[@0, @1, @2]
                                                      selectedIndex:0
-                                                            action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                            action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _interpolationOverrunRow.defaultHint = _NS("Default: Fall Back to a Cheaper Method");
@@ -375,7 +375,7 @@
     _interpolationRifeRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Use the RIFE Neural Network")
                                                        explanation:_NS("Replaces the motion vectors of the SmoothVideo Project engine with the neural network. The RIFE engine always uses the network whatever this says.")
                                                              state:NO
-                                                            action:^(BOOL checked) {
+                                                            action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
         [weakSelf updateInterpolationRowEnablement];
     }];
@@ -389,7 +389,7 @@
                                                                        _NS("Half")]
                                                                 tags:@[@100, @75, @50]
                                                        selectedIndex:0
-                                                              action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                              action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _interpolationRifeScaleRow.defaultHint = _NS("Default: Full picture");
@@ -412,7 +412,7 @@
             }
         }];
     }];
-    _interpolationRifeModelRow.textChangedHandler = ^(NSString *text) {
+    _interpolationRifeModelRow.textChangedHandler = ^(NSString *__unused text) {
         weakSelf.hasUnsavedChanges = YES;
     };
     [interpolationCard.contentStackView addArrangedSubview:_interpolationRifeModelRow];
@@ -434,7 +434,7 @@
             }
         }];
     }];
-    _interpolationSvpPathRow.textChangedHandler = ^(NSString *text) {
+    _interpolationSvpPathRow.textChangedHandler = ^(NSString *__unused text) {
         weakSelf.hasUnsavedChanges = YES;
     };
     [interpolationCard.contentStackView addArrangedSubview:_interpolationSvpPathRow];
@@ -469,7 +469,7 @@
                                                         text:@"maclcsnap-"
                                                  placeholder:@"maclcsnap-"
                                                     isSecure:NO
-                                                      action:^(NSString *text) {
+                                                      action:^(NSString *__unused text) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _snapPrefixRow.defaultHint = _NS("Default: maclcsnap-");
@@ -480,7 +480,7 @@
                                                    items:@[@"png", @"jpg", @"tiff", @"webp"]
                                                     tags:@[@0, @1, @2, @3]
                                            selectedIndex:0
-                                                  action:^(NSInteger selectedIndex, NSInteger tag) {
+                                                  action:^(NSInteger __unused selectedIndex, NSInteger __unused tag) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _snapFormatRow.defaultHint = _NS("Default: png");
@@ -489,7 +489,7 @@
     _snapSequentialRow = [MacLCSettingsRow checkboxRowWithTitle:_NS("Sequential Numbering")
                                                     explanation:_NS("Name screenshots with incrementing numbers (00001, 00002) instead of dates.")
                                                           state:NO
-                                                         action:^(BOOL checked) {
+                                                         action:^(BOOL __unused checked) {
         weakSelf.hasUnsavedChanges = YES;
     }];
     _snapSequentialRow.defaultHint = _NS("Default: Off");

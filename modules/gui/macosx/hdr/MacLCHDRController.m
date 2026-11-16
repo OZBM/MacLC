@@ -377,7 +377,7 @@ static char *InheritString(const char *name)
         __weak typeof(self) weakSelf = self;
         _pollTimer = [NSTimer scheduledTimerWithTimeInterval:kPollInterval
                                                      repeats:YES
-                                                       block:^(NSTimer *timer) {
+                                                       block:^(NSTimer *__unused timer) {
             [weakSelf pollVideoOutput];
         }];
         _pollTimer.tolerance = 0.3;

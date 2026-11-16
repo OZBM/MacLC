@@ -102,7 +102,7 @@
     vlc_medialibrary_t * const ml = vlc_ml_instance_get(getIntf());
     const int64_t playlistID = _playlist.libraryID;
     NSMutableArray<NSNumber *> * const sources = [NSMutableArray array];
-    [rows enumerateIndexesUsingBlock:^(NSUInteger index, BOOL * const stop) {
+    [rows enumerateIndexesUsingBlock:^(NSUInteger index, BOOL * const __unused stop) {
         [sources addObject:@(index)];
     }];
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{

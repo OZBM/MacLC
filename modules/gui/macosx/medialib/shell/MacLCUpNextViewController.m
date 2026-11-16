@@ -266,7 +266,7 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     _tableView.returnHandler = ^{
         [weakSelf playRow:weakSelf.tableViewSelectedRow];
     };
-    _tableView.menuProvider = ^NSMenu *(NSInteger row) {
+    _tableView.menuProvider = ^NSMenu *(NSInteger __unused row) {
         return [weakSelf contextMenu];
     };
 
@@ -504,7 +504,7 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
 - (void)showSelectionInFinder:(id)sender
 {
     NSMutableArray<NSURL *> * const urls = [NSMutableArray array];
-    [_tableView.selectedRowIndexes enumerateIndexesUsingBlock:^(NSUInteger row, BOOL * const stop) {
+    [_tableView.selectedRowIndexes enumerateIndexesUsingBlock:^(NSUInteger row, BOOL * const __unused stop) {
         NSString * const path = row < self->_items.count ? self->_items[row].path : nil;
         if (path.length > 0) {
             [urls addObject:[NSURL fileURLWithPath:path]];
@@ -587,7 +587,7 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
         }
 
         NSMutableArray<VLCPlayQueueItem *> * const draggedItems = [NSMutableArray arrayWithCapacity:sourceRows.count];
-        [sourceRows enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL * const stop) {
+        [sourceRows enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL * const __unused stop) {
             [draggedItems addObject:self->_items[idx]];
         }];
 

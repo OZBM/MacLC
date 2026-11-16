@@ -593,7 +593,7 @@ static NSTextField *MakeLabel(NSFont *font, NSColor *color)
     _observedViews = chain;
 
     __weak typeof(self) weakSelf = self;
-    void (^refresh)(NSNotification *) = ^(NSNotification *note) {
+    void (^refresh)(NSNotification *) = ^(NSNotification *__unused note) {
         [weakSelf refreshAnimated:NO];
     };
     NSNotificationCenter * const center = NSNotificationCenter.defaultCenter;
@@ -607,7 +607,7 @@ static NSTextField *MakeLabel(NSFont *font, NSColor *color)
         [center addObserverForName:NSWindowWillCloseNotification
                             object:window
                              queue:NSOperationQueue.mainQueue
-                        usingBlock:^(NSNotification *note) {
+                        usingBlock:^(NSNotification *__unused note) {
         [weakSelf windowWillClose];
     }]];
     [_notificationTokens addObject:

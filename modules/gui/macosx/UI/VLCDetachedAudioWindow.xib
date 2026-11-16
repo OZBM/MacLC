@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -16,7 +16,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES" fullSizeContentView="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" topStrut="YES"/>
             <rect key="contentRect" x="91" y="467" width="500" height="500"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1680" height="1025"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="2056" height="1290"/>
             <value key="minSize" type="size" width="239" height="239"/>
             <view key="contentView" id="4" customClass="VLCTrackingView">
                 <rect key="frame" x="0.0" y="0.0" width="500" height="500"/>
@@ -26,13 +26,13 @@
                         <rect key="frame" x="0.0" y="0.0" width="500" height="500"/>
                         <subviews>
                             <customView appearanceType="darkAqua" translatesAutoresizingMaskIntoConstraints="NO" id="5" customClass="VLCBottomBarView">
-                                <rect key="frame" x="0.0" y="0.0" width="500" height="115"/>
+                                <rect key="frame" x="0.0" y="0.0" width="500" height="109"/>
                                 <subviews>
                                     <customView translatesAutoresizingMaskIntoConstraints="NO" id="65" customClass="VLCDragDropView">
-                                        <rect key="frame" x="0.0" y="0.0" width="500" height="115"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="500" height="109"/>
                                         <subviews>
                                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="hHQ-ue-m9C">
-                                                <rect key="frame" x="8" y="63" width="484" height="19"/>
+                                                <rect key="frame" x="6" y="58" width="488" height="19"/>
                                                 <shadow key="shadow" blurRadius="5">
                                                     <color key="color" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 </shadow>
@@ -43,7 +43,7 @@
                                                 </textFieldCell>
                                             </textField>
                                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="zpq-en-EAi">
-                                                <rect key="frame" x="8" y="82" width="484" height="28"/>
+                                                <rect key="frame" x="6" y="77" width="488" height="28"/>
                                                 <shadow key="shadow" blurRadius="5">
                                                     <color key="color" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 </shadow>
@@ -54,10 +54,10 @@
                                                 </textFieldCell>
                                             </textField>
                                             <customView translatesAutoresizingMaskIntoConstraints="NO" id="Vae-cT-EEI" userLabel="Play controls group">
-                                                <rect key="frame" x="185" y="10" width="131" height="32"/>
+                                                <rect key="frame" x="187" y="8" width="126" height="32"/>
                                                 <subviews>
                                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="gAM-N6-20z" userLabel="Jump Back Button">
-                                                        <rect key="frame" x="0.0" y="3" width="20.5" height="28"/>
+                                                        <rect key="frame" x="0.0" y="6" width="15" height="23"/>
                                                         <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="arrow.trianglehead.counterclockwise" catalog="system" imagePosition="only" alignment="center" alternateImage="arrow.trianglehead.counterclockwise" controlSize="large" continuous="YES" imageScaling="proportionallyUpOrDown" id="ZMf-Wu-LAx">
                                                             <behavior key="behavior" lightByContents="YES"/>
                                                             <font key="font" metaFont="system"/>
@@ -71,7 +71,7 @@
                                                         </connections>
                                                     </button>
                                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="11">
-                                                        <rect key="frame" x="20" y="-1.5" width="32.5" height="35"/>
+                                                        <rect key="frame" x="15" y="-1.5" width="32.5" height="35"/>
                                                         <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="backward.fill" catalog="system" imagePosition="only" alignment="center" alternateImage="backward.fill" controlSize="large" continuous="YES" enabled="NO" imageScaling="proportionallyUpOrDown" id="14">
                                                             <behavior key="behavior" lightByContents="YES"/>
                                                             <font key="font" metaFont="system"/>
@@ -84,7 +84,7 @@
                                                         </connections>
                                                     </button>
                                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="10">
-                                                        <rect key="frame" x="52" y="-3" width="32" height="38"/>
+                                                        <rect key="frame" x="47" y="-3" width="32" height="38"/>
                                                         <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="play.circle.fill" catalog="system" imagePosition="only" alignment="center" alternateImage="play.circle.fill" controlSize="large" imageScaling="proportionallyUpOrDown" id="15">
                                                             <behavior key="behavior" lightByContents="YES"/>
                                                             <font key="font" metaFont="system"/>
@@ -97,7 +97,7 @@
                                                         </connections>
                                                     </button>
                                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="12">
-                                                        <rect key="frame" x="84" y="-1.5" width="32.5" height="35"/>
+                                                        <rect key="frame" x="79" y="-1.5" width="32.5" height="35"/>
                                                         <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="forward.fill" catalog="system" imagePosition="only" alignment="center" alternateImage="forward.fill" controlSize="large" continuous="YES" enabled="NO" imageScaling="proportionallyUpOrDown" id="13">
                                                             <behavior key="behavior" lightByContents="YES"/>
                                                             <font key="font" metaFont="system"/>
@@ -110,7 +110,7 @@
                                                         </connections>
                                                     </button>
                                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="gzL-f3-Atd" userLabel="Jump Forwards Buttoin">
-                                                        <rect key="frame" x="116" y="6" width="15" height="23"/>
+                                                        <rect key="frame" x="111" y="6" width="15" height="23"/>
                                                         <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="arrow.trianglehead.clockwise" catalog="system" imagePosition="only" alignment="center" alternateImage="arrow.trianglehead.clockwise" controlSize="large" continuous="YES" imageScaling="proportionallyUpOrDown" id="81E-pP-1hO">
                                                             <behavior key="behavior" lightByContents="YES"/>
                                                             <font key="font" metaFont="system"/>
@@ -143,7 +143,7 @@
                                                 </constraints>
                                             </customView>
                                             <slider hidden="YES" horizontalHuggingPriority="200" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="20" customClass="VLCPlaybackProgressSlider">
-                                                <rect key="frame" x="8" y="45" width="484" height="20"/>
+                                                <rect key="frame" x="8" y="44" width="484" height="14"/>
                                                 <sliderCell key="cell" controlSize="small" continuous="YES" state="on" alignment="left" maxValue="1" doubleValue="0.32600000000000001" tickMarkPosition="above" sliderType="linear" id="23" customClass="VLCPlaybackProgressSliderCell">
                                                     <font key="font" size="12" name="Helvetica"/>
                                                 </sliderCell>
@@ -151,31 +151,26 @@
                                                     <action selector="timeSliderAction:" target="3" id="46"/>
                                                 </connections>
                                             </slider>
-                                            <button focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="9" customClass="VLCTimeField">
-                                                <rect key="frame" x="446" y="34" width="46" height="13"/>
+                                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="9" customClass="VLCTimeField">
+                                                <rect key="frame" x="437" y="31" width="55" height="13"/>
+                                                <shadow key="shadow" blurRadius="1">
+                                                    <color key="color" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                </shadow>
+                                                <buttonCell key="cell" type="bevel" title="00:00" bezelStyle="regularSquare" imagePosition="overlaps" alignment="center" borderStyle="border" inset="2" id="16">
+                                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                                    <font key="font" metaFont="systemBold" size="10"/>
+                                                </buttonCell>
                                                 <constraints>
                                                     <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="42" id="EvZ-Sy-m25"/>
                                                     <constraint firstAttribute="height" constant="13" id="LYT-Sd-Gf6"/>
                                                 </constraints>
-                                                <shadow key="shadow" blurRadius="1">
-                                                    <color key="color" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                                </shadow>
-                                                <buttonCell key="cell" type="push" title="00:00" bezelStyle="regularSquare" imagePosition="overlaps" alignment="center" borderStyle="border" inset="2" id="16">
-                                                    <font key="font" metaFont="systemBold" size="10"/>
-                                                    <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
-                                                </buttonCell>
                                             </button>
                                             <stackView distribution="fill" orientation="horizontal" alignment="centerY" spacing="4" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="xR4-jH-evo" customClass="VLCStackView">
-                                                <userDefinedRuntimeAttributes>
-                                                    <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                        <integer value="1"/>
-                                                    </userDefinedRuntimeAttribute>
-                                                </userDefinedRuntimeAttributes>
-                                                <rect key="frame" x="373" y="10" width="117" height="32"/>
+                                                <rect key="frame" x="376" y="8" width="116" height="32"/>
                                                 <subviews>
                                                     <button wantsLayer="YES" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="tJC-hA-c4P" customClass="VLCImageButton">
-                                                        <rect key="frame" x="0.0" y="-1" width="32" height="33"/>
-                                                        <buttonCell key="cell" type="recessed" bezelStyle="recessed" image="volume.3.fill" catalog="system" imagePosition="only" alignment="center" controlSize="large" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="f8j-zW-474">
+                                                        <rect key="frame" x="0.0" y="0.0" width="32" height="32"/>
+                                                        <buttonCell key="cell" type="recessed" bezelStyle="recessed" image="speaker.wave.3.fill" catalog="system" imagePosition="only" alignment="center" controlSize="large" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="f8j-zW-474">
                                                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES" changeBackground="YES" changeGray="YES"/>
                                                             <font key="font" metaFont="system"/>
                                                         </buttonCell>
@@ -188,7 +183,7 @@
                                                         </connections>
                                                     </button>
                                                     <slider verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="z4Z-7V-IQk" customClass="VLCVolumeSlider">
-                                                        <rect key="frame" x="35" y="8" width="84" height="17"/>
+                                                        <rect key="frame" x="36" y="10" width="80" height="12"/>
                                                         <constraints>
                                                             <constraint firstAttribute="width" constant="80" id="Z0g-An-VZe"/>
                                                         </constraints>
@@ -206,13 +201,18 @@
                                                     <real value="3.4028234663852886e+38"/>
                                                     <real value="3.4028234663852886e+38"/>
                                                 </customSpacing>
+                                                <userDefinedRuntimeAttributes>
+                                                    <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
+                                                        <integer key="value" value="0"/>
+                                                    </userDefinedRuntimeAttribute>
+                                                </userDefinedRuntimeAttributes>
                                             </stackView>
                                         </subviews>
                                         <constraints>
                                             <constraint firstAttribute="trailing" secondItem="20" secondAttribute="trailing" constant="8" id="0Wf-Ej-xo8" customClass="VLCSpacingConstraint">
                                                 <userDefinedRuntimeAttributes>
                                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                        <integer value="2"/>
+                                                        <integer key="value" value="0"/>
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
                                             </constraint>
@@ -223,7 +223,7 @@
                                             <constraint firstItem="20" firstAttribute="leading" secondItem="65" secondAttribute="leading" constant="8" id="KrJ-x3-HIr" customClass="VLCSpacingConstraint">
                                                 <userDefinedRuntimeAttributes>
                                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                        <integer value="2"/>
+                                                        <integer key="value" value="0"/>
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
                                             </constraint>
@@ -232,7 +232,7 @@
                                             <constraint firstAttribute="bottom" secondItem="Vae-cT-EEI" secondAttribute="bottom" constant="8" id="T6V-Vf-TOT" customClass="VLCSpacingConstraint">
                                                 <userDefinedRuntimeAttributes>
                                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                        <integer value="2"/>
+                                                        <integer key="value" value="0"/>
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
                                             </constraint>
@@ -241,7 +241,7 @@
                                             <constraint firstItem="zpq-en-EAi" firstAttribute="top" secondItem="65" secondAttribute="top" constant="4" id="dgI-qM-hLE" customClass="VLCSpacingConstraint">
                                                 <userDefinedRuntimeAttributes>
                                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                        <integer value="1"/>
+                                                        <integer key="value" value="0"/>
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
                                             </constraint>
@@ -249,21 +249,21 @@
                                             <constraint firstAttribute="trailing" secondItem="9" secondAttribute="trailing" constant="8" id="p5i-nM-pBs" customClass="VLCSpacingConstraint">
                                                 <userDefinedRuntimeAttributes>
                                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                        <integer value="2"/>
+                                                        <integer key="value" value="0"/>
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
                                             </constraint>
                                             <constraint firstItem="Vae-cT-EEI" firstAttribute="top" secondItem="20" secondAttribute="bottom" constant="4" id="pfB-W2-CWB" customClass="VLCSpacingConstraint">
                                                 <userDefinedRuntimeAttributes>
                                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                        <integer value="1"/>
+                                                        <integer key="value" value="0"/>
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
                                             </constraint>
                                             <constraint firstAttribute="trailing" secondItem="zpq-en-EAi" secondAttribute="trailing" constant="8" id="qYc-DT-uwy" customClass="VLCSpacingConstraint">
                                                 <userDefinedRuntimeAttributes>
                                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                        <integer value="2"/>
+                                                        <integer key="value" value="0"/>
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
                                             </constraint>
@@ -310,12 +310,12 @@
                 <outlet property="forwardButton" destination="12" id="f7L-YR-p1H"/>
                 <outlet property="jumpBackwardButton" destination="gAM-N6-20z" id="pjA-Rp-szy"/>
                 <outlet property="jumpForwardButton" destination="gzL-f3-Atd" id="g5i-TP-TrD"/>
+                <outlet property="muteVolumeButton" destination="tJC-hA-c4P" id="mVB-qt-x7M"/>
                 <outlet property="playButton" destination="10" id="Gsq-tx-qf3"/>
                 <outlet property="playingItemDisplayField" destination="zpq-en-EAi" id="9js-uK-Dgf"/>
                 <outlet property="timeField" destination="9" id="uzI-2c-bs3"/>
                 <outlet property="timeSlider" destination="20" id="AFS-sq-vuw"/>
                 <outlet property="volumeSlider" destination="z4Z-7V-IQk" id="njj-Ji-PGF"/>
-                <outlet property="muteVolumeButton" destination="tJC-hA-c4P" id="mVB-qt-x7M"/>
             </connections>
         </customObject>
     </objects>
@@ -325,6 +325,6 @@
         <image name="backward.fill" catalog="system" width="20" height="12"/>
         <image name="forward.fill" catalog="system" width="20" height="12"/>
         <image name="play.circle.fill" catalog="system" width="15" height="15"/>
-        <image name="volume.3.fill" catalog="system" width="22" height="15"/>
+        <image name="speaker.wave.3.fill" catalog="system" width="22" height="15"/>
     </resources>
 </document>

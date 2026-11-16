@@ -1337,7 +1337,7 @@ static NSArray<AVCaptureDevice *> *VLCCaptureDevices(AVMediaType mediaType)
         [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:types
                                                                mediaType:nil
                                                                 position:AVCaptureDevicePositionUnspecified];
-    NSPredicate * const predicate = [NSPredicate predicateWithBlock:^BOOL(AVCaptureDevice * const device, NSDictionary * const bindings) {
+    NSPredicate * const predicate = [NSPredicate predicateWithBlock:^BOOL(AVCaptureDevice * const device, NSDictionary * const __unused bindings) {
         return [device hasMediaType:mediaType] || [device hasMediaType:AVMediaTypeMuxed];
     }];
     return [session.devices filteredArrayUsingPredicate:predicate];

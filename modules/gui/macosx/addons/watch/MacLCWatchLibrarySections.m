@@ -137,7 +137,7 @@ void MacLCWatchResumeEntry(MacLCWatchEntry *entry, MacLCWatchSectionViewControll
             [sActivePickers addObject:picker];
 
             __weak MacLCStreamPickerController *weakPicker = picker;
-            picker.completionHandler = ^(BOOL played) {
+            picker.completionHandler = ^(BOOL __unused played) {
                 MacLCStreamPickerController *strongPicker = weakPicker;
                 if (strongPicker) {
                     [sActivePickers removeObject:strongPicker];
@@ -262,7 +262,7 @@ void MacLCWatchResumeEntry(MacLCWatchEntry *entry, MacLCWatchSectionViewControll
         [weakSelf handleSelectionActivation];
     };
 
-    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
+    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger __unused sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
         return [MacLCWatchLayout posterGridSectionWithEnvironment:environment hasHeader:NO];
     };
     _collectionView.collectionViewLayout = [[NSCollectionViewCompositionalLayout alloc] initWithSectionProvider:provider];
@@ -616,7 +616,7 @@ void MacLCWatchResumeEntry(MacLCWatchEntry *entry, MacLCWatchSectionViewControll
         [weakSelf handleSelectionActivation];
     };
 
-    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
+    NSCollectionViewCompositionalLayoutSectionProvider provider = ^NSCollectionLayoutSection * _Nullable(NSInteger __unused sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
         return [MacLCWatchLayout continueGridSectionWithEnvironment:environment hasHeader:YES];
     };
     _collectionView.collectionViewLayout = [[NSCollectionViewCompositionalLayout alloc] initWithSectionProvider:provider];

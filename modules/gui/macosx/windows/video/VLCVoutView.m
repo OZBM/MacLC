@@ -106,10 +106,8 @@
     i_lastScrollWheelDirection = 0;
     f_cumulated_magnification = 0.0;
 
-    if (@available(macOS 10.15, *)) {
-        self.wantsLayer = YES;
-        self.layer.wantsExtendedDynamicRangeContent = YES;
-    }
+    self.wantsLayer = YES;
+    self.layer.preferredDynamicRange = CADynamicRangeHigh;
 
     _playerController = VLCMain.sharedInstance.playQueueController.playerController;
     _hotkeysController = [[VLCHotkeysController alloc] init];
@@ -132,11 +130,9 @@
 {
     [super viewDidMoveToWindow];
     if (self.window) {
-        if (@available(macOS 10.15, *)) {
-            self.window.colorSpace = [NSColorSpace extendedSRGBColorSpace];
-            self.window.contentView.wantsLayer = YES;
-            self.window.contentView.layer.wantsExtendedDynamicRangeContent = YES;
-        }
+        self.window.colorSpace = [NSColorSpace extendedSRGBColorSpace];
+        self.window.contentView.wantsLayer = YES;
+        self.window.contentView.layer.preferredDynamicRange = CADynamicRangeHigh;
         [NSNotificationCenter.defaultCenter addObserver:self
                                                selector:@selector(windowDidResignKey:)
                                                    name:NSWindowDidResignKeyNotification

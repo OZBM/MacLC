@@ -197,7 +197,7 @@
 
     __weak typeof(self) weakSelf = self;
     NSCollectionViewCompositionalLayout *layout =
-        [[NSCollectionViewCompositionalLayout alloc] initWithSectionProvider:^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
+        [[NSCollectionViewCompositionalLayout alloc] initWithSectionProvider:^NSCollectionLayoutSection * _Nullable(NSInteger __unused sectionIndex, id<NSCollectionLayoutEnvironment> environment) {
         if (weakSelf.isSearchMode) {
             return [MacLCYouTubeLayout resultListSectionWithEnvironment:environment hasHeader:YES];
         } else if (weakSelf.section.feed == MacLCYouTubeFeedPlaylists) {
@@ -487,7 +487,7 @@
     __weak typeof(self) weakSelf = self;
     _searchDebounceTimer = [NSTimer scheduledTimerWithTimeInterval:0.6
                                                            repeats:NO
-                                                             block:^(NSTimer * _Nonnull timer) {
+                                                             block:^(NSTimer * _Nonnull __unused timer) {
         [weakSelf executeSearch];
     }];
 }
@@ -934,7 +934,7 @@ forRepresentedObjectAtIndexPath:(NSIndexPath *)indexPath
         }
         if (url != nil) {
             __weak typeof(self) weakSelf = self;
-            [[MacLCYouTubeService sharedService] playlist:url limit:36 completion:^(MacLCYouTubePage * _Nullable p, NSError * _Nullable err) {
+            [[MacLCYouTubeService sharedService] playlist:url limit:36 completion:^(MacLCYouTubePage * _Nullable p, NSError * _Nullable __unused err) {
                 if (p.playlist != nil) {
                     [weakSelf showPlaylist:p.playlist];
                 }

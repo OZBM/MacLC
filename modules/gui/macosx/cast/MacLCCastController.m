@@ -289,7 +289,7 @@ static void * const kAirPlayKVOContext = (void *)&kAirPlayKVOContext;
                 __weak typeof(self) weakSelf = self;
                 _airplayDisconnectTimer = [NSTimer scheduledTimerWithTimeInterval:4.0
                                                                           repeats:NO
-                                                                            block:^(NSTimer * _Nonnull timer) {
+                                                                            block:^(NSTimer * _Nonnull __unused timer) {
                     __strong typeof(weakSelf) strongSelf = weakSelf;
                     if (!strongSelf) return;
                     strongSelf->_airplayDisconnectTimer = nil;
@@ -389,7 +389,7 @@ static void * const kAirPlayKVOContext = (void *)&kAirPlayKVOContext;
         addObserverForName:AVPlayerItemDidPlayToEndTimeNotification
                     object:probeItem
                      queue:[NSOperationQueue mainQueue]
-                usingBlock:^(NSNotification * _Nonnull note) {
+                usingBlock:^(NSNotification * _Nonnull __unused note) {
                     __strong typeof(weakSelf) strongSelf = weakSelf;
                     if (strongSelf) {
                         [strongSelf->_airPlayPlayer seekToTime:kCMTimeZero];
@@ -409,7 +409,7 @@ static void * const kAirPlayKVOContext = (void *)&kAirPlayKVOContext;
     __weak typeof(self) weakSelf = self;
     _probeRemovalTimer = [NSTimer scheduledTimerWithTimeInterval:3.0
                                                          repeats:NO
-                                                           block:^(NSTimer * _Nonnull timer) {
+                                                           block:^(NSTimer * _Nonnull __unused timer) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
         strongSelf->_probeRemovalTimer = nil;
