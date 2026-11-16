@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="24765" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="24765"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -189,8 +189,8 @@ DQ
                             <font key="font" size="12" name="Helvetica"/>
                         </sliderCell>
                         <connections>
-                            <binding destination="-2" name="maxValue" keyPath="self.maxTime" id="ele-YJ-xSk"/>
                             <binding destination="-2" name="value" keyPath="self.jumpTotalSecs" previousBinding="ele-YJ-xSk" id="mmy-a5-0Y9"/>
+                            <binding destination="-2" name="maxValue" keyPath="self.maxTime" id="ele-YJ-xSk"/>
                         </connections>
                     </slider>
                     <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="C7h-06-Udn">

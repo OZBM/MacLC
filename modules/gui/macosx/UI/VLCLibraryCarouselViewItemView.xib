@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="21701" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="21701"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -53,14 +54,14 @@
                         <constraint firstItem="isd-eb-9XW" firstAttribute="leading" secondItem="6QI-EH-rMu" secondAttribute="leading" constant="8" id="Vgu-8n-XUQ" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="2"/>
+                                    <integer key="value" value="2"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
                         <constraint firstItem="isd-eb-9XW" firstAttribute="top" secondItem="6QI-EH-rMu" secondAttribute="top" constant="8" id="crc-Yn-dBs" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="2"/>
+                                    <integer key="value" value="2"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -98,14 +99,14 @@
                 <constraint firstItem="orq-rq-pBK" firstAttribute="leading" secondItem="Hib-tD-Vvh" secondAttribute="leading" constant="8" id="IlA-QV-Zl1" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="CKr-3L-pMu" firstAttribute="leading" secondItem="Hib-tD-Vvh" secondAttribute="leading" constant="8" id="bW1-WZ-Ycn" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -114,7 +115,7 @@
                 <constraint firstAttribute="trailing" secondItem="CKr-3L-pMu" secondAttribute="trailing" constant="8" id="edB-6v-tSL" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -122,14 +123,14 @@
                 <constraint firstAttribute="trailing" secondItem="orq-rq-pBK" secondAttribute="trailing" constant="8" id="rou-q0-WrF" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="bottom" secondItem="orq-rq-pBK" secondAttribute="bottom" constant="8" id="vwh-Yj-Ux4" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>

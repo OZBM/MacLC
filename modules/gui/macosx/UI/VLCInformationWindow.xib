@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="16097.2" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="16097.2"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
+        <capability name="Image references" minToolsVersion="12.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -18,11 +19,13 @@
                 <outlet property="audioDecodedLabel" destination="583" id="684"/>
                 <outlet property="audioDecodedTextField" destination="582" id="685"/>
                 <outlet property="audioLabel" destination="574" id="686"/>
+                <outlet property="contentDescriptionLabel" destination="498" id="679"/>
                 <outlet property="contentDescriptionTextField" destination="497" id="951-iw-gOA"/>
                 <outlet property="copyrightLabel" destination="487" id="658"/>
                 <outlet property="copyrightTextField" destination="486" id="659"/>
                 <outlet property="dateLabel" destination="436" id="656"/>
                 <outlet property="dateTextField" destination="435" id="655"/>
+                <outlet property="decodedMRLLabel" destination="510" id="677"/>
                 <outlet property="decodedMRLTextField" destination="509" id="cRO-43-SO3"/>
                 <outlet property="demuxBitrateLabel" destination="545" id="693"/>
                 <outlet property="demuxBitrateTextField" destination="hUq-0S-i6D" id="Jgq-FQ-1CE"/>
@@ -34,13 +37,12 @@
                 <outlet property="demuxReadBytesTextField" destination="542" id="9eB-eE-XTP"/>
                 <outlet property="demuxReadPacketsLabel" destination="Hnb-RD-RvP" id="6Xi-zs-S8Q"/>
                 <outlet property="demuxReadPacketsTextField" destination="7Q8-ZO-4ZM" id="gWq-ZN-quj"/>
-                <outlet property="contentDescriptionLabel" destination="498" id="679"/>
                 <outlet property="directorLabel" destination="cXh-Kb-cBh" id="6ZF-wX-Xh2"/>
                 <outlet property="directorTextField" destination="KiB-XA-gnh" id="ERL-sw-M61"/>
                 <outlet property="displayedLabel" destination="557" id="712"/>
                 <outlet property="displayedTextField" destination="558" id="713"/>
-                <outlet property="encodedByTextField" destination="504" id="BOa-Pb-f9Z"/>
                 <outlet property="encodedByLabel" destination="505" id="660"/>
+                <outlet property="encodedByTextField" destination="504" id="BOa-Pb-f9Z"/>
                 <outlet property="episodeLabel" destination="32r-kK-YIK" id="yix-cN-AcT"/>
                 <outlet property="episodeTextField" destination="D3W-el-Mmk" id="FS0-bE-baK"/>
                 <outlet property="genreLabel" destination="462" id="662"/>
@@ -79,7 +81,6 @@
                 <outlet property="trackNumberTextField" destination="441" id="v8g-zz-lrZ"/>
                 <outlet property="trackTotalLabel" destination="cIj-bq-nFH" id="DTy-a5-z5z"/>
                 <outlet property="trackTotalTextField" destination="Ken-fu-rsj" id="5tM-3S-iBE"/>
-                <outlet property="decodedMRLLabel" destination="510" id="677"/>
                 <outlet property="videoDecodedLabel" destination="555" id="727"/>
                 <outlet property="videoDecodedTextField" destination="556" id="728"/>
                 <outlet property="videoLabel" destination="553" id="711"/>
@@ -103,11 +104,11 @@
                         <tabViewItems>
                             <tabViewItem label="General" identifier="1" id="419">
                                 <view key="view" id="422">
-                                    <rect key="frame" x="0.0" y="0.0" width="542" height="513"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="542" height="444"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="427" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="473" width="468" height="19"/>
+                                            <rect key="frame" x="37" y="404" width="468" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="428">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -115,7 +116,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="429">
-                                            <rect key="frame" x="35" y="495" width="373" height="14"/>
+                                            <rect key="frame" x="35" y="426" width="373" height="14"/>
                                             <constraints>
                                                 <constraint firstAttribute="width" constant="369" id="QQR-jU-J5W"/>
                                             </constraints>
@@ -126,7 +127,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="509" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="18" width="416" height="19"/>
+                                            <rect key="frame" x="37" y="-51" width="416" height="19"/>
                                             <constraints>
                                                 <constraint firstAttribute="height" constant="19" id="POw-kc-CJg"/>
                                             </constraints>
@@ -137,7 +138,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="510">
-                                            <rect key="frame" x="35" y="40" width="475" height="13"/>
+                                            <rect key="frame" x="35" y="-29" width="475" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Location" id="511">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -145,7 +146,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="431" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="430" width="300" height="19"/>
+                                            <rect key="frame" x="37" y="361" width="300" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="434">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -153,7 +154,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="432">
-                                            <rect key="frame" x="35" y="452" width="262" height="13"/>
+                                            <rect key="frame" x="35" y="383" width="262" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Artist" id="433">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -161,7 +162,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="435" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="345" y="430" width="160" height="19"/>
+                                            <rect key="frame" x="345" y="361" width="160" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="438">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -169,7 +170,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="436">
-                                            <rect key="frame" x="343" y="452" width="27" height="13"/>
+                                            <rect key="frame" x="343" y="383" width="27" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Date" id="437">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -177,7 +178,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="439" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="387" width="300" height="19"/>
+                                            <rect key="frame" x="37" y="318" width="300" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="446">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -185,7 +186,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="440">
-                                            <rect key="frame" x="35" y="409" width="35" height="13"/>
+                                            <rect key="frame" x="35" y="340" width="35" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Album" id="445">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -193,7 +194,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="441" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="345" y="387" width="76" height="19"/>
+                                            <rect key="frame" x="345" y="318" width="76" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="444">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -201,7 +202,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="442">
-                                            <rect key="frame" x="343" y="409" width="72" height="13"/>
+                                            <rect key="frame" x="343" y="340" width="72" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Track Number" id="443">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -209,7 +210,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="461" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="258" width="300" height="19"/>
+                                            <rect key="frame" x="37" y="189" width="300" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="468">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -217,7 +218,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="462">
-                                            <rect key="frame" x="35" y="280" width="33" height="13"/>
+                                            <rect key="frame" x="35" y="211" width="33" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Genre" id="467">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -225,7 +226,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="476" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="215" width="300" height="19"/>
+                                            <rect key="frame" x="37" y="146" width="300" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="479">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -233,7 +234,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="477">
-                                            <rect key="frame" x="35" y="237" width="64" height="13"/>
+                                            <rect key="frame" x="35" y="168" width="64" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Now Playing" id="478">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -241,7 +242,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" horizontalHuggingPriority="200" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="481" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="86" width="229" height="19"/>
+                                            <rect key="frame" x="37" y="17" width="229" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="484">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -249,7 +250,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="482">
-                                            <rect key="frame" x="35" y="108" width="233" height="13"/>
+                                            <rect key="frame" x="35" y="39" width="233" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Publisher" id="483">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -257,7 +258,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="504" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="274" y="86" width="231" height="19"/>
+                                            <rect key="frame" x="274" y="17" width="231" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="507">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -265,7 +266,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="505">
-                                            <rect key="frame" x="274" y="108" width="231" height="13"/>
+                                            <rect key="frame" x="274" y="39" width="231" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Encoded by" id="506">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -273,7 +274,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="486" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="129" width="300" height="19"/>
+                                            <rect key="frame" x="37" y="60" width="300" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="489">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -281,7 +282,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="487">
-                                            <rect key="frame" x="35" y="151" width="64" height="13"/>
+                                            <rect key="frame" x="35" y="82" width="64" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Copyright" id="488">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -289,7 +290,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" translatesAutoresizingMaskIntoConstraints="NO" id="497" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="172" width="300" height="19"/>
+                                            <rect key="frame" x="37" y="103" width="300" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="500">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -297,7 +298,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="498">
-                                            <rect key="frame" x="35" y="194" width="64" height="13"/>
+                                            <rect key="frame" x="35" y="125" width="64" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Description" id="499">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -305,7 +306,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="463" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="345" y="258" width="160" height="19"/>
+                                            <rect key="frame" x="345" y="189" width="160" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="466">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -313,7 +314,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="464">
-                                            <rect key="frame" x="343" y="280" width="93" height="13"/>
+                                            <rect key="frame" x="343" y="211" width="93" height="13"/>
                                             <constraints>
                                                 <constraint firstAttribute="width" constant="89" id="qse-Y4-EaG"/>
                                             </constraints>
@@ -324,7 +325,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="tWC-Zr-8E5" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="301" width="300" height="19"/>
+                                            <rect key="frame" x="37" y="232" width="300" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="Ec8-Cl-y0i">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -332,7 +333,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="8ES-YK-OvS">
-                                            <rect key="frame" x="35" y="323" width="36" height="13"/>
+                                            <rect key="frame" x="35" y="254" width="36" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Actors" id="aZ1-3i-ChV">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -340,7 +341,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="KiB-XA-gnh" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="345" y="301" width="160" height="19"/>
+                                            <rect key="frame" x="345" y="232" width="160" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="pFQ-Gp-0HP">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -348,7 +349,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="cXh-Kb-cBh">
-                                            <rect key="frame" x="343" y="323" width="93" height="13"/>
+                                            <rect key="frame" x="343" y="254" width="93" height="13"/>
                                             <constraints>
                                                 <constraint firstAttribute="width" constant="89" id="XWn-9q-LbO"/>
                                             </constraints>
@@ -359,7 +360,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="412">
-                                            <rect key="frame" x="407" y="60" width="98" height="19"/>
+                                            <rect key="frame" x="407" y="-9" width="98" height="19"/>
                                             <buttonCell key="cell" type="push" title="Save Metadata" bezelStyle="rounded" alignment="center" enabled="NO" borderStyle="border" inset="2" id="413">
                                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                                 <font key="font" metaFont="system"/>
@@ -369,7 +370,7 @@
                                             </connections>
                                         </button>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Ken-fu-rsj" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="429" y="387" width="76" height="19"/>
+                                            <rect key="frame" x="429" y="318" width="76" height="19"/>
                                             <constraints>
                                                 <constraint firstAttribute="width" constant="76" id="X3G-qK-H1c"/>
                                             </constraints>
@@ -380,7 +381,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="cIj-bq-nFH">
-                                            <rect key="frame" x="427" y="409" width="58" height="13"/>
+                                            <rect key="frame" x="427" y="340" width="58" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Track Total" id="i17-ag-vz1">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -388,7 +389,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Vvu-VZ-aui" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="37" y="344" width="300" height="19"/>
+                                            <rect key="frame" x="37" y="275" width="300" height="19"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" focusRingType="none" drawsBackground="YES" id="dCs-of-GUs">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -396,7 +397,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="TJe-7E-Uca">
-                                            <rect key="frame" x="35" y="366" width="61" height="13"/>
+                                            <rect key="frame" x="35" y="297" width="61" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Show Name" id="VeK-xk-INw">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -404,7 +405,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="NFO-5i-C2y">
-                                            <rect key="frame" x="343" y="366" width="40" height="13"/>
+                                            <rect key="frame" x="343" y="297" width="40" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Season" id="Cvp-kb-ISg">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -412,7 +413,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="D3W-el-Mmk" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="429" y="344" width="76" height="19"/>
+                                            <rect key="frame" x="429" y="275" width="76" height="19"/>
                                             <constraints>
                                                 <constraint firstAttribute="width" constant="76" id="V5q-H5-oPv"/>
                                                 <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="76" id="tzn-gy-27A"/>
@@ -424,7 +425,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="32r-kK-YIK">
-                                            <rect key="frame" x="427" y="366" width="43" height="13"/>
+                                            <rect key="frame" x="427" y="297" width="43" height="13"/>
                                             <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Episode" id="feZ-4P-eXl">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -432,7 +433,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Cro-Nn-BBH" customClass="VLCSettingTextField">
-                                            <rect key="frame" x="345" y="344" width="76" height="19"/>
+                                            <rect key="frame" x="345" y="275" width="76" height="19"/>
                                             <constraints>
                                                 <constraint firstAttribute="width" constant="76" id="STi-Ld-Rjj"/>
                                             </constraints>
@@ -443,7 +444,7 @@
                                             </textFieldCell>
                                         </textField>
                                         <button translatesAutoresizingMaskIntoConstraints="NO" id="9jw-Fr-d1M">
-                                            <rect key="frame" x="345" y="129" width="160" height="128"/>
+                                            <rect key="frame" x="345" y="60" width="160" height="128"/>
                                             <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="noart" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="T6o-O9-fdd">
                                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                                 <font key="font" metaFont="system"/>
@@ -456,7 +457,7 @@
                                             </connections>
                                         </button>
                                         <button horizontalHuggingPriority="252" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="mC1-pf-fRU">
-                                            <rect key="frame" x="441" y="18" width="64" height="19"/>
+                                            <rect key="frame" x="441" y="-51" width="64" height="19"/>
                                             <buttonCell key="cell" type="push" title="Copy" bezelStyle="rounded" imagePosition="trailing" alignment="center" state="on" borderStyle="border" inset="2" id="VR0-15-bEV">
                                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                                 <font key="font" metaFont="system"/>
@@ -467,7 +468,7 @@
                                             </connections>
                                         </button>
                                         <box verticalHuggingPriority="750" boxType="separator" translatesAutoresizingMaskIntoConstraints="NO" id="9Bt-th-j2x">
-                                            <rect key="frame" x="0.0" y="58" width="542" height="5"/>
+                                            <rect key="frame" x="0.0" y="-11" width="542" height="5"/>
                                         </box>
                                     </subviews>
                                     <constraints>
@@ -479,7 +480,7 @@
                                         <constraint firstItem="Cro-Nn-BBH" firstAttribute="leading" secondItem="Vvu-VZ-aui" secondAttribute="trailing" constant="8" id="4Wy-de-qFK" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -487,7 +488,7 @@
                                         <constraint firstItem="463" firstAttribute="leading" secondItem="461" secondAttribute="trailing" constant="8" id="5fW-BF-CQQ" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -495,14 +496,14 @@
                                         <constraint firstItem="509" firstAttribute="trailing" secondItem="mC1-pf-fRU" secondAttribute="leading" constant="-8" id="64p-sq-S98" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
                                         <constraint firstItem="435" firstAttribute="leading" secondItem="431" secondAttribute="trailing" constant="8" id="69n-nP-QoU" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -511,7 +512,7 @@
                                         <constraint firstItem="Ken-fu-rsj" firstAttribute="leading" secondItem="441" secondAttribute="trailing" constant="8" id="8CH-DT-qPt" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -525,7 +526,7 @@
                                         <constraint firstItem="9jw-Fr-d1M" firstAttribute="top" secondItem="463" secondAttribute="bottom" constant="8" id="BUu-AV-Vnk" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -534,7 +535,7 @@
                                         <constraint firstItem="TJe-7E-Uca" firstAttribute="top" secondItem="439" secondAttribute="bottom" constant="8" id="CtI-Qn-zYS" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -548,7 +549,7 @@
                                         <constraint firstItem="504" firstAttribute="leading" secondItem="481" secondAttribute="trailing" constant="8" id="GNl-FV-0Tb" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -560,14 +561,14 @@
                                         <constraint firstItem="510" firstAttribute="top" secondItem="9Bt-th-j2x" secondAttribute="top" constant="8" id="Ka9-to-h99" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
                                         <constraint firstItem="9Bt-th-j2x" firstAttribute="top" secondItem="412" secondAttribute="bottom" constant="8" symbolic="YES" id="Lqx-sg-dsv" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -579,14 +580,14 @@
                                         <constraint firstItem="505" firstAttribute="leading" secondItem="482" secondAttribute="trailing" constant="8" id="Osi-SE-fRa" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
                                         <constraint firstItem="D3W-el-Mmk" firstAttribute="leading" secondItem="Cro-Nn-BBH" secondAttribute="trailing" constant="8" id="Ot2-CH-D1Q" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -594,7 +595,7 @@
                                         <constraint firstItem="482" firstAttribute="top" secondItem="486" secondAttribute="bottom" constant="8" id="PSK-wM-mHh" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -618,7 +619,7 @@
                                         <constraint firstItem="432" firstAttribute="top" secondItem="427" secondAttribute="bottom" constant="8" id="b5k-Mg-gUI" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -632,14 +633,14 @@
                                         <constraint firstItem="8ES-YK-OvS" firstAttribute="top" secondItem="Vvu-VZ-aui" secondAttribute="bottom" constant="8" id="fBu-0v-sEr" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
                                         <constraint firstItem="429" firstAttribute="top" secondItem="422" secondAttribute="top" constant="4" id="fEh-gm-DlI" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="1"/>
+                                                    <integer key="value" value="1"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -647,14 +648,14 @@
                                         <constraint firstItem="440" firstAttribute="top" secondItem="431" secondAttribute="bottom" constant="8" id="fmF-KN-XYS" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
                                         <constraint firstItem="477" firstAttribute="top" secondItem="461" secondAttribute="bottom" constant="8" symbolic="YES" id="g6g-Ns-JmP" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -669,7 +670,7 @@
                                         <constraint firstItem="498" firstAttribute="top" secondItem="476" secondAttribute="bottom" constant="8" id="lwM-dZ-Ak0" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -679,7 +680,7 @@
                                         <constraint firstItem="462" firstAttribute="top" secondItem="tWC-Zr-8E5" secondAttribute="bottom" constant="8" id="nzo-th-CDt" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -690,7 +691,7 @@
                                         <constraint firstItem="487" firstAttribute="top" secondItem="497" secondAttribute="bottom" constant="8" id="pMt-4R-J9m" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -713,7 +714,7 @@
                                         <constraint firstItem="KiB-XA-gnh" firstAttribute="leading" secondItem="tWC-Zr-8E5" secondAttribute="trailing" constant="8" id="zrh-ZO-Xrk" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="2"/>
+                                                    <integer key="value" value="2"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -732,7 +733,7 @@
                                                 <autoresizingMask key="autoresizingMask"/>
                                                 <subviews>
                                                     <outlineView focusRingType="none" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" alternatingRowBackgroundColors="YES" columnReordering="NO" multipleSelection="NO" emptySelection="NO" autosaveColumns="NO" typeSelect="NO" rowSizeStyle="automatic" viewBased="YES" indentationPerLevel="16" indentationMarkerFollowsCell="NO" autoresizesOutlineColumn="YES" outlineTableColumn="521" id="519">
-                                                        <rect key="frame" x="0.0" y="0.0" width="494" height="440"/>
+                                                        <rect key="frame" x="0.0" y="0.0" width="510" height="440"/>
                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                         <size key="intercellSpacing" width="3" height="2"/>
                                                         <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -751,11 +752,11 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="sWh-xo-F0z">
-                                                                        <rect key="frame" x="11" y="1" width="254" height="17"/>
+                                                                        <rect key="frame" x="11" y="1" width="247" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField identifier="VLCInformationWindowPropertyNameCell" horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="aQy-jV-OVS">
-                                                                                <rect key="frame" x="0.0" y="1" width="254" height="16"/>
+                                                                                <rect key="frame" x="0.0" y="1" width="247" height="16"/>
                                                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                                                                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Table View Cell" id="S8v-2v-4vD">
                                                                                     <font key="font" usesAppearanceFont="YES"/>
@@ -783,11 +784,11 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="AiZ-f9-liR">
-                                                                        <rect key="frame" x="261" y="1" width="227" height="17"/>
+                                                                        <rect key="frame" x="261" y="1" width="221" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="oPm-Le-K3W">
-                                                                                <rect key="frame" x="0.0" y="1" width="227" height="16"/>
+                                                                                <rect key="frame" x="0.0" y="1" width="221" height="16"/>
                                                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                                                                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Table View Cell" id="F2n-nI-GbZ">
                                                                                     <font key="font" usesAppearanceFont="YES"/>
@@ -821,7 +822,7 @@
                                         <constraint firstItem="516" firstAttribute="top" secondItem="421" secondAttribute="top" constant="4" id="IN7-1d-XgS" customClass="VLCSpacingConstraint">
                                             <userDefinedRuntimeAttributes>
                                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                    <integer value="1"/>
+                                                    <integer key="value" value="1"/>
                                                 </userDefinedRuntimeAttribute>
                                             </userDefinedRuntimeAttributes>
                                         </constraint>
@@ -839,11 +840,11 @@
                                         <box autoresizesSubviews="NO" borderType="line" title="Box" titlePosition="noTitle" translatesAutoresizingMaskIntoConstraints="NO" id="549" userLabel="Input Box">
                                             <rect key="frame" x="31" y="306" width="486" height="109"/>
                                             <view key="contentView" id="enP-o2-JOw">
-                                                <rect key="frame" x="3" y="3" width="480" height="103"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="486" height="109"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                 <subviews>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="531">
-                                                        <rect key="frame" x="12" y="74" width="86" height="14"/>
+                                                        <rect key="frame" x="12" y="80" width="86" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Read bytes" id="532">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -851,7 +852,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="535">
-                                                        <rect key="frame" x="177" y="74" width="47" height="14"/>
+                                                        <rect key="frame" x="177" y="80" width="47" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000 kB" id="536">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -859,7 +860,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="537">
-                                                        <rect key="frame" x="12" y="55" width="86" height="14"/>
+                                                        <rect key="frame" x="12" y="61" width="86" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Input bitrate" id="540">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -867,7 +868,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="538">
-                                                        <rect key="frame" x="167" y="55" width="57" height="14"/>
+                                                        <rect key="frame" x="167" y="61" width="57" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000 kB/s" id="539">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -875,7 +876,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="541">
-                                                        <rect key="frame" x="12" y="36" width="86" height="14"/>
+                                                        <rect key="frame" x="12" y="42" width="86" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Demuxed bytes" id="544">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -883,7 +884,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="542">
-                                                        <rect key="frame" x="177" y="36" width="47" height="14"/>
+                                                        <rect key="frame" x="177" y="42" width="47" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000 kB" id="543">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -891,7 +892,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="545">
-                                                        <rect key="frame" x="12" y="17" width="86" height="14"/>
+                                                        <rect key="frame" x="12" y="23" width="86" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Corrupted" id="548">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -899,7 +900,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="546">
-                                                        <rect key="frame" x="167" y="17" width="57" height="14"/>
+                                                        <rect key="frame" x="167" y="23" width="57" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000 kB/s" id="547">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -907,7 +908,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="L6D-Ls-MFm">
-                                                        <rect key="frame" x="256" y="74" width="98" height="14"/>
+                                                        <rect key="frame" x="256" y="80" width="98" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Read packets" id="oeH-hJ-nMy">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -915,7 +916,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4ER-zb-B5H">
-                                                        <rect key="frame" x="421" y="74" width="47" height="14"/>
+                                                        <rect key="frame" x="421" y="80" width="47" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000 kB" id="wGg-yM-9i6">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -923,7 +924,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="gsz-au-iO1">
-                                                        <rect key="frame" x="256" y="55" width="98" height="14"/>
+                                                        <rect key="frame" x="256" y="61" width="98" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Demux bitrate" id="aS8-Ia-dmj">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -931,7 +932,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="hUq-0S-i6D">
-                                                        <rect key="frame" x="411" y="55" width="57" height="14"/>
+                                                        <rect key="frame" x="411" y="61" width="57" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000 kB/s" id="XHi-jw-z5b">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -939,7 +940,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Hnb-RD-RvP">
-                                                        <rect key="frame" x="256" y="36" width="98" height="14"/>
+                                                        <rect key="frame" x="256" y="42" width="98" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Demuxed packets" id="IdT-d6-LZQ">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -947,7 +948,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="7Q8-ZO-4ZM">
-                                                        <rect key="frame" x="421" y="36" width="47" height="14"/>
+                                                        <rect key="frame" x="421" y="42" width="47" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000 kB" id="Epu-hD-zg8">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -955,7 +956,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="NHt-3c-ugP">
-                                                        <rect key="frame" x="256" y="17" width="98" height="14"/>
+                                                        <rect key="frame" x="256" y="23" width="98" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Discontinuities" id="FXD-Ky-Yre">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -963,7 +964,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="uph-5X-7MU">
-                                                        <rect key="frame" x="411" y="17" width="57" height="14"/>
+                                                        <rect key="frame" x="411" y="23" width="57" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000 kB/s" id="EEh-Ux-gkI">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -975,7 +976,7 @@
                                                     <constraint firstItem="535" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="531" secondAttribute="trailing" constant="8" id="1TX-CX-5ch" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="2"/>
+                                                                <integer key="value" value="2"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -990,7 +991,7 @@
                                                     <constraint firstItem="542" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="541" secondAttribute="trailing" constant="8" id="Cna-8M-Wb7" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="2"/>
+                                                                <integer key="value" value="2"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1001,7 +1002,7 @@
                                                     <constraint firstItem="545" firstAttribute="top" secondItem="541" secondAttribute="bottom" constant="4" id="EYj-lI-vUv" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1011,14 +1012,14 @@
                                                     <constraint firstItem="NHt-3c-ugP" firstAttribute="top" secondItem="Hnb-RD-RvP" secondAttribute="bottom" constant="4" id="Jbc-Gt-KGb" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
                                                     <constraint firstItem="hUq-0S-i6D" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="gsz-au-iO1" secondAttribute="trailing" constant="8" id="JdY-4G-Czw" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="2"/>
+                                                                <integer key="value" value="2"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1029,7 +1030,7 @@
                                                     <constraint firstItem="4ER-zb-B5H" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="L6D-Ls-MFm" secondAttribute="trailing" constant="8" id="SqP-zy-13s" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="2"/>
+                                                                <integer key="value" value="2"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1042,7 +1043,7 @@
                                                     <constraint firstItem="541" firstAttribute="top" secondItem="537" secondAttribute="bottom" constant="4" id="Xhx-IO-RLK" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1051,7 +1052,7 @@
                                                     <constraint firstItem="546" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="545" secondAttribute="trailing" constant="8" id="fCs-Oh-4rl" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="2"/>
+                                                                <integer key="value" value="2"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1059,7 +1060,7 @@
                                                     <constraint firstItem="uph-5X-7MU" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="NHt-3c-ugP" secondAttribute="trailing" constant="8" id="iiT-uI-Xpg" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="2"/>
+                                                                <integer key="value" value="2"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1069,28 +1070,28 @@
                                                     <constraint firstItem="gsz-au-iO1" firstAttribute="top" secondItem="L6D-Ls-MFm" secondAttribute="bottom" constant="4" id="qR5-qd-Gfu" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
                                                     <constraint firstItem="537" firstAttribute="top" secondItem="531" secondAttribute="bottom" constant="4" id="sEw-5m-Z6G" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
                                                     <constraint firstItem="Hnb-RD-RvP" firstAttribute="top" secondItem="gsz-au-iO1" secondAttribute="bottom" constant="4" id="sLT-ZS-pmx" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
                                                     <constraint firstItem="7Q8-ZO-4ZM" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Hnb-RD-RvP" secondAttribute="trailing" constant="8" id="ugL-pE-vGY" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="2"/>
+                                                                <integer key="value" value="2"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1099,7 +1100,7 @@
                                                     <constraint firstItem="538" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="537" secondAttribute="trailing" constant="8" id="zJT-6x-qV0" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="2"/>
+                                                                <integer key="value" value="2"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1136,11 +1137,11 @@
                                         <box autoresizesSubviews="NO" borderType="line" title="Box" titlePosition="noTitle" translatesAutoresizingMaskIntoConstraints="NO" id="573" userLabel="Audio Box">
                                             <rect key="frame" x="275" y="187" width="242" height="104"/>
                                             <view key="contentView" id="7tR-kf-2ax">
-                                                <rect key="frame" x="3" y="3" width="236" height="98"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="242" height="104"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                 <subviews>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="583">
-                                                        <rect key="frame" x="12" y="70" width="121" height="14"/>
+                                                        <rect key="frame" x="12" y="76" width="121" height="14"/>
                                                         <constraints>
                                                             <constraint firstAttribute="width" constant="117" id="FaO-BP-Myr"/>
                                                         </constraints>
@@ -1151,7 +1152,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="582">
-                                                        <rect key="frame" x="135" y="70" width="89" height="14"/>
+                                                        <rect key="frame" x="135" y="76" width="89" height="14"/>
                                                         <constraints>
                                                             <constraint firstAttribute="width" constant="85" id="pgJ-Ad-US6"/>
                                                         </constraints>
@@ -1162,7 +1163,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="581">
-                                                        <rect key="frame" x="12" y="51" width="121" height="14"/>
+                                                        <rect key="frame" x="12" y="57" width="121" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Played buffer" id="586">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1170,7 +1171,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="580">
-                                                        <rect key="frame" x="135" y="51" width="89" height="14"/>
+                                                        <rect key="frame" x="135" y="57" width="89" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000" id="587">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1178,7 +1179,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="579">
-                                                        <rect key="frame" x="12" y="32" width="121" height="14"/>
+                                                        <rect key="frame" x="12" y="38" width="121" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Lost buffers" id="588">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1186,7 +1187,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="578">
-                                                        <rect key="frame" x="135" y="32" width="89" height="14"/>
+                                                        <rect key="frame" x="135" y="38" width="89" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000" id="589">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1200,7 +1201,7 @@
                                                     <constraint firstItem="581" firstAttribute="top" secondItem="583" secondAttribute="bottom" constant="4" id="7Wn-sX-VvF" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1214,7 +1215,7 @@
                                                     <constraint firstItem="579" firstAttribute="top" secondItem="581" secondAttribute="bottom" constant="4" id="X5g-op-T8Q" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1237,11 +1238,11 @@
                                         <box autoresizesSubviews="NO" borderType="line" title="Box" titlePosition="noTitle" translatesAutoresizingMaskIntoConstraints="NO" id="552" userLabel="Video Box">
                                             <rect key="frame" x="31" y="187" width="243" height="104"/>
                                             <view key="contentView" id="QnG-Hd-ZtQ">
-                                                <rect key="frame" x="3" y="3" width="237" height="98"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="243" height="104"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                 <subviews>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="555">
-                                                        <rect key="frame" x="12" y="70" width="121" height="14"/>
+                                                        <rect key="frame" x="12" y="76" width="121" height="14"/>
                                                         <constraints>
                                                             <constraint firstAttribute="width" constant="117" id="Htg-L7-ZFh"/>
                                                         </constraints>
@@ -1252,7 +1253,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="556">
-                                                        <rect key="frame" x="135" y="70" width="89" height="14"/>
+                                                        <rect key="frame" x="135" y="76" width="89" height="14"/>
                                                         <constraints>
                                                             <constraint firstAttribute="width" constant="85" id="NGB-dc-ns6"/>
                                                         </constraints>
@@ -1263,7 +1264,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="557">
-                                                        <rect key="frame" x="12" y="51" width="121" height="14"/>
+                                                        <rect key="frame" x="12" y="57" width="121" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Displayed frames" id="568">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1271,7 +1272,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="558">
-                                                        <rect key="frame" x="135" y="51" width="89" height="14"/>
+                                                        <rect key="frame" x="135" y="57" width="89" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000/s" id="567">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1279,7 +1280,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="559">
-                                                        <rect key="frame" x="12" y="32" width="121" height="14"/>
+                                                        <rect key="frame" x="12" y="38" width="121" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Lost frames" id="566">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1287,7 +1288,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="560">
-                                                        <rect key="frame" x="135" y="32" width="89" height="14"/>
+                                                        <rect key="frame" x="135" y="38" width="89" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000" id="565">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1295,7 +1296,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="gMs-hL-fn9">
-                                                        <rect key="frame" x="12" y="13" width="67" height="14"/>
+                                                        <rect key="frame" x="12" y="19" width="67" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Late frames" id="ogL-5n-hNp">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1303,7 +1304,7 @@
                                                         </textFieldCell>
                                                     </textField>
                                                     <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="xmq-je-ONJ">
-                                                        <rect key="frame" x="193" y="13" width="31" height="14"/>
+                                                        <rect key="frame" x="193" y="19" width="31" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="1000" id="7tF-A7-Tuc">
                                                             <font key="font" metaFont="smallSystem"/>
                                                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1321,7 +1322,7 @@
                                                     <constraint firstItem="gMs-hL-fn9" firstAttribute="top" secondItem="559" secondAttribute="bottom" constant="4" id="Igp-mS-Zly" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1332,7 +1333,7 @@
                                                     <constraint firstItem="559" firstAttribute="top" secondItem="557" secondAttribute="bottom" constant="4" id="YBx-5i-pAU" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1343,7 +1344,7 @@
                                                     <constraint firstItem="557" firstAttribute="top" secondItem="555" secondAttribute="bottom" constant="4" id="q79-vb-GNq" customClass="VLCSpacingConstraint">
                                                         <userDefinedRuntimeAttributes>
                                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                                <integer value="1"/>
+                                                                <integer key="value" value="1"/>
                                                             </userDefinedRuntimeAttribute>
                                                         </userDefinedRuntimeAttributes>
                                                     </constraint>
@@ -1413,7 +1414,7 @@
                     <constraint firstItem="GFW-aJ-Pub" firstAttribute="top" secondItem="3" secondAttribute="top" constant="4" id="HNk-eG-ZIv" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="1"/>
+                                <integer key="value" value="1"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -1428,7 +1429,7 @@
         </window>
     </objects>
     <resources>
-        <image name="arrow.right.page.on.clipboard" catalog="system" width="14" height="15"/>
+        <image name="arrow.right.page.on.clipboard" catalog="system" width="32" height="32"/>
         <image name="noart" width="128" height="128"/>
     </resources>
 </document>

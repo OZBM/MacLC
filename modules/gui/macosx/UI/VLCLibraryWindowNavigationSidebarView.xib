@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -23,7 +24,7 @@
                     <rect key="frame" x="0.0" y="0.0" width="163" height="408"/>
                     <clipView key="contentView" drawsBackground="NO" id="ENU-zz-PNN">
                         <rect key="frame" x="0.0" y="0.0" width="163" height="408"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <outlineView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" selectionHighlightStyle="sourceList" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" viewBased="YES" floatsGroupRows="NO" indentationPerLevel="13" outlineTableColumn="0BA-rc-l73" id="7u8-Zm-gnd" customClass="VLCLibraryWindowNavigationSidebarOutlineView">
                                 <rect key="frame" x="0.0" y="0.0" width="163" height="408"/>
@@ -69,7 +70,7 @@
                                                     <imageView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="g5f-nN-6XM">
                                                         <rect key="frame" x="3" y="-17" width="17" height="17"/>
                                                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                                        <imageCell key="cell" refusesFirstResponder="YES" imageScaling="proportionallyDown" image="NSActionTemplate" id="iLQ-Rx-S8F"/>
+                                                        <imageCell key="cell" refusesFirstResponder="YES" imageScaling="proportionallyDown" image="ellipsis.circle" catalog="system" id="iLQ-Rx-S8F"/>
                                                     </imageView>
                                                     <textField focusRingType="none" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="9Av-FK-YYz">
                                                         <rect key="frame" x="25" y="-17" width="115" height="17"/>
@@ -132,7 +133,7 @@
                         <constraint firstAttribute="bottom" secondItem="bT3-Rj-1sP" secondAttribute="bottom" constant="4" id="0Oa-ae-42L" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="1"/>
+                                    <integer key="value" value="1"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -140,14 +141,14 @@
                         <constraint firstAttribute="trailing" secondItem="bT3-Rj-1sP" secondAttribute="trailing" constant="4" id="89E-uL-PDh" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="1"/>
+                                    <integer key="value" value="1"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
                         <constraint firstItem="uvb-DL-v2Y" firstAttribute="leading" secondItem="ktP-pW-HNz" secondAttribute="leading" constant="4" id="8fh-AX-6Yy" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="1"/>
+                                    <integer key="value" value="1"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -156,14 +157,14 @@
                         <constraint firstItem="bT3-Rj-1sP" firstAttribute="top" secondItem="ktP-pW-HNz" secondAttribute="top" constant="4" id="Ywb-cy-Ftx" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="1"/>
+                                    <integer key="value" value="1"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
                         <constraint firstItem="uvb-DL-v2Y" firstAttribute="top" secondItem="ktP-pW-HNz" secondAttribute="top" constant="4" id="akG-qb-5B7" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="1"/>
+                                    <integer key="value" value="1"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -173,14 +174,14 @@
                         <constraint firstItem="bT3-Rj-1sP" firstAttribute="leading" secondItem="uvb-DL-v2Y" secondAttribute="trailing" constant="4" id="oAa-Vo-uGC" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="1"/>
+                                    <integer key="value" value="1"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
                         <constraint firstAttribute="bottom" secondItem="uvb-DL-v2Y" secondAttribute="bottom" constant="4" id="wqe-yn-z5G" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="1"/>
+                                    <integer key="value" value="1"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -205,7 +206,7 @@
         </customView>
     </objects>
     <resources>
-        <image name="NSActionTemplate" width="20" height="20"/>
-        <image name="info.circle.fill" catalog="system" width="15" height="15"/>
+        <image name="ellipsis.circle" catalog="system" width="32" height="32"/>
+        <image name="info.circle.fill" catalog="system" width="32" height="32"/>
     </resources>
 </document>

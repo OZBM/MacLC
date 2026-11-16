@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="24412" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="24412"/>
-        <capability name="System colors introduced in macOS 10.14" minToolsVersion="10.0"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -40,7 +40,7 @@
                     <rect key="frame" x="0.0" y="50" width="510" height="210"/>
                     <clipView key="contentView" drawsBackground="NO" copiesOnScroll="NO" id="20t-S6-IYS">
                         <rect key="frame" x="0.0" y="0.0" width="510" height="210"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" autosaveColumns="NO" rowHeight="16" rowSizeStyle="automatic" viewBased="YES" id="Ubg-RS-LWE" customClass="VLCPlayQueueTableView">
                                 <rect key="frame" x="0.0" y="0.0" width="510" height="210"/>
@@ -113,7 +113,7 @@
                             <subviews>
                                 <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="bdZ-N9-Noa">
                                     <rect key="frame" x="0.0" y="13" width="24" height="24"/>
-                                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="shuffleOn" imagePosition="only" alignment="center" imageScaling="proportionallyDown" inset="2" id="fpN-XQ-XkJ">
+                                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="shuffle" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyDown" inset="2" id="fpN-XQ-XkJ">
                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="system"/>
                                     </buttonCell>
@@ -127,7 +127,7 @@
                                 </button>
                                 <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="9xU-Ba-Hys">
                                     <rect key="frame" x="155" y="13" width="24" height="24"/>
-                                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="repeatOff" imagePosition="only" alignment="center" imageScaling="proportionallyDown" inset="2" id="CWu-CE-2fG">
+                                    <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="repeat" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyDown" inset="2" id="CWu-CE-2fG">
                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="system"/>
                                     </buttonCell>
@@ -187,7 +187,7 @@
                         <constraint firstItem="hc5-GJ-yJe" firstAttribute="leading" secondItem="ftr-ct-999" secondAttribute="leading" constant="16" symbolic="YES" id="Saj-PQ-UQL" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="3"/>
+                                    <integer key="value" value="3"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -195,14 +195,14 @@
                         <constraint firstItem="ew3-Pn-diG" firstAttribute="leading" secondItem="ftr-ct-999" secondAttribute="leading" constant="16" id="ftr-l-001" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="3"/>
+                                    <integer key="value" value="3"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
                         <constraint firstAttribute="trailing" secondItem="ew3-Pn-diG" secondAttribute="trailing" constant="16" id="ftr-t-001" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="3"/>
+                                    <integer key="value" value="3"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -238,7 +238,7 @@
                         <constraint firstItem="ghp-DI-YmZ" firstAttribute="top" secondItem="qv6-Mn-ifA" secondAttribute="bottom" constant="8" id="XFC-9r-Q8L" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="2"/>
+                                    <integer key="value" value="2"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -254,7 +254,7 @@
                 <constraint firstItem="ik5-L4-VLw" firstAttribute="leading" secondItem="NJR-gf-yTs" secondAttribute="leading" constant="16" id="CW2-KK-Z5t" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -263,7 +263,7 @@
                 <constraint firstAttribute="trailing" secondItem="ik5-L4-VLw" secondAttribute="trailing" constant="16" id="ef5-v1-Rm6" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -280,9 +280,9 @@
     </objects>
     <resources>
         <image name="dropzone" width="112" height="112"/>
-        <image name="line.3.horizontal.decrease" catalog="system" width="16" height="10"/>
-        <image name="repeatOff" width="24" height="24"/>
-        <image name="shuffleOn" width="24" height="24"/>
-        <image name="trash" catalog="system" width="15" height="17"/>
+        <image name="line.3.horizontal.decrease" catalog="system" width="32" height="32"/>
+        <image name="repeat" catalog="system" width="32" height="32"/>
+        <image name="shuffle" catalog="system" width="32" height="32"/>
+        <image name="trash" catalog="system" width="32" height="32"/>
     </resources>
 </document>

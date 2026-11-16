@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="16097" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="16097"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -80,11 +80,11 @@ DQ
                     <box verticalHuggingPriority="249" title="Output Options" translatesAutoresizingMaskIntoConstraints="NO" id="lFf-Vt-GlA">
                         <rect key="frame" x="17" y="321" width="526" height="206"/>
                         <view key="contentView" id="WSk-MJ-gaE">
-                            <rect key="frame" x="3" y="3" width="520" height="188"/>
+                            <rect key="frame" x="0.0" y="0.0" width="526" height="194"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <matrix verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" allowsEmptySelection="NO" autosizesCells="NO" translatesAutoresizingMaskIntoConstraints="NO" id="rbD-7I-E3s">
-                                    <rect key="frame" x="14" y="65" width="130" height="93"/>
+                                    <rect key="frame" x="14" y="71" width="130" height="93"/>
                                     <constraints>
                                         <constraint firstAttribute="height" constant="93" id="qoS-8j-Ab9"/>
                                         <constraint firstAttribute="width" constant="130" id="wny-Ju-sbe"/>
@@ -109,7 +109,7 @@ DQ
                                     </connections>
                                 </matrix>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="qTV-D2-4qj">
-                                    <rect key="frame" x="150" y="83" width="51" height="14"/>
+                                    <rect key="frame" x="150" y="89" width="51" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="right" title="Type:" usesSingleLineMode="YES" id="FmW-wJ-seP">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -117,7 +117,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="dIT-Za-GZ1">
-                                    <rect key="frame" x="150" y="53" width="51" height="14"/>
+                                    <rect key="frame" x="150" y="59" width="51" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="right" title="Address:" usesSingleLineMode="YES" id="JUh-NF-Yqm">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -125,7 +125,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <popUpButton horizontalHuggingPriority="240" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4UQ-fz-Yyc">
-                                    <rect key="frame" x="204" y="78" width="155" height="22"/>
+                                    <rect key="frame" x="204" y="84" width="155" height="22"/>
                                     <popUpButtonCell key="cell" type="push" title="HTTP" bezelStyle="rounded" alignment="left" controlSize="small" lineBreakMode="clipping" enabled="NO" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="4hN-qW-hgT" id="XpA-TL-e0V">
                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -143,7 +143,7 @@ DQ
                                     </connections>
                                 </popUpButton>
                                 <textField horizontalHuggingPriority="240" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="rYi-sr-scq">
-                                    <rect key="frame" x="207" y="51" width="149" height="19"/>
+                                    <rect key="frame" x="207" y="57" width="149" height="19"/>
                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" enabled="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="left" drawsBackground="YES" id="8Od-oU-Zg1">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -151,7 +151,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="f6Q-bn-tII">
-                                    <rect key="frame" x="429" y="51" width="50" height="19"/>
+                                    <rect key="frame" x="429" y="57" width="50" height="19"/>
                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" enabled="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" title="1234" drawsBackground="YES" id="u8D-ZB-t1Z">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -162,7 +162,7 @@ DQ
                                     </connections>
                                 </textField>
                                 <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Jmb-Tp-iOD">
-                                    <rect key="frame" x="430" y="121" width="75" height="27"/>
+                                    <rect key="frame" x="430" y="127" width="75" height="27"/>
                                     <buttonCell key="cell" type="push" title="Browse..." bezelStyle="rounded" alignment="center" controlSize="small" borderStyle="border" inset="2" id="Ynq-6T-cbU">
                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -172,7 +172,7 @@ DQ
                                     </connections>
                                 </button>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="hWN-pR-WjU">
-                                    <rect key="frame" x="152" y="127" width="275" height="19"/>
+                                    <rect key="frame" x="152" y="133" width="275" height="19"/>
                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="left" drawsBackground="YES" id="1X0-W0-nAb">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -180,14 +180,14 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" horizontalCompressionResistancePriority="820" tag="1" translatesAutoresizingMaskIntoConstraints="NO" id="o4u-Rk-ouF">
-                                    <rect key="frame" x="484" y="47" width="19" height="28"/>
+                                    <rect key="frame" x="484" y="53" width="19" height="28"/>
                                     <stepperCell key="cell" continuous="YES" alignment="left" tag="1" maxValue="65535" doubleValue="1234" valueWraps="YES" id="lLd-2l-hI7"/>
                                     <connections>
                                         <action selector="streamPortStepperChanged:" target="-2" id="XED-7o-SdA"/>
                                     </connections>
                                 </stepper>
                                 <textField verticalHuggingPriority="750" verticalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="BJg-ve-g7Y">
-                                    <rect key="frame" x="394" y="53" width="30" height="14"/>
+                                    <rect key="frame" x="394" y="59" width="30" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="right" title="Port:" usesSingleLineMode="YES" id="NAD-7o-cLM">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -195,7 +195,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="cEb-9R-g1E">
-                                    <rect key="frame" x="429" y="81" width="50" height="19"/>
+                                    <rect key="frame" x="429" y="87" width="50" height="19"/>
                                     <constraints>
                                         <constraint firstAttribute="width" constant="50" id="W9a-Kn-EH7"/>
                                     </constraints>
@@ -206,7 +206,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="pE8-jH-B2X">
-                                    <rect key="frame" x="394" y="83" width="30" height="14"/>
+                                    <rect key="frame" x="394" y="89" width="30" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="right" title="TTL:" usesSingleLineMode="YES" id="n7J-Rg-RrL">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -214,7 +214,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="ja6-U3-8js">
-                                    <rect key="frame" x="13" y="19" width="124" height="14"/>
+                                    <rect key="frame" x="13" y="25" width="124" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="left" title="Encapsulation method:" usesSingleLineMode="YES" id="7kT-83-qcQ">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -222,7 +222,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <popUpButton horizontalHuggingPriority="200" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="I4F-yo-4jZ">
-                                    <rect key="frame" x="152" y="14" width="351" height="22"/>
+                                    <rect key="frame" x="152" y="20" width="351" height="22"/>
                                     <popUpButtonCell key="cell" type="push" title="MPEG TS" bezelStyle="rounded" alignment="left" controlSize="small" lineBreakMode="clipping" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="0ez-IF-b9x" id="ec3-Ul-A9d">
                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -244,14 +244,14 @@ DQ
                                     </connections>
                                 </popUpButton>
                                 <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" horizontalCompressionResistancePriority="820" tag="1" translatesAutoresizingMaskIntoConstraints="NO" id="363-uQ-FZP">
-                                    <rect key="frame" x="484" y="77" width="19" height="28"/>
+                                    <rect key="frame" x="484" y="83" width="19" height="28"/>
                                     <stepperCell key="cell" continuous="YES" alignment="left" tag="1" minValue="1" maxValue="65535" doubleValue="1" valueWraps="YES" id="QCT-Ps-u2f"/>
                                     <connections>
                                         <action selector="streamTTLStepperChanged:" target="-2" id="HeP-Dg-sp7"/>
                                     </connections>
                                 </stepper>
                                 <button mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="5ZV-KT-f8p">
-                                    <rect key="frame" x="13" y="153" width="59" height="18"/>
+                                    <rect key="frame" x="13" y="159" width="59" height="18"/>
                                     <buttonCell key="cell" type="check" title="Screen" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" inset="2" id="Yml-Iq-kRG">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -261,7 +261,7 @@ DQ
                                     </connections>
                                 </button>
                                 <button translatesAutoresizingMaskIntoConstraints="NO" id="LXS-Yk-fsG">
-                                    <rect key="frame" x="149" y="103" width="105" height="18"/>
+                                    <rect key="frame" x="149" y="109" width="105" height="18"/>
                                     <buttonCell key="cell" type="check" title="Dump raw input" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" inset="2" id="a8K-Ss-hRu">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -281,7 +281,7 @@ DQ
                                 <constraint firstAttribute="trailing" secondItem="I4F-yo-4jZ" secondAttribute="trailing" constant="16" symbolic="YES" id="Gdp-NJ-kUJ" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -289,7 +289,7 @@ DQ
                                 <constraint firstItem="4UQ-fz-Yyc" firstAttribute="leading" secondItem="qTV-D2-4qj" secondAttribute="trailing" constant="8" id="LLY-Y6-Hko" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -305,7 +305,7 @@ DQ
                                 <constraint firstItem="o4u-Rk-ouF" firstAttribute="leading" secondItem="f6Q-bn-tII" secondAttribute="trailing" constant="8" symbolic="YES" id="aPI-1B-Q5D" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -314,14 +314,14 @@ DQ
                                 <constraint firstItem="5ZV-KT-f8p" firstAttribute="top" secondItem="WSk-MJ-gaE" secondAttribute="top" constant="16" symbolic="YES" id="eMz-Za-rAR" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
                                 <constraint firstAttribute="trailing" secondItem="Jmb-Tp-iOD" secondAttribute="trailing" constant="16" symbolic="YES" id="esP-up-lfz" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -330,14 +330,14 @@ DQ
                                 <constraint firstItem="363-uQ-FZP" firstAttribute="leading" secondItem="cEb-9R-g1E" secondAttribute="trailing" constant="8" symbolic="YES" id="gbi-C9-mCs" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
                                 <constraint firstItem="5ZV-KT-f8p" firstAttribute="leading" secondItem="WSk-MJ-gaE" secondAttribute="leading" constant="16" id="hmv-Oo-3LI" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -346,7 +346,7 @@ DQ
                                 <constraint firstItem="I4F-yo-4jZ" firstAttribute="leading" secondItem="ja6-U3-8js" secondAttribute="trailing" constant="16" id="jvH-zl-sQ8" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -356,7 +356,7 @@ DQ
                                 <constraint firstItem="dIT-Za-GZ1" firstAttribute="top" secondItem="qTV-D2-4qj" secondAttribute="bottom" constant="16" id="n66-Ik-DDv" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -366,7 +366,7 @@ DQ
                                 <constraint firstItem="hWN-pR-WjU" firstAttribute="top" secondItem="5ZV-KT-f8p" secondAttribute="bottom" constant="8" id="v7c-71-Hpu" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -376,14 +376,14 @@ DQ
                                 <constraint firstItem="hWN-pR-WjU" firstAttribute="leading" secondItem="rbD-7I-E3s" secondAttribute="trailing" constant="8" id="yjK-Mc-eFS" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
                                 <constraint firstItem="Jmb-Tp-iOD" firstAttribute="leading" secondItem="hWN-pR-WjU" secondAttribute="trailing" constant="8" symbolic="YES" id="zb8-tR-WIF" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -396,11 +396,11 @@ DQ
                     <box horizontalHuggingPriority="750" verticalHuggingPriority="249" title="Transcode Options" translatesAutoresizingMaskIntoConstraints="NO" id="L1M-To-k82">
                         <rect key="frame" x="17" y="173" width="526" height="141"/>
                         <view key="contentView" id="sgL-Qj-BBS">
-                            <rect key="frame" x="3" y="3" width="520" height="123"/>
+                            <rect key="frame" x="0.0" y="0.0" width="526" height="129"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <button mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="IRa-L7-1pX">
-                                    <rect key="frame" x="13" y="41" width="52" height="19"/>
+                                    <rect key="frame" x="13" y="47" width="52" height="19"/>
                                     <buttonCell key="cell" type="check" title="Audio" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" inset="2" id="IVd-9U-lbe">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -410,7 +410,7 @@ DQ
                                     </connections>
                                 </button>
                                 <popUpButton horizontalHuggingPriority="240" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="EOF-Z1-25K">
-                                    <rect key="frame" x="68" y="38" width="235" height="22"/>
+                                    <rect key="frame" x="68" y="44" width="235" height="22"/>
                                     <popUpButtonCell key="cell" type="push" title="acodec" bezelStyle="rounded" alignment="left" controlSize="small" lineBreakMode="clipping" enabled="NO" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="rZZ-Re-t2d" id="ipc-AR-rgf">
                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -425,7 +425,7 @@ DQ
                                     </connections>
                                 </popUpButton>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="HOS-pG-57A">
-                                    <rect key="frame" x="338" y="43" width="77" height="14"/>
+                                    <rect key="frame" x="338" y="49" width="77" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="right" title="Bitrate (kb/s):" usesSingleLineMode="YES" id="13k-Rl-3Xa">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -433,7 +433,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="OEl-R9-y58">
-                                    <rect key="frame" x="338" y="95" width="77" height="14"/>
+                                    <rect key="frame" x="338" y="101" width="77" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="right" title="Bitrate (kb/s):" usesSingleLineMode="YES" id="ec6-eo-17W">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -441,7 +441,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <button mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="Soa-uy-ulr">
-                                    <rect key="frame" x="13" y="93" width="52" height="18"/>
+                                    <rect key="frame" x="13" y="99" width="52" height="18"/>
                                     <buttonCell key="cell" type="check" title="Video" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" inset="2" id="9nZ-6i-Pyy">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -451,7 +451,7 @@ DQ
                                     </connections>
                                 </button>
                                 <popUpButton horizontalHuggingPriority="240" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="b49-7r-xIr">
-                                    <rect key="frame" x="68" y="90" width="235" height="22"/>
+                                    <rect key="frame" x="68" y="96" width="235" height="22"/>
                                     <popUpButtonCell key="cell" type="push" title="vcodec" bezelStyle="rounded" alignment="left" controlSize="small" lineBreakMode="clipping" enabled="NO" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="Vl9-6Y-5fo" id="3SK-Om-qfd">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -466,7 +466,7 @@ DQ
                                     </connections>
                                 </popUpButton>
                                 <comboBox verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="fWq-Up-O1D">
-                                    <rect key="frame" x="420" y="90" width="83" height="22"/>
+                                    <rect key="frame" x="420" y="96" width="83" height="22"/>
                                     <constraints>
                                         <constraint firstAttribute="width" constant="80" id="xl7-in-Im6"/>
                                     </constraints>
@@ -480,7 +480,7 @@ DQ
                                     </connections>
                                 </comboBox>
                                 <comboBox verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Yeb-za-sAB">
-                                    <rect key="frame" x="420" y="38" width="83" height="22"/>
+                                    <rect key="frame" x="420" y="44" width="83" height="22"/>
                                     <comboBoxCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" enabled="NO" borderStyle="bezel" alignment="left" drawsBackground="YES" completes="NO" numberOfVisibleItems="5" id="4kf-z6-Ejw">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -491,7 +491,7 @@ DQ
                                     </connections>
                                 </comboBox>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="Bpf-5e-3Qe">
-                                    <rect key="frame" x="338" y="17" width="77" height="14"/>
+                                    <rect key="frame" x="338" y="23" width="77" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="right" title="Channels" usesSingleLineMode="YES" id="0Vg-aU-iII">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -499,7 +499,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <comboBox verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="dKe-4f-p6f">
-                                    <rect key="frame" x="420" y="12" width="83" height="22"/>
+                                    <rect key="frame" x="420" y="18" width="83" height="22"/>
                                     <comboBoxCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" enabled="NO" borderStyle="bezel" alignment="left" drawsBackground="YES" completes="NO" numberOfVisibleItems="5" id="r9D-34-Fvx">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -510,7 +510,7 @@ DQ
                                     </connections>
                                 </comboBox>
                                 <comboBox verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="cYk-Bl-eGZ">
-                                    <rect key="frame" x="420" y="64" width="83" height="22"/>
+                                    <rect key="frame" x="420" y="70" width="83" height="22"/>
                                     <comboBoxCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" enabled="NO" borderStyle="bezel" alignment="left" drawsBackground="YES" completes="NO" numberOfVisibleItems="5" id="dJu-4c-uuv">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -521,7 +521,7 @@ DQ
                                     </connections>
                                 </comboBox>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="dfW-h5-9bx">
-                                    <rect key="frame" x="338" y="69" width="77" height="14"/>
+                                    <rect key="frame" x="338" y="75" width="77" height="14"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="right" title="Scale:" usesSingleLineMode="YES" id="V3H-q4-f5L">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -536,7 +536,7 @@ DQ
                                 <constraint firstItem="b49-7r-xIr" firstAttribute="leading" secondItem="Soa-uy-ulr" secondAttribute="trailing" constant="8" symbolic="YES" id="5nd-Nk-rbq" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -562,7 +562,7 @@ DQ
                                 <constraint firstAttribute="bottom" secondItem="dKe-4f-p6f" secondAttribute="bottom" constant="16" id="aZa-Pd-Y7K" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -574,7 +574,7 @@ DQ
                                 <constraint firstItem="Soa-uy-ulr" firstAttribute="leading" secondItem="sgL-Qj-BBS" secondAttribute="leading" constant="16" id="gKA-Qw-9Nv" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -584,7 +584,7 @@ DQ
                                 <constraint firstAttribute="trailing" secondItem="fWq-Up-O1D" secondAttribute="trailing" constant="16" symbolic="YES" id="pge-GG-a2s" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -595,11 +595,11 @@ DQ
                     <box horizontalHuggingPriority="750" verticalHuggingPriority="750" title="Stream Announcing" translatesAutoresizingMaskIntoConstraints="NO" id="oA5-7V-7Z0" userLabel="Stream announcing box">
                         <rect key="frame" x="17" y="41" width="526" height="120"/>
                         <view key="contentView" id="FY5-5J-gXQ">
-                            <rect key="frame" x="3" y="3" width="520" height="102"/>
+                            <rect key="frame" x="0.0" y="0.0" width="526" height="108"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
-                                <button verticalCompressionResistancePriority="752" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="Ttn-20-6ZJ">
-                                    <rect key="frame" x="17" y="71" width="241" height="18"/>
+                                <button mirrorLayoutDirectionWhenInternationalizing="always" verticalCompressionResistancePriority="752" translatesAutoresizingMaskIntoConstraints="NO" id="Ttn-20-6ZJ">
+                                    <rect key="frame" x="17" y="77" width="241" height="18"/>
                                     <buttonCell key="cell" type="check" title="SAP Announce" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" enabled="NO" inset="2" id="ghJ-Wd-xtF">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -608,8 +608,8 @@ DQ
                                         <action selector="announceChanged:" target="-2" id="Zov-Mk-Llp"/>
                                     </connections>
                                 </button>
-                                <button verticalCompressionResistancePriority="751" mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="PiK-Gm-63G">
-                                    <rect key="frame" x="17" y="53" width="241" height="18"/>
+                                <button mirrorLayoutDirectionWhenInternationalizing="always" verticalCompressionResistancePriority="751" translatesAutoresizingMaskIntoConstraints="NO" id="PiK-Gm-63G">
+                                    <rect key="frame" x="17" y="59" width="241" height="18"/>
                                     <buttonCell key="cell" type="check" title="RTSP Announce" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" enabled="NO" inset="2" id="3Kb-lH-0e6">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -619,7 +619,7 @@ DQ
                                     </connections>
                                 </button>
                                 <button mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="6rb-hy-Tes">
-                                    <rect key="frame" x="261" y="71" width="241" height="18"/>
+                                    <rect key="frame" x="261" y="77" width="241" height="18"/>
                                     <buttonCell key="cell" type="check" title="HTTP Announce" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" enabled="NO" inset="2" id="Sax-Na-3iY">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -629,7 +629,7 @@ DQ
                                     </connections>
                                 </button>
                                 <button mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="hlR-dz-4vC">
-                                    <rect key="frame" x="261" y="53" width="241" height="18"/>
+                                    <rect key="frame" x="261" y="59" width="241" height="18"/>
                                     <buttonCell key="cell" type="check" title="Export SDP as file" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" enabled="NO" inset="2" id="Zox-PS-UZl">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="message" size="11"/>
@@ -639,7 +639,7 @@ DQ
                                     </connections>
                                 </button>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" verticalCompressionResistancePriority="751" translatesAutoresizingMaskIntoConstraints="NO" id="k3s-1O-ta2">
-                                    <rect key="frame" x="18" y="32" width="78" height="13"/>
+                                    <rect key="frame" x="18" y="38" width="78" height="13"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="left" title="Channel Name:" usesSingleLineMode="YES" id="KPb-5M-Xqq">
                                         <font key="font" metaFont="system" size="10"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -647,7 +647,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="639-kH-MAw">
-                                    <rect key="frame" x="108" y="30" width="392" height="19"/>
+                                    <rect key="frame" x="108" y="36" width="392" height="19"/>
                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" enabled="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="left" drawsBackground="YES" id="vzf-kt-KT6">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -655,7 +655,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="ooz-Cf-58S">
-                                    <rect key="frame" x="18" y="13" width="78" height="9"/>
+                                    <rect key="frame" x="18" y="19" width="78" height="9"/>
                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="left" title="SDP URL" usesSingleLineMode="YES" id="9GW-H2-EPq">
                                         <font key="font" metaFont="system" size="10"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -663,7 +663,7 @@ DQ
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="sve-ta-Por">
-                                    <rect key="frame" x="108" y="11" width="392" height="19"/>
+                                    <rect key="frame" x="108" y="17" width="392" height="19"/>
                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" enabled="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="left" drawsBackground="YES" id="gnV-FF-sds">
                                         <font key="font" metaFont="message" size="11"/>
                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -676,7 +676,7 @@ DQ
                                 <constraint firstItem="Ttn-20-6ZJ" firstAttribute="top" secondItem="FY5-5J-gXQ" secondAttribute="top" constant="16" id="4Jv-9e-YK8" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -684,7 +684,7 @@ DQ
                                 <constraint firstAttribute="trailing" secondItem="639-kH-MAw" secondAttribute="trailing" constant="16" symbolic="YES" id="5Yh-Re-OWI" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -695,7 +695,7 @@ DQ
                                 <constraint firstItem="ooz-Cf-58S" firstAttribute="top" secondItem="k3s-1O-ta2" secondAttribute="bottom" constant="8" id="ALX-Tc-38V" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -706,7 +706,7 @@ DQ
                                 <constraint firstItem="Ttn-20-6ZJ" firstAttribute="leading" secondItem="FY5-5J-gXQ" secondAttribute="leading" constant="16" symbolic="YES" id="Pva-bZ-2yf" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -717,7 +717,7 @@ DQ
                                 <constraint firstItem="6rb-hy-Tes" firstAttribute="leading" secondItem="Ttn-20-6ZJ" secondAttribute="trailing" constant="8" symbolic="YES" id="mHa-wl-Z0R" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -727,7 +727,7 @@ DQ
                                 <constraint firstAttribute="trailing" secondItem="6rb-hy-Tes" secondAttribute="trailing" constant="16" symbolic="YES" id="vhd-N9-Lic" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -743,7 +743,7 @@ DQ
                     <constraint firstAttribute="trailing" secondItem="lFf-Vt-GlA" secondAttribute="trailing" constant="16" symbolic="YES" id="DES-kM-gmZ" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="3"/>
+                                <integer key="value" value="3"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -752,14 +752,14 @@ DQ
                     <constraint firstItem="oA5-7V-7Z0" firstAttribute="top" secondItem="L1M-To-k82" secondAttribute="bottom" constant="16" id="Old-vt-qO3" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="3"/>
+                                <integer key="value" value="3"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
                     <constraint firstItem="lFf-Vt-GlA" firstAttribute="leading" secondItem="WLI-pv-owx" secondAttribute="leading" constant="16" symbolic="YES" id="VeF-C6-hHT" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="3"/>
+                                <integer key="value" value="3"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -768,7 +768,7 @@ DQ
                     <constraint firstItem="Moj-Wu-DMX" firstAttribute="top" secondItem="oA5-7V-7Z0" secondAttribute="bottom" constant="8" symbolic="YES" id="saw-84-Qhs" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="2"/>
+                                <integer key="value" value="2"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>

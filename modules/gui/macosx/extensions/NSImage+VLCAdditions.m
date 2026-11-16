@@ -110,16 +110,6 @@ static NSImage *MenuSymbol(NSString *name, NSString *fallbackName)
     return AccentSymbol(@"externaldrive.fill", 64.0, @"bw-usb2");
 }
 
-+ (NSImage *)VLCDefaultAppIconImage
-{
-    return [NSImage imageNamed:@"NXdefaultappicon"];
-}
-
-+ (NSImage *)VLCFollowImage
-{
-    return [NSImage imageNamed:@"NXFollow"];
-}
-
 /* Artwork for media that has none: a quiet tile with a media glyph, one
  * bitmap per appearance, rendered once and picked when drawn so it follows
  * light and dark mode without redrawing gradients in every grid cell. */
@@ -220,31 +210,6 @@ static NSImage *EmptyStateImage(NSString *symbolName, NSString *fallbackName)
 + (NSImage *)VLCGenericImage
 {
     return [NSImage imageNamed:@"generic"];
-}
-
-+ (NSImage *)VLCShuffleOffImage
-{
-    return [NSImage imageNamed:@"shuffleOff"];
-}
-
-+ (NSImage *)VLCShuffleOnImage
-{
-    return [NSImage imageNamed:@"shuffleOn"];
-}
-
-+ (NSImage *)VLCRepeatAllImage
-{
-    return [NSImage imageNamed:@"repeatAll"];
-}
-
-+ (NSImage *)VLCRepeatOneImage
-{
-    return [NSImage imageNamed:@"repeatOne"];
-}
-
-+ (NSImage *)VLCRepeatOffImage
-{
-    return [NSImage imageNamed:@"repeatOff"];
 }
 
 + (void)quickLookPreviewForLocalPath:(NSString *)path

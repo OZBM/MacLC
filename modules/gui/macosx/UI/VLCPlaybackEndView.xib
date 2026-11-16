@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23727" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23727"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -57,7 +58,7 @@
                             <rect key="frame" x="267" y="0.0" width="125" height="32"/>
                             <buttonCell key="cell" type="inline" title="Play next item" bezelStyle="inline" image="arrow.right" catalog="system" imagePosition="above" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="O5u-Ck-U6T">
                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
-                                <font key="font" size="11" name=".SFNS-Semibold"/>
+                                <font key="font" metaFont="systemSemibold" size="11"/>
                             </buttonCell>
                         </button>
                     </subviews>
@@ -79,7 +80,7 @@
                 <constraint firstItem="jN5-TU-5uH" firstAttribute="top" secondItem="NcL-Nn-hUb" secondAttribute="top" constant="16" id="Bae-6M-XVS" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -87,7 +88,7 @@
                 <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="huG-UY-8W9" secondAttribute="trailing" constant="16" id="MbH-DN-TXI" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -95,7 +96,7 @@
                 <constraint firstItem="jN5-TU-5uH" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="NcL-Nn-hUb" secondAttribute="leading" constant="16" id="SWK-YP-EHJ" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -103,21 +104,21 @@
                 <constraint firstItem="C5J-Xc-NJc" firstAttribute="top" secondItem="jN5-TU-5uH" secondAttribute="bottom" constant="8" id="VgY-k7-miC" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="huG-UY-8W9" firstAttribute="top" secondItem="C5J-Xc-NJc" secondAttribute="bottom" constant="16" id="Wk4-Fh-M3Z" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="huG-UY-8W9" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="NcL-Nn-hUb" secondAttribute="leading" constant="16" id="X0f-L9-A1Y" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -126,7 +127,7 @@
                 <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="jN5-TU-5uH" secondAttribute="trailing" constant="16" id="nWw-9e-tGN" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -134,7 +135,7 @@
                 <constraint firstAttribute="bottom" secondItem="huG-UY-8W9" secondAttribute="bottom" constant="16" id="paw-6c-QHp" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -143,8 +144,8 @@
         </visualEffectView>
     </objects>
     <resources>
-        <image name="arrow.right" catalog="system" width="15" height="12"/>
-        <image name="books.vertical.fill" catalog="system" width="20" height="17"/>
-        <image name="repeat" catalog="system" width="18" height="14"/>
+        <image name="arrow.right" catalog="system" width="32" height="32"/>
+        <image name="books.vertical.fill" catalog="system" width="32" height="32"/>
+        <image name="repeat" catalog="system" width="32" height="32"/>
     </resources>
 </document>

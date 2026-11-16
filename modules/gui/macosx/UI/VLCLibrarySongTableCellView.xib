@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="21701" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="21701"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -37,15 +38,15 @@
                 </textField>
                 <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="NFZ-x0-t5c">
                     <rect key="frame" x="10" y="17" width="16" height="16"/>
-                    <constraints>
-                        <constraint firstAttribute="width" secondItem="NFZ-x0-t5c" secondAttribute="height" multiplier="1:1" id="Hv5-J8-wdk"/>
-                        <constraint firstAttribute="height" constant="16" id="bai-RH-huE"/>
-                    </constraints>
                     <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="play.fill" catalog="system" imagePosition="only" alignment="left" imageScaling="proportionallyDown" inset="2" id="5MR-Gt-X4p">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
                     <color key="contentTintColor" name="VLCAccentColor"/>
+                    <constraints>
+                        <constraint firstAttribute="width" secondItem="NFZ-x0-t5c" secondAttribute="height" multiplier="1:1" id="Hv5-J8-wdk"/>
+                        <constraint firstAttribute="height" constant="16" id="bai-RH-huE"/>
+                    </constraints>
                 </button>
                 <textField horizontalHuggingPriority="1000" verticalHuggingPriority="750" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="XNL-fH-9bU">
                     <rect key="frame" x="334" y="17" width="56" height="16"/>
@@ -60,14 +61,14 @@
                 <constraint firstItem="ohB-P0-nCv" firstAttribute="trailing" secondItem="XNL-fH-9bU" secondAttribute="leading" constant="-16" id="8Vs-Dy-2RI" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="Wzl-zu-AHr" firstAttribute="leading" secondItem="c22-O7-iKe" secondAttribute="leading" constant="8" id="E8L-qx-YEb" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -75,7 +76,7 @@
                 <constraint firstItem="XNL-fH-9bU" firstAttribute="trailing" secondItem="ffE-px-l0g" secondAttribute="trailing" constant="-8" id="Ea2-S4-L6B" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -89,7 +90,7 @@
                 <constraint firstItem="NFZ-x0-t5c" firstAttribute="leading" secondItem="ffE-px-l0g" secondAttribute="leading" constant="8" id="laI-Bm-0fz" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -107,7 +108,7 @@
         </customView>
     </objects>
     <resources>
-        <image name="play.fill" catalog="system" width="15" height="15"/>
+        <image name="play.fill" catalog="system" width="32" height="32"/>
         <namedColor name="VLCAccentColor">
             <color red="1" green="0.37999999523162842" blue="0.039999999105930328" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>

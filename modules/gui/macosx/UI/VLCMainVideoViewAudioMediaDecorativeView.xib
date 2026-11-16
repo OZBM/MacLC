@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -30,13 +30,13 @@
                     </shadow>
                     <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyUpOrDown" image="noart" id="m7g-tH-8dl"/>
                 </imageView>
-                <scrollView borderType="none" autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" hasHorizontalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4vZ-4x-fwW">
+                <scrollView borderType="none" autohidesScrollers="YES" horizontalLineScroll="46" horizontalPageScroll="10" verticalLineScroll="46" verticalPageScroll="10" hasHorizontalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4vZ-4x-fwW">
                     <rect key="frame" x="0.0" y="0.0" width="316" height="336"/>
                     <clipView key="contentView" drawsBackground="NO" copiesOnScroll="NO" id="H6H-Cp-iPh">
                         <rect key="frame" x="0.0" y="0.0" width="316" height="336"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
-                            <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="firstColumnOnly" columnReordering="NO" columnResizing="NO" multipleSelection="NO" autosaveColumns="NO" typeSelect="NO" rowSizeStyle="automatic" viewBased="YES" id="5mv-Qc-JwM" customClass="VLCPlayQueueTableView">
+                            <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="firstColumnOnly" columnReordering="NO" columnResizing="NO" multipleSelection="NO" autosaveColumns="NO" typeSelect="NO" rowHeight="44" rowSizeStyle="automatic" viewBased="YES" id="5mv-Qc-JwM" customClass="VLCPlayQueueTableView">
                                 <rect key="frame" x="0.0" y="0.0" width="316" height="336"/>
                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 <size key="intercellSpacing" width="3" height="2"/>
@@ -69,10 +69,10 @@
                                                     </textField>
                                                 </subviews>
                                                 <constraints>
-                                                    <constraint firstItem="Wdd-df-zUi" firstAttribute="leading" secondItem="ZTp-fs-5fE" secondAttribute="leading" id="l-lead"/>
-                                                    <constraint firstItem="Wdd-df-zUi" firstAttribute="trailing" secondItem="ZTp-fs-5fE" secondAttribute="trailing" id="l-trail"/>
-                                                    <constraint firstItem="Wdd-df-zUi" firstAttribute="top" secondItem="ZTp-fs-5fE" secondAttribute="top" id="l-top"/>
                                                     <constraint firstItem="Wdd-df-zUi" firstAttribute="bottom" secondItem="ZTp-fs-5fE" secondAttribute="bottom" id="l-bot"/>
+                                                    <constraint firstItem="Wdd-df-zUi" firstAttribute="leading" secondItem="ZTp-fs-5fE" secondAttribute="leading" id="l-lead"/>
+                                                    <constraint firstItem="Wdd-df-zUi" firstAttribute="top" secondItem="ZTp-fs-5fE" secondAttribute="top" id="l-top"/>
+                                                    <constraint firstItem="Wdd-df-zUi" firstAttribute="trailing" secondItem="ZTp-fs-5fE" secondAttribute="trailing" id="l-trail"/>
                                                 </constraints>
                                                 <connections>
                                                     <outlet property="textField" destination="Wdd-df-zUi" id="61g-Ze-nvR"/>
@@ -103,7 +103,7 @@
                 <constraint firstItem="40P-sL-Mzq" firstAttribute="bottom" relation="lessThanOrEqual" secondItem="D1e-fS-bwO" secondAttribute="bottom" constant="-16" id="DHs-x0-cB0" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -114,20 +114,20 @@
                 <constraint firstItem="40P-sL-Mzq" firstAttribute="top" relation="greaterThanOrEqual" secondItem="D1e-fS-bwO" secondAttribute="top" constant="16" id="TVt-Xt-aoo" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
+                <constraint firstAttribute="trailing" secondItem="4vZ-4x-fwW" secondAttribute="trailing" id="Vo4-sT-MAu"/>
+                <constraint firstAttribute="bottom" secondItem="4vZ-4x-fwW" secondAttribute="bottom" id="aRK-vR-wkV"/>
                 <constraint firstItem="cDv-dn-65H" firstAttribute="leading" secondItem="WRu-Ic-lQK" secondAttribute="leading" id="bZL-GN-AAt"/>
                 <constraint firstItem="cDv-dn-65H" firstAttribute="top" secondItem="WRu-Ic-lQK" secondAttribute="top" id="dvc-kq-jk8"/>
                 <constraint firstItem="D1e-fS-bwO" firstAttribute="top" secondItem="WRu-Ic-lQK" secondAttribute="top" id="eDP-U6-Qt6"/>
+                <constraint firstItem="4vZ-4x-fwW" firstAttribute="top" secondItem="WRu-Ic-lQK" secondAttribute="top" id="ran-Af-QyV"/>
+                <constraint firstItem="4vZ-4x-fwW" firstAttribute="leading" secondItem="WRu-Ic-lQK" secondAttribute="leading" id="ran-Af-QyW"/>
                 <constraint firstAttribute="bottom" secondItem="D1e-fS-bwO" secondAttribute="bottom" id="toU-5j-lin"/>
                 <constraint firstAttribute="trailing" secondItem="cDv-dn-65H" secondAttribute="trailing" id="vEl-zP-vj9"/>
                 <constraint firstItem="40P-sL-Mzq" firstAttribute="centerY" secondItem="WRu-Ic-lQK" secondAttribute="centerY" priority="250" id="yFl-gc-ITT"/>
-                <constraint firstAttribute="trailing" secondItem="4vZ-4x-fwW" secondAttribute="trailing" id="Vo4-sT-MAu"/>
-                <constraint firstAttribute="bottom" secondItem="4vZ-4x-fwW" secondAttribute="bottom" id="aRK-vR-wkV"/>
-                <constraint firstItem="4vZ-4x-fwW" firstAttribute="top" secondItem="WRu-Ic-lQK" secondAttribute="top" id="ran-Af-QyV"/>
-                <constraint firstItem="4vZ-4x-fwW" firstAttribute="leading" secondItem="WRu-Ic-lQK" secondAttribute="leading" id="ran-Af-QyW"/>
             </constraints>
             <connections>
                 <outlet property="backgroundCoverArtView" destination="cDv-dn-65H" id="bw2-8i-Xg6"/>

@@ -26,6 +26,7 @@
 #import "VLCLibraryCollectionViewFlowLayout.h"
 #import "VLCLibraryCollectionViewItem.h"
 #import "VLCLibraryDataTypes.h"
+#import "medialib/data/MacLCLibraryActions.h"
 
 @implementation VLCLibraryCollectionViewDelegate
 
@@ -110,53 +111,19 @@ canDragItemsAtIndexPaths:(NSSet<NSIndexPath *> *)indexPaths
     return YES;
 }
 
-- (BOOL)collectionView:(NSCollectionView *)collectionView
-writeItemsAtIndexPaths:(NSSet<NSIndexPath *> *)indexPaths
-          toPasteboard:(NSPasteboard *)pasteboard
+/* One writer per item (the media-library archive plus the file), the way the
+ * library grid writes them; the play queue reads every pasteboard item. */
+- (nullable id<NSPasteboardWriting>)collectionView:(NSCollectionView *)collectionView
+                pasteboardWriterForItemAtIndexPath:(NSIndexPath *)indexPath
 {
     if (![collectionView.dataSource conformsToProtocol:@protocol(VLCLibraryCollectionViewDataSource)]) {
-        return NO;
+        return nil;
     }
-
-    NSObject<VLCLibraryCollectionViewDataSource> *vlcDataSource = (NSObject<VLCLibraryCollectionViewDataSource>*)collectionView.dataSource;
-
-    NSUInteger numberOfIndexPaths = indexPaths.count;
-    NSMutableArray *encodedLibraryItemsArray = [NSMutableArray arrayWithCapacity:numberOfIndexPaths];
-    NSMutableArray<NSURL *> *fileURLsArray = [NSMutableArray arrayWithCapacity:numberOfIndexPaths];
-
-    for (NSIndexPath *indexPath in indexPaths) {
-
-        id<VLCMediaLibraryItemProtocol> libraryItem = [vlcDataSource libraryItemAtIndexPath:indexPath
-                                                                          forCollectionView:collectionView];
-
-        [libraryItem iterateMediaItemsWithBlock:^(VLCMediaLibraryMediaItem *mediaItem) {
-            [encodedLibraryItemsArray addObject:mediaItem];
-
-            VLCMediaLibraryFile *file = mediaItem.files.firstObject;
-            if (file) {
-                NSURL *url = [NSURL URLWithString:file.MRL];
-                if (url) {
-                    [fileURLsArray addObject:url];
-                }
-            }
-        }];
-    }
-
-    NSError *archiveError = nil;
-    NSData * const data = [NSKeyedArchiver archivedDataWithRootObject:encodedLibraryItemsArray
-                                                requiringSecureCoding:YES
-                                                                error:&archiveError];
-    if (data == nil) {
-        NSLog(@"Failed to archive MediaLibrary Item drag payload: %@", archiveError);
-        return NO;
-    }
-    [pasteboard declareTypes:@[VLCMediaLibraryMediaItemPasteboardType] owner:self];
-    [pasteboard setData:data forType:VLCMediaLibraryMediaItemPasteboardType];
-    if (fileURLsArray.count > 0) {
-        [pasteboard writeObjects:fileURLsArray];
-    }
-
-    return YES;
+    NSObject<VLCLibraryCollectionViewDataSource> * const vlcDataSource =
+        (NSObject<VLCLibraryCollectionViewDataSource> *)collectionView.dataSource;
+    const id<VLCMediaLibraryItemProtocol> libraryItem =
+        [vlcDataSource libraryItemAtIndexPath:indexPath forCollectionView:collectionView];
+    return libraryItem != nil ? [MacLCLibraryActions pasteboardWriterForItem:libraryItem] : nil;
 }
 
 @end

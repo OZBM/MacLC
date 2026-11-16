@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="12121" systemVersion="17A365" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <development version="7000" identifier="xcode"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="12121"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="VLCLogWindowController">
@@ -38,18 +39,17 @@
                                         <rect key="frame" x="0.0" y="0.0" width="480" height="231"/>
                                         <clipView key="contentView" wantsLayer="YES" id="jLc-G4-HUQ">
                                             <rect key="frame" x="0.0" y="0.0" width="480" height="231"/>
-                                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                            <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
                                                 <tableView wantsLayer="YES" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" autosaveColumns="NO" rowSizeStyle="automatic" headerView="XuL-0o-TLH" viewBased="YES" id="Cpc-IS-2Wn">
                                                     <rect key="frame" x="0.0" y="0.0" width="480" height="208"/>
-                                                    <autoresizingMask key="autoresizingMask"/>
+                                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <size key="intercellSpacing" width="3" height="2"/>
                                                     <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                     <color key="gridColor" name="gridColor" catalog="System" colorSpace="catalog"/>
                                                     <tableColumns>
-                                                        <tableColumn identifier="" width="60" minWidth="40" maxWidth="1000" id="1UD-vH-uqq">
+                                                        <tableColumn width="60" minWidth="40" maxWidth="1000" id="1UD-vH-uqq">
                                                             <tableHeaderCell key="headerCell" lineBreakMode="truncatingTail" borderStyle="border" title="Type">
-                                                                <font key="font" metaFont="smallSystem"/>
                                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                                 <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                                             </tableHeaderCell>
@@ -61,10 +61,10 @@
                                                             <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                             <prototypeCellViews>
                                                                 <tableCellView wantsLayer="YES" id="9bi-ti-5pD">
-                                                                    <rect key="frame" x="1" y="1" width="60" height="17"/>
+                                                                    <rect key="frame" x="11" y="1" width="65" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
-                                                                        <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ltO-uq-R24">
+                                                                        <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="ltO-uq-R24">
                                                                             <rect key="frame" x="0.0" y="0.0" width="60" height="17"/>
                                                                             <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Debug" id="Nqw-Jt-xHZ">
                                                                                 <font key="font" metaFont="system"/>
@@ -87,9 +87,8 @@
                                                                 </tableCellView>
                                                             </prototypeCellViews>
                                                         </tableColumn>
-                                                        <tableColumn identifier="" width="90" minWidth="40" maxWidth="1000" id="ybR-8n-0YS">
+                                                        <tableColumn width="90" minWidth="40" maxWidth="1000" id="ybR-8n-0YS">
                                                             <tableHeaderCell key="headerCell" lineBreakMode="truncatingTail" borderStyle="border" title="Component">
-                                                                <font key="font" metaFont="smallSystem"/>
                                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                                 <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                                             </tableHeaderCell>
@@ -101,10 +100,10 @@
                                                             <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                             <prototypeCellViews>
                                                                 <tableCellView wantsLayer="YES" id="0rr-qZ-Zvp">
-                                                                    <rect key="frame" x="64" y="1" width="90" height="17"/>
+                                                                    <rect key="frame" x="79" y="1" width="90" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
-                                                                        <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="KgY-wU-75V">
+                                                                        <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="KgY-wU-75V">
                                                                             <rect key="frame" x="0.0" y="0.0" width="90" height="17"/>
                                                                             <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="macosx" id="pG7-rA-7gk">
                                                                                 <font key="font" metaFont="system"/>
@@ -127,9 +126,8 @@
                                                                 </tableCellView>
                                                             </prototypeCellViews>
                                                         </tableColumn>
-                                                        <tableColumn identifier="" width="321" minWidth="40" maxWidth="3.4028234663852886e+38" id="B4u-CM-hUN">
+                                                        <tableColumn width="292" minWidth="40" maxWidth="3.4028234663852886e+38" id="B4u-CM-hUN">
                                                             <tableHeaderCell key="headerCell" lineBreakMode="truncatingTail" borderStyle="border" alignment="left" title="Message">
-                                                                <font key="font" metaFont="smallSystem"/>
                                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                                                             </tableHeaderCell>
@@ -141,10 +139,10 @@
                                                             <tableColumnResizingMask key="resizingMask" resizeWithTable="YES"/>
                                                             <prototypeCellViews>
                                                                 <tableCellView wantsLayer="YES" id="mKk-vl-YgV">
-                                                                    <rect key="frame" x="157" y="1" width="321" height="17"/>
+                                                                    <rect key="frame" x="172" y="1" width="296" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
-                                                                        <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" misplaced="YES" allowsExpansionToolTips="YES" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="hdT-qU-xRy">
+                                                                        <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" misplaced="YES" allowsExpansionToolTips="YES" translatesAutoresizingMaskIntoConstraints="NO" id="hdT-qU-xRy">
                                                                             <rect key="frame" x="0.0" y="-9" width="321" height="35"/>
                                                                             <textFieldCell key="cell" lineBreakMode="truncatingTail" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="left" placeholderString="" usesSingleLineMode="YES" id="ed5-yc-Kp5">
                                                                                 <font key="font" metaFont="system"/>
@@ -203,7 +201,7 @@ It can even span multiple lines</string>
                                 <rect key="frame" x="0.0" y="232" width="480" height="98"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <subviews>
-                                    <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="gAc-zn-uSr">
+                                    <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="gAc-zn-uSr">
                                         <rect key="frame" x="110" y="69" width="352" height="17"/>
                                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="debug" placeholderString="Type" id="URV-0p-IuP">
                                             <font key="font" metaFont="system"/>
@@ -220,7 +218,7 @@ IA
                                             </binding>
                                         </connections>
                                     </textField>
-                                    <textField horizontalHuggingPriority="100" verticalHuggingPriority="750" horizontalCompressionResistancePriority="200" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="hRN-Hm-oJ6">
+                                    <textField horizontalHuggingPriority="100" verticalHuggingPriority="750" horizontalCompressionResistancePriority="200" translatesAutoresizingMaskIntoConstraints="NO" id="hRN-Hm-oJ6">
                                         <rect key="frame" x="18" y="51" width="388" height="17"/>
                                         <textFieldCell key="cell" lineBreakMode="truncatingHead" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="left" title="foo.c:21" placeholderString="Type" id="ff0-T1-m5Y">
                                             <font key="font" metaFont="system"/>
@@ -237,7 +235,7 @@ IA
                                             </binding>
                                         </connections>
                                     </textField>
-                                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="yQr-Pj-2OQ">
+                                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="yQr-Pj-2OQ">
                                         <rect key="frame" x="18" y="69" width="88" height="17"/>
                                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="left" title="videotoolbox" placeholderString="Component" id="evj-05-leN">
                                             <font key="font" metaFont="systemBold"/>
@@ -255,14 +253,15 @@ IA
                                     <scrollView borderType="none" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" hasHorizontalScroller="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Pfg-HK-E4H">
                                         <rect key="frame" x="20" y="8" width="440" height="35"/>
                                         <clipView key="contentView" drawsBackground="NO" copiesOnScroll="NO" id="cZ6-B4-AVY">
-                                            <rect key="frame" x="0.0" y="0.0" width="440" height="35"/>
-                                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="423" height="35"/>
+                                            <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <textView editable="NO" drawsBackground="NO" importsGraphics="NO" richText="NO" findStyle="bar" allowsNonContiguousLayout="YES" smartInsertDelete="YES" id="EVR-Ey-aSl">
-                                                    <rect key="frame" x="0.0" y="0.0" width="440" height="35"/>
+                                                <textView editable="NO" drawsBackground="NO" importsGraphics="NO" richText="NO" verticallyResizable="YES" findStyle="bar" allowsNonContiguousLayout="YES" smartInsertDelete="YES" id="EVR-Ey-aSl">
+                                                    <rect key="frame" x="0.0" y="0.0" width="423" height="35"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                                    <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
-                                                    <size key="minSize" width="440" height="35"/>
+                                                    <color key="textColor" name="textColor" catalog="System" colorSpace="catalog"/>
+                                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                    <size key="minSize" width="423" height="35"/>
                                                     <size key="maxSize" width="471" height="10000000"/>
                                                     <color key="insertionPointColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                     <connections>
@@ -275,7 +274,6 @@ IA
                                                     </connections>
                                                 </textView>
                                             </subviews>
-                                            <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                         </clipView>
                                         <scroller key="horizontalScroller" hidden="YES" verticalHuggingPriority="750" doubleValue="1" horizontal="YES" id="7Yp-wp-He8">
                                             <rect key="frame" x="-100" y="-100" width="87" height="18"/>
@@ -286,7 +284,7 @@ IA
                                             <autoresizingMask key="autoresizingMask"/>
                                         </scroller>
                                     </scrollView>
-                                    <textField horizontalHuggingPriority="105" verticalHuggingPriority="750" horizontalCompressionResistancePriority="201" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="YjO-49-ed6">
+                                    <textField horizontalHuggingPriority="105" verticalHuggingPriority="750" horizontalCompressionResistancePriority="201" translatesAutoresizingMaskIntoConstraints="NO" id="YjO-49-ed6">
                                         <rect key="frame" x="410" y="51" width="52" height="17"/>
                                         <textFieldCell key="cell" lineBreakMode="truncatingTail" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="doFoo()" placeholderString="Type" id="tjV-0Y-iBf">
                                             <font key="font" metaFont="system"/>
@@ -309,28 +307,28 @@ IA
                                     <constraint firstItem="Pfg-HK-E4H" firstAttribute="top" secondItem="hRN-Hm-oJ6" secondAttribute="bottom" constant="8" id="24q-jK-9J7" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="2"/>
+                                                <integer key="value" value="2"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
                                     <constraint firstItem="YjO-49-ed6" firstAttribute="leading" secondItem="hRN-Hm-oJ6" secondAttribute="trailing" constant="8" id="2Tf-Pg-VfZ" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="2"/>
+                                                <integer key="value" value="2"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
                                     <constraint firstAttribute="trailing" secondItem="Pfg-HK-E4H" secondAttribute="trailing" constant="16" id="3Aw-EY-Jgz" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="3"/>
+                                                <integer key="value" value="3"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
                                     <constraint firstItem="Pfg-HK-E4H" firstAttribute="leading" secondItem="ESj-Mw-X94" secondAttribute="leading" constant="16" id="70O-DF-o0V" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="3"/>
+                                                <integer key="value" value="3"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
@@ -338,14 +336,14 @@ IA
                                     <constraint firstAttribute="bottom" secondItem="Pfg-HK-E4H" secondAttribute="bottom" constant="8" id="Qib-Os-QkT" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="2"/>
+                                                <integer key="value" value="2"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
                                     <constraint firstItem="yQr-Pj-2OQ" firstAttribute="leading" secondItem="ESj-Mw-X94" secondAttribute="leading" constant="16" id="TSY-7b-Iud" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="3"/>
+                                                <integer key="value" value="3"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
@@ -354,7 +352,7 @@ IA
                                     <constraint firstItem="gAc-zn-uSr" firstAttribute="leading" secondItem="yQr-Pj-2OQ" secondAttribute="trailing" constant="8" id="ZdG-le-RDN" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="2"/>
+                                                <integer key="value" value="2"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
@@ -362,7 +360,7 @@ IA
                                     <constraint firstItem="hRN-Hm-oJ6" firstAttribute="leading" secondItem="ESj-Mw-X94" secondAttribute="leading" constant="16" id="lSl-p0-QFt" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="3"/>
+                                                <integer key="value" value="3"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
@@ -370,21 +368,21 @@ IA
                                     <constraint firstAttribute="trailing" secondItem="YjO-49-ed6" secondAttribute="trailing" constant="16" id="qHC-VC-lrB" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="3"/>
+                                                <integer key="value" value="3"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
                                     <constraint firstItem="YjO-49-ed6" firstAttribute="leading" secondItem="hRN-Hm-oJ6" secondAttribute="trailing" constant="8" id="u6b-x9-u0Q" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="2"/>
+                                                <integer key="value" value="2"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
                                     <constraint firstAttribute="trailing" secondItem="gAc-zn-uSr" secondAttribute="trailing" constant="16" id="xhv-EZ-pdm" customClass="VLCSpacingConstraint">
                                         <userDefinedRuntimeAttributes>
                                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                                <integer value="3"/>
+                                                <integer key="value" value="3"/>
                                             </userDefinedRuntimeAttribute>
                                         </userDefinedRuntimeAttributes>
                                     </constraint>
@@ -407,7 +405,7 @@ IA
                     <constraint firstAttribute="trailing" secondItem="5ZT-Oc-K6D" secondAttribute="trailing" id="VBn-UL-8Od"/>
                 </constraints>
             </view>
-            <toolbar key="toolbar" implicitIdentifier="8D6305A4-7404-4A0D-9515-2B68530B5D7F" autosavesConfiguration="NO" displayMode="iconOnly" sizeMode="regular" id="HkO-0c-Zi1">
+            <toolbar key="toolbar" implicitIdentifier="8D6305A4-7404-4A0D-9515-2B68530B5D7F" autosavesConfiguration="NO" showsBaselineSeparator="NO" displayMode="iconOnly" sizeMode="regular" id="HkO-0c-Zi1">
                 <allowedToolbarItems>
                     <toolbarItem implicitItemIdentifier="NSToolbarSpaceItem" id="kAx-MM-EeR"/>
                     <toolbarItem implicitItemIdentifier="NSToolbarFlexibleSpaceItem" id="D2F-Ah-mBO"/>
@@ -431,7 +429,7 @@ IA
                         <nil key="toolTip"/>
                         <size key="minSize" width="100" height="22"/>
                         <size key="maxSize" width="120" height="22"/>
-                        <searchField key="view" wantsLayer="YES" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="NO" textCompletion="NO" id="JpS-Ua-CDA">
+                        <searchField key="view" wantsLayer="YES" verticalHuggingPriority="750" textCompletion="NO" id="JpS-Ua-CDA">
                             <rect key="frame" x="0.0" y="14" width="120" height="22"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                             <searchFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" borderStyle="bezel" placeholderString="Filter" usesSingleLineMode="YES" bezelStyle="round" id="LXB-gm-PNe">
@@ -465,14 +463,14 @@ IA
                             </connections>
                         </button>
                     </toolbarItem>
-                    <toolbarItem implicitItemIdentifier="DEDC42C7-F153-4D85-9698-3C6F6EFBFFA2" label="Refresh" paletteLabel="Refresh" image="NSRefreshTemplate" id="FcB-hY-pNL">
+                    <toolbarItem implicitItemIdentifier="DEDC42C7-F153-4D85-9698-3C6F6EFBFFA2" label="Refresh" paletteLabel="Refresh" image="arrow.clockwise" catalog="system" id="FcB-hY-pNL">
                         <nil key="toolTip"/>
                         <size key="minSize" width="42" height="28"/>
                         <size key="maxSize" width="42" height="32"/>
                         <button key="view" verticalHuggingPriority="750" id="K2Y-Ne-xDL">
                             <rect key="frame" x="3" y="14" width="42" height="28"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                            <buttonCell key="cell" type="roundTextured" bezelStyle="texturedRounded" image="NSRefreshTemplate" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="8tT-Kp-NaB">
+                            <buttonCell key="cell" type="roundTextured" bezelStyle="texturedRounded" image="arrow.clockwise" catalog="system" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="8tT-Kp-NaB">
                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                 <font key="font" metaFont="system"/>
                             </buttonCell>
@@ -481,14 +479,14 @@ IA
                             </connections>
                         </button>
                     </toolbarItem>
-                    <toolbarItem implicitItemIdentifier="0194FC70-2254-4C34-B21A-F008708D71B6" label="Details" paletteLabel="Details" image="NSQuickLookTemplate" id="Je0-kI-Toi">
+                    <toolbarItem implicitItemIdentifier="0194FC70-2254-4C34-B21A-F008708D71B6" label="Details" paletteLabel="Details" image="eye" catalog="system" id="Je0-kI-Toi">
                         <nil key="toolTip"/>
                         <size key="minSize" width="42" height="25"/>
                         <size key="maxSize" width="42" height="25"/>
                         <button key="view" verticalHuggingPriority="750" id="VaY-7B-tp1">
                             <rect key="frame" x="1" y="14" width="42" height="25"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                            <buttonCell key="cell" type="roundTextured" bezelStyle="texturedRounded" image="NSQuickLookTemplate" imagePosition="overlaps" alignment="center" lineBreakMode="truncatingTail" state="on" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="GsM-bi-gac">
+                            <buttonCell key="cell" type="roundTextured" bezelStyle="texturedRounded" image="eye" catalog="system" imagePosition="overlaps" alignment="center" lineBreakMode="truncatingTail" state="on" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="GsM-bi-gac">
                                 <behavior key="behavior" pushIn="YES" changeContents="YES" lightByContents="YES"/>
                                 <font key="font" metaFont="system"/>
                             </buttonCell>
@@ -509,15 +507,16 @@ IA
             <point key="canvasLocation" x="139" y="192"/>
         </window>
         <arrayController objectClassName="VLCLogMessage" editable="NO" selectsInsertedObjects="NO" id="0Or-bh-QJU">
+            <classReference key="objectClass" className="VLCLogMessage"/>
             <connections>
                 <binding destination="-2" name="contentArray" keyPath="self.messagesArray" id="nWK-kZ-4HF"/>
             </connections>
         </arrayController>
     </objects>
     <resources>
-        <image name="NSQuickLookTemplate" width="19" height="12"/>
-        <image name="NSRefreshTemplate" width="11" height="15"/>
-        <image name="trash" catalog="system" width="15" height="15"/>
-        <image name="square.and.arrow.down" catalog="system" width="15" height="15"/>
+        <image name="arrow.clockwise" catalog="system" width="32" height="32"/>
+        <image name="eye" catalog="system" width="32" height="32"/>
+        <image name="square.and.arrow.down" catalog="system" width="32" height="32"/>
+        <image name="trash" catalog="system" width="32" height="32"/>
     </resources>
 </document>

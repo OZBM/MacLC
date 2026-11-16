@@ -30,6 +30,7 @@
 #import "library/VLCLibraryDataTypes.h"
 
 #import "views/VLCUIUnits.h"
+#import "theme/MacLCDesign.h"
 
 @interface VLCLibraryHomeViewBaseCarouselContainerView ()
 {
@@ -107,12 +108,16 @@
         [self.bottomAnchor constraintEqualToAnchor:self.carouselView.bottomAnchor]
     ]];
 
-    const CGFloat buttonSize = VLCUIUnits.largeSpacing;
+    /* Glass paging circles, at least the minimum hit target. */
+    const CGFloat buttonSize = MAX(28.0, MacLCDesign.minimumHitTarget);
 
-    NSImage * const leftImage = [NSImage imageNamed:NSImageNameGoLeftTemplate];
+    NSImage * const leftImage = [NSImage imageWithSystemSymbolName:@"chevron.left" accessibilityDescription:_NS("Scroll Left")];
     _leftButton = [[NSButton alloc] initWithFrame:NSZeroRect];
     self.leftButton.translatesAutoresizingMaskIntoConstraints = NO;
     self.leftButton.image = leftImage;
+    self.leftButton.bezelStyle = NSBezelStyleGlass;
+    self.leftButton.borderShape = NSControlBorderShapeCircle;
+    self.leftButton.toolTip = _NS("Scroll Left");
     self.leftButton.target = self;
     self.leftButton.action = @selector(scrollLeft:);
     [self addSubview:self.leftButton];
@@ -123,10 +128,13 @@
         [self.leftButton.heightAnchor constraintEqualToConstant:buttonSize],
     ]];
 
-    NSImage * const rightImage = [NSImage imageNamed:NSImageNameGoRightTemplate];
+    NSImage * const rightImage = [NSImage imageWithSystemSymbolName:@"chevron.right" accessibilityDescription:_NS("Scroll Right")];
     _rightButton = [[NSButton alloc] initWithFrame:NSZeroRect];
     self.rightButton.translatesAutoresizingMaskIntoConstraints = NO;
     self.rightButton.image = rightImage;
+    self.rightButton.bezelStyle = NSBezelStyleGlass;
+    self.rightButton.borderShape = NSControlBorderShapeCircle;
+    self.rightButton.toolTip = _NS("Scroll Right");
     self.rightButton.target = self;
     self.rightButton.action = @selector(scrollRight:);
     [self addSubview:self.rightButton];

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="16097" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="16097"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -48,11 +48,11 @@
                     <box borderType="line" title="Audio/Video" titlePosition="noTitle" translatesAutoresizingMaskIntoConstraints="NO" id="5">
                         <rect key="frame" x="13" y="158" width="425" height="51"/>
                         <view key="contentView" id="cSz-hU-mVM">
-                            <rect key="frame" x="3" y="3" width="419" height="45"/>
+                            <rect key="frame" x="0.0" y="0.0" width="425" height="51"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="6">
-                                    <rect key="frame" x="15" y="16" width="147" height="14"/>
+                                    <rect key="frame" x="15" y="22" width="147" height="14"/>
                                     <textFieldCell key="cell" controlSize="small" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Audio track synchronization:" usesSingleLineMode="YES" id="7">
                                         <font key="font" metaFont="smallSystem"/>
                                         <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -60,7 +60,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="8">
-                                    <rect key="frame" x="308" y="13" width="76" height="19"/>
+                                    <rect key="frame" x="308" y="19" width="76" height="19"/>
                                     <constraints>
                                         <constraint firstAttribute="width" constant="76" id="inS-O9-M4h"/>
                                     </constraints>
@@ -78,7 +78,7 @@
                                     </connections>
                                 </textField>
                                 <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="10">
-                                    <rect key="frame" x="390" y="11" width="15" height="22"/>
+                                    <rect key="frame" x="390" y="17" width="15" height="22"/>
                                     <stepperCell key="cell" controlSize="small" continuous="YES" alignment="left" increment="0.5" minValue="-60" maxValue="60" id="11">
                                         <font key="font" metaFont="smallSystem"/>
                                     </stepperCell>
@@ -91,7 +91,7 @@
                                 <constraint firstAttribute="bottom" secondItem="6" secondAttribute="bottom" constant="16" id="NaA-4f-9By" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -100,7 +100,7 @@
                                 <constraint firstItem="10" firstAttribute="leading" secondItem="8" secondAttribute="trailing" constant="8" id="s7s-bB-pDz" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -110,7 +110,7 @@
                                 <constraint firstAttribute="trailing" secondItem="10" secondAttribute="trailing" constant="16" id="zeF-Id-Fsw" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -128,11 +128,11 @@
                     <box borderType="line" title="Subtitles/Video" titlePosition="noTitle" translatesAutoresizingMaskIntoConstraints="NO" id="16">
                         <rect key="frame" x="13" y="32" width="427" height="112"/>
                         <view key="contentView" id="KDu-mg-vUb">
-                            <rect key="frame" x="3" y="3" width="421" height="106"/>
+                            <rect key="frame" x="0.0" y="0.0" width="427" height="112"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="21">
-                                    <rect key="frame" x="15" y="78" width="164" height="14"/>
+                                    <rect key="frame" x="15" y="84" width="164" height="14"/>
                                     <textFieldCell key="cell" controlSize="small" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Subtitle track synchronization:" usesSingleLineMode="YES" id="22">
                                         <font key="font" metaFont="smallSystem"/>
                                         <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -140,7 +140,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="20">
-                                    <rect key="frame" x="308" y="76" width="76" height="19"/>
+                                    <rect key="frame" x="308" y="82" width="76" height="19"/>
                                     <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" usesSingleLineMode="YES" id="23">
                                         <numberFormatter key="formatter" formatterBehavior="custom10_4" numberStyle="decimal" generatesDecimalNumbers="YES" lenient="YES" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" maximumFractionDigits="3" positiveSuffix=" s" negativeSuffix=" s" id="95"/>
                                         <font key="font" metaFont="smallSystem"/>
@@ -155,7 +155,7 @@
                                     </connections>
                                 </textField>
                                 <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="19">
-                                    <rect key="frame" x="390" y="74" width="15" height="22"/>
+                                    <rect key="frame" x="390" y="80" width="15" height="22"/>
                                     <stepperCell key="cell" controlSize="small" continuous="YES" alignment="left" increment="0.5" minValue="-60" maxValue="60" id="24">
                                         <font key="font" metaFont="smallSystem"/>
                                     </stepperCell>
@@ -164,7 +164,7 @@
                                     </connections>
                                 </stepper>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="27">
-                                    <rect key="frame" x="15" y="46" width="84" height="14"/>
+                                    <rect key="frame" x="15" y="52" width="84" height="14"/>
                                     <textFieldCell key="cell" controlSize="small" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Subtitle speed:" usesSingleLineMode="YES" id="36">
                                         <font key="font" metaFont="smallSystem"/>
                                         <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -172,7 +172,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="28">
-                                    <rect key="frame" x="308" y="44" width="76" height="19"/>
+                                    <rect key="frame" x="308" y="50" width="76" height="19"/>
                                     <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" usesSingleLineMode="YES" id="35">
                                         <numberFormatter key="formatter" formatterBehavior="custom10_4" numberStyle="decimal" lenient="YES" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" maximumFractionDigits="3" positiveSuffix=" s" negativeSuffix=" s" id="96"/>
                                         <font key="font" metaFont="smallSystem"/>
@@ -187,7 +187,7 @@
                                     </connections>
                                 </textField>
                                 <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="29">
-                                    <rect key="frame" x="390" y="42" width="15" height="22"/>
+                                    <rect key="frame" x="390" y="48" width="15" height="22"/>
                                     <stepperCell key="cell" controlSize="small" continuous="YES" alignment="left" increment="0.20000000000000001" maxValue="100" doubleValue="1" id="34">
                                         <font key="font" metaFont="smallSystem"/>
                                     </stepperCell>
@@ -196,7 +196,7 @@
                                     </connections>
                                 </stepper>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="98">
-                                    <rect key="frame" x="15" y="14" width="129" height="14"/>
+                                    <rect key="frame" x="15" y="20" width="129" height="14"/>
                                     <textFieldCell key="cell" controlSize="small" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Subtitle duration factor:" usesSingleLineMode="YES" id="102">
                                         <font key="font" metaFont="smallSystem"/>
                                         <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -204,7 +204,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="99">
-                                    <rect key="frame" x="308" y="12" width="76" height="19"/>
+                                    <rect key="frame" x="308" y="18" width="76" height="19"/>
                                     <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" usesSingleLineMode="YES" id="100">
                                         <numberFormatter key="formatter" formatterBehavior="custom10_4" numberStyle="decimal" lenient="YES" minimumIntegerDigits="0" maximumIntegerDigits="2000000000" maximumFractionDigits="3" positiveSuffix=" s" negativeSuffix=" s" id="101"/>
                                         <font key="font" metaFont="smallSystem"/>
@@ -219,7 +219,7 @@
                                     </connections>
                                 </textField>
                                 <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="105">
-                                    <rect key="frame" x="390" y="10" width="15" height="22"/>
+                                    <rect key="frame" x="390" y="16" width="15" height="22"/>
                                     <stepperCell key="cell" controlSize="small" continuous="YES" alignment="left" increment="0.20000000000000001" maxValue="20" id="106">
                                         <font key="font" metaFont="smallSystem"/>
                                     </stepperCell>
@@ -237,7 +237,7 @@
                                 <constraint firstItem="19" firstAttribute="leading" secondItem="20" secondAttribute="trailing" constant="8" id="9qQ-wN-2RZ" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -249,7 +249,7 @@
                                 <constraint firstItem="105" firstAttribute="leading" secondItem="99" secondAttribute="trailing" constant="8" id="N3A-1H-ZYe" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -266,7 +266,7 @@
                                 <constraint firstItem="29" firstAttribute="leading" secondItem="28" secondAttribute="trailing" constant="8" id="upi-Mf-NNY" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="2"/>
+                                            <integer key="value" value="2"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -289,7 +289,7 @@
                     <constraint firstItem="41" firstAttribute="top" secondItem="16" secondAttribute="bottom" constant="8" id="2AA-ky-LLK" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="2"/>
+                                <integer key="value" value="2"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -303,7 +303,7 @@
                     <constraint firstItem="5" firstAttribute="leading" secondItem="2" secondAttribute="leading" constant="16" id="YNv-ok-Htz" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="3"/>
+                                <integer key="value" value="3"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -313,7 +313,7 @@
                     <constraint firstItem="16" firstAttribute="leading" secondItem="2" secondAttribute="leading" constant="16" id="tDL-yc-wDo" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="3"/>
+                                <integer key="value" value="3"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -323,5 +323,4 @@
             <point key="canvasLocation" x="141" y="149"/>
         </window>
     </objects>
-    <resources/>
 </document>

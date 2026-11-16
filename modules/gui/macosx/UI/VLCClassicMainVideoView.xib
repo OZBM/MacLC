@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
+        <deployment version="270200" identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="Image references" minToolsVersion="12.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
@@ -94,7 +95,7 @@
                                 <buttonCell key="cell" type="recessed" bezelStyle="recessed" imagePosition="only" controlSize="large" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="CU4-UE-tsW">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
-                                    <imageReference key="image" image="NSLeftFacingTriangleTemplate" symbolScale="large"/>
+                                    <imageReference key="image" image="chevron.left" catalog="system" symbolScale="large"/>
                                 </buttonCell>
                                 <color key="contentTintColor" red="0.99999600649999998" green="1" blue="1" alpha="0.85338267140000001" colorSpace="custom" customColorSpace="sRGB"/>
                                 <connections>
@@ -109,7 +110,7 @@
                                 <buttonCell key="cell" type="recessed" bezelStyle="recessed" imagePosition="only" controlSize="large" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="VDP-ql-lW8">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES" changeBackground="YES" changeGray="YES"/>
                                     <font key="font" metaFont="system"/>
-                                    <imageReference key="image" image="NSListViewTemplate" symbolScale="large"/>
+                                    <imageReference key="image" image="list.bullet" catalog="system" symbolScale="large"/>
                                 </buttonCell>
                                 <color key="contentTintColor" red="0.99999600649999998" green="1" blue="1" alpha="0.85338267140000001" colorSpace="custom" customColorSpace="sRGB"/>
                                 <connections>
@@ -556,18 +557,18 @@
         </customView>
     </objects>
     <resources>
-        <image name="NSLeftFacingTriangleTemplate" width="12" height="17"/>
-        <image name="NSListViewTemplate" width="21" height="15"/>
-        <image name="arrow.trianglehead.clockwise" catalog="system" width="15" height="17"/>
-        <image name="arrow.trianglehead.counterclockwise" catalog="system" width="15" height="17"/>
-        <image name="arrow.up.left.and.arrow.down.right" catalog="system" width="16" height="15"/>
-        <image name="backward.fill" catalog="system" width="20" height="12"/>
-        <image name="forward.fill" catalog="system" width="20" height="12"/>
-        <image name="music.note.list" catalog="system" width="17" height="15"/>
-        <image name="pin.fill" catalog="system" width="19" height="22"/>
-        <image name="pip.enter" catalog="system" width="20" height="16"/>
-        <image name="play.fill" catalog="system" width="12" height="13"/>
-        <image name="play.rectangle.on.rectangle" catalog="system" width="19" height="15"/>
-        <image name="speaker.wave.3.fill" catalog="system" width="22" height="15"/>
+        <image name="arrow.trianglehead.clockwise" catalog="system" width="32" height="32"/>
+        <image name="arrow.trianglehead.counterclockwise" catalog="system" width="32" height="32"/>
+        <image name="arrow.up.left.and.arrow.down.right" catalog="system" width="32" height="32"/>
+        <image name="backward.fill" catalog="system" width="32" height="32"/>
+        <image name="chevron.left" catalog="system" width="32" height="32"/>
+        <image name="forward.fill" catalog="system" width="32" height="32"/>
+        <image name="list.bullet" catalog="system" width="32" height="32"/>
+        <image name="music.note.list" catalog="system" width="32" height="32"/>
+        <image name="pin.fill" catalog="system" width="32" height="32"/>
+        <image name="pip.enter" catalog="system" width="32" height="32"/>
+        <image name="play.fill" catalog="system" width="32" height="32"/>
+        <image name="play.rectangle.on.rectangle" catalog="system" width="32" height="32"/>
+        <image name="speaker.wave.3.fill" catalog="system" width="32" height="32"/>
     </resources>
 </document>

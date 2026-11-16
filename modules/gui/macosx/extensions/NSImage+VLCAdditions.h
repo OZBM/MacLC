@@ -46,8 +46,6 @@ struct vlc_object_t;
 @property (class, readonly) NSImage *VLCBWServer2Image;
 @property (class, readonly) NSImage *VLCBWUsb1Image;
 @property (class, readonly) NSImage *VLCBWUsb2Image;
-@property (class, readonly) NSImage *VLCDefaultAppIconImage;
-@property (class, readonly) NSImage *VLCFollowImage;
 
 // Placeholder images
 @property (class, readonly) NSImage *VLCNoArtImage;
@@ -57,11 +55,6 @@ struct vlc_object_t;
 @property (class, readonly) NSImage *VLCGenericImage;
 
 // Playback control images
-@property (class, readonly) NSImage *VLCShuffleOffImage;
-@property (class, readonly) NSImage *VLCShuffleOnImage;
-@property (class, readonly) NSImage *VLCRepeatAllImage;
-@property (class, readonly) NSImage *VLCRepeatOneImage;
-@property (class, readonly) NSImage *VLCRepeatOffImage;
 
 + (void)quickLookPreviewForLocalPath:(NSString *)path
                             withSize:(NSSize)size 

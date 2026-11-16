@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
+        <deployment version="270200" identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -1535,7 +1536,7 @@
                                     <subviews>
                                         <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="fI0-dm-MVt">
                                             <rect key="frame" x="426" y="190" width="39" height="15"/>
-                                            <buttonCell key="cell" type="roundRect" title="Reset" bezelStyle="roundedRect" image="buttonCell:rEJ-M5-S37:image" imagePosition="overlaps" alignment="center" controlSize="mini" borderStyle="border" inset="2" id="rEJ-M5-S37">
+                                            <buttonCell key="cell" type="roundRect" title="Reset" bezelStyle="roundedRect" imagePosition="overlaps" alignment="center" controlSize="mini" borderStyle="border" inset="2" id="rEJ-M5-S37">
                                                 <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                                 <font key="font" metaFont="miniSystem"/>
                                             </buttonCell>
@@ -1751,47 +1752,5 @@
         <userDefaultsController representsSharedInstance="YES" id="350"/>
     </objects>
     <resources>
-        <image name="buttonCell:rEJ-M5-S37:image" width="1" height="1">
-            <mutableData key="keyedArchiveRepresentation">
-YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05T
-S2V5ZWRBcmNoaXZlctEICVRyb290gAGuCwwbHCEaJissMzY5P0JVJG51bGzXDQ4PEBESExQVFhcYGRpW
-TlNTaXplViRjbGFzc1xOU0ltYWdlRmxhZ3NWTlNSZXBzW05TVGludENvbG9yV05TQ29sb3JeTlNSZXNp
-emluZ01vZGWAAoANEiDLAACAA4AAgAsQAFZ7MSwgMX3SHQ4eIFpOUy5vYmplY3RzoR+ABIAK0h0OIiWi
-IySABYAGgAnTDicoKSoaXxAUTlNUSUZGUmVwcmVzZW50YXRpb25fEBlOU0ludGVybmFsTGF5b3V0RGly
-ZWN0aW9ugAiAB08RBkxNTQAqAAAACgAAABABAAADAAAAAQABAAABAQADAAAAAQABAAABAgADAAAAAgAI
-AAgBAwADAAAAAQABAAABBgADAAAAAQABAAABCgADAAAAAQABAAABEQAEAAAAAQAAAAgBEgADAAAAAQAB
-AAABFQADAAAAAQACAAABFgADAAAAAQABAAABFwAEAAAAAQAAAAIBHAADAAAAAQABAAABKAADAAAAAQAC
-AAABUgADAAAAAQABAAABUwADAAAAAgABAAGHcwAHAAAFfAAAANAAAAAAAAAFfGFwcGwCIAAAbW50ckdS
-QVlYWVogB9AAAgAOAAwAAAAAYWNzcEFQUEwAAAAAbm9uZQAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA
-0y1hcHBsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFZGVzYwAA
-AMAAAABvZHNjbQAAATAAAAPuY3BydAAABSAAAAA4d3RwdAAABVgAAAAUa1RSQwAABWwAAAAOZGVzYwAA
-AAAAAAAVR2VuZXJpYyBHcmF5IFByb2ZpbGUAAAAAAAAAAAAAABVHZW5lcmljIEdyYXkgUHJvZmlsZQAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG1sdWMAAAAAAAAAEwAA
-AAxwdEJSAAAAKgAAAPRmckZVAAAAKgAAAR56aFRXAAAAEAAAAUhpdElUAAAALgAAAVhuYk5PAAAALAAA
-AYZrb0tSAAAAGAAAAbJkZURFAAAAOgAAAcpzdlNFAAAALgAAAgR6aENOAAAAEAAAAjJqYUpQAAAAFgAA
-AkJwdFBPAAAAOAAAAlhubE5MAAAAKgAAApBlc0VTAAAAKAAAArpmaUZJAAAALAAAAuJwbFBMAAAANgAA
-Aw5ydVJVAAAAJgAAA0RhckVHAAAAKAAAA2plblVTAAAAKAAAA5JkYURLAAAANAAAA7oAUABlAHIAZgBp
-AGwAIABDAGkAbgB6AGEAIABHAGUAbgDpAHIAaQBjAG8AUAByAG8AZgBpAGwAIABnAOkAbgDpAHIAaQBx
-AHUAZQAgAGcAcgBpAHOQGnUocHCWjoJyX2ljz4/wAFAAcgBvAGYAaQBsAG8AIABnAHIAaQBnAGkAbwAg
-AGcAZQBuAGUAcgBpAGMAbwBHAGUAbgBlAHIAaQBzAGsAIABnAHIA5QB0AG8AbgBlAHAAcgBvAGYAaQBs
-x3y8GAAgAEcAcgBhAHkAINUEuFzTDMd8AEEAbABsAGcAZQBtAGUAaQBuAGUAcwAgAEcAcgBhAHUAcwB0
-AHUAZgBlAG4ALQBQAHIAbwBmAGkAbABHAGUAbgBlAHIAaQBzAGsAIABnAHIA5QBzAGsAYQBsAGUAcABy
-AG8AZgBpAGxmbpAacHBepmPPj/Blh072TgCCLDCwMOwwpDDXMO0w1TChMKQw6wBQAGUAcgBmAGkAbAAg
-AGcAZQBuAOkAcgBpAGMAbwAgAGQAZQAgAGMAaQBuAHoAZQBuAHQAbwBzAEEAbABnAGUAbQBlAGUAbgAg
-AGcAcgBpAGoAcwBwAHIAbwBmAGkAZQBsAFAAZQByAGYAaQBsACAAZwByAGkAcwAgAGcAZQBuAOkAcgBp
-AGMAbwBZAGwAZQBpAG4AZQBuACAAaABhAHIAbQBhAGEAcAByAG8AZgBpAGkAbABpAFUAbgBpAHcAZQBy
-AHMAYQBsAG4AeQAgAHAAcgBvAGYAaQBsACAAcwB6AGEAcgBvAVsAYwBpBB4EMQRJBDgEOQAgBEEENQRA
-BEsEOQAgBD8EQAQ+BEQEOAQ7BEwGRQZEBkEAIAYqBjkGMQZKBkEAIABHAHIAYQB5ACAGJwZEBjkGJwZF
-AEcAZQBuAGUAcgBpAGMAIABHAHIAYQB5ACAAUAByAG8AZgBpAGwAZQBHAGUAbgBlAHIAZQBsACAAZwBy
-AOUAdABvAG4AZQBiAGUAcwBrAHIAaQB2AGUAbABzAGUAAHRleHQAAAAAQ29weXJpZ2h0IDIwMDcgQXBw
-bGUgSW5jLiwgYWxsIHJpZ2h0cyByZXNlcnZlZC4AWFlaIAAAAAAAAPNRAAEAAAABFsxjdXJ2AAAAAAAA
-AAEBzQAA0i0uLzBaJGNsYXNzbmFtZVgkY2xhc3Nlc18QEE5TQml0bWFwSW1hZ2VSZXCjLzEyWk5TSW1h
-Z2VSZXBYTlNPYmplY3TSLS40NVdOU0FycmF5ojQy0i0uNzheTlNNdXRhYmxlQXJyYXmjNzQy0zo7Djw9
-PldOU1doaXRlXE5TQ29sb3JTcGFjZUQwIDAAEAOADNItLkBBV05TQ29sb3KiQDLSLS5DRFdOU0ltYWdl
-okMyAAgAEQAaACQAKQAyADcASQBMAFEAUwBiAGgAdwB+AIUAkgCZAKUArQC8AL4AwADFAMcAyQDLAM0A
-1ADZAOQA5gDoAOoA7wDyAPQA9gD4AP8BFgEyATQBNgeGB4sHlgefB7IHtgfBB8oHzwfXB9oH3wfuB/IH
-+QgBCA4IEwgVCBcIHAgkCCcILAg0AAAAAAAAAgEAAAAAAAAARQAAAAAAAAAAAAAAAAAACDc
-</mutableData>
-        </image>
     </resources>
 </document>

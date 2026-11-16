@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="Image references" minToolsVersion="12.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -9,12 +10,7 @@
         <customObject id="-2" userLabel="File's Owner"/>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
         <customObject id="-3" userLabel="Application" customClass="NSObject"/>
-        <stackView distribution="fillEqually" orientation="horizontal" alignment="centerY" spacing="8" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="250" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="3qj-hs-qA9" customClass="VLCLibraryHomeViewActionsView">
-            <userDefinedRuntimeAttributes>
-                <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                    <integer value="2"/>
-                </userDefinedRuntimeAttribute>
-            </userDefinedRuntimeAttributes>
+        <stackView distribution="fillEqually" orientation="horizontal" alignment="centerY" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="250" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="3qj-hs-qA9" customClass="VLCLibraryHomeViewActionsView">
             <rect key="frame" x="0.0" y="0.0" width="801" height="128"/>
             <subviews>
                 <button verticalHuggingPriority="251" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="z8M-pF-aNN">
@@ -93,6 +89,11 @@
                 <real value="3.4028234663852886e+38"/>
                 <real value="3.4028234663852886e+38"/>
             </customSpacing>
+            <userDefinedRuntimeAttributes>
+                <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
+                    <integer key="value" value="2"/>
+                </userDefinedRuntimeAttribute>
+            </userDefinedRuntimeAttributes>
             <connections>
                 <outlet property="openBrowseButton" destination="g9j-oN-Lyd" id="hRd-gf-7ar"/>
                 <outlet property="openCaptureDeviceButton" destination="y5B-QJ-eG5" id="sYh-WY-Hr0"/>
@@ -104,10 +105,10 @@
         </stackView>
     </objects>
     <resources>
-        <image name="camera.fill" catalog="system" width="19" height="15"/>
-        <image name="folder.fill" catalog="system" width="18" height="14"/>
-        <image name="internaldrive.fill" catalog="system" width="18" height="13"/>
-        <image name="network" catalog="system" width="15" height="15"/>
-        <image name="opticaldisc.fill" catalog="system" width="15" height="15"/>
+        <image name="camera.fill" catalog="system" width="32" height="32"/>
+        <image name="folder.fill" catalog="system" width="32" height="32"/>
+        <image name="internaldrive.fill" catalog="system" width="32" height="32"/>
+        <image name="network" catalog="system" width="32" height="32"/>
+        <image name="opticaldisc.fill" catalog="system" width="32" height="32"/>
     </resources>
 </document>

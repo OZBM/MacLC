@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23727" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23727"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -177,7 +177,7 @@
                         <rect key="frame" x="0.0" y="44" width="580" height="576"/>
                         <clipView key="contentView" drawsBackground="NO" copiesOnScroll="NO" id="ecH-Hh-jJF" customClass="VLCSimplePrefsClipView">
                             <rect key="frame" x="1" y="1" width="578" height="574"/>
-                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                            <autoresizingMask key="autoresizingMask"/>
                             <subviews>
                                 <view translatesAutoresizingMaskIntoConstraints="NO" id="HOX-DS-Fgr" userLabel="content view">
                                     <rect key="frame" x="0.0" y="0.0" width="578" height="574"/>
@@ -269,14 +269,14 @@ Gw
                                 <constraint firstAttribute="trailing" secondItem="2275" secondAttribute="trailing" constant="16" id="ecs-7d-FYG" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
                                 <constraint firstItem="3636" firstAttribute="leading" secondItem="uTV-TS-NBc" secondAttribute="leading" constant="16" id="gDc-YB-ivM" customClass="VLCSpacingConstraint">
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                            <integer value="3"/>
+                                            <integer key="value" value="3"/>
                                         </userDefinedRuntimeAttribute>
                                     </userDefinedRuntimeAttributes>
                                 </constraint>
@@ -304,11 +304,11 @@ Gw
                 <box borderType="line" title="General Settings" translatesAutoresizingMaskIntoConstraints="NO" id="kup-aY-Wqq">
                     <rect key="frame" x="18" y="421" width="563" height="131"/>
                     <view key="contentView" id="wFl-aV-3Hn">
-                        <rect key="frame" x="4" y="5" width="555" height="111"/>
+                        <rect key="frame" x="0.0" y="0.0" width="563" height="119"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3892">
-                                <rect key="frame" x="15" y="83" width="117" height="16"/>
+                                <rect key="frame" x="15" y="91" width="117" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Language" usesSingleLineMode="YES" id="3893">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -316,7 +316,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3900">
-                                <rect key="frame" x="144" y="77" width="395" height="25"/>
+                                <rect key="frame" x="144" y="85" width="395" height="25"/>
                                 <popUpButtonCell key="cell" type="push" bezelStyle="rounded" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" id="3901">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -330,7 +330,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="r3P-eU-tEX">
-                                <rect key="frame" x="15" y="49" width="189" height="18"/>
+                                <rect key="frame" x="15" y="57" width="189" height="18"/>
                                 <buttonCell key="cell" type="check" title="Enable MacLC status bar icon" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="Vhy-1T-Knj">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -340,7 +340,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="QZ2-zA-u6A">
-                                <rect key="frame" x="15" y="16" width="286" height="18"/>
+                                <rect key="frame" x="15" y="24" width="286" height="18"/>
                                 <buttonCell key="cell" type="check" title="Display album track numbers in play queue" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="I5V-9N-WTo">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -363,7 +363,7 @@ Gw
                             <constraint firstAttribute="trailing" secondItem="3900" secondAttribute="trailing" constant="16" id="tlF-b1-Tuz" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -373,11 +373,11 @@ Gw
                 <box borderType="line" title="Playback control" translatesAutoresizingMaskIntoConstraints="NO" id="CZP-ZN-k6p">
                     <rect key="frame" x="18" y="328" width="563" height="89"/>
                     <view key="contentView" id="gj4-zO-E26">
-                        <rect key="frame" x="4" y="5" width="555" height="69"/>
+                        <rect key="frame" x="0.0" y="0.0" width="563" height="77"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3919">
-                                <rect key="frame" x="15" y="41" width="117" height="16"/>
+                                <rect key="frame" x="15" y="49" width="117" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Continue playback" usesSingleLineMode="YES" id="3923">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -385,7 +385,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3920">
-                                <rect key="frame" x="144" y="35" width="398" height="25"/>
+                                <rect key="frame" x="144" y="43" width="398" height="25"/>
                                 <popUpButtonCell key="cell" type="push" bezelStyle="rounded" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" id="3921">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -396,7 +396,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="SYi-7I-cKE">
-                                <rect key="frame" x="15" y="14" width="201" height="18"/>
+                                <rect key="frame" x="15" y="22" width="201" height="18"/>
                                 <buttonCell key="cell" type="check" title="Display end of playback view" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="Vsg-0v-H35">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -416,7 +416,7 @@ Gw
                             <constraint firstItem="SYi-7I-cKE" firstAttribute="top" secondItem="3919" secondAttribute="bottom" constant="8" id="czT-2q-qcN" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -428,11 +428,11 @@ Gw
                 <box verticalHuggingPriority="251" verticalCompressionResistancePriority="751" borderType="line" title="Playback behaviour" translatesAutoresizingMaskIntoConstraints="NO" id="EKZ-iB-CMo">
                     <rect key="frame" x="18" y="237" width="563" height="87"/>
                     <view key="contentView" id="BMS-wa-oJS">
-                        <rect key="frame" x="4" y="5" width="555" height="67"/>
+                        <rect key="frame" x="0.0" y="0.0" width="563" height="75"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3564">
-                                <rect key="frame" x="16" y="40" width="288" height="18"/>
+                                <rect key="frame" x="16" y="48" width="288" height="18"/>
                                 <buttonCell key="cell" type="check" title="Enable notifications on playlist item change" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="3565">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -442,7 +442,7 @@ Gw
                                 </connections>
                             </button>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3910">
-                                <rect key="frame" x="16" y="12" width="116" height="16"/>
+                                <rect key="frame" x="16" y="20" width="116" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Pause iTunes" usesSingleLineMode="YES" id="3914">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -450,7 +450,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3911">
-                                <rect key="frame" x="144" y="6" width="396" height="25"/>
+                                <rect key="frame" x="144" y="14" width="396" height="25"/>
                                 <popUpButtonCell key="cell" type="push" bezelStyle="rounded" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" id="3912">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -468,7 +468,7 @@ Gw
                             <constraint firstItem="3564" firstAttribute="top" secondItem="BMS-wa-oJS" secondAttribute="top" constant="8" id="Jw3-R5-8cy" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -485,11 +485,11 @@ Gw
                 <box verticalHuggingPriority="249" borderType="line" title="Privacy / Network Interaction" translatesAutoresizingMaskIntoConstraints="NO" id="2318">
                     <rect key="frame" x="18" y="118" width="563" height="115"/>
                     <view key="contentView" id="nnH-Tj-ON7">
-                        <rect key="frame" x="4" y="5" width="555" height="95"/>
+                        <rect key="frame" x="0.0" y="0.0" width="563" height="103"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3556">
-                                <rect key="frame" x="14" y="38" width="221" height="18"/>
+                                <rect key="frame" x="14" y="46" width="221" height="18"/>
                                 <buttonCell key="cell" type="check" title="Automatically check for updates" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="3557">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -499,7 +499,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3928">
-                                <rect key="frame" x="14" y="68" width="165" height="18"/>
+                                <rect key="frame" x="14" y="76" width="165" height="18"/>
                                 <buttonCell key="cell" type="check" title="Allow metadata access" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="3929">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -509,7 +509,7 @@ Gw
                                 </connections>
                             </button>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3560">
-                                <rect key="frame" x="42" y="17" width="153" height="14"/>
+                                <rect key="frame" x="42" y="25" width="153" height="14"/>
                                 <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Last check on June 27 2045" id="3561">
                                     <font key="font" metaFont="message" size="11"/>
                                     <color key="textColor" name="tertiaryLabelColor" catalog="System" colorSpace="catalog"/>
@@ -521,7 +521,7 @@ Gw
                             <constraint firstItem="3560" firstAttribute="top" secondItem="3556" secondAttribute="bottom" constant="8" id="1dH-5R-Rht" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -533,7 +533,7 @@ Gw
                             <constraint firstItem="3928" firstAttribute="leading" secondItem="nnH-Tj-ON7" secondAttribute="leading" constant="16" id="KBn-vy-58f" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -541,7 +541,7 @@ Gw
                             <constraint firstItem="3928" firstAttribute="top" secondItem="nnH-Tj-ON7" secondAttribute="top" constant="8" id="QC3-ep-bpv" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -552,11 +552,11 @@ Gw
                 <box borderType="line" title="HTTP Server" translatesAutoresizingMaskIntoConstraints="NO" id="drh-ot-Vyn">
                     <rect key="frame" x="18" y="17" width="563" height="94"/>
                     <view key="contentView" id="Who-VF-GbQ">
-                        <rect key="frame" x="4" y="5" width="555" height="74"/>
+                        <rect key="frame" x="0.0" y="0.0" width="563" height="82"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3875">
-                                <rect key="frame" x="14" y="20" width="118" height="16"/>
+                                <rect key="frame" x="14" y="28" width="118" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Password" usesSingleLineMode="YES" id="3876">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -564,7 +564,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3884" customClass="NSSecureTextField">
-                                <rect key="frame" x="147" y="17" width="391" height="21"/>
+                                <rect key="frame" x="147" y="25" width="391" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="3885">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -576,7 +576,7 @@ Gw
                                 </connections>
                             </textField>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="lpZ-9y-Vfn">
-                                <rect key="frame" x="14" y="47" width="191" height="18"/>
+                                <rect key="frame" x="14" y="55" width="191" height="18"/>
                                 <buttonCell key="cell" type="check" title="Enable MacLC HTTP interface" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="Nby-oq-jkQ">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -594,14 +594,14 @@ Gw
                             <constraint firstItem="lpZ-9y-Vfn" firstAttribute="leading" secondItem="Who-VF-GbQ" secondAttribute="leading" constant="16" id="PWI-C5-4nk" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="lpZ-9y-Vfn" firstAttribute="top" secondItem="Who-VF-GbQ" secondAttribute="top" constant="8" id="VqA-8L-DMQ" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -618,14 +618,14 @@ Gw
                 <constraint firstItem="EKZ-iB-CMo" firstAttribute="top" secondItem="CZP-ZN-k6p" secondAttribute="bottom" constant="8" id="6rd-dG-SxK" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2318" firstAttribute="top" secondItem="EKZ-iB-CMo" secondAttribute="bottom" constant="8" id="9hm-PK-wnp" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -636,7 +636,7 @@ Gw
                 <constraint firstItem="CZP-ZN-k6p" firstAttribute="top" secondItem="kup-aY-Wqq" secondAttribute="bottom" constant="8" id="QJY-SR-Xvz" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -659,11 +659,11 @@ Gw
                 <box title="Last.fm" translatesAutoresizingMaskIntoConstraints="NO" id="2363">
                     <rect key="frame" x="17" y="16" width="564" height="121"/>
                     <view key="contentView" id="7U2-xM-E1M">
-                        <rect key="frame" x="4" y="5" width="556" height="101"/>
+                        <rect key="frame" x="0.0" y="0.0" width="564" height="109"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2365">
-                                <rect key="frame" x="14" y="73" width="194" height="18"/>
+                                <rect key="frame" x="14" y="81" width="194" height="18"/>
                                 <buttonCell key="cell" type="check" title="Enable Last.fm submissions" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="3472">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -673,7 +673,7 @@ Gw
                                 </connections>
                             </button>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2367">
-                                <rect key="frame" x="175" y="44" width="361" height="21"/>
+                                <rect key="frame" x="175" y="52" width="361" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" enabled="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="3474">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -686,7 +686,7 @@ Gw
                                 </connections>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="2368">
-                                <rect key="frame" x="106" y="16" width="63" height="16"/>
+                                <rect key="frame" x="106" y="24" width="63" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Password" usesSingleLineMode="YES" id="3475">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -694,7 +694,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2369" customClass="NSSecureTextField">
-                                <rect key="frame" x="175" y="13" width="361" height="21"/>
+                                <rect key="frame" x="175" y="21" width="361" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" enabled="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="3476">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -707,7 +707,7 @@ Gw
                                 </connections>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="2366">
-                                <rect key="frame" x="99" y="47" width="70" height="16"/>
+                                <rect key="frame" x="99" y="55" width="70" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="User name" usesSingleLineMode="YES" id="3473">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -720,7 +720,7 @@ Gw
                             <constraint firstItem="2369" firstAttribute="top" secondItem="2367" secondAttribute="bottom" constant="8" id="5oX-M6-q2A" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -728,21 +728,21 @@ Gw
                             <constraint firstItem="2369" firstAttribute="leading" secondItem="2368" secondAttribute="trailing" constant="8" symbolic="YES" id="ABF-bT-Jtq" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="2367" firstAttribute="leading" secondItem="2366" secondAttribute="trailing" constant="8" symbolic="YES" id="LBg-lb-KXd" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="2365" firstAttribute="leading" secondItem="7U2-xM-E1M" secondAttribute="leading" constant="16" id="MmS-JL-8Cb" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -750,7 +750,7 @@ Gw
                             <constraint firstAttribute="trailing" secondItem="2367" secondAttribute="trailing" constant="16" id="OFk-Uj-MkS" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -765,11 +765,11 @@ Gw
                 <box title="Effects" translatesAutoresizingMaskIntoConstraints="NO" id="2347">
                     <rect key="frame" x="17" y="140" width="564" height="61"/>
                     <view key="contentView" id="N65-iQ-8gY">
-                        <rect key="frame" x="4" y="5" width="556" height="41"/>
+                        <rect key="frame" x="0.0" y="0.0" width="564" height="49"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="2357">
-                                <rect key="frame" x="9" y="13" width="160" height="16"/>
+                                <rect key="frame" x="9" y="21" width="160" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Visualization" usesSingleLineMode="YES" id="3470">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -777,7 +777,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2358">
-                                <rect key="frame" x="172" y="7" width="368" height="25"/>
+                                <rect key="frame" x="172" y="15" width="368" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Default" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="2361" id="3471">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -799,7 +799,7 @@ Gw
                             <constraint firstItem="2358" firstAttribute="leading" secondItem="2357" secondAttribute="trailing" constant="8" symbolic="YES" id="9Qb-vC-6wn" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -807,7 +807,7 @@ Gw
                             <constraint firstAttribute="trailing" secondItem="2358" secondAttribute="trailing" constant="16" id="ecd-fD-xzP" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -819,11 +819,11 @@ Gw
                 <box title="General Audio" translatesAutoresizingMaskIntoConstraints="NO" id="2332">
                     <rect key="frame" x="17" y="204" width="564" height="160"/>
                     <view key="contentView" id="sX1-um-Nbr">
-                        <rect key="frame" x="4" y="5" width="556" height="140"/>
+                        <rect key="frame" x="0.0" y="0.0" width="564" height="148"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <slider verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2335">
-                                <rect key="frame" x="173" y="47" width="311" height="28"/>
+                                <rect key="frame" x="173" y="55" width="311" height="28"/>
                                 <constraints>
                                     <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="205" id="4Mt-lP-4oa"/>
                                 </constraints>
@@ -835,7 +835,7 @@ Gw
                                 </connections>
                             </slider>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2336">
-                                <rect key="frame" x="490" y="53" width="46" height="21"/>
+                                <rect key="frame" x="490" y="61" width="46" height="21"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="46" id="96N-ME-SLD"/>
                                 </constraints>
@@ -865,7 +865,7 @@ Gw
                                 </connections>
                             </textField>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2345">
-                                <rect key="frame" x="10" y="17" width="159" height="16"/>
+                                <rect key="frame" x="10" y="25" width="159" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Preferred Audio language" usesSingleLineMode="YES" id="3464">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -873,7 +873,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2346">
-                                <rect key="frame" x="175" y="15" width="361" height="21"/>
+                                <rect key="frame" x="175" y="23" width="361" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="3465">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -885,7 +885,7 @@ Gw
                                 </connections>
                             </textField>
                             <matrix verticalHuggingPriority="750" mirrorLayoutDirectionWhenInternationalizing="always" allowsEmptySelection="NO" translatesAutoresizingMaskIntoConstraints="NO" id="3664">
-                                <rect key="frame" x="12" y="82" width="524" height="48"/>
+                                <rect key="frame" x="12" y="90" width="524" height="48"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="48" id="Vw9-Mr-7S2"/>
                                 </constraints>
@@ -924,7 +924,7 @@ Gw
                             <constraint firstItem="2346" firstAttribute="leading" secondItem="2345" secondAttribute="trailing" constant="8" symbolic="YES" id="4L3-Eo-Hwp" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -933,7 +933,7 @@ Gw
                             <constraint firstItem="2345" firstAttribute="top" secondItem="2335" secondAttribute="bottom" constant="16" id="9cb-SC-NJS" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -941,14 +941,14 @@ Gw
                             <constraint firstAttribute="trailing" secondItem="2336" secondAttribute="trailing" constant="16" id="RiT-2N-oVX" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstAttribute="trailing" secondItem="3664" secondAttribute="trailing" constant="16" id="SEy-Pv-8qj" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -956,7 +956,7 @@ Gw
                             <constraint firstItem="2336" firstAttribute="leading" secondItem="2335" secondAttribute="trailing" constant="8" id="etL-aD-xyO" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -967,7 +967,7 @@ Gw
                             <constraint firstItem="3664" firstAttribute="top" secondItem="sX1-um-Nbr" secondAttribute="top" constant="8" id="ydK-et-WGv" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -990,7 +990,7 @@ Gw
                 <constraint firstItem="2347" firstAttribute="top" secondItem="sX1-um-Nbr" secondAttribute="bottom" constant="8" id="4R0-Xw-p8K" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -998,35 +998,35 @@ Gw
                 <constraint firstAttribute="bottom" secondItem="2363" secondAttribute="bottom" constant="16" id="FEY-8l-LsQ" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2331" firstAttribute="top" secondItem="2330" secondAttribute="top" constant="16" id="Jcr-Mc-d5D" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="trailing" secondItem="2332" secondAttribute="trailing" constant="16" id="LtM-8O-6Vh" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2363" firstAttribute="top" secondItem="N65-iQ-8gY" secondAttribute="bottom" constant="8" id="Mw8-bF-X3e" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2331" firstAttribute="leading" secondItem="2330" secondAttribute="leading" constant="16" id="QAN-X3-PVf" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1039,7 +1039,7 @@ Gw
                 <constraint firstItem="2332" firstAttribute="leading" secondItem="2330" secondAttribute="leading" constant="16" id="yCl-al-Jh8" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1062,11 +1062,11 @@ Gw
                 <box verticalHuggingPriority="249" title="Display" translatesAutoresizingMaskIntoConstraints="NO" id="2449">
                     <rect key="frame" x="17" y="358" width="548" height="170"/>
                     <view key="contentView" id="eGM-I9-pBb">
-                        <rect key="frame" x="4" y="5" width="540" height="150"/>
+                        <rect key="frame" x="0.0" y="0.0" width="548" height="158"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2452">
-                                <rect key="frame" x="15" y="123" width="218" height="18"/>
+                                <rect key="frame" x="15" y="131" width="218" height="18"/>
                                 <buttonCell key="cell" type="check" title="Show video within main window" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="3479">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1076,7 +1076,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="6yQ-ig-eP0">
-                                <rect key="frame" x="15" y="95" width="212" height="18"/>
+                                <rect key="frame" x="15" y="103" width="212" height="18"/>
                                 <buttonCell key="cell" type="check" title="Use classic video player layout" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="hMN-gu-1VU">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1086,7 +1086,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2451">
-                                <rect key="frame" x="15" y="11" width="111" height="18"/>
+                                <rect key="frame" x="15" y="19" width="111" height="18"/>
                                 <buttonCell key="cell" type="check" title="Always on top" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="3478">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1096,7 +1096,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="rpy-5O-tek">
-                                <rect key="frame" x="15" y="67" width="281" height="18"/>
+                                <rect key="frame" x="15" y="75" width="281" height="18"/>
                                 <buttonCell key="cell" type="check" title="Pause the video playback when minimized" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="v2U-aI-gRI">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1106,7 +1106,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4a1-oW-HKH">
-                                <rect key="frame" x="15" y="39" width="267" height="18"/>
+                                <rect key="frame" x="15" y="47" width="267" height="18"/>
                                 <buttonCell key="cell" type="check" title="Resize interface to the native video size" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="rNV-hL-qNL">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1116,7 +1116,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3728">
-                                <rect key="frame" x="268" y="11" width="150" height="18"/>
+                                <rect key="frame" x="268" y="19" width="150" height="18"/>
                                 <buttonCell key="cell" type="check" title="Window decorations" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="3729">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1138,7 +1138,7 @@ Gw
                             <constraint firstItem="2452" firstAttribute="top" secondItem="eGM-I9-pBb" secondAttribute="top" constant="8" id="Zf8-Vt-ftS" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1155,11 +1155,11 @@ Gw
                 <box title="Fullscreen" translatesAutoresizingMaskIntoConstraints="NO" id="9CN-jv-NQ1">
                     <rect key="frame" x="17" y="230" width="548" height="124"/>
                     <view key="contentView" id="DfV-6B-rTp">
-                        <rect key="frame" x="4" y="5" width="540" height="104"/>
+                        <rect key="frame" x="0.0" y="0.0" width="548" height="112"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="5Db-fa-Ffw">
-                                <rect key="frame" x="14" y="76" width="133" height="18"/>
+                                <rect key="frame" x="14" y="84" width="133" height="18"/>
                                 <buttonCell key="cell" type="check" title="Start in fullscreen" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="dib-dQ-tMp">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1169,7 +1169,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="i5X-iK-Hbj">
-                                <rect key="frame" x="268" y="76" width="228" height="18"/>
+                                <rect key="frame" x="268" y="84" width="228" height="18"/>
                                 <buttonCell key="cell" type="check" title="Black screens in Fullscreen mode" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="mR8-Zk-i3R">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1179,7 +1179,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="6mo-Qc-MZV">
-                                <rect key="frame" x="14" y="45" width="191" height="18"/>
+                                <rect key="frame" x="14" y="53" width="191" height="18"/>
                                 <buttonCell key="cell" type="check" title="Use native fullscreen mode" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="8UZ-lD-mnI">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1189,7 +1189,7 @@ Gw
                                 </connections>
                             </button>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="74n-z2-A2G">
-                                <rect key="frame" x="267" y="9" width="260" height="25"/>
+                                <rect key="frame" x="267" y="17" width="260" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Screen 1 (1280 * 800)" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="2ni-Sy-Xtp" id="HOa-K5-WKi">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -1206,7 +1206,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="pch-Ac-iPY">
-                                <rect key="frame" x="14" y="15" width="250" height="16"/>
+                                <rect key="frame" x="14" y="23" width="250" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Fullscreen video device" usesSingleLineMode="YES" id="Ft8-Q4-fXE">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1221,7 +1221,7 @@ Gw
                             <constraint firstItem="5Db-fa-Ffw" firstAttribute="leading" secondItem="DfV-6B-rTp" secondAttribute="leading" constant="16" id="OeS-17-dI8" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1232,7 +1232,7 @@ Gw
                             <constraint firstItem="74n-z2-A2G" firstAttribute="leading" secondItem="pch-Ac-iPY" secondAttribute="trailing" constant="8" symbolic="YES" id="c9u-3t-SCo" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1247,11 +1247,11 @@ Gw
                 <box title="Video" translatesAutoresizingMaskIntoConstraints="NO" id="3722">
                     <rect key="frame" x="17" y="136" width="548" height="90"/>
                     <view key="contentView" id="Kie-O4-kEN">
-                        <rect key="frame" x="4" y="5" width="540" height="70"/>
+                        <rect key="frame" x="0.0" y="0.0" width="548" height="78"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3707">
-                                <rect key="frame" x="14" y="16" width="250" height="16"/>
+                                <rect key="frame" x="14" y="24" width="250" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Deinterlace mode" usesSingleLineMode="YES" id="3708">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1259,7 +1259,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3705">
-                                <rect key="frame" x="14" y="42" width="250" height="16"/>
+                                <rect key="frame" x="14" y="50" width="250" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Deinterlace" usesSingleLineMode="YES" id="3714">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1267,7 +1267,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3704">
-                                <rect key="frame" x="267" y="36" width="260" height="25"/>
+                                <rect key="frame" x="267" y="44" width="260" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Item1" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="3718" id="3715">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -1284,7 +1284,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3706">
-                                <rect key="frame" x="267" y="10" width="260" height="25"/>
+                                <rect key="frame" x="267" y="18" width="260" height="25"/>
                                 <popUpButtonCell key="cell" type="push" bezelStyle="rounded" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" id="3709">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -1307,7 +1307,7 @@ Gw
                             <constraint firstItem="3704" firstAttribute="leading" secondItem="3705" secondAttribute="trailing" constant="8" symbolic="YES" id="L4F-xM-LU7" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1316,21 +1316,21 @@ Gw
                             <constraint firstItem="3705" firstAttribute="leading" secondItem="Kie-O4-kEN" secondAttribute="leading" constant="16" id="SQT-Pj-34i" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="3707" firstAttribute="top" secondItem="3705" secondAttribute="bottom" constant="8" id="Xsd-Lp-XID" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="3706" firstAttribute="leading" secondItem="3707" secondAttribute="trailing" constant="8" symbolic="YES" id="dOi-Nj-X6r" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1338,7 +1338,7 @@ Gw
                             <constraint firstItem="3704" firstAttribute="top" secondItem="Kie-O4-kEN" secondAttribute="top" constant="8" id="oBr-u8-v0v" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1351,11 +1351,11 @@ Gw
                 <box title="Video snapshots" translatesAutoresizingMaskIntoConstraints="NO" id="2466">
                     <rect key="frame" x="17" y="16" width="548" height="116"/>
                     <view key="contentView" id="0VI-tx-88U">
-                        <rect key="frame" x="4" y="5" width="540" height="96"/>
+                        <rect key="frame" x="0.0" y="0.0" width="548" height="104"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2468">
-                                <rect key="frame" x="78" y="66" width="362" height="21"/>
+                                <rect key="frame" x="78" y="74" width="362" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="3486">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1368,7 +1368,7 @@ Gw
                                 </connections>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2470">
-                                <rect key="frame" x="13" y="68" width="47" height="16"/>
+                                <rect key="frame" x="13" y="76" width="47" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Folder" usesSingleLineMode="YES" id="3487">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1376,7 +1376,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2473">
-                                <rect key="frame" x="441" y="59" width="90" height="32"/>
+                                <rect key="frame" x="441" y="67" width="90" height="32"/>
                                 <buttonCell key="cell" type="push" title="Browse..." bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="3488">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1386,7 +1386,7 @@ Gw
                                 </connections>
                             </button>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2474">
-                                <rect key="frame" x="78" y="40" width="210" height="21"/>
+                                <rect key="frame" x="78" y="48" width="210" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="maclcsnap-" drawsBackground="YES" id="3489">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1399,7 +1399,7 @@ Gw
                                 </connections>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2475">
-                                <rect key="frame" x="13" y="42" width="47" height="16"/>
+                                <rect key="frame" x="13" y="50" width="47" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Prefix" usesSingleLineMode="YES" id="3490">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1407,7 +1407,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="2476">
-                                <rect key="frame" x="294" y="41" width="159" height="18"/>
+                                <rect key="frame" x="294" y="49" width="159" height="18"/>
                                 <buttonCell key="cell" type="check" title="Sequential numbering" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="3491">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1417,7 +1417,7 @@ Gw
                                 </connections>
                             </button>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2477">
-                                <rect key="frame" x="13" y="13" width="47" height="16"/>
+                                <rect key="frame" x="13" y="21" width="47" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Format" usesSingleLineMode="YES" id="3492">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1425,7 +1425,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2478">
-                                <rect key="frame" x="75" y="7" width="217" height="25"/>
+                                <rect key="frame" x="75" y="15" width="217" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="PNG" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="2481" id="3493">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -1458,7 +1458,7 @@ Gw
                             <constraint firstItem="2473" firstAttribute="leading" secondItem="2468" secondAttribute="trailing" constant="8" id="ODC-pu-xp8" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1466,7 +1466,7 @@ Gw
                             <constraint firstItem="2468" firstAttribute="leading" secondItem="2470" secondAttribute="trailing" constant="16" id="WpQ-mA-c81" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1475,7 +1475,7 @@ Gw
                             <constraint firstItem="2476" firstAttribute="leading" secondItem="2474" secondAttribute="trailing" constant="8" id="kSp-xb-1mt" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1484,14 +1484,14 @@ Gw
                             <constraint firstAttribute="trailing" secondItem="2473" secondAttribute="trailing" constant="16" id="s3k-H0-3Mb" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="2475" firstAttribute="top" secondItem="2470" secondAttribute="bottom" constant="8" id="tRo-k8-39Y" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1511,7 +1511,7 @@ Gw
                 <constraint firstItem="2449" firstAttribute="top" secondItem="Hrj-mH-eqd" secondAttribute="bottom" constant="4" id="5oS-y3-MUj" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="1"/>
+                            <integer key="value" value="1"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1522,14 +1522,14 @@ Gw
                 <constraint firstItem="2448" firstAttribute="leading" secondItem="2440" secondAttribute="leading" constant="16" id="EK2-tT-Ge2" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2448" firstAttribute="top" secondItem="2440" secondAttribute="top" constant="16" id="HNE-GS-O0F" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1539,7 +1539,7 @@ Gw
                 <constraint firstItem="9CN-jv-NQ1" firstAttribute="top" secondItem="2449" secondAttribute="bottom" constant="8" id="Jxh-6r-rIB" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1548,14 +1548,14 @@ Gw
                 <constraint firstItem="3722" firstAttribute="top" secondItem="9CN-jv-NQ1" secondAttribute="bottom" constant="8" id="NZU-Tg-ojc" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2449" firstAttribute="top" secondItem="2448" secondAttribute="bottom" constant="8" id="OB8-io-6AU" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1565,7 +1565,7 @@ Gw
                 <constraint firstItem="2466" firstAttribute="top" secondItem="3722" secondAttribute="bottom" constant="8" id="kQ6-kF-m8M" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1573,7 +1573,7 @@ Gw
                 <constraint firstAttribute="trailing" secondItem="2449" secondAttribute="trailing" constant="16" id="n6x-4B-j0u" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1582,7 +1582,7 @@ Gw
                 <constraint firstAttribute="bottom" secondItem="2466" secondAttribute="bottom" constant="16" id="rgR-SW-QwX" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1596,11 +1596,11 @@ Gw
                 <box title="Codecs / Muxers" translatesAutoresizingMaskIntoConstraints="NO" id="2585">
                     <rect key="frame" x="17" y="242" width="538" height="160"/>
                     <view key="contentView" id="30i-kg-rYI">
-                        <rect key="frame" x="4" y="5" width="530" height="140"/>
+                        <rect key="frame" x="0.0" y="0.0" width="538" height="148"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2593">
-                                <rect key="frame" x="14" y="77" width="240" height="16"/>
+                                <rect key="frame" x="14" y="85" width="240" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Repair AVI Files" usesSingleLineMode="YES" id="3519">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1608,7 +1608,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3434">
-                                <rect key="frame" x="14" y="45" width="240" height="16"/>
+                                <rect key="frame" x="14" y="53" width="240" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Skip the Loop filter for H.264 decoding" usesSingleLineMode="YES" id="3522">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1616,7 +1616,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="lem-yf-jZB">
-                                <rect key="frame" x="14" y="12" width="98" height="18"/>
+                                <rect key="frame" x="14" y="20" width="98" height="18"/>
                                 <buttonCell key="cell" type="check" title="Skip frames" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="lfl-mG-es8">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1626,7 +1626,7 @@ Gw
                                 </connections>
                             </button>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="mFh-ke-4yF">
-                                <rect key="frame" x="267" y="12" width="246" height="18"/>
+                                <rect key="frame" x="267" y="20" width="246" height="18"/>
                                 <buttonCell key="cell" type="check" title="Fast seek" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="XWc-M2-awg">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1636,7 +1636,7 @@ Gw
                                 </connections>
                             </button>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2594">
-                                <rect key="frame" x="266" y="71" width="251" height="25"/>
+                                <rect key="frame" x="266" y="79" width="251" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Item1" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="2598" id="3520">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -1653,7 +1653,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3435">
-                                <rect key="frame" x="266" y="39" width="251" height="25"/>
+                                <rect key="frame" x="266" y="47" width="251" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Item1" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="3439" id="3523">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -1670,7 +1670,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <button verticalHuggingPriority="751" translatesAutoresizingMaskIntoConstraints="NO" id="E3R-AI-QGD">
-                                <rect key="frame" x="14" y="111" width="205" height="18"/>
+                                <rect key="frame" x="14" y="119" width="205" height="18"/>
                                 <buttonCell key="cell" type="check" title="Enable hardware acceleration" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="atu-5u-S8s">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1691,21 +1691,21 @@ Gw
                             <constraint firstItem="lem-yf-jZB" firstAttribute="top" secondItem="3434" secondAttribute="bottom" constant="16" id="RYW-Uf-buV" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="3434" firstAttribute="top" secondItem="2593" secondAttribute="bottom" constant="16" id="Tam-yC-51c" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="E3R-AI-QGD" secondAttribute="trailing" constant="16" id="UeL-aj-4Ov" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1720,7 +1720,7 @@ Gw
                             <constraint firstItem="E3R-AI-QGD" firstAttribute="leading" secondItem="30i-kg-rYI" secondAttribute="leading" constant="16" id="v2C-3E-DlJ" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1731,11 +1731,11 @@ Gw
                 <box borderType="line" title="Record directory or filename" translatesAutoresizingMaskIntoConstraints="NO" id="3623">
                     <rect key="frame" x="17" y="175" width="538" height="64"/>
                     <view key="contentView" id="7b2-vV-8CM">
-                        <rect key="frame" x="4" y="5" width="530" height="44"/>
+                        <rect key="frame" x="0.0" y="0.0" width="538" height="52"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3614">
-                                <rect key="frame" x="15" y="12" width="413" height="20"/>
+                                <rect key="frame" x="15" y="20" width="413" height="20"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="20" id="aEu-v9-mQg"/>
                                 </constraints>
@@ -1750,7 +1750,7 @@ Gw
                                 </connections>
                             </textField>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3616">
-                                <rect key="frame" x="429" y="5" width="90" height="32"/>
+                                <rect key="frame" x="429" y="13" width="90" height="32"/>
                                 <buttonCell key="cell" type="push" title="Browse..." bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="3617">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1767,7 +1767,7 @@ Gw
                             <constraint firstItem="3616" firstAttribute="leading" secondItem="3614" secondAttribute="trailing" constant="8" id="niL-qT-A9B" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1778,7 +1778,7 @@ Gw
                         <constraint firstItem="3614" firstAttribute="leading" secondItem="3623" secondAttribute="leading" constant="16" id="YUQ-6L-lr3" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="3"/>
+                                    <integer key="value" value="3"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -1787,11 +1787,11 @@ Gw
                 <box title="Network" translatesAutoresizingMaskIntoConstraints="NO" id="2563">
                     <rect key="frame" x="17" y="107" width="538" height="64"/>
                     <view key="contentView" id="1lv-cw-XiH">
-                        <rect key="frame" x="4" y="5" width="530" height="44"/>
+                        <rect key="frame" x="0.0" y="0.0" width="538" height="52"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3742">
-                                <rect key="frame" x="8" y="5" width="514" height="32"/>
+                                <rect key="frame" x="8" y="13" width="514" height="32"/>
                                 <buttonCell key="cell" type="push" title="Edit default application settings for network protocols" bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="3743">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1810,14 +1810,14 @@ Gw
                         <constraint firstItem="3742" firstAttribute="leading" secondItem="2563" secondAttribute="leading" constant="16" id="0wq-Sm-I8k" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="3"/>
+                                    <integer key="value" value="3"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
                         <constraint firstAttribute="trailing" secondItem="3742" secondAttribute="trailing" constant="16" id="tGu-zJ-RHQ" customClass="VLCSpacingConstraint">
                             <userDefinedRuntimeAttributes>
                                 <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                    <integer value="3"/>
+                                    <integer key="value" value="3"/>
                                 </userDefinedRuntimeAttribute>
                             </userDefinedRuntimeAttributes>
                         </constraint>
@@ -1826,11 +1826,11 @@ Gw
                 <box title="Caching" translatesAutoresizingMaskIntoConstraints="NO" id="2572">
                     <rect key="frame" x="17" y="12" width="538" height="90"/>
                     <view key="contentView" id="deK-kX-Lvr">
-                        <rect key="frame" x="4" y="5" width="530" height="70"/>
+                        <rect key="frame" x="0.0" y="0.0" width="538" height="78"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2580">
-                                <rect key="frame" x="266" y="36" width="251" height="25"/>
+                                <rect key="frame" x="266" y="44" width="251" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Item1" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="2583" id="3514">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -1850,7 +1850,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2574">
-                                <rect key="frame" x="14" y="42" width="240" height="16"/>
+                                <rect key="frame" x="14" y="50" width="240" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Default Caching Level" usesSingleLineMode="YES" id="3513">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1858,7 +1858,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" preferredMaxLayoutWidth="0.0" translatesAutoresizingMaskIntoConstraints="NO" id="3162">
-                                <rect key="frame" x="15" y="24" width="500" height="11"/>
+                                <rect key="frame" x="15" y="32" width="500" height="11"/>
                                 <textFieldCell key="cell" sendsActionOnEndEditing="YES" alignment="center" title="Use the complete preferences to configure custom caching values for each access module." id="3515">
                                     <font key="font" metaFont="miniSystem"/>
                                     <color key="textColor" name="tertiaryLabelColor" catalog="System" colorSpace="catalog"/>
@@ -1876,7 +1876,7 @@ Gw
                             <constraint firstItem="2574" firstAttribute="leading" secondItem="deK-kX-Lvr" secondAttribute="leading" constant="16" id="YS7-i8-eoQ" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1884,7 +1884,7 @@ Gw
                             <constraint firstItem="3162" firstAttribute="top" secondItem="2580" secondAttribute="bottom" constant="4" id="ltx-8x-IZC" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="1"/>
+                                        <integer key="value" value="1"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -1899,7 +1899,7 @@ Gw
                 <constraint firstItem="2563" firstAttribute="top" secondItem="3623" secondAttribute="bottom" constant="8" id="HYu-M9-6fQ" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1911,28 +1911,28 @@ Gw
                 <constraint firstItem="2585" firstAttribute="top" secondItem="2562" secondAttribute="top" constant="16" id="gJz-mz-MZc" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="3623" firstAttribute="leading" secondItem="2562" secondAttribute="leading" constant="16" id="iUT-Of-JWh" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="3623" firstAttribute="top" secondItem="30i-kg-rYI" secondAttribute="bottom" constant="8" id="md4-QO-qOV" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="trailing" secondItem="3623" secondAttribute="trailing" constant="16" id="noM-v5-qkA" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -1947,11 +1947,11 @@ Gw
                 <box title="Display Settings" translatesAutoresizingMaskIntoConstraints="NO" id="2537">
                     <rect key="frame" x="16" y="16" width="537" height="216"/>
                     <view key="contentView" id="YRd-Qa-GBI">
-                        <rect key="frame" x="4" y="5" width="529" height="196"/>
+                        <rect key="frame" x="0.0" y="0.0" width="537" height="204"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2541">
-                                <rect key="frame" x="141" y="166" width="274" height="21"/>
+                                <rect key="frame" x="141" y="174" width="274" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" continuous="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="3499">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="textColor" catalog="System" colorSpace="catalog"/>
@@ -1964,7 +1964,7 @@ Gw
                                 </connections>
                             </textField>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2542">
-                                <rect key="frame" x="13" y="169" width="113" height="16"/>
+                                <rect key="frame" x="13" y="177" width="113" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Font" usesSingleLineMode="YES" id="3500">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1972,7 +1972,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <button horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2543">
-                                <rect key="frame" x="416" y="160" width="104" height="32"/>
+                                <rect key="frame" x="416" y="168" width="104" height="32"/>
                                 <buttonCell key="cell" type="push" title="Choose..." bezelStyle="rounded" alignment="center" borderStyle="border" inset="2" id="3501">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1982,7 +1982,7 @@ Gw
                                 </connections>
                             </button>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2549">
-                                <rect key="frame" x="13" y="138" width="61" height="16"/>
+                                <rect key="frame" x="13" y="146" width="61" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Font Size" usesSingleLineMode="YES" id="3503">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1990,7 +1990,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2550">
-                                <rect key="frame" x="138" y="99" width="281" height="25"/>
+                                <rect key="frame" x="138" y="107" width="281" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Item1" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="2553" id="3504">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -2007,7 +2007,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2555">
-                                <rect key="frame" x="13" y="105" width="113" height="16"/>
+                                <rect key="frame" x="13" y="113" width="113" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Text Color" usesSingleLineMode="YES" id="3505">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2015,7 +2015,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3682">
-                                <rect key="frame" x="138" y="41" width="281" height="25"/>
+                                <rect key="frame" x="138" y="49" width="281" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Item1" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="3688" id="3685">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -2032,7 +2032,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3683">
-                                <rect key="frame" x="13" y="47" width="113" height="16"/>
+                                <rect key="frame" x="13" y="55" width="113" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Outline Thickness" usesSingleLineMode="YES" id="3684">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2040,7 +2040,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3691">
-                                <rect key="frame" x="138" y="12" width="281" height="25"/>
+                                <rect key="frame" x="138" y="20" width="281" height="25"/>
                                 <popUpButtonCell key="cell" type="push" title="Item1" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="3697" id="3694">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -2057,7 +2057,7 @@ Gw
                                 </connections>
                             </popUpButton>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3692">
-                                <rect key="frame" x="13" y="18" width="113" height="16"/>
+                                <rect key="frame" x="13" y="26" width="113" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Outline Color" usesSingleLineMode="YES" id="3693">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2065,7 +2065,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3568">
-                                <rect key="frame" x="13" y="77" width="113" height="16"/>
+                                <rect key="frame" x="13" y="85" width="113" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Opacity" usesSingleLineMode="YES" id="3574">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2073,7 +2073,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <slider verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3569">
-                                <rect key="frame" x="139" y="69" width="224" height="28"/>
+                                <rect key="frame" x="139" y="77" width="224" height="28"/>
                                 <sliderCell key="cell" continuous="YES" alignment="left" maxValue="100" doubleValue="100" tickMarkPosition="above" sliderType="linear" id="3573">
                                     <font key="font" metaFont="user"/>
                                 </sliderCell>
@@ -2082,7 +2082,7 @@ Gw
                                 </connections>
                             </slider>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" translatesAutoresizingMaskIntoConstraints="NO" id="3584">
-                                <rect key="frame" x="421" y="104" width="91" height="18"/>
+                                <rect key="frame" x="421" y="112" width="91" height="18"/>
                                 <buttonCell key="cell" type="check" title="Force Bold" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="3585">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -2092,7 +2092,7 @@ Gw
                                 </connections>
                             </button>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3594">
-                                <rect key="frame" x="369" y="74" width="46" height="21"/>
+                                <rect key="frame" x="369" y="82" width="46" height="21"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="46" id="N9V-Sb-2yE"/>
                                 </constraints>
@@ -2115,7 +2115,7 @@ Gw
                                 </connections>
                             </textField>
                             <slider verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3MP-L5-isz">
-                                <rect key="frame" x="139" y="130" width="235" height="28"/>
+                                <rect key="frame" x="139" y="138" width="235" height="28"/>
                                 <sliderCell key="cell" continuous="YES" alignment="left" minValue="10" maxValue="500" doubleValue="100" tickMarkPosition="above" sliderType="linear" id="KzQ-5z-7Sh">
                                     <font key="font" metaFont="user"/>
                                 </sliderCell>
@@ -2124,7 +2124,7 @@ Gw
                                 </connections>
                             </slider>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="yfD-4K-I4T">
-                                <rect key="frame" x="380" y="138" width="37" height="16"/>
+                                <rect key="frame" x="380" y="146" width="37" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="clipping" title="Label" id="gTV-LT-cpO">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -2141,14 +2141,14 @@ Gw
                             <constraint firstItem="3594" firstAttribute="top" secondItem="2550" secondAttribute="bottom" constant="8" id="C8h-6p-dDq" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstAttribute="trailing" secondItem="2543" secondAttribute="trailing" constant="16" id="CHh-Fn-VRs" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -2160,7 +2160,7 @@ Gw
                             <constraint firstItem="3594" firstAttribute="leading" secondItem="3569" secondAttribute="trailing" constant="8" id="MMc-E9-BU7" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -2173,14 +2173,14 @@ Gw
                             <constraint firstAttribute="bottom" secondItem="3691" secondAttribute="bottom" constant="16" id="avR-g1-nXZ" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="3584" firstAttribute="leading" secondItem="2550" secondAttribute="trailing" constant="8" id="dCC-Ro-c4H" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -2189,14 +2189,14 @@ Gw
                             <constraint firstItem="yfD-4K-I4T" firstAttribute="leading" secondItem="3MP-L5-isz" secondAttribute="trailing" constant="8" id="gCg-9Q-ajb" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
                             <constraint firstItem="3MP-L5-isz" firstAttribute="top" secondItem="2541" secondAttribute="bottom" constant="8" id="h4S-qr-M4S" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -2219,7 +2219,7 @@ Gw
                             <constraint firstItem="2543" firstAttribute="leading" secondItem="2541" secondAttribute="trailing" constant="8" id="vhE-gP-o1W" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -2231,11 +2231,11 @@ Gw
                 <box title="On Screen Display" translatesAutoresizingMaskIntoConstraints="NO" id="2524">
                     <rect key="frame" x="17" y="326" width="537" height="58"/>
                     <view key="contentView" id="GNq-vl-Idl">
-                        <rect key="frame" x="4" y="5" width="529" height="38"/>
+                        <rect key="frame" x="0.0" y="0.0" width="537" height="46"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button mirrorLayoutDirectionWhenInternationalizing="always" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2526">
-                                <rect key="frame" x="14" y="10" width="98" height="18"/>
+                                <rect key="frame" x="14" y="18" width="98" height="18"/>
                                 <buttonCell key="cell" type="check" title="Enable OSD" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="3494">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -2252,7 +2252,7 @@ Gw
                             <constraint firstItem="2526" firstAttribute="leading" secondItem="GNq-vl-Idl" secondAttribute="leading" constant="16" id="vBb-ey-eQ6" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="3"/>
+                                        <integer key="value" value="3"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -2262,11 +2262,11 @@ Gw
                 <box title="SPU language" translatesAutoresizingMaskIntoConstraints="NO" id="1aw-Yd-yzY">
                     <rect key="frame" x="17" y="235" width="537" height="88"/>
                     <view key="contentView" id="clp-fm-5xs">
-                        <rect key="frame" x="4" y="5" width="529" height="68"/>
+                        <rect key="frame" x="0.0" y="0.0" width="537" height="76"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2529">
-                                <rect key="frame" x="16" y="42" width="175" height="16"/>
+                                <rect key="frame" x="16" y="50" width="175" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Preferred Subtitle Language" usesSingleLineMode="YES" id="3495">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2274,7 +2274,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2530">
-                                <rect key="frame" x="206" y="40" width="306" height="21"/>
+                                <rect key="frame" x="206" y="48" width="306" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" continuous="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="3496">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2286,7 +2286,7 @@ Gw
                                 </connections>
                             </textField>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2531">
-                                <rect key="frame" x="16" y="14" width="175" height="16"/>
+                                <rect key="frame" x="16" y="22" width="175" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Default Encoding" usesSingleLineMode="YES" id="3497">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2294,7 +2294,7 @@ Gw
                                 </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2532">
-                                <rect key="frame" x="203" y="8" width="313" height="25"/>
+                                <rect key="frame" x="203" y="16" width="313" height="25"/>
                                 <popUpButtonCell key="cell" type="push" bezelStyle="rounded" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" arrowPosition="arrowAtCenter" preferredEdge="maxY" selectedItem="2665" id="3498">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="message"/>
@@ -2327,7 +2327,7 @@ Gw
                             <constraint firstItem="2529" firstAttribute="top" secondItem="clp-fm-5xs" secondAttribute="top" constant="8" id="vT7-e0-BpD" customClass="VLCSpacingConstraint">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                        <integer value="2"/>
+                                        <integer key="value" value="2"/>
                                     </userDefinedRuntimeAttribute>
                                 </userDefinedRuntimeAttributes>
                             </constraint>
@@ -2341,7 +2341,7 @@ Gw
                 <constraint firstItem="2524" firstAttribute="top" secondItem="2523" secondAttribute="top" constant="16" id="4qg-so-xqk" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -2349,21 +2349,21 @@ Gw
                 <constraint firstItem="2537" firstAttribute="top" secondItem="clp-fm-5xs" secondAttribute="bottom" constant="8" id="H4g-wr-WPK" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="trailing" secondItem="2524" secondAttribute="trailing" constant="16" id="RQ7-jW-ceF" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2524" firstAttribute="leading" secondItem="2523" secondAttribute="leading" constant="16" id="TCX-8r-ecQ" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -2371,7 +2371,7 @@ Gw
                 <constraint firstAttribute="bottom" secondItem="2537" secondAttribute="bottom" constant="16" id="cLh-7c-0op" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -2380,7 +2380,7 @@ Gw
                 <constraint firstItem="1aw-Yd-yzY" firstAttribute="top" secondItem="GNq-vl-Idl" secondAttribute="bottom" constant="8" id="juM-c8-qr5" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -2475,56 +2475,56 @@ Gw
                 <constraint firstItem="6Ro-o1-WEd" firstAttribute="top" secondItem="2669" secondAttribute="bottom" constant="16" id="8B2-PI-H5C" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="trailing" secondItem="2669" secondAttribute="trailing" constant="16" id="9ma-RK-c6X" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2673" firstAttribute="leading" secondItem="2668" secondAttribute="leading" constant="16" id="HYF-Bu-NcI" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="bottom" secondItem="6Ro-o1-WEd" secondAttribute="bottom" constant="16" id="LHQ-FJ-GlZ" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="2673" secondAttribute="trailing" constant="16" id="Sdf-9E-91g" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2669" firstAttribute="top" secondItem="2673" secondAttribute="bottom" constant="8" id="cl3-aB-HqL" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="2673" firstAttribute="top" secondItem="2668" secondAttribute="top" constant="16" id="cmU-2H-taN" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="6Ro-o1-WEd" firstAttribute="leading" secondItem="2668" secondAttribute="leading" constant="16" id="yqH-HV-wNV" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -2603,7 +2603,7 @@ Gw
                     <constraint firstItem="0Dd-AY-La9" firstAttribute="leading" secondItem="2678" secondAttribute="leading" constant="16" id="57E-sW-DD6" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="3"/>
+                                <integer key="value" value="3"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2611,7 +2611,7 @@ Gw
                     <constraint firstItem="2803" firstAttribute="top" secondItem="2800" secondAttribute="bottom" constant="8" id="7lB-JR-wGe" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="2"/>
+                                <integer key="value" value="2"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2620,7 +2620,7 @@ Gw
                     <constraint firstAttribute="trailing" secondItem="2791" secondAttribute="trailing" constant="16" id="QIF-0S-zPw" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="3"/>
+                                <integer key="value" value="3"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2630,7 +2630,7 @@ Gw
                     <constraint firstItem="2800" firstAttribute="top" secondItem="2679" secondAttribute="bottom" constant="8" id="aBX-2J-mHL" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="2"/>
+                                <integer key="value" value="2"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2883,7 +2883,7 @@ Gw
                     <constraint firstItem="3837" firstAttribute="top" secondItem="3829" secondAttribute="bottom" constant="4" id="0mm-QZ-MPB" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="1"/>
+                                <integer key="value" value="1"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2892,7 +2892,7 @@ Gw
                     <constraint firstItem="3829" firstAttribute="top" secondItem="3813" secondAttribute="bottom" constant="4" id="34h-Wl-av2" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="1"/>
+                                <integer key="value" value="1"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2900,7 +2900,7 @@ Gw
                     <constraint firstItem="3821" firstAttribute="top" secondItem="3805" secondAttribute="bottom" constant="4" id="7wb-Ol-KSn" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="1"/>
+                                <integer key="value" value="1"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2909,7 +2909,7 @@ Gw
                     <constraint firstItem="3797" firstAttribute="top" secondItem="3789" secondAttribute="bottom" constant="4" id="FB2-0s-gxn" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="1"/>
+                                <integer key="value" value="1"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2918,7 +2918,7 @@ Gw
                     <constraint firstItem="3845" firstAttribute="top" secondItem="3837" secondAttribute="bottom" constant="4" id="GgT-Er-RqV" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="1"/>
+                                <integer key="value" value="1"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2932,7 +2932,7 @@ Gw
                     <constraint firstItem="3805" firstAttribute="top" secondItem="3797" secondAttribute="bottom" constant="4" id="PFk-8r-n3z" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="1"/>
+                                <integer key="value" value="1"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -2940,14 +2940,14 @@ Gw
                     <constraint firstItem="3747" firstAttribute="top" secondItem="3746" secondAttribute="top" constant="16" id="Qmk-Sm-nEp" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="3"/>
+                                <integer key="value" value="3"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
                     <constraint firstItem="3749" firstAttribute="top" secondItem="3747" secondAttribute="bottom" constant="8" id="Rbq-nY-csv" customClass="VLCSpacingConstraint">
                         <userDefinedRuntimeAttributes>
                             <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                                <integer value="2"/>
+                                <integer key="value" value="2"/>
                             </userDefinedRuntimeAttribute>
                         </userDefinedRuntimeAttributes>
                     </constraint>
@@ -3098,7 +3098,7 @@ Gw
                 <constraint firstItem="AsR-G7-aHo" firstAttribute="leading" secondItem="eei-wi-f9H" secondAttribute="leading" constant="16" id="3jm-3z-Xs7" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -3111,28 +3111,28 @@ Gw
                 <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="hvb-5M-TTc" secondAttribute="trailing" constant="16" id="dM1-kS-zcj" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="gbE-0a-hRm" firstAttribute="leading" secondItem="eei-wi-f9H" secondAttribute="leading" constant="16" id="ggB-z1-D2B" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="bottom" secondItem="AsR-G7-aHo" secondAttribute="bottom" constant="16" id="hxw-eg-Qfw" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="trailing" secondItem="gbE-0a-hRm" secondAttribute="trailing" constant="16" id="n4Z-j5-Mtr" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="3"/>
+                            <integer key="value" value="3"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>

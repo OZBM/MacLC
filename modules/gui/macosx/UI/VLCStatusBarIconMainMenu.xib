@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="15400" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15400"/>
+        <deployment version="270200" identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -114,21 +114,21 @@
                 <constraint firstAttribute="trailing" secondItem="SKt-XT-Vki" secondAttribute="trailing" constant="8" id="3dK-k6-jdo" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="bottom" secondItem="0kw-t4-DcN" secondAttribute="bottom" constant="4" id="3mr-9q-uiU" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="1"/>
+                            <integer key="value" value="1"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstItem="Byt-pH-60l" firstAttribute="leading" secondItem="0kw-t4-DcN" secondAttribute="trailing" constant="8" id="5xj-kL-0Iz" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -137,14 +137,14 @@
                 <constraint firstAttribute="trailing" secondItem="Byt-pH-60l" secondAttribute="trailing" constant="8" id="KPq-cq-e0H" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
                 <constraint firstAttribute="trailing" secondItem="FnZ-Gr-BKf" secondAttribute="trailing" constant="8" id="NMl-LX-jSq" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -153,7 +153,7 @@
                 <constraint firstItem="0kw-t4-DcN" firstAttribute="top" secondItem="fDN-Tb-DeD" secondAttribute="top" constant="4" id="kXt-fY-Yce" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="1"/>
+                            <integer key="value" value="1"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -180,28 +180,28 @@
                 </button>
                 <button translatesAutoresizingMaskIntoConstraints="NO" id="p8X-zU-PwN" customClass="VLCImageButton">
                     <rect key="frame" x="85" y="19" width="24" height="24"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="24" id="5IV-1l-2UV"/>
-                        <constraint firstAttribute="width" secondItem="p8X-zU-PwN" secondAttribute="height" multiplier="1:1" id="lkX-DA-UeD"/>
-                    </constraints>
                     <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="backward.end.fill" catalog="system" imagePosition="overlaps" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="PSI-Wi-u0R">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="24" id="5IV-1l-2UV"/>
+                        <constraint firstAttribute="width" secondItem="p8X-zU-PwN" secondAttribute="height" multiplier="1:1" id="lkX-DA-UeD"/>
+                    </constraints>
                     <connections>
                         <action selector="statusBarIconPrevious:" target="-2" id="kAL-hK-8qL"/>
                     </connections>
                 </button>
                 <button translatesAutoresizingMaskIntoConstraints="NO" id="lvI-lN-t4O" customClass="VLCImageButton">
                     <rect key="frame" x="114" y="19" width="24" height="24"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="24" id="VH7-ja-clp"/>
-                        <constraint firstAttribute="width" secondItem="lvI-lN-t4O" secondAttribute="height" multiplier="1:1" id="kzq-fw-PfK"/>
-                    </constraints>
                     <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="play.fill" catalog="system" imagePosition="only" alignment="center" alternateImage="pause.fill" imageScaling="proportionallyUpOrDown" inset="2" id="nqu-wV-vI1">
                         <behavior key="behavior" pushIn="YES" changeContents="YES" lightByContents="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="24" id="VH7-ja-clp"/>
+                        <constraint firstAttribute="width" secondItem="lvI-lN-t4O" secondAttribute="height" multiplier="1:1" id="kzq-fw-PfK"/>
+                    </constraints>
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="boolean" keyPath="toggle" value="YES"/>
                     </userDefinedRuntimeAttributes>
@@ -211,28 +211,28 @@
                 </button>
                 <button translatesAutoresizingMaskIntoConstraints="NO" id="NHj-Vf-SPF" customClass="VLCImageButton">
                     <rect key="frame" x="142" y="19" width="24" height="24"/>
-                    <constraints>
-                        <constraint firstAttribute="width" secondItem="NHj-Vf-SPF" secondAttribute="height" multiplier="1:1" id="WY1-gG-mtJ"/>
-                        <constraint firstAttribute="height" constant="24" id="YJ5-t2-qjF"/>
-                    </constraints>
                     <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="forward.end.fill" catalog="system" imagePosition="overlaps" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="BIa-Vy-yD2">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
+                    <constraints>
+                        <constraint firstAttribute="width" secondItem="NHj-Vf-SPF" secondAttribute="height" multiplier="1:1" id="WY1-gG-mtJ"/>
+                        <constraint firstAttribute="height" constant="24" id="YJ5-t2-qjF"/>
+                    </constraints>
                     <connections>
                         <action selector="statusBarIconNext:" target="-2" id="4I4-wu-R5u"/>
                     </connections>
                 </button>
                 <button translatesAutoresizingMaskIntoConstraints="NO" id="PaW-Fe-vxo">
                     <rect key="frame" x="180" y="12" width="21" height="21"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="21" id="7y1-o7-Gbn"/>
-                        <constraint firstAttribute="width" secondItem="PaW-Fe-vxo" secondAttribute="height" multiplier="1:1" id="vLQ-Kw-bgS"/>
-                    </constraints>
                     <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" image="shuffle" catalog="system" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="VEm-qG-2cc">
                         <behavior key="behavior" pushIn="YES" changeContents="YES" lightByContents="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="21" id="7y1-o7-Gbn"/>
+                        <constraint firstAttribute="width" secondItem="PaW-Fe-vxo" secondAttribute="height" multiplier="1:1" id="vLQ-Kw-bgS"/>
+                    </constraints>
                     <connections>
                         <action selector="statusBarIconToggleRandom:" target="-2" id="IHE-JL-EfK"/>
                     </connections>
@@ -269,7 +269,7 @@
                 <constraint firstItem="lvI-lN-t4O" firstAttribute="left" secondItem="p8X-zU-PwN" secondAttribute="right" constant="4" id="8qk-us-Qmc" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="1"/>
+                            <integer key="value" value="1"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -282,7 +282,7 @@
                 <constraint firstItem="PaW-Fe-vxo" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="NHj-Vf-SPF" secondAttribute="trailing" constant="8" id="YH5-QF-W4F" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -291,7 +291,7 @@
                 <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="wXO-2p-mxK" secondAttribute="trailing" constant="8" id="r0h-9T-Nta" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -299,7 +299,7 @@
                 <constraint firstItem="z3X-aG-Veg" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="v97-Ct-Yqs" secondAttribute="leading" constant="8" id="vF3-RT-xhz" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="2"/>
+                            <integer key="value" value="2"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -307,7 +307,7 @@
                 <constraint firstItem="NHj-Vf-SPF" firstAttribute="left" secondItem="lvI-lN-t4O" secondAttribute="right" constant="4" id="xzh-Vk-QlB" customClass="VLCSpacingConstraint">
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="spacingToken">
-                            <integer value="1"/>
+                            <integer key="value" value="1"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
                 </constraint>
@@ -317,10 +317,10 @@
     </objects>
     <resources>
         <image name="MacLC" width="512" height="512"/>
-        <image name="forward.end.fill" catalog="system" width="15" height="15"/>
-        <image name="pause.fill" catalog="system" width="15" height="15"/>
-        <image name="play.fill" catalog="system" width="15" height="15"/>
-        <image name="backward.end.fill" catalog="system" width="15" height="15"/>
-        <image name="shuffle" catalog="system" width="15" height="15"/>
+        <image name="backward.end.fill" catalog="system" width="32" height="32"/>
+        <image name="forward.end.fill" catalog="system" width="32" height="32"/>
+        <image name="pause.fill" catalog="system" width="32" height="32"/>
+        <image name="play.fill" catalog="system" width="32" height="32"/>
+        <image name="shuffle" catalog="system" width="32" height="32"/>
     </resources>
 </document>

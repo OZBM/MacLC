@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="25408" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
+        <deployment version="270200" identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="25408"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -320,11 +321,11 @@
         </customObject>
     </objects>
     <resources>
-        <image name="arrow.trianglehead.clockwise" catalog="system" width="15" height="17"/>
-        <image name="arrow.trianglehead.counterclockwise" catalog="system" width="15" height="17"/>
-        <image name="backward.fill" catalog="system" width="20" height="12"/>
-        <image name="forward.fill" catalog="system" width="20" height="12"/>
-        <image name="play.circle.fill" catalog="system" width="15" height="15"/>
-        <image name="speaker.wave.3.fill" catalog="system" width="22" height="15"/>
+        <image name="arrow.trianglehead.clockwise" catalog="system" width="32" height="32"/>
+        <image name="arrow.trianglehead.counterclockwise" catalog="system" width="32" height="32"/>
+        <image name="backward.fill" catalog="system" width="32" height="32"/>
+        <image name="forward.fill" catalog="system" width="32" height="32"/>
+        <image name="play.circle.fill" catalog="system" width="32" height="32"/>
+        <image name="speaker.wave.3.fill" catalog="system" width="32" height="32"/>
     </resources>
 </document>
