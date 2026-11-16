@@ -1340,13 +1340,6 @@ Open(vlc_object_t *obj)
         if (aout->sys == nil)
             return VLC_EGENERIC;
 
-#if TARGET_OS_OSX
-        /* Start the Atmos decoder registration as early as possible, so the
-         * one-second window overlaps input buffering rather than delaying the
-         * first E-AC-3 packet. */
-        atmos_prime_Begin();
-#endif
-
         aout->start = Start;
         aout->stop = Stop;
         aout->play = Play;
