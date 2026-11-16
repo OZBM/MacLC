@@ -89,13 +89,13 @@
 - (void)installHandlersOnMediaSource:(VLCMediaSource *)mediaSource
 {
     mediaSource.willStartGeneratingChildNodesForNodeHandler = ^(input_item_node_t * const node) {
-        const NSInteger rootMostAffectedState = [_navigationStates indexOfObjectPassingTest:^BOOL(VLCLibraryMediaSourceViewNavigationState * const _Nonnull obj, const NSUInteger __unused idx, BOOL * const __unused stop) {
+        const NSInteger rootMostAffectedState = [self->_navigationStates indexOfObjectPassingTest:^BOOL(VLCLibraryMediaSourceViewNavigationState * const _Nonnull obj, const NSUInteger __unused idx, BOOL * const __unused stop) {
             return obj.currentNodeDisplayed.vlcInputItemNode == node;
         }];
 
         if (rootMostAffectedState != NSNotFound) {
-            for (NSUInteger i = rootMostAffectedState + 1; i < _navigationStates.count; i++) {
-                VLCLibraryMediaSourceViewNavigationState * const state = _navigationStates[i];
+            for (NSUInteger i = rootMostAffectedState + 1; i < self->_navigationStates.count; i++) {
+                VLCLibraryMediaSourceViewNavigationState * const state = self->_navigationStates[i];
                 NSURL * const url = [NSURL URLWithString:state.currentNodeDisplayed.inputItem.MRL];
                 [self.affectedPathControlStates setObject:state forKey:url];
             }

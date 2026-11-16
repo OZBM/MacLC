@@ -198,7 +198,7 @@ static const char *const remoteBrowseDescription = "Remote Browse";
                                                                    ITEM_TYPE_DIRECTORY,
                                                                    ITEM_LOCAL);
             input_item_node_t * const directoryNode = input_item_node_Create(directoryItem);
-            input_item_node_AppendNode(&(_p_mediaSource->tree->root), directoryNode);
+            input_item_node_AppendNode(&(self->_p_mediaSource->tree->root), directoryNode);
             input_item_Release(directoryItem);
         };
 

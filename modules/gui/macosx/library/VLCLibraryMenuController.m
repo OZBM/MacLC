@@ -43,7 +43,13 @@
 #import <vlc_url.h>
 #import <vlc_common.h>
 
-@interface VLCLibraryMenuController ()
+/* Declares the placeholder action the favourite item is created with; no class
+ * implements it, updateMenuItems replaces the action as soon as items are set. */
+@protocol VLCLibraryMenuFavoritePlaceholderAction <NSObject>
+- (void)toggleFavorite:(id)sender;
+@end
+
+@interface VLCLibraryMenuController () <NSMenuItemValidation>
 {
     VLCInformationWindowController *_informationWindowController;
 

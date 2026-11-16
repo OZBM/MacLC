@@ -380,8 +380,8 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
 
     // Delay this to allow the full animation to run inside the modal event loop
     dispatch_async(dispatch_get_main_queue(), ^{
-        [_tabView selectTabViewItemWithIdentifier:identifier];
-        [_fileSubCheckbox setState: NSControlStateValueOff];
+        [self->_tabView selectTabViewItemWithIdentifier:identifier];
+        [self->_fileSubCheckbox setState: NSControlStateValueOff];
     });
 
     NSModalResponse i_result = [NSApp runModalForWindow: self.window];
@@ -505,7 +505,7 @@ NSString *const VLCOpenTextFieldWasClicked = @"VLCOpenTextFieldWasClicked";
 - (IBAction)expandMRLfieldAction:(id)sender
 {
     [NSAnimationContext runAnimationRespectingPreferencesWithChanges:^(NSAnimationContext * const __unused context) {
-        if ([_mrlButton state] == NSControlStateValueOff) {
+        if ([self->_mrlButton state] == NSControlStateValueOff) {
             self.mrlViewHeightConstraint.animator.constant = 0;
             self.mrlBox.hidden = YES;
         } else {

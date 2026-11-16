@@ -348,7 +348,7 @@ _##field##TextField.delegate = self
 
         if (artworkImages.count == 0) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                _artwork = NSImage.VLCNoArtImage;
+                self->_artwork = NSImage.VLCNoArtImage;
                 [self updateRepresentation];
             });
             return;
@@ -364,7 +364,7 @@ _##field##TextField.delegate = self
                                                    gridItemCount:artworkImages.count];
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            _artwork = [NSImage compositeImageWithImages:artworkImages
+            self->_artwork = [NSImage compositeImageWithImages:artworkImages
                                                 frames:frames
                                                     size:artworkSize];
 
@@ -409,7 +409,7 @@ _##field##TextField.delegate = self
 
         if (artworkImages.count == 0) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                _artwork = NSImage.VLCNoArtImage;
+                self->_artwork = NSImage.VLCNoArtImage;
                 [self updateRepresentation];
             });
             return;
@@ -425,7 +425,7 @@ _##field##TextField.delegate = self
                                                    gridItemCount:artworkImages.count];
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            _artwork = [NSImage compositeImageWithImages:artworkImages
+            self->_artwork = [NSImage compositeImageWithImages:artworkImages
                                                 frames:frames
                                                     size:artworkSize];
             [self updateRepresentation];
@@ -713,11 +713,11 @@ SET_INPUTITEM_PROP(field, field)                \
             return;
         }
 
-        _artwork = image;
-        _artworkImageButton.image = [[NSImage alloc] initWithContentsOfURL:url];
+        self->_artwork = image;
+        self->_artworkImageButton.image = [[NSImage alloc] initWithContentsOfURL:url];
 
-        _newArtworkURL = url;
-        _saveMetaDataButton.enabled = YES;
+        self->_newArtworkURL = url;
+        self->_saveMetaDataButton.enabled = YES;
     }];
 }
 

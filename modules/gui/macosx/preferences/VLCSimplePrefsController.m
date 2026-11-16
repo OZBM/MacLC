@@ -231,7 +231,7 @@ static NSString* VLCHotkeysSettingToolbarIdentifier = @"Hotkeys Settings Item Id
 
 @end
 
-@interface VLCSimplePrefsController() <NSToolbarDelegate, NSWindowDelegate>
+@interface VLCSimplePrefsController() <NSToolbarDelegate, NSToolbarItemValidation, NSWindowDelegate, NSControlTextEditingDelegate, NSFontChanging>
 {
     BOOL _audioSettingChanged;
     BOOL _intfSettingChanged;

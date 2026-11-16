@@ -94,6 +94,12 @@ NSString * const VLCPlayerShowLyricsKey = @"VLCPlayerShowLyricsKey";
 const CGFloat VLCVolumeMaximum = 2.;
 const CGFloat VLCVolumeDefault = 1.;
 
+/* Declares the selector probed in -videoOutputThreadForKeyWindow; no class
+ * adopts it, the probe only asks the key window whether it answers. */
+@protocol VLCPlayerControllerVideoViewProbe <NSObject>
+- (id)videoView;
+@end
+
 @interface VLCPlayerController ()
 {
     vlc_player_t *_p_player;

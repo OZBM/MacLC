@@ -1916,11 +1916,11 @@ o_moduleenabled = [NSNumber numberWithBool:NO];\
 
 @implementation ModuleListConfigControl (NSTableDataSource)
 
-- (BOOL)tableView:(NSTableView *)tableView writeRowsWithIndexes:(NSIndexSet *)rowIndexes toPasteboard:(NSPasteboard *)pboard
+- (id<NSPasteboardWriting>)tableView:(NSTableView *)tableView pasteboardWriterForRow:(NSInteger)row
 {
-    [pboard declareTypes:@[VLCPrefsWidgetModuleDragType] owner:nil];
-    [pboard setPropertyList:@[@(rowIndexes.firstIndex)] forType:VLCPrefsWidgetModuleDragType];
-    return YES;
+    NSPasteboardItem * const pasteboardItem = [[NSPasteboardItem alloc] init];
+    [pasteboardItem setPropertyList:@[@(row)] forType:VLCPrefsWidgetModuleDragType];
+    return pasteboardItem;
 }
 
 - (NSDragOperation)tableView:(NSTableView*)table

@@ -24,6 +24,9 @@
 
 #import "preferences/VLCSimplePrefsController.h"
 
+@interface VLCSimplePrefsWindow () <NSFontChanging>
+@end
+
 @implementation VLCSimplePrefsWindow
 
 - (BOOL)acceptsFirstResponder

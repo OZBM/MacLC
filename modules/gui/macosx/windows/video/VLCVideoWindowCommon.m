@@ -407,7 +407,7 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
         if (!b_animation) {
             /* We don't animate if we are not visible, instead we
              * simply fade the display */
-            CGDisplayFadeReservationToken token;
+            CGDisplayFadeReservationToken token = kCGDisplayFadeReservationInvalidToken;
 
             if (blackout_other_displays) {
                 CGAcquireDisplayFadeReservation(kCGMaxDisplayReservationInterval, &token);
@@ -569,7 +569,7 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
     if (!b_animation) {
         /* We don't animate if we are not visible, instead we
          * simply fade the display */
-        CGDisplayFadeReservationToken token;
+        CGDisplayFadeReservationToken token = kCGDisplayFadeReservationInvalidToken;
 
         if (blackout_other_displays) {
             CGAcquireDisplayFadeReservation(kCGMaxDisplayReservationInterval, &token);

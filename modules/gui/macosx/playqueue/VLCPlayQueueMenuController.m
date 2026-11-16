@@ -39,7 +39,7 @@
 #import "windows/VLCOpenWindowController.h"
 #import "panels/VLCInformationWindowController.h"
 
-@interface VLCPlayQueueMenuController ()
+@interface VLCPlayQueueMenuController () <NSMenuItemValidation>
 {
     VLCPlayQueueController *_playQueueController;
     VLCPlayQueueSortingMenuController *_playQueueSortingMenuController;

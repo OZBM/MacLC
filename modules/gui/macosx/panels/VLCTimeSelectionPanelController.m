@@ -23,7 +23,7 @@
 
 #import "extensions/NSString+Helpers.h"
 
-@interface VLCTimeSelectionPanelController ()
+@interface VLCTimeSelectionPanelController () <NSControlTextEditingDelegate>
 {
     TimeSelectionCompletionHandler _completionHandler;
     id _keyMonitor;

@@ -25,6 +25,7 @@
 #import "playqueue/VLCPlayerController.h"
 #import "library/VLCInputItem.h"
 #import "settings/MacLCConfigSafe.h"
+#import "windows/video/VLCVideoWindowCommon.h"
 
 #include <vlc_configuration.h>
 

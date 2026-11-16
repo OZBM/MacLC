@@ -344,8 +344,8 @@
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext * __unused context) {
         _loadingOverlayView.animator.alphaValue = 0.0;
     } completionHandler:^{
-        [_loadingOverlayView removeFromSuperview];
-        [_loadingOverlayView.indicator stopAnimation:self];
+        [self->_loadingOverlayView removeFromSuperview];
+        [self->_loadingOverlayView.indicator stopAnimation:self];
         [self updatePlaceholderLabel:nil];
     }];
 }

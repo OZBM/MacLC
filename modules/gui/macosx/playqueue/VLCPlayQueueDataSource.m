@@ -215,7 +215,7 @@ static NSString *VLCPlayQueueCellIdentifier = @"VLCPlayQueueCellIdentifier";
                                                 title:_NS("Remove from Play Queue")
                                                handler:^(NSTableViewRowAction * const __unused action, const NSInteger row) {
                 NSIndexSet * const indices = [NSIndexSet indexSetWithIndex:row];
-                [_playQueueController removeItemsAtIndexes:indices];
+                [self->_playQueueController removeItemsAtIndexes:indices];
             }];
         return @[removeAction];
     }
