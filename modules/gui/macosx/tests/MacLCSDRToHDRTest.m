@@ -157,6 +157,19 @@ static struct maclc_sdr2hdr_env Env(void)
     XCTAssertEqualWithAccuracy(expf(maclc_sdr2hdr_grid_log_scale(4.44f)), MACLC_SDR2HDR_P_TRAIN, 1e-3);
 }
 
+- (void)testLearnedGainsKeepWhiteNeutral
+{
+    /* white, and white one or two 8-bit chroma codes off: one gain */
+    XCTAssertEqual(maclc_sdr2hdr_hue_spread(1.0f, 1.0f, 1.0f), 0.0f);
+    XCTAssertEqual(maclc_sdr2hdr_hue_spread(0.98626f, 1.00411f, 1.0f), 0.0f);
+    XCTAssertEqual(maclc_sdr2hdr_hue_spread(0.97261f, 1.00821f, 1.0f), 0.0f);
+    XCTAssertEqual(maclc_sdr2hdr_hue_spread(0.0f, 0.0f, 0.0f), 0.0f);
+    /* a colourful highlight keeps the whole spread, a pale one part of it */
+    XCTAssertEqual(maclc_sdr2hdr_hue_spread(1.0f, 0.6f, 0.2f), MACLC_SDR2HDR_HUE_SPREAD);
+    XCTAssertEqualWithAccuracy(maclc_sdr2hdr_hue_spread(1.0f, 0.95f, 0.93f),
+                               0.5f * MACLC_SDR2HDR_HUE_SPREAD, 1e-5);
+}
+
 - (void)testSaturationOnlyTouchesExpandedColours
 {
     float rgb[3] = { 0.8f, 0.2f, 0.1f };

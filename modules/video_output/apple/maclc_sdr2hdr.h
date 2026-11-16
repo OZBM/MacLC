@@ -117,6 +117,17 @@
  * degree on average and keeps a failure, like a yellow street lamp pushed to
  * salmon, from rotating the hue. */
 #define MACLC_SDR2HDR_HUE_SPREAD          0.2f
+/* ...and only as far as the SDR pixel has a colour to restore: no spread up
+ * to HUE_SAT_NEUTRAL of saturation (1 - min/max in linear light; a white one
+ * 8-bit chroma code off is at 0.018, two codes off at 0.035), all of it from
+ * HUE_SAT_FULL. Both networks give white a greener gain than red and blue,
+ * which tinted white highlights (channels 6 % apart with High, 8 % with
+ * Maximum, 10 % once the source is a code off), while on near-neutral
+ * pixels their per-channel gains are barely better than one gain (held-out:
+ * 3.69 and 3.78 degrees, against 3.78). The gate lowers the held-out error
+ * too: High 2.233 to 2.227 degrees, Maximum 2.101 to 2.080. */
+#define MACLC_SDR2HDR_HUE_SAT_NEUTRAL     0.04f
+#define MACLC_SDR2HDR_HUE_SAT_FULL        0.10f
 
 enum maclc_sdr2hdr_quality
 {
@@ -402,6 +413,20 @@ static inline float
 maclc_sdr2hdr_grid_log_scale(float budget)
 {
     return logf(fmaxf(budget, MACLC_SDR2HDR_P_TRAIN));
+}
+
+/* How far, in natural log, a learned level lets each channel's gain stray
+ * from the pixel's luminance-weighted gain. r, g, b: the SDR pixel in linear
+ * light. */
+static inline float
+maclc_sdr2hdr_hue_spread(float r, float g, float b)
+{
+    float m = fmaxf(fmaxf(r, g), b);
+    float sat = m > 0.0f ? 1.0f - fminf(fminf(r, g), b) / m : 0.0f;
+    return MACLC_SDR2HDR_HUE_SPREAD
+         * maclc_sdr2hdr_clamp((sat - MACLC_SDR2HDR_HUE_SAT_NEUTRAL)
+                               / (MACLC_SDR2HDR_HUE_SAT_FULL - MACLC_SDR2HDR_HUE_SAT_NEUTRAL),
+                               0.0f, 1.0f);
 }
 
 /*
