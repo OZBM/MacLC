@@ -33,6 +33,16 @@ The `auhal` output remains available as a fallback (`--aout=auhal`).
 
 DRM-protected files (e.g. Apple Music downloads) are not supported.
 
+## Hardware compatibility
+
+The path uses only public `AVSampleBufferAudioRenderer` APIs, so it works on
+any Mac that supports Apple's spatial audio — including Apple-silicon MacBook
+Air built-in speakers (same renderer as MacBook Pro, just smaller drivers) and
+compatible headphones (AirPods 3/Pro/Max, Beats with Spatial Audio). Head
+tracking and Personalized Spatial Audio are controlled by macOS/AirPods, not
+by this code. Older Intel Macs without spatial-audio support fall back to
+ordinary multichannel rendering.
+
 ## Key files
 
 * `modules/audio_output/apple/avsamplebuffer.m` — compressed passthrough,
