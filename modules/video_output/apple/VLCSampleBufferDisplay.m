@@ -61,6 +61,21 @@
 
 #define DISPLAY_LAYER_INIT_TIMEOUT_SEC  1.0
 
+#if TARGET_OS_OSX
+/* preferredDynamicRange alone turns EDR on only for contents tagged with more
+ * than 1.0 of headroom. MacLC enqueues untagged linear-light buffers and sets
+ * contentsHeadroom from the screen's live headroom, which only grows once EDR
+ * is on: without this deprecated switch the headroom stalled near 1.1 and SDR
+ * to HDR and HDR highlights were clipped to SDR white (measured 2026-11-16). */
+static inline void MacLCLayerSetWantsEDR(CALayer *layer, BOOL on)
+{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    layer.wantsExtendedDynamicRangeContent = on;
+#pragma clang diagnostic pop
+}
+#endif
+
 #if __is_target_os(ios)
 #define IS_VT_ROTATION_API_AVAILABLE __IPHONE_OS_VERSION_MAX_ALLOWED >= 160000
 #elif __is_target_os(macos)
@@ -643,6 +658,7 @@ static void DeletePipController( pip_controller_t * pipcontroller );
 #if TARGET_OS_OSX
     self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     self.wantsLayer = YES;
+    MacLCLayerSetWantsEDR(self.layer, NO);
     self.layer.preferredDynamicRange = CADynamicRangeStandard;
     self.layer.contentsHeadroom = 1.0;
 #else
@@ -721,6 +737,7 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
     layer.opaque = 1.0;
     layer.hidden = NO;
+    MacLCLayerSetWantsEDR(layer, YES);
     layer.preferredDynamicRange = CADynamicRangeHigh;
     NSScreen *screen = self.window.screen ?: [NSScreen mainScreen];
     CGFloat headroom = 1.0;
@@ -1064,9 +1081,12 @@ shouldInheritContentsScale:(CGFloat)newScale
 
     if (hdr_mode == 2 || hdr_mode == 3) {
         /* Mode 2 (Tone-map to SDR) or Mode 3 (Disable HDR): configure layer for SDR presentation */
+        MacLCLayerSetWantsEDR(self.window.layer, NO);
+        MacLCLayerSetWantsEDR(self.displayView.layer, NO);
         self.window.layer.preferredDynamicRange = CADynamicRangeStandard;
         self.displayView.layer.preferredDynamicRange = CADynamicRangeStandard;
         if (nswindow) {
+            MacLCLayerSetWantsEDR(nswindow.contentView.layer, NO);
             nswindow.contentView.layer.preferredDynamicRange = CADynamicRangeStandard;
         }
         applied_edr = "off";
@@ -1088,12 +1108,15 @@ shouldInheritContentsScale:(CGFloat)newScale
     } else {
         /* Mode 0 (Auto) or Mode 1 (Force HDR): enable EDR display pipeline */
         self.window.wantsLayer = YES;
+        MacLCLayerSetWantsEDR(self.window.layer, YES);
         self.window.layer.preferredDynamicRange = CADynamicRangeHigh;
         self.displayView.wantsLayer = YES;
+        MacLCLayerSetWantsEDR(self.displayView.layer, YES);
         self.displayView.layer.preferredDynamicRange = CADynamicRangeHigh;
         if (nswindow) {
             nswindow.colorSpace = [NSColorSpace extendedSRGBColorSpace];
             nswindow.contentView.wantsLayer = YES;
+            MacLCLayerSetWantsEDR(nswindow.contentView.layer, YES);
             nswindow.contentView.layer.preferredDynamicRange = CADynamicRangeHigh;
         }
         applied_edr = "on";
@@ -1128,6 +1151,7 @@ shouldInheritContentsScale:(CGFloat)newScale
      * where HDR video puts MACLC_HDR_REFERENCE_WHITE, below its diffuse
      * white, so they need no dimming. */
     if (self.spuView) {
+        MacLCLayerSetWantsEDR(self.spuView.layer, NO);
         self.spuView.layer.preferredDynamicRange = CADynamicRangeStandard;
         self.spuView.layer.contentsHeadroom = 1.0;
         self.spuView.layer.opacity = 1.0f;

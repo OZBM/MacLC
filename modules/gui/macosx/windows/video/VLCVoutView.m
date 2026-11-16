@@ -107,6 +107,12 @@
     f_cumulated_magnification = 0.0;
 
     self.wantsLayer = YES;
+    /* Kept with preferredDynamicRange: the video layers under this view carry
+     * untagged linear light, which preferredDynamicRange alone leaves in SDR. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    self.layer.wantsExtendedDynamicRangeContent = YES;
+#pragma clang diagnostic pop
     self.layer.preferredDynamicRange = CADynamicRangeHigh;
 
     _playerController = VLCMain.sharedInstance.playQueueController.playerController;
@@ -132,6 +138,10 @@
     if (self.window) {
         self.window.colorSpace = [NSColorSpace extendedSRGBColorSpace];
         self.window.contentView.wantsLayer = YES;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        self.window.contentView.layer.wantsExtendedDynamicRangeContent = YES;
+#pragma clang diagnostic pop
         self.window.contentView.layer.preferredDynamicRange = CADynamicRangeHigh;
         [NSNotificationCenter.defaultCenter addObserver:self
                                                selector:@selector(windowDidResignKey:)
