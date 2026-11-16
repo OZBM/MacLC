@@ -18,7 +18,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		4D1C00000000000000000301 /* Exceptions for "../../../modules/gui/macosx" folder in "macosx_plugin" target */ = {
+		4D1C00000000000000000301 /* Exceptions for "modules/gui/macosx" folder in "macosx_plugin" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				shaders/VLCSnowShader.metal,
@@ -28,12 +28,12 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4D1C00000000000000000401 /* ../../../modules/gui/macosx */ = {
+		4D1C00000000000000000401 /* modules/gui/macosx */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				4D1C00000000000000000301 /* Exceptions for "../../../modules/gui/macosx" folder in "macosx_plugin" target */,
+				4D1C00000000000000000301 /* Exceptions for "modules/gui/macosx" folder in "macosx_plugin" target */,
 			);
-			path = ../../../modules/gui/macosx;
+			path = modules/gui/macosx;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -53,19 +53,19 @@
 			isa = PBXGroup;
 			children = (
 				4D1C00000000000000000203 /* MacLC.xcconfig */,
-				4D1C00000000000000000401 /* ../../../modules/gui/macosx */,
-				4D1C00000000000000000702 /* ../../../modules/video_filter */,
+				4D1C00000000000000000401 /* modules/gui/macosx */,
+				4D1C00000000000000000702 /* modules/video_filter */,
 				4D1C00000000000000000703 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		4D1C00000000000000000702 /* ../../../modules/video_filter */ = {
+		4D1C00000000000000000702 /* modules/video_filter */ = {
 			isa = PBXGroup;
 			children = (
 				4D1C00000000000000000201 /* maclc_frc_geometry.c */,
 				4D1C00000000000000000202 /* maclc_frc_geometry.h */,
 			);
-			path = ../../../modules/video_filter;
+			path = modules/video_filter;
 			sourceTree = "<group>";
 		};
 		4D1C00000000000000000703 /* Products */ = {
@@ -86,7 +86,7 @@
 			buildPhases = (
 			);
 			buildToolPath = /bin/zsh;
-			buildWorkingDirectory = "$(SRCROOT)/../../../build";
+			buildWorkingDirectory = "$(SRCROOT)/build";
 			dependencies = (
 			);
 			name = "MacLC Package";
@@ -109,7 +109,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4D1C00000000000000000401 /* ../../../modules/gui/macosx */,
+				4D1C00000000000000000401 /* modules/gui/macosx */,
 			);
 			name = macosx_plugin;
 			productName = macosx_plugin;

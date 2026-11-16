@@ -59,6 +59,8 @@ target*/
 contrib-*
 install-*
 xcodeproj/
+/MacLC.xcodeproj/xcuserdata/
+/MacLC.xcodeproj/project.xcworkspace/
 static-lib/
 !buildsystem/
 !build.rs

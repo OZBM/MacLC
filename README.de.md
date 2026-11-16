@@ -371,7 +371,7 @@ make -C build -j12
 make -C build package-macosx          # signed MacLC.app and maclc-<version>.dmg
 
 # interface work in Xcode (deploys the plugin into build/MacLC.app)
-xcodebuild -project extras/package/macosx/MacLC.xcodeproj -scheme MacLC build
+xcodebuild -project MacLC.xcodeproj -scheme MacLC build
 
 # a release: clean build in build-release/, checks, smoke test on sample files, SHA-256
 extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
@@ -399,7 +399,7 @@ MacLC erscheint unter der **GNU General Public License 2.0 oder neuer**. Die App
 
 **MacLC steht in keiner Verbindung zu VideoLAN und wird von VideoLAN weder empfohlen noch unterstützt.** VLC, VideoLAN und das Leitkegel-Logo sind Marken von VideoLAN; MacLC verwendet sie nicht. Bitte melde Fehler in MacLC hier und nicht bei VideoLAN. Dolby Vision ist eine Marke der Dolby Laboratories; alle weiteren Namen gehören ihren jeweiligen Inhabern.
 
-MacLC baut auf über zwanzig Jahren Arbeit des VideoLAN-Projekts und vieler Freiwilliger an VLC auf: danke. Siehe [`AUTHORS`](AUTHORS) und [`THANKS`](THANKS); die ursprüngliche README-Datei bleibt als [`README.upstream.md`](README.upstream.md) erhalten.
+MacLC baut auf über zwanzig Jahren Arbeit des VideoLAN-Projekts und vieler Freiwilliger an VLC auf: danke. Siehe [`AUTHORS`](AUTHORS) und [`THANKS`](THANKS); die ursprüngliche README-Datei bleibt als [`doc/upstream/README.md`](doc/upstream/README.md) erhalten.
 
 Die Illustration am Anfang des HDR-Abschnitts ist eine erfundene Szene, komplett in Blender erzeugt. Die übrigen Bilder auf dieser Seite zeigen Open-Movies: *Sintel*, *Big Buck Bunny*, *Tears of Steel* und *Elephants Dream* (© Blender Foundation, CC BY), *Cosmos Laundromat* (Andy Goralczyk und Blender Foundation, CC BY 4.0), *Spring* (Francesco Siddi, Blender Foundation, CC BY 4.0), *Sprite Fright* (Blender Studio, CC BY 4.0) und *Caminandes: Llama Drama* (Pablo Vazquez, Beorn Leonard, Francesco Siddi, CC BY 3.0) sowie Panoramen von Poly Haven (CC0).
 

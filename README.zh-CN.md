@@ -371,7 +371,7 @@ make -C build -j12
 make -C build package-macosx          # signed MacLC.app and maclc-<version>.dmg
 
 # interface work in Xcode (deploys the plugin into build/MacLC.app)
-xcodebuild -project extras/package/macosx/MacLC.xcodeproj -scheme MacLC build
+xcodebuild -project MacLC.xcodeproj -scheme MacLC build
 
 # a release: clean build in build-release/, checks, smoke test on sample files, SHA-256
 extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
@@ -399,7 +399,7 @@ MacLC 基于 **GNU 通用公共许可证 2.0 或更高版本**发布。其中包
 
 **MacLC 与 VideoLAN 没有任何隶属关系，亦未获得其背书或支持。** VLC、VideoLAN 及交通锥标志均为 VideoLAN 的商标；MacLC 不使用这些商标。请在此处报告 MacLC 的问题，切勿提交给 VideoLAN。Dolby Vision 是 Dolby Laboratories 的商标；其他名称均归其各自所有者所有。
 
-感谢 VideoLAN 项目以及众多志愿者二十年来在 VLC 上的付出，MacLC 正是建立在这些成果之上：详见 [`AUTHORS`](AUTHORS) 与 [`THANKS`](THANKS)；上游 README 保留为 [`README.upstream.md`](README.upstream.md)。
+感谢 VideoLAN 项目以及众多志愿者二十年来在 VLC 上的付出，MacLC 正是建立在这些成果之上：详见 [`AUTHORS`](AUTHORS) 与 [`THANKS`](THANKS)；上游 README 保留为 [`doc/upstream/README.md`](doc/upstream/README.md)。
 
 HDR 一节开头的示意图是一个虚构场景，完全在 Blender 中从零渲染而成。本页其他图片展示了以下开源电影：*Sintel*、*Big Buck Bunny*、*Tears of Steel* 和 *Elephants Dream*（© Blender Foundation，CC BY），*Cosmos Laundromat*（Andy Goralczyk 与 Blender Foundation，CC BY 4.0），*Spring*（Francesco Siddi、Blender Foundation，CC BY 4.0），*Sprite Fright*（Blender Studio，CC BY 4.0）以及 *Caminandes: Llama Drama*（Pablo Vazquez、Beorn Leonard、Francesco Siddi，CC BY 3.0），另有 Poly Haven 全景图（CC0）。
 

@@ -134,7 +134,7 @@ package-macosx-zip: MacLC.app
 	rm -f "$(top_builddir)/maclc-$(VERSION).zip"
 	mkdir -p $(top_builddir)/maclc-$(VERSION)/Goodies/
 	cp -Rp $(top_builddir)/MacLC.app $(top_builddir)/maclc-$(VERSION)/MacLC.app
-	cd $(srcdir); cp -R AUTHORS COPYING README.md THANKS NEWS $(abs_top_builddir)/maclc-$(VERSION)/Goodies/
+	cd $(srcdir); cp -R AUTHORS COPYING README.md THANKS doc/upstream/NEWS $(abs_top_builddir)/maclc-$(VERSION)/Goodies/
 	zip -r -y -9 $(top_builddir)/maclc-$(VERSION).zip $(top_builddir)/maclc-$(VERSION)
 	rm -rf "$(top_builddir)/maclc-$(VERSION)"
 
@@ -188,6 +188,6 @@ EXTRA_DIST += \
 	extras/package/macosx/dmg/background.tiff \
 	extras/package/macosx/asset_sources/vlc_app_icon.svg \
 	extras/package/macosx/VLC.entitlements \
-	extras/package/macosx/MacLC.xcconfig \
-	extras/package/macosx/MacLC.xcodeproj/project.pbxproj \
-	extras/package/macosx/MacLC.xcodeproj/xcshareddata/xcschemes/MacLC-Package.xcscheme
+	MacLC.xcconfig \
+	MacLC.xcodeproj/project.pbxproj \
+	MacLC.xcodeproj/xcshareddata/xcschemes/MacLC-Package.xcscheme

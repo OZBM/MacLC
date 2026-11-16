@@ -371,7 +371,7 @@ make -C build -j12
 make -C build package-macosx          # signed MacLC.app and maclc-<version>.dmg
 
 # interface work in Xcode (deploys the plugin into build/MacLC.app)
-xcodebuild -project extras/package/macosx/MacLC.xcodeproj -scheme MacLC build
+xcodebuild -project MacLC.xcodeproj -scheme MacLC build
 
 # a release: clean build in build-release/, checks, smoke test on sample files, SHA-256
 extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
@@ -399,7 +399,7 @@ MacLC est publié sous la **GNU General Public License 2.0 ou ultérieure**. Il 
 
 **MacLC n'est ni affilié à VideoLAN, ni approuvé ou pris en charge par VideoLAN.** VLC, VideoLAN et le logo au cône de signalisation sont des marques de VideoLAN ; MacLC ne les utilise pas. Merci de signaler les bugs de MacLC ici, et non auprès de VideoLAN. Dolby Vision est une marque de Dolby Laboratories ; les autres noms appartiennent à leurs propriétaires respectifs.
 
-Merci au projet VideoLAN et aux nombreux bénévoles dont les deux décennies de travail sur VLC servent de fondation à MacLC : voir [`AUTHORS`](AUTHORS) et [`THANKS`](THANKS) ; le README d'origine est conservé sous [`README.upstream.md`](README.upstream.md).
+Merci au projet VideoLAN et aux nombreux bénévoles dont les deux décennies de travail sur VLC servent de fondation à MacLC : voir [`AUTHORS`](AUTHORS) et [`THANKS`](THANKS) ; le README d'origine est conservé sous [`doc/upstream/README.md`](doc/upstream/README.md).
 
 L'illustration en tête de la section HDR est une scène inventée, rendue de toutes pièces dans Blender. Les autres images de cette page montrent des films libres : *Sintel*, *Big Buck Bunny*, *Tears of Steel* et *Elephants Dream* (© Blender Foundation, CC BY), *Cosmos Laundromat* (Andy Goralczyk et la Blender Foundation, CC BY 4.0), *Spring* (Francesco Siddi, Blender Foundation, CC BY 4.0), *Sprite Fright* (Blender Studio, CC BY 4.0) et *Caminandes: Llama Drama* (Pablo Vazquez, Beorn Leonard, Francesco Siddi, CC BY 3.0), ainsi que des panoramas de Poly Haven (CC0).
 

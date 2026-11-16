@@ -371,7 +371,7 @@ make -C build -j12
 make -C build package-macosx          # signed MacLC.app and maclc-<version>.dmg
 
 # interface work in Xcode (deploys the plugin into build/MacLC.app)
-xcodebuild -project extras/package/macosx/MacLC.xcodeproj -scheme MacLC build
+xcodebuild -project MacLC.xcodeproj -scheme MacLC build
 
 # a release: clean build in build-release/, checks, smoke test on sample files, SHA-256
 extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
@@ -399,7 +399,7 @@ MacLCは **GNU General Public License 2.0 以降** のもとで公開されて�
 
 **MacLCはVideoLANと提携しておらず、VideoLANによる承認やサポートも受けていません。** VLC、VideoLAN、およびカラーコーンのロゴはVideoLANの商標であり、MacLCはこれらを使用していません。MacLCのバグはVideoLANではなく、こちらに報告してください。Dolby VisionはDolby Laboratoriesの商標であり、その他の名称はそれぞれの所有者に帰属します。
 
-MacLCの基盤となっているVLCに20年にわたり取り組んできたVideoLANプロジェクトと多くのボランティアの皆様に感謝いたします（[`AUTHORS`](AUTHORS) および [`THANKS`](THANKS) を参照。アップストリームのREADMEは [`README.upstream.md`](README.upstream.md) として保持されています）。
+MacLCの基盤となっているVLCに20年にわたり取り組んできたVideoLANプロジェクトと多くのボランティアの皆様に感謝いたします（[`AUTHORS`](AUTHORS) および [`THANKS`](THANKS) を参照。アップストリームのREADMEは [`doc/upstream/README.md`](doc/upstream/README.md) として保持されています）。
 
 HDRセクション冒頭のイラストは、Blenderでゼロからレンダリングした架空のシーンです。このページのほかの画像にはオープンムービーが表示されています：*Sintel*、*Big Buck Bunny*、*Tears of Steel*、*Elephants Dream*（© Blender Foundation, CC BY）、*Cosmos Laundromat*（Andy Goralczyk and the Blender Foundation, CC BY 4.0）、*Spring*（Francesco Siddi, Blender Foundation, CC BY 4.0）、*Sprite Fright*（Blender Studio, CC BY 4.0）、*Caminandes: Llama Drama*（Pablo Vazquez, Beorn Leonard, Francesco Siddi, CC BY 3.0）、およびPoly Havenのパノラマ（CC0）。
 

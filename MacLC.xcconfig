@@ -1,4 +1,4 @@
-// MacLC.xcconfig: build settings of MacLC.xcodeproj.
+// MacLC.xcconfig: build settings of MacLC.xcodeproj (both at the repository root).
 //
 // The core (libvlccore, every other plugin, contribs) keeps its autotools
 // build in build/. Xcode builds the macOS interface plugin natively
@@ -10,7 +10,7 @@
 //
 // Flags mirror modules/gui/macosx/Makefile.am; keep the two in sync.
 
-MACLC_ROOT = $(SRCROOT)/../../..
+MACLC_ROOT = $(SRCROOT)
 MACLC_BUILD = $(MACLC_ROOT)/build
 
 SDKROOT = macosx
@@ -50,3 +50,53 @@ LIBRARY_SEARCH_PATHS = $(MACLC_BUILD)/src/.libs
 OTHER_LDFLAGS = -lvlccore $(MACLC_BUILD)/compat/.libs/libcompat.a -framework AVKit -framework AVFoundation -framework Cocoa -framework CoreAudio -framework CoreGraphics -framework CoreMedia -framework CoreVideo -framework IOKit -framework QuartzCore -framework SystemConfiguration -framework ScriptingBridge -framework WebKit -framework QuickLook -framework QuickLookThumbnailing -framework Metal -framework MetalKit -framework VideoToolbox -framework UniformTypeIdentifiers -weak_framework MediaPlayer -Wl,-headerpad_max_install_names
 
 DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+
+// Xcode 27.2 recommended settings, from the Base_ProjectSettings template a
+// new macOS project gets. The make build does not read them. Deviations:
+// ENABLE_USER_SCRIPT_SANDBOXING stays NO (the deploy phase writes into
+// build/MacLC.app), and the C standard matches the make build's Objective-C
+// default (gnu17; maclc_frc_geometry.c keeps -std=gnu23 per file).
+GCC_C_LANGUAGE_STANDARD = gnu17
+CLANG_CXX_LANGUAGE_STANDARD = gnu++20
+CLANG_ENABLE_OBJC_WEAK = YES
+ENABLE_STRICT_OBJC_MSGSEND = YES
+GCC_NO_COMMON_BLOCKS = YES
+GCC_DYNAMIC_NO_PIC = NO
+COPY_PHASE_STRIP = NO
+DEAD_CODE_STRIPPING = YES
+ENABLE_NS_ASSERTIONS[config=Release] = NO
+LOCALIZATION_PREFERS_STRING_CATALOGS = YES
+CLANG_ANALYZER_NONNULL = YES
+CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE
+CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES
+CLANG_WARN_BOOL_CONVERSION = YES
+CLANG_WARN_COMMA = YES
+CLANG_WARN_CONSTANT_CONVERSION = YES
+CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES
+CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR
+// Off: the core headers' Doxygen comments raise about 2,000 -Wdocumentation
+// warnings that say nothing about the interface code.
+CLANG_WARN_DOCUMENTATION_COMMENTS = NO
+CLANG_WARN_EMPTY_BODY = YES
+CLANG_WARN_ENUM_CONVERSION = YES
+CLANG_WARN_INFINITE_RECURSION = YES
+CLANG_WARN_INT_CONVERSION = YES
+CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES
+CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES
+CLANG_WARN_OBJC_LITERAL_CONVERSION = YES
+CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR
+CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES
+CLANG_WARN_RANGE_LOOP_ANALYSIS = YES
+// Off for the same reason: about 350 -Wstrict-prototypes warnings, all in
+// core headers declared with empty parameter lists.
+CLANG_WARN_STRICT_PROTOTYPES = NO
+CLANG_WARN_SUSPICIOUS_MOVE = YES
+CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE
+CLANG_WARN_UNREACHABLE_CODE = YES
+CLANG_WARN__DUPLICATE_METHOD_MATCH = YES
+GCC_WARN_64_TO_32_BIT_CONVERSION = YES
+GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR
+GCC_WARN_UNDECLARED_SELECTOR = YES
+GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE
+GCC_WARN_UNUSED_FUNCTION = YES
+GCC_WARN_UNUSED_VARIABLE = YES
