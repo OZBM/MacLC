@@ -37,9 +37,6 @@ AM_LDFLAGS = \
 	-shrext $(LIBEXT) \
 	-no-undefined \
 	$(top_builddir)/compat/libcompat.la $(LTLIBVLCCORE)
-if HAVE_WIN32
-AM_LDFLAGS += $(top_builddir)/modules/module.rc.lo -Wc,-static
-endif
 AM_YFLAGS = -d -Wno-yacc
 
 SUFFIXES = .l .y .asm

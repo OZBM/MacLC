@@ -1,5 +1,3 @@
-SUBDIRS += gui/qt
-
 guidir = $(pluginsdir)/gui
 gui_LTLIBRARIES =
 gui_PLUGINS =
@@ -32,4 +30,3 @@ EXTRA_LTLIBRARIES += libminimal_macosx_plugin.la
 gui_PLUGINS += $(LTLIBminimal_macosx)
 
 include gui/macosx/Makefile.am
-include gui/skins2/Makefile.am

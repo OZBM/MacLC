@@ -15,16 +15,3 @@ splitter_PLUGINS += \
 libclone_plugin_la_SOURCES = video_splitter/clone.c
 
 libwall_plugin_la_SOURCES = video_splitter/wall.c
-
-libpanoramix_plugin_la_SOURCES = video_splitter/panoramix.c
-libpanoramix_plugin_la_CFLAGS = $(AM_CFLAGS)
-libpanoramix_plugin_la_LIBADD = $(LIBM)
-if HAVE_WIN32_DESKTOP
-splitter_PLUGINS += libpanoramix_plugin.la
-else
-if HAVE_XCB
-libpanoramix_plugin_la_CFLAGS += $(XCB_RANDR_CFLAGS) $(XCB_CFLAGS)
-libpanoramix_plugin_la_LIBADD += $(XCB_RANDR_LIBS) $(XCB_LIBS)
-splitter_PLUGINS += libpanoramix_plugin.la
-endif
-endif

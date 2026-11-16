@@ -36,31 +36,3 @@ endif
 libvlc_motion_la_SOURCES = control/motionlib.c control/motionlib.h
 libvlc_motion_la_LDFLAGS = -static
 noinst_LTLIBRARIES += libvlc_motion.la
-
-libdbus_plugin_la_SOURCES = \
-	control/dbus/dbus_introspect.h control/dbus/dbus_common.h \
-	control/dbus/dbus_root.c control/dbus/dbus_root.h \
-	control/dbus/dbus_player.c control/dbus/dbus_player.h \
-	control/dbus/dbus_tracklist.c control/dbus/dbus_tracklist.h \
-	control/dbus/dbus.c
-libdbus_plugin_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
-libdbus_plugin_la_LIBADD = $(DBUS_LIBS) $(LIBM)
-if HAVE_DBUS
-control_PLUGINS += libdbus_plugin.la
-endif
-
-libxcb_hotkeys_plugin_la_SOURCES = control/globalhotkeys/xcb.c
-libxcb_hotkeys_plugin_la_CFLAGS = $(AM_CFLAGS) \
-	$(XCB_KEYSYMS_CFLAGS) $(XCB_CFLAGS)
-libxcb_hotkeys_plugin_la_LIBADD = $(XCB_KEYSYMS_LIBS) $(XCB_LIBS)
-if HAVE_XCB_KEYSYMS
-control_PLUGINS += libxcb_hotkeys_plugin.la
-endif
-
-libntservice_plugin_la_SOURCES = control/ntservice.c
-libwin_hotkeys_plugin_la_SOURCES = control/globalhotkeys/win32.c
-libwin_msg_plugin_la_SOURCES = control/win_msg.c
-if HAVE_WIN32_DESKTOP
-control_PLUGINS += libntservice_plugin.la
-control_PLUGINS += libwin_hotkeys_plugin.la libwin_msg_plugin.la
-endif

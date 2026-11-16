@@ -1,4 +1,4 @@
-CLEANFILES = skins2/default.vlt
+CLEANFILES =
 MOSTLYCLEANFILES =
 EXTRA_DIST =
 
@@ -52,107 +52,12 @@ LUA_MODULES_PKGDATA = \
 	lua/http/custom.lua \
 	$(NULL)
 
-desktopdir = $(datadir)/applications
-if KDE_SOLID
-desktop_DATA = vlc.desktop vlc-openbd.desktop vlc-opendvd.desktop vlc-openvcd.desktop vlc-opencda.desktop
-appdatadir = $(datarootdir)/metainfo
-appdata_DATA = org.videolan.vlc.appdata.xml
-endif
-
-EXTRA_DIST += vlc.desktop.in vlc.desktop.mimetypes
-EXTRA_DIST += vlc-openbd.desktop.in vlc-opendvd.desktop.in vlc-openvcd.desktop.in vlc-opencda.desktop.in
-CLEANFILES += $(desktop_DATA) $(appdata_DATA)
-
-%.desktop: %.desktop.in $(top_builddir)/config.status
-	$(AM_V_GEN)mimetypes="$$(sed 's/\s*#.*$$//g' $(srcdir)/vlc.desktop.mimetypes | $(EGREP) -v '^$$' | tr "\n" ';')"; \
-	sed \
-		-e 's,\@bindir\@,$(bindir),g' \
-		 -e "s,\@MIMETYPES\@,$$mimetypes,g" < "$<" > tmp-$@
-	$(AM_V_at)$(DESKTOP_FILE_VALIDATE) tmp-$@
-	$(AM_V_at)mv -f tmp-$@ $@
-
-org.videolan.vlc.appdata.xml: org.videolan.vlc.appdata.xml.in
-	$(AM_V_GEN)$(MSGFMT) --xml --template "$<" -d "$(top_srcdir)/po" \
-			-o "$@.tmp" || \
-		cp $< $@.tmp
-	$(AM_V_at)mv -f "$@.tmp" "$@"
-
-iconsdatadir = $(datadir)/icons/hicolor
-icons16dir = $(iconsdatadir)/16x16/apps
-icons32dir = $(iconsdatadir)/32x32/apps
-icons48dir = $(iconsdatadir)/48x48/apps
-icons128dir = $(iconsdatadir)/128x128/apps
-icons256dir = $(iconsdatadir)/256x256/apps
-
-if !HAVE_WIN32
-dist_pkgdata_DATA = icons/vlc.ico
-dist_icons16_DATA = icons/16x16/vlc.png icons/16x16/vlc.xpm
-dist_icons32_DATA = icons/32x32/vlc.png icons/32x32/vlc.xpm \
-			icons/32x32/vlc-xmas.xpm \
-			icons/32x32/vlc-aprilfools.xpm
-dist_icons48_DATA = icons/48x48/vlc.png icons/48x48/vlc-xmas.png \
-			icons/48x48/vlc-aprilfools.png
-dist_icons128_DATA = icons/128x128/vlc.png icons/128x128/vlc-xmas.png \
-                     icons/128x128/vlc-kb.png \
-                     icons/128x128/vlc-aprilfools.png
-dist_icons256_DATA = icons/256x256/vlc.png
-
-nobase_dist_pkgdata_SCRIPTS = \
-	utils/audio-vlc-default.sh \
-	utils/video-vlc-default.sh \
-	$(NULL)
-endif
-
 EXTRA_DIST += \
-	$(skins2_default_vlt_FILES) \
-	$(DIST_icons) \
-	$(DIST_http_lua) \
-	$(DIST_solid)
+	$(DIST_http_lua)
 
 nobase_pkgdata_DATA =
 nobase_pkglibexec_SCRIPTS =
 nobase_dist_pkgdata_DATA =
-if BUILD_SKINS
-nobase_pkgdata_DATA += skins2/default.vlt
-nobase_dist_pkgdata_DATA += $(DIST_skins2)
-endif
-if KDE_SOLID
-soliddata_DATA = $(DIST_solid)
-endif
-
-DIST_icons = \
-	vlc512x512.png
-
-DIST_skins2 = \
-	skins2/fonts/FreeSans.ttf \
-	skins2/fonts/FreeSansBold.ttf \
-	skins2/skin.dtd \
-	skins2/skin.catalog \
-	skins2/winamp2.xml
-
-skins2_default_vlt_FILES = \
-	skins2/default/theme.xml \
-	skins2/default/subX/about.png \
-	skins2/default/subX/eq.png \
-	skins2/default/subX/font.otf \
-	skins2/default/subX/main.png \
-	skins2/default/subX/playtreeglyphs.png \
-	skins2/default/subX/pl.png \
-	skins2/default/subX/sysbuttons.png \
-	skins2/default/subX/vol_anim.png \
-	skins2/default/subX/vol_slider.png
-
-skins2/default.vlt: $(skins2_default_vlt_FILES)
-	$(AM_V_at)$(MKDIR_P) "skins2"
-	$(AM_V_at)rm -f -- skins2/default.vlt.tmp
-	$(AM_V_GEN)tarowner="--owner=root --group=root"; \
-	if test "`uname -s`" = "Darwin"; then tarowner=""; fi; \
-	GZIP=--no-name \
-	tar cvvzf skins2/default.vlt.tmp \
-		--format=ustar $$tarsort \
-		$$tarowner --directory="$(srcdir)/skins2" \
-		$$(cd "$(srcdir)/skins2" && find default/ -type f | LC_ALL=C sort)
-	$(AM_V_at)mv -f -- skins2/default.vlt.tmp skins2/default.vlt
 
 #
 # LUA
@@ -275,11 +180,6 @@ EXTRA_DIST += \
 	$(LUA_MODULES_PKGDATA) \
 	$(NULL)
 
-DIST_solid = \
-	solid/vlc-openbd.desktop \
-	solid/vlc-opencda.desktop \
-	solid/vlc-opendvd.desktop \
-	solid/vlc-openvcd.desktop
 
 EXTRA_DIST += \
         hrtfs/dodeca_and_7channel_3DSL_HRTF.sofa

@@ -142,14 +142,6 @@ libsvgdec_plugin_la_LIBADD = $(LIBS_svgdec)
 EXTRA_LTLIBRARIES += libsvgdec_plugin.la
 codec_PLUGINS += $(LTLIBsvgdec)
 
-libxwd_plugin_la_SOURCES = codec/xwd.c
-libxwd_plugin_la_CFLAGS = $(AM_CFLAGS) $(XPROTO_CFLAGS)
-libxwd_plugin_la_LIBADD = $(XPROTO_LIBS)
-libxwd_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(codec_RPATH)
-if HAVE_XCB
-codec_PLUGINS += libxwd_plugin.la
-endif
-
 
 ### SPU ###
 
@@ -413,98 +405,6 @@ noinst_LTLIBRARIES += libavcodec_common.la
 codec_PLUGINS += libavcodec_plugin.la
 endif
 
-### avcodec hardware acceleration ###
-
-libvaapi_plugin_la_SOURCES = \
-	codec/avcodec/vaapi.c hw/vaapi/vlc_vaapi.c hw/vaapi/vlc_vaapi.h \
-	codec/avcodec/va_surface.c codec/avcodec/va_surface.h
-libvaapi_plugin_la_CPPFLAGS = $(AM_CPPFLAGS)
-libvaapi_plugin_la_CFLAGS = $(AM_CFLAGS) $(AVCODEC_CFLAGS)
-libvaapi_plugin_la_LIBADD = $(LIBVA_LIBS) $(AVCODEC_LIBS)
-if HAVE_AVCODEC
-if HAVE_VAAPI
-codec_PLUGINS += libvaapi_plugin.la
-endif
-endif
-
-libd3d9_common_la_SOURCES = video_chroma/d3d9_fmt.c video_chroma/d3d9_fmt.h \
-	video_chroma/dxgi_fmt.c video_chroma/dxgi_fmt.h
-libd3d9_common_la_LDFLAGS = -static
-if HAVE_WIN32_DESKTOP
-noinst_LTLIBRARIES += libd3d9_common.la
-endif
-
-libdxva2_plugin_la_SOURCES = \
-	codec/avcodec/dxva2.c codec/avcodec/directx_va.c codec/avcodec/directx_va.h \
-	codec/avcodec/va_surface.c codec/avcodec/va_surface.h \
-	packetizer/h264_nal.c packetizer/h264_nal.h \
-	packetizer/hevc_nal.c packetizer/hevc_nal.h \
-	packetizer/h26x_nal_common.h \
-	codec/avcodec/dxva_blocklist.c
-libdxva2_plugin_la_LIBADD = libd3d9_common.la -ld3d9 $(LIBCOM) -luuid -ldxva2
-if !HAVE_WINSTORE
-if HAVE_AVCODEC_DXVA2
-codec_PLUGINS += libdxva2_plugin.la
-endif
-endif
-
-libd3d11_common_la_SOURCES = video_chroma/d3d11_fmt.cpp video_chroma/d3d11_fmt.h \
-	video_chroma/dxgi_fmt.c video_chroma/dxgi_fmt.h
-libd3d11_common_la_CXXFLAGS = $(AM_CXXFLAGS) $(LIBCOMCXXFLAGS)
-libd3d11_common_la_LDFLAGS = -static
-if HAVE_WIN32
-noinst_LTLIBRARIES += libd3d11_common.la
-endif
-
-libd3d11va_plugin_la_SOURCES = \
-	codec/avcodec/d3d11va.c codec/avcodec/directx_va.c codec/avcodec/directx_va.h \
-        codec/avcodec/va_surface.c codec/avcodec/va_surface.h \
-	packetizer/h264_nal.c packetizer/h264_nal.h \
-	packetizer/hevc_nal.c packetizer/hevc_nal.h \
-	packetizer/h26x_nal_common.h \
-	codec/avcodec/dxva_blocklist.c
-libd3d11va_plugin_la_LIBADD = libd3d11_common.la $(LIBCOM) -luuid -ld3d11
-if HAVE_AVCODEC_D3D11VA
-codec_PLUGINS += libd3d11va_plugin.la
-endif
-
-### OpenMAX ###
-
-noinst_HEADERS += \
-	codec/omxil/OMX_Broadcom.h \
-	codec/omxil/OMX_Component.h \
-	codec/omxil/OMX_Core.h \
-	codec/omxil/OMX_Image.h \
-	codec/omxil/OMX_IVCommon.h \
-	codec/omxil/OMX_Types.h \
-	codec/omxil/OMX_Audio.h \
-	codec/omxil/OMX_Index.h \
-	codec/omxil/OMX_Other.h \
-	codec/omxil/OMX_Video.h
-
-libomxil_plugin_la_SOURCES = \
-	codec/omxil/utils.c codec/omxil/omxil_utils.h \
-	packetizer/h264_nal.c packetizer/h264_nal.h \
-	packetizer/hevc_nal.c packetizer/hevc_nal.h \
-	packetizer/h26x_nal_common.h \
-	codec/omxil/qcom.c codec/omxil/qcom.h \
-	codec/omxil/omxil.c codec/omxil/omxil.h codec/omxil/omxil_core.c codec/omxil/omxil_core.h
-libomxil_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/codec/omxil $(CFLAGS_omxil)
-libomxil_plugin_la_LIBADD = libchroma_copy.la $(LIBDL)
-libomxil_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(codec_RPATH)
-
-libmediacodec_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/codec/omxil
-libmediacodec_plugin_la_SOURCES = codec/omxil/mediacodec.c codec/omxil/mediacodec.h \
-	codec/omxil/mediacodec_jni.c codec/omxil/mediacodec_ndk.c codec/omxil/utils.c \
-	codec/omxil/omxil_utils.h codec/omxil/qcom.c codec/omxil/qcom.h
-libmediacodec_plugin_la_LIBADD = libchroma_copy.la libvlc_hxxxhelper.la \
-	libandroid_utils.la $(LIBDL) $(GLES2_LIBS) $(EGL_LIBS) -lmediandk
-codec_PLUGINS += $(LTLIBomxil)
-EXTRA_LTLIBRARIES += libomxil_plugin.la
-if HAVE_ANDROID
-codec_PLUGINS += libmediacodec_plugin.la
-endif
-
 
 ### X26x encoders ###
 
@@ -578,10 +478,6 @@ EXTRA_LTLIBRARIES += libvpx_plugin.la
 codec_PLUGINS += $(LTLIBvpx)
 
 libvpx_alpha_plugin_la_SOURCES = codec/vpx_alpha.c codec/alpha_combine.h
-if HAVE_WIN32
-libvpx_alpha_plugin_la_SOURCES += codec/alpha_d3d11.cpp
-libvpx_alpha_plugin_la_LIBADD = $(LIBCOM) libd3d11_common.la -ld3d11
-endif
 codec_PLUGINS += libvpx_alpha_plugin.la
 
 libaom_plugin_la_SOURCES = codec/aom.c \
@@ -623,34 +519,7 @@ EXTRA_LTLIBRARIES += libdav1d_plugin.la
 codec_PLUGINS += $(LTLIBdav1d)
 
 
-### Hardware encoders ###
-
-libqsv_plugin_la_SOURCES = codec/qsv.c demux/mpeg/timestamps.h
-libqsv_plugin_la_CFLAGS = $(AM_CFLAGS) $(VPL_CFLAGS)
-libqsv_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(codec_RPATH)
-libqsv_plugin_la_LIBADD = $(VPL_LIBS)
-EXTRA_LTLIBRARIES += libqsv_plugin.la
-codec_PLUGINS += $(LTLIBqsv)
-
 ### External frameworks ###
-
-libdmo_plugin_la_SOURCES = codec/dmo/dmo.c codec/dmo/dmo.h codec/dmo/buffer.c
-libdmo_plugin_la_LIBADD = $(LIBM)
-if HAVE_WIN32
-libdmo_plugin_la_LIBADD += $(LIBCOM) -luuid -lmsdmo
-if !HAVE_WINSTORE
-codec_PLUGINS += libdmo_plugin.la
-endif
-endif
-
-libmft_plugin_la_SOURCES = codec/mft.cpp \
-    codec/mft_d3d.cpp codec/mft_d3d.h \
-    codec/mft_d3d11.cpp codec/mft_d3d11.h
-libmft_plugin_la_CXXFLAGS = $(AM_CXXFLAGS) $(LIBCOMCXXFLAGS)
-if HAVE_WIN32
-libmft_plugin_la_LIBADD = $(LIBCOM) -luuid -lmfplat libvlc_hxxxhelper.la libd3d11_common.la -ld3d11
-codec_PLUGINS += libmft_plugin.la
-endif
 
 libgstdecode_plugin_la_SOURCES = codec/gstreamer/gstdecode.c \
 								 codec/gstreamer/gstvlcpictureplaneallocator.c \

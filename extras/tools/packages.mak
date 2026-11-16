@@ -1,5 +1,4 @@
 GNU=https://ftpmirror.gnu.org/gnu
-APACHE=https://downloads.apache.org/
 SF=https://downloads.sourceforge.net/project
 VIDEOLAN=https://downloads.videolan.org/pub/contrib
 
@@ -33,9 +32,6 @@ XZ_URL=https://tukaani.org/xz/xz-$(XZ_VERSION).tar.bz2
 
 SED_VERSION=4.2.2
 SED_URL=$(GNU)/sed/sed-$(SED_VERSION).tar.bz2
-
-ANT_VERSION=1.9.7
-ANT_URL=$(APACHE)/ant/binaries/apache-ant-$(ANT_VERSION)-bin.tar.bz2
 
 BISON_VERSION=3.8.2
 BISON_URL=$(GNU)/bison/bison-$(BISON_VERSION).tar.xz

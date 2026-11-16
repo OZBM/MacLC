@@ -65,10 +65,6 @@ else
 FFMPEGCONF += --disable-encoders --disable-muxers
 endif
 
-ifneq ($(findstring amf,$(PKGS)),)
-DEPS_ffmpeg += amf $(DEPS_amf)
-endif
-
 # Small size
 ifdef WITH_OPTIMIZATION
 ifdef ENABLE_SMALL

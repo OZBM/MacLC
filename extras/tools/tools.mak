@@ -334,25 +334,6 @@ CLEAN_PKG += sed
 DISTCLEAN_PKG += sed-$(SED_VERSION).tar.bz2
 CLEAN_FILE += .buildsed
 
-# Apache ANT
-
-apache-ant-$(ANT_VERSION).tar.bz2:
-	$(call download_pkg,$(ANT_URL),ant)
-
-.getant: apache-ant-$(ANT_VERSION).tar.bz2
-ant: apache-ant-$(ANT_VERSION).tar.bz2
-	$(UNPACK)
-	$(MOVE)
-
-.buildant: ant
-	(mkdir -p $(PREFIX)/bin && cp $</bin/* $(PREFIX)/bin/)
-	(mkdir -p $(PREFIX)/lib && cp $</lib/* $(PREFIX)/lib/)
-	touch $@
-
-CLEAN_PKG += ant
-DISTCLEAN_PKG += apache-ant-$(ANT_VERSION).tar.bz2
-CLEAN_FILE += .buildant
-
 
 #
 # GNU bison

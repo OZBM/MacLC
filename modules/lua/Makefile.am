@@ -43,9 +43,6 @@ liblua_plugin_la_SOURCES = \
 	lua/libs/renderers.c \
 	lua/libs/medialibrary.c
 
-if HAVE_WIN32
-liblua_plugin_la_SOURCES += lua/libs/win.c
-endif
 liblua_plugin_la_CFLAGS = $(AM_CFLAGS) $(LUA_CFLAGS) -I$(srcdir)/lua
 liblua_plugin_la_LIBADD = $(LUA_LIBS) $(SOCKET_LIBS) $(LIBDL) $(LIBM)
 if BUILD_LUA

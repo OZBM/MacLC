@@ -9,10 +9,6 @@ bin_PROGRAMS = vlc
 noinst_PROGRAMS = vlc-static
 endif
 endif
-EXTRA_DIST = vlc_win32_rc.rc.in
-CLEANFILES = vlc_win32_rc.rc
-
-SUFFIXES = .rc.in .rc
 
 AM_CPPFLAGS = $(CPPFLAGS_vlc)
 AM_CFLAGS = $(CFLAGS_vlc)
@@ -32,21 +28,6 @@ vlc_CPPFLAGS = $(AM_CPPFLAGS)
 if !HAVE_WIN32
 vlc_SOURCES = vlc.c override.c
 vlc_LDADD += $(LIBDL)
-else
-vlc_SOURCES = winvlc.c
-EXTRA_vlc_DEPENDENCIES = vlc_win32_rc.$(OBJEXT)
-vlc_LDFLAGS = -mwindows -Wc,-static
-vlc_LDADD += -lole32 vlc_win32_rc.$(OBJEXT)
-libbreakpad_wrapper_la_SOURCES = breakpad.cpp
-libbreakpad_wrapper_la_LIBADD = $(BREAKPAD_LIBS)
-libbreakpad_wrapper_la_LDFLAGS = -static
-libbreakpad_wrapper_la_CXXFLAGS = $(AM_CXXFLAGS) $(BREAKPAD_CFLAGS) -DBREAKPAD_URL=\"@BREAKPAD_URL@\"
-if HAVE_BREAKPAD
-noinst_LTLIBRARIES += libbreakpad_wrapper.la
-vlc_LDADD += libbreakpad_wrapper.la -lstdc++ -lwininet
-EXTRA_vlc_DEPENDENCIES += libbreakpad_wrapper.la
-vlc_CPPFLAGS += -DHAVE_BREAKPAD
-endif
 endif
 
 vlc_osx_SOURCES = darwinvlc.m
@@ -103,13 +84,6 @@ endif
 vlc_wrapper_SOURCES = rootwrap.c
 vlc_wrapper_LDADD = $(SOCKET_LIBS)
 
-vlc_win32_rc.rc: $(top_builddir)/config.status vlc_win32_rc.rc.in
-	cd "$(top_builddir)" && \
-	$(SHELL) ./config.status --file="bin/$@"
-
-vlc_win32_rc.$(OBJEXT): vlc_win32_rc.rc $(top_srcdir)/extras/package/win32/vlc.exe.manifest
-	$(WINDRES) --include-dir $(top_srcdir)/share/icons --include-dir $(top_srcdir)/extras/package/win32 -i $< -o $@
-
 #
 # Plug-ins cache generator
 #
@@ -121,11 +95,6 @@ vlc_cache_gen_LDADD = \
 	$(GNUGETOPT_LIBS) \
 	../compat/libcompat.la \
 	../lib/libvlc.la
-if HAVE_WIN32
-vlc_cache_gen_LDADD += vlc_win32_rc.$(OBJEXT)
-vlc_cache_gen_LDFLAGS = -Wc,-static
-EXTRA_vlc_cache_gen_DEPENDENCIES = vlc_win32_rc.$(OBJEXT)
-endif
 
 if HAVE_PARTIAL_LINKING
 AM_CPPFLAGS += -DVLC_PARTIAL_LINKING -I $(builddir)/../modules/

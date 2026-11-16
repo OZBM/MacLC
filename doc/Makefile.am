@@ -1,21 +1,7 @@
 NULL =
 
 LIBVLC_SAMPLES = \
-	libvlc/gtk_player.c \
-	libvlc/QtPlayer/LICENSE \
-	libvlc/QtPlayer/main.cpp \
-	libvlc/QtPlayer/player.cpp \
-	libvlc/QtPlayer/player.h \
-	libvlc/QtPlayer/QtVLC.pro \
-	libvlc/QtGL/main.cpp \
-	libvlc/QtGL/qtvlcwidget.cpp \
-	libvlc/QtGL/qtvlcwidget.h \
-	libvlc/QtGL/QtGl.pro \
 	libvlc/thumbnailer.c \
-	libvlc/wx_player.cpp \
-	libvlc/d3d11_player.cpp \
-	libvlc/d3d9_player.c \
-	libvlc/win_player.c \
 	libvlc/CMakeLists.txt \
 	libvlc/appkit_player.m \
 	libvlc/parser.c \
@@ -93,13 +79,6 @@ EXTRA_DIST = \
 	release-howto.txt \
 	Doxyfile.in \
 	lirc/example.lircrc \
-	skins/skins-howto.txt \
-	skins/events-howto.txt \
-	skins/curve_maker/Bezier.bas \
-	skins/curve_maker/Bezier.frm \
-	skins/curve_maker/Bezier.frx \
-	skins/curve_maker/bezier.vbp \
-	skins/curve_maker/Bezier.vbw \
 	strings.txt \
 	translations.txt \
 	demo.sh \

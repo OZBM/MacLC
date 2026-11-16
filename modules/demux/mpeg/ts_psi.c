@@ -58,7 +58,7 @@
 #include "ts_metadata.h"
 #include "ts_descriptions.h"
 
-#include "../../access/dtv/en50221_capmt.h"
+#include "en50221_capmt.h"
 #include "ts_streamwrapper.h"
 
 #include <assert.h>

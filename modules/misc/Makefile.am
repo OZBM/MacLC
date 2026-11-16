@@ -68,42 +68,6 @@ if HAVE_XROS
 misc_PLUGINS += libuikit_inhibit_plugin.la
 endif
 
-libxdg_screensaver_plugin_la_SOURCES = misc/inhibit/xdg.c
-if HAVE_XCB
-if !HAVE_WIN32
-misc_PLUGINS += libxdg_screensaver_plugin.la
-endif
-endif
-
-libdbus_screensaver_plugin_la_SOURCES = misc/inhibit/dbus.c
-libdbus_screensaver_plugin_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
-libdbus_screensaver_plugin_la_LIBADD = $(DBUS_LIBS)
-if HAVE_DBUS
-misc_PLUGINS += libdbus_screensaver_plugin.la
-endif
-
-libwl_idle_inhibit_plugin_la_SOURCES = misc/inhibit/wl-idle-inhibit.c
-nodist_libwl_idle_inhibit_plugin_la_SOURCES = \
-	misc/inhibit/idle-inhibit-client-protocol.h \
-	misc/inhibit/idle-inhibit-protocol.c
-libwl_idle_inhibit_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/misc/inhibit
-libwl_idle_inhibit_plugin_la_CFLAGS = $(WAYLAND_CLIENT_CFLAGS)
-libwl_idle_inhibit_plugin_la_LIBADD = $(WAYLAND_CLIENT_LIBS)
-if HAVE_WAYLAND
-misc_PLUGINS += libwl_idle_inhibit_plugin.la
-BUILT_SOURCES += $(nodist_libwl_idle_inhibit_plugin_la_SOURCES)
-endif
-
-misc/inhibit/idle-inhibit-client-protocol.h: \
-		$(WAYLAND_PROTOCOLS)/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml \
-		misc/Makefile.am
-	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header $< $@
-
-misc/inhibit/idle-inhibit-protocol.c: \
-		$(WAYLAND_PROTOCOLS)/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml \
-		misc/Makefile.am
-	$(AM_V_GEN)$(WAYLAND_SCANNER) private-code $< $@
-
 libaddonsvorepository_plugin_la_SOURCES = \
 	misc/addons/vorepository.c misc/addons/xmlreading.h
 libaddonsfsstorage_plugin_la_SOURCES = \

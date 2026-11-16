@@ -53,15 +53,6 @@ libvlc_la_SOURCES = \
 	../src/revision.c
 EXTRA_DIST =
 
-if HAVE_WIN32
-noinst_DATA = libvlc_win32_rc.rc
-endif
-EXTRA_DIST += libvlc_win32_rc.rc.in
-
-libvlc_win32_rc.rc: libvlc_win32_rc.rc.in $(top_builddir)/config.status
-	$(AM_V_GEN)cd "$(top_builddir)" && \
-	$(SHELL) ./config.status --file="lib/$@"
-
 libvlc_la_LIBADD = ../src/libvlccore.la ../compat/libcompat.la $(LIBM)
 libvlc_la_LDFLAGS = \
 	$(LDFLAGS_libvlc) \
@@ -70,13 +61,6 @@ libvlc_la_LDFLAGS = \
 	-export-symbols $(srcdir)/libvlc.sym
 EXTRA_libvlc_la_DEPENDENCIES = libvlc.sym
 libvlc_la_CPPFLAGS = $(AM_CPPFLAGS)
-if HAVE_WIN32
-EXTRA_libvlc_la_DEPENDENCIES += libvlc_win32_rc.$(OBJEXT)
-libvlc_la_LDFLAGS += -Wl,libvlc_win32_rc.$(OBJEXT) -avoid-version -Wc,-static
-if HAVE_DYNAMIC_PLUGINS
-libvlc_la_CPPFLAGS += -DLIBVLC_DLL_EXPORT
-endif
-endif
 if HAVE_OS2
 libvlc_la_LDFLAGS += -avoid-version
 endif
@@ -101,9 +85,6 @@ pkgconfig_DATA = libvlc.pc
 libvlc.pc: libvlc.pc.in $(top_builddir)/config.status
 	$(AM_V_GEN)cd "$(top_builddir)" && \
 	$(SHELL) ./config.status --file="lib/$@"
-
-libvlc_win32_rc.$(OBJEXT): libvlc_win32_rc.rc $(top_srcdir)/extras/package/win32/libvlc.dll.manifest
-	$(WINDRES) --include-dir $(top_srcdir)/share --include-dir $(top_srcdir)/extras/package/win32 -i $< -o $@
 
 checkheader_verbose = $(checkheader_verbose_$(V))
 checkheader_verbose_ = $(checkheader_verbose_$(AM_DEFAULT_VERBOSITY))

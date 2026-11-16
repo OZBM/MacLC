@@ -273,7 +273,6 @@ check pkg-config
 check cmake $MIN_CMAKE
 check_tar
 check_sed
-check ant
 check xz
 check bison $MIN_BISON
 check flex

@@ -11,12 +11,9 @@ DIST_SUBDIRS = m4 $(SUBDIRS)
 
 EXTRA_DIST = \
 	buildsystem/cargo-test.py \
-	buildsystem/check_qml_module.py \
 	extras/include/x86/x86inc.asm \
 	extras/include/x86/x86util.asm \
-	extras/package/macosx/package.mak \
-	extras/package/win32/package.mak \
-	extras/package/npapi.am
+	extras/package/macosx/package.mak
 
 dist_noinst_SCRIPTS = bootstrap
 nodist_noinst_SCRIPTS = compile
@@ -34,11 +31,10 @@ AM_DISTCHECK_CONFIGURE_FLAGS = \
 	--disable-postproc --disable-swscale \
 	--disable-dbus \
 	--disable-mad \
-	--disable-faad --disable-skins2 \
+	--disable-faad \
 	--disable-live555 \
 	--disable-lua \
-	--disable-fribidi \
-	--with-kde-solid='$${datadir}/kde4/apps'
+	--disable-fribidi
 
 AUTOMAKE_OPTIONS = \
 	1.11 \
@@ -78,9 +74,7 @@ EXTRA_DIST += \
 	extras/analyser/emacs.init \
 	extras/analyser/vlc.vim \
 	extras/analyser/valgrind.suppressions \
-	extras/buildsystem/make.pl \
-	extras/misc/mpris.py \
-	extras/misc/mpris.xml
+	extras/buildsystem/make.pl
 
 ###############################################################################
 # Scripts for building dependencies.
@@ -121,7 +115,7 @@ doc:
 # Building aliases
 ###############################################################################
 
-ALL_ALIASES = cvlc rvlc svlc qvlc nvlc
+ALL_ALIASES = cvlc rvlc nvlc
 if BUILD_VLC
 bin_SCRIPTS = $(ALIASES)
 endif
@@ -137,12 +131,6 @@ cvlc: make-alias Makefile
 
 rvlc: make-alias Makefile
 	$(AM_V_GEN)$(MKALIAS) rc
-
-svlc: make-alias Makefile
-	$(AM_V_GEN)$(MKALIAS) skins2
-
-qvlc: make-alias Makefile
-	$(AM_V_GEN)$(MKALIAS) qt
 
 nvlc: make-alias Makefile
 	$(AM_V_GEN)$(MKALIAS) ncurses
@@ -215,8 +203,6 @@ update-po:
 # OS Packaging rules
 ###############################################################################
 include extras/package/macosx/package.mak
-include extras/package/win32/package.mak
-include extras/package/win32/msi.mak
 
 dist-hook:
 	chmod u+w "$(distdir)/configure" "$(distdir)/configure.ac"

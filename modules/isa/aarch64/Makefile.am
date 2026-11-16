@@ -22,3 +22,6 @@ if HAVE_SVE
 aarch64_PLUGINS += \
 	libdeinterlace_sve_plugin.la
 endif
+
+# Assembler macros shared by the .S files above.
+noinst_HEADERS += isa/aarch64/asm.S

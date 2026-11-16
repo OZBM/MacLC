@@ -126,7 +126,6 @@ pluginsinclude_HEADERS.h = \
 	../include/vlc_vout_display.h \
 	../include/vlc_vout_osd.h \
 	../include/vlc_window.h \
-	../include/vlc_xlib.h \
 	../include/vlc_xml.h \
 	$(NULL)
 
@@ -176,19 +175,6 @@ pkgconfig_DATA = vlc-plugin.pc
 CLEANFILES += $(pkgconfig_DATA)
 
 vlc-plugin.pc: vlc-plugin.pc.in $(top_builddir)/config.status
-	$(AM_V_GEN)cd "$(top_builddir)" && \
-	$(SHELL) ./config.status --file="src/$@"
-
-##############################################################################
-# Windows resource files
-##############################################################################
-
-if HAVE_WIN32
-noinst_DATA = libvlccore_win32_rc.rc
-endif
-EXTRA_DIST += libvlccore_win32_rc.rc.in
-
-libvlccore_win32_rc.rc: libvlccore_win32_rc.rc.in $(top_builddir)/config.status
 	$(AM_V_GEN)cd "$(top_builddir)" && \
 	$(SHELL) ./config.status --file="src/$@"
 
@@ -448,45 +434,6 @@ libvlccore_la_LIBADD = $(LIBS_libvlccore) \
 
 libvlccore_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS_libvlccore)
 
-if HAVE_WIN32
-libvlccore_la_SOURCES += \
-	win32/dirs-common.c \
-	win32/error.c \
-	win32/filesystem.c \
-	win32/netconf.c \
-	win32/plugin.c \
-	win32/rand.c \
-	win32/specific.c \
-	win32/thread.c \
-	win32/process.c
-if HAVE_WINSTORE
-libvlccore_la_SOURCES += posix/timer.c win32/dirs-uap.c
-else
-libvlccore_la_SOURCES += win32/timer.c win32/dirs.c win32/spawn.c
-libvlccore_la_LIBADD += -lwinmm -lole32 -luuid
-endif
-libvlccore_la_LIBADD += -lbcrypt
-endif
-
-if HAVE_OS2
-libvlccore_la_SOURCES += \
-	os2/dirs.c \
-	darwin/error.c \
-	os2/filesystem.c \
-	os2/getaddrinfo.c \
-	os2/netconf.c \
-	os2/plugin.c \
-	os2/specific.c \
-	os2/rand.c \
-	os2/thread.c
-endif
-
-if HAVE_EMSCRIPTEN
-libvlccore_la_SOURCES += \
-	emscripten/netconf.c \
-	emscripten/thread.c
-endif
-
 if HAVE_DARWIN
 libvlccore_la_SOURCES += \
 	darwin/error.c \
@@ -496,39 +443,6 @@ libvlccore_objc_la_SOURCES = \
 	darwin/dirs.m \
 	darwin/netconf.m
 noinst_LTLIBRARIES = libvlccore_objc.la
-endif
-
-if HAVE_FREEBSD
-libvlccore_la_SOURCES += \
-	freebsd/cpu.c \
-	freebsd/thread.c
-endif
-
-if HAVE_NETBSD
-libvlccore_la_SOURCES += \
-        netbsd/thread.c
-endif
-
-if HAVE_OPENBSD
-libvlccore_la_SOURCES += \
-        openbsd/cpu.c \
-        openbsd/thread.c
-endif
-
-if HAVE_LINUX
-libvlccore_la_SOURCES += \
-	linux/cpu.c \
-	linux/dirs.c \
-	linux/thread.c
-if !HAVE_ANDROID
-libvlccore_la_SOURCES += \
-	linux/filesystem.c
-else
-libvlccore_la_SOURCES += \
-	android/error.c \
-	android/specific.c \
-	android/thread.c
-endif
 endif
 
 if !HAVE_WIN32
@@ -565,14 +479,8 @@ libvlccore_la_SOURCES += \
 	posix/picture.c \
 	posix/spawn.c \
 	posix/specific.c
-if HAVE_LIBANL
-libvlccore_la_SOURCES += \
-	linux/getaddrinfo.c
-libvlccore_la_LIBADD += -lanl
-else
 libvlccore_la_SOURCES += \
 	posix/getaddrinfo.c
-endif
 endif
 endif
 endif
@@ -602,10 +510,6 @@ libvlccore_la_LDFLAGS = \
 libvlccore_la_SOURCES += libvlccore.sym
 EXTRA_libvlccore_la_DEPENDENCIES = libvlccore.sym
 
-if HAVE_WIN32
-EXTRA_libvlccore_la_DEPENDENCIES += libvlccore_win32_rc.$(OBJEXT)
-libvlccore_la_LDFLAGS += -Wl,libvlccore_win32_rc.$(OBJEXT) -avoid-version -Wc,-static
-endif
 if HAVE_OS2
 libvlccore_la_LDFLAGS += -avoid-version
 endif
@@ -630,9 +534,6 @@ endif
 if HAVE_ANDROID
 libvlccore_la_LDFLAGS += -avoid-version
 endif
-
-libvlccore_win32_rc.$(OBJEXT): libvlccore_win32_rc.rc $(top_srcdir)/extras/package/win32/libvlccore.dll.manifest
-	$(WINDRES) --include-dir $(top_srcdir)/share --include-dir $(top_srcdir)/extras/package/win32 -i $< -o $@
 
 # FourCC tables
 BUILT_SOURCES += fourcc_tables.h
@@ -816,13 +717,9 @@ $(checkheaders.hpp): CHECKCOMPILE=$(LTCXXCOMPILE)
 
 # Some exceptions for headers depending on other libraries
 checkheader_vlc_gcrypt.h.check: CHECK_CFLAGS = "-Dgcry_check_version(x)="
-checkheader_vlc_xlib.h.check: CHECK_CFLAGS = $(X_CFLAGS)
 checkheader_vlc_list.hpp.check: CHECK_CFLAGS = "-Drestrict="
 
 SKIPPED_CHECKHEADERS =
-if !HAVE_X
-SKIPPED_CHECKHEADERS += vlc_xlib.h
-endif
 
 $(SKIPPED_CHECKHEADERS:%=checkheader_%.check): checkheader_verbose_0 = $(skip_checkheader_verbose_0)
 $(SKIPPED_CHECKHEADERS:%=checkheader_%.check): CHECKCOMPILE = exit 0;

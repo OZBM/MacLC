@@ -16,27 +16,8 @@ if HAVE_SYSLOG
 logger_PLUGINS += libsyslog_plugin.la
 endif
 
-libsd_journal_plugin_la_SOURCES = logger/journal.c
-libsd_journal_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) $(SYSTEMD_CFLAGS)
-libsd_journal_plugin_la_LIBADD = $(SYSTEMD_LIBS)
-if HAVE_SYSTEMD
-logger_PLUGINS += libsd_journal_plugin.la
-endif
-
-libandroid_logger_plugin_la_SOURCES = logger/android.c
-libandroid_logger_plugin_la_LIBADD = -llog
-if HAVE_ANDROID
-logger_PLUGINS += libandroid_logger_plugin.la
-endif
-
 libjson_tracer_plugin_la_SOURCES = logger/json.c
 logger_PLUGINS += libjson_tracer_plugin.la
-
-libemscripten_logger_plugin_la_SOURCES = logger/emscripten.c
-
-if HAVE_EMSCRIPTEN
-logger_PLUGINS += libemscripten_logger_plugin.la
-endif
 
 AM_V_LTCARGO = $(AM_V_LTCARGO_$(V))
 AM_V_LTCARGO_ = $(AM_V_LTCARGO_$(AM_DEFAULT_VERBOSITY))

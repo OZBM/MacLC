@@ -27,26 +27,7 @@ libfreetype_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) $(FREETYPE_CFLAGS)
 libfreetype_plugin_la_LIBADD = $(AM_LIBADD) $(LIBM)
 libfreetype_plugin_la_LDFLAGS = $(FREETYPE_LDFLAGS) $(text_RPATH)
 
-if HAVE_WIN32
-libfreetype_plugin_la_SOURCES += text_renderer/freetype/fonts/dwrite.cpp
-libfreetype_plugin_la_CXXFLAGS = $(AM_CXXFLAGS) $(LIBCOMCXXFLAGS)
-libfreetype_plugin_la_LINK = $(CXXLINK)
-libfreetype_plugin_la_LIBADD += -ldwrite -luuid
-if HAVE_WIN32_DESKTOP
-libfreetype_plugin_la_SOURCES += text_renderer/freetype/fonts/win32.c
-libfreetype_plugin_la_LIBADD += -liconv -lz -lusp10 -lgdi32 -lole32
-endif
-else
 libfreetype_plugin_la_LINK = $(LINK)
-endif
-if HAVE_FONTCONFIG
-libfreetype_plugin_la_SOURCES += text_renderer/freetype/fonts/fontconfig.c
-libfreetype_plugin_la_CPPFLAGS += -DHAVE_FONTCONFIG
-libfreetype_plugin_la_LIBADD += $(FONTCONFIG_LIBS)
-endif
-if HAVE_ANDROID
-libfreetype_plugin_la_SOURCES += text_renderer/freetype/fonts/android.c
-endif
 if HAVE_DARWIN
 libfreetype_plugin_la_SOURCES += text_renderer/freetype/fonts/darwin.c
 libfreetype_plugin_la_LDFLAGS += -Wl,-framework,CoreFoundation -Wl,-framework,CoreText
@@ -78,12 +59,4 @@ libnsspeechsynthesizer_plugin_la_SOURCES = text_renderer/nsspeechsynthesizer.m
 libnsspeechsynthesizer_plugin_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-framework,Cocoa
 if HAVE_OSX
 text_PLUGINS += libnsspeechsynthesizer_plugin.la
-endif
-
-# SAPI TTS (win32)
-libsapi_plugin_la_SOURCES = text_renderer/sapi.cpp
-libsapi_plugin_la_LIBADD = $(LIBCOM)
-libsapi_plugin_la_CXXFLAGS = $(AM_CXXFLAGS) $(LIBCOMCXXFLAGS)
-if HAVE_SAPI
-text_PLUGINS += libsapi_plugin.la
 endif

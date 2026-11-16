@@ -16,7 +16,6 @@ TEST_EXTENSIONS = .xctest
 # XCTest bundles in $(srcdir). Point the bundle name back to $(abs_builddir).
 XCTEST_LOG_COMPILER = $(SHELL) -c 'exec "$(XCTEST)" "$(abs_builddir)/$$(basename "$$1")"' xctest
 
-dist_noinst_SCRIPTS = module.rc.in
 EXTRA_LTLIBRARIES =
 
 if HAVE_RUST
@@ -74,16 +73,7 @@ include codec/Makefile.am
 include control/Makefile.am
 include demux/Makefile.am
 include gui/Makefile.am
-include hw/nvdec/Makefile.am
-include hw/d3d9/Makefile.am
-include hw/d3d11/Makefile.am
-include hw/vaapi/Makefile.am
-include hw/vdpau/Makefile.am
-include hw/mmal/Makefile.am
 include isa/aarch64/Makefile.am
-include isa/arm/Makefile.am
-include isa/ppc/Makefile.am
-include isa/riscv/Makefile.am
 include isa/x86/Makefile.am
 include keystore/Makefile.am
 include logger/Makefile.am
@@ -106,21 +96,6 @@ if ENABLE_SOUT
 include access_output/Makefile.am
 include mux/Makefile.am
 include stream_out/Makefile.am
-endif
-
-if HAVE_WIN32
-BUILT_SOURCES += module.rc.lo
-CLEANFILES += module.rc
-#noinst_DATA = module.rc.lo
-
-module.rc: module.rc.in $(top_builddir)/config.status
-	$(AM_V_GEN) cd "$(top_builddir)" && $(SHELL) ./config.status --file="modules/$@"
-
-module.rc.lo: module.rc
-	$(AM_V_GEN) $(LIBTOOL) --tag=RC --mode=compile $(WINDRES) \
-		--include-dir $(top_srcdir)/share \
-		--include-dir $(top_srcdir)/extras/package/win32 \
-		-i $< -o $@
 endif
 
 # Wayland
