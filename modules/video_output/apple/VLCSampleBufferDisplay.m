@@ -191,19 +191,13 @@ typedef NS_ENUM(NSUInteger, VLCSampleBufferPixelFlip) {
     if (status != noErr) {
         return NULL;
     }
-    CFDictionaryRef attachments;
-    if (@available(iOS 15.0, tvOS 15.0, macOS 12.0, *)) {
-        attachments = CVBufferCopyAttachments(pixelBuffer, kCVAttachmentMode_ShouldPropagate);
-    } else {
-        attachments = CVBufferGetAttachments(pixelBuffer, kCVAttachmentMode_ShouldPropagate);
-    }
+    CFDictionaryRef attachments =
+        CVBufferCopyAttachments(pixelBuffer, kCVAttachmentMode_ShouldPropagate);
     /* NULL when the source carries no propagatable attachment (an untagged
      * software picture), and CFRelease(NULL) aborts. */
     if (attachments != NULL) {
         CVBufferSetAttachments(rotated, attachments, kCVAttachmentMode_ShouldPropagate);
-        if (@available(iOS 15.0, tvOS 15.0, macOS 12.0, *)) {
-            CFRelease(attachments);
-        }
+        CFRelease(attachments);
     }
     return rotated;
 }
@@ -225,7 +219,6 @@ typedef NS_ENUM(NSUInteger, VLCSampleBufferPixelFlip) {
 #pragma mark - VLCPixelBufferRotationContextVT
 
 #if IS_VT_ROTATION_API_AVAILABLE
-API_AVAILABLE(ios(16.0), tvos(16.0), macosx(13.0))
 @interface VLCPixelBufferRotationContextVT : NSObject <VLCPixelBufferRotationContext>
 
 @end
@@ -242,13 +235,9 @@ API_AVAILABLE(ios(16.0), tvos(16.0), macosx(13.0))
 {
     self = [super init];
     if (self) {
-        if (@available(iOS 16.0, tvOS 16.0, macOS 13.0, *)) {
-            OSStatus status = VTPixelRotationSessionCreate(NULL, &_rotationSession);
-            if (status != noErr)
-                return nil;
-        } else {
+        OSStatus status = VTPixelRotationSessionCreate(NULL, &_rotationSession);
+        if (status != noErr)
             return nil;
-        }
     }
     return self;
 }
@@ -610,16 +599,11 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     @property (nonatomic) int64_t publishedCaps;
     @property (nonatomic) const char *publishedActive;
     @property (nonatomic) CGFloat currentHeadroom;
-    @property (nonatomic) bool warnedToneMapFallback;
     @property (nonatomic) const char *effectivePdrStr;
     @property (nonatomic) const char *effectiveTmmStr;
     @property (nonatomic) const char *effectiveEdrStr;
     @property (nonatomic) float effectiveHeadroomVal;
     @property (nonatomic) BOOL hasLoggedEffectiveConfig;
-    @property (nonatomic) BOOL warnedWantsEDRUnavailable;
-    @property (nonatomic) BOOL warnedPdrUnavailable;
-    @property (nonatomic) BOOL warnedTmmUnavailable;
-    @property (nonatomic) BOOL warnedScreenHeadroomUnavailable;
     @property (nonatomic) BOOL isPreparingDisplay;
     @property (nonatomic) BOOL invalidated;
     @property (nonatomic) NSCondition *readyCondition;
@@ -659,16 +643,8 @@ static void DeletePipController( pip_controller_t * pipcontroller );
 #if TARGET_OS_OSX
     self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     self.wantsLayer = YES;
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
-    if (@available(macOS 10.15, *)) {
-        self.layer.wantsExtendedDynamicRangeContent = NO;
-    }
-#endif
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
-    if (@available(macOS 14.0, *)) {
-        self.layer.contentsHeadroom = 1.0;
-    }
-#endif
+    self.layer.preferredDynamicRange = CADynamicRangeStandard;
+    self.layer.contentsHeadroom = 1.0;
 #else
     self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.backgroundColor = [UIColor clearColor];
@@ -745,31 +721,18 @@ static void DeletePipController( pip_controller_t * pipcontroller );
     layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
     layer.opaque = 1.0;
     layer.hidden = NO;
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
-    if (@available(macOS 10.15, *)) {
-        layer.wantsExtendedDynamicRangeContent = YES;
+    layer.preferredDynamicRange = CADynamicRangeHigh;
+    NSScreen *screen = self.window.screen ?: [NSScreen mainScreen];
+    CGFloat headroom = 1.0;
+    if (screen && screen.maximumExtendedDynamicRangeColorComponentValue > 1.0) {
+        headroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+    } else if (screen && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0) {
+        headroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
     }
-#endif
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
-    if (@available(macOS 14.0, *)) {
-        layer.preferredDynamicRange = CADynamicRangeHigh;
-        NSScreen *screen = self.window.screen ?: [NSScreen mainScreen];
-        CGFloat headroom = 1.0;
-        if (screen && screen.maximumExtendedDynamicRangeColorComponentValue > 1.0) {
-            headroom = screen.maximumExtendedDynamicRangeColorComponentValue;
-        } else if (screen && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0) {
-            headroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
-        }
-        if (headroom > 1.0) {
-            layer.contentsHeadroom = headroom;
-        }
+    if (headroom > 1.0) {
+        layer.contentsHeadroom = headroom;
     }
-#endif
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
-    if (@available(macOS 15.0, *)) {
-        layer.toneMapMode = CAToneMapModeIfSupported;
-    }
-#endif
+    layer.toneMapMode = CAToneMapModeIfSupported;
     [CATransaction unlock];
     return layer;
 }
@@ -826,8 +789,7 @@ shouldInheritContentsScale:(CGFloat)newScale
     if (_rotationContext)
         return _rotationContext;
 #if IS_VT_ROTATION_API_AVAILABLE
-    if (@available(iOS 16.0, tvOS 16.0, macOS 13.0, *))
-        _rotationContext = [VLCPixelBufferRotationContextVT new];
+    _rotationContext = [VLCPixelBufferRotationContextVT new];
 #endif
     if (!_rotationContext)
         _rotationContext = [VLCPixelBufferRotationContextCI new];
@@ -856,16 +818,11 @@ shouldInheritContentsScale:(CGFloat)newScale
 
     _vd = vd;
     _currentHeadroom = 1.0;
-    _warnedToneMapFallback = false;
     _effectivePdrStr = "None";
     _effectiveTmmStr = "None";
     _effectiveEdrStr = "None";
     _effectiveHeadroomVal = 1.0f;
     _hasLoggedEffectiveConfig = NO;
-    _warnedWantsEDRUnavailable = NO;
-    _warnedPdrUnavailable = NO;
-    _warnedTmmUnavailable = NO;
-    _warnedScreenHeadroomUnavailable = NO;
     _hdrMode = 0;
     _isPreparingDisplay = NO;
     _invalidated = NO;
@@ -1079,26 +1036,12 @@ shouldInheritContentsScale:(CGFloat)newScale
     NSScreen *screen = nswindow.screen ?: [NSScreen mainScreen];
 
     CGFloat screenHeadroom = 1.0;
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
-    if (@available(macOS 10.15, *)) {
-        if (screen) {
-            screenHeadroom = screen.maximumExtendedDynamicRangeColorComponentValue;
-            if (screenHeadroom <= 1.0 && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0) {
-                screenHeadroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
-            }
-        }
-    } else {
-        if (!_warnedScreenHeadroomUnavailable) {
-            msg_Warn(vd, "NSScreen.maximumExtendedDynamicRangeColorComponentValue unavailable (< macOS 10.15); defaulting screen headroom to 1.0");
-            _warnedScreenHeadroomUnavailable = YES;
+    if (screen) {
+        screenHeadroom = screen.maximumExtendedDynamicRangeColorComponentValue;
+        if (screenHeadroom <= 1.0 && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0) {
+            screenHeadroom = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
         }
     }
-#else
-    if (!_warnedScreenHeadroomUnavailable) {
-        msg_Warn(vd, "SDK max allowed < macOS 10.15; defaulting screen headroom to 1.0");
-        _warnedScreenHeadroomUnavailable = YES;
-    }
-#endif
 
     CGFloat effectiveHeadroom;
     if (_userHeadroom > 0.0f) {
@@ -1121,68 +1064,19 @@ shouldInheritContentsScale:(CGFloat)newScale
 
     if (hdr_mode == 2 || hdr_mode == 3) {
         /* Mode 2 (Tone-map to SDR) or Mode 3 (Disable HDR): configure layer for SDR presentation */
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
-        if (@available(macOS 10.15, *)) {
-            self.window.layer.wantsExtendedDynamicRangeContent = NO;
-            self.displayView.layer.wantsExtendedDynamicRangeContent = NO;
-            if (nswindow) {
-                nswindow.contentView.layer.wantsExtendedDynamicRangeContent = NO;
-            }
-            applied_edr = "off";
-        } else {
-            if (!_warnedWantsEDRUnavailable) {
-                msg_Warn(vd, "CALayer.wantsExtendedDynamicRangeContent unavailable (< macOS 10.15); standard layer SDR rendering used");
-                _warnedWantsEDRUnavailable = YES;
-            }
-            applied_edr = "unsupported (< macOS 10.15)";
+        self.window.layer.preferredDynamicRange = CADynamicRangeStandard;
+        self.displayView.layer.preferredDynamicRange = CADynamicRangeStandard;
+        if (nswindow) {
+            nswindow.contentView.layer.preferredDynamicRange = CADynamicRangeStandard;
         }
-#else
-        if (!_warnedWantsEDRUnavailable) {
-            msg_Warn(vd, "SDK max allowed < macOS 10.15; standard layer SDR rendering used");
-            _warnedWantsEDRUnavailable = YES;
-        }
-        applied_edr = "unsupported (< macOS 10.15)";
-#endif
+        applied_edr = "off";
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
-        if (@available(macOS 14.0, *)) {
-            self.displayView.layer.preferredDynamicRange = CADynamicRangeStandard;
-            self.displayView.layer.contentsHeadroom = 1.0;
-            applied_pdr = "Standard";
-            applied_headroom = 1.0f;
-        } else {
-            if (!_warnedPdrUnavailable) {
-                msg_Warn(vd, "CALayer.preferredDynamicRange/contentsHeadroom unavailable (< macOS 14); falling back to buffer retagging in render path");
-                _warnedPdrUnavailable = YES;
-            }
-            applied_pdr = "unsupported (< macOS 14)";
-        }
-#else
-        if (!_warnedPdrUnavailable) {
-            msg_Warn(vd, "SDK max allowed < macOS 14; falling back to buffer retagging in render path");
-            _warnedPdrUnavailable = YES;
-        }
-        applied_pdr = "unsupported (< macOS 14)";
-#endif
+        self.displayView.layer.contentsHeadroom = 1.0;
+        applied_pdr = "Standard";
+        applied_headroom = 1.0f;
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
-        if (@available(macOS 15.0, *)) {
-            self.displayView.layer.toneMapMode = CAToneMapModeAutomatic;
-            applied_tmm = "Automatic";
-        } else {
-            if (!_warnedTmmUnavailable) {
-                msg_Warn(vd, "CALayer.toneMapMode unavailable (< macOS 15); relying on CADynamicRangeStandard for compositor tone-mapping");
-                _warnedTmmUnavailable = YES;
-            }
-            applied_tmm = "unsupported (< macOS 15)";
-        }
-#else
-        if (!_warnedTmmUnavailable) {
-            msg_Warn(vd, "SDK max allowed < macOS 15; relying on CADynamicRangeStandard for compositor tone-mapping");
-            _warnedTmmUnavailable = YES;
-        }
-        applied_tmm = "unsupported (< macOS 15)";
-#endif
+        self.displayView.layer.toneMapMode = CAToneMapModeAutomatic;
+        applied_tmm = "Automatic";
 
         if (hdr_mode == 2) {
             msg_Dbg(vd, "HDR mode 2 (tone-map to SDR): preferredDynamicRange=%s, toneMapMode=%s, contentsHeadroom=%.2f, EDR %s",
@@ -1193,76 +1087,27 @@ shouldInheritContentsScale:(CGFloat)newScale
         }
     } else {
         /* Mode 0 (Auto) or Mode 1 (Force HDR): enable EDR display pipeline */
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
-        if (@available(macOS 10.15, *)) {
-            self.window.wantsLayer = YES;
-            self.window.layer.wantsExtendedDynamicRangeContent = YES;
-            self.displayView.wantsLayer = YES;
-            self.displayView.layer.wantsExtendedDynamicRangeContent = YES;
-            if (nswindow) {
-                nswindow.colorSpace = [NSColorSpace extendedSRGBColorSpace];
-                nswindow.contentView.wantsLayer = YES;
-                nswindow.contentView.layer.wantsExtendedDynamicRangeContent = YES;
-            }
-            applied_edr = "on";
-        } else {
-            if (!_warnedWantsEDRUnavailable) {
-                msg_Warn(vd, "CALayer.wantsExtendedDynamicRangeContent/extendedSRGBColorSpace unavailable (< macOS 10.15); display remains standard dynamic range");
-                _warnedWantsEDRUnavailable = YES;
-            }
-            applied_edr = "unsupported (< macOS 10.15)";
+        self.window.wantsLayer = YES;
+        self.window.layer.preferredDynamicRange = CADynamicRangeHigh;
+        self.displayView.wantsLayer = YES;
+        self.displayView.layer.preferredDynamicRange = CADynamicRangeHigh;
+        if (nswindow) {
+            nswindow.colorSpace = [NSColorSpace extendedSRGBColorSpace];
+            nswindow.contentView.wantsLayer = YES;
+            nswindow.contentView.layer.preferredDynamicRange = CADynamicRangeHigh;
         }
-#else
-        if (!_warnedWantsEDRUnavailable) {
-            msg_Warn(vd, "SDK max allowed < macOS 10.15; display remains standard dynamic range");
-            _warnedWantsEDRUnavailable = YES;
-        }
-        applied_edr = "unsupported (< macOS 10.15)";
-#endif
+        applied_edr = "on";
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
-        if (@available(macOS 14.0, *)) {
-            self.displayView.layer.preferredDynamicRange = CADynamicRangeHigh;
-            if (effectiveHeadroom > 1.0) {
-                self.displayView.layer.contentsHeadroom = effectiveHeadroom;
-            } else {
-                self.displayView.layer.contentsHeadroom = 1.0;
-            }
-            applied_pdr = "High";
-            applied_headroom = (float)self.displayView.layer.contentsHeadroom;
+        if (effectiveHeadroom > 1.0) {
+            self.displayView.layer.contentsHeadroom = effectiveHeadroom;
         } else {
-            if (!_warnedPdrUnavailable) {
-                msg_Warn(vd, "CALayer.preferredDynamicRange/contentsHeadroom unavailable (< macOS 14); relying on wantsExtendedDynamicRangeContent");
-                _warnedPdrUnavailable = YES;
-            }
-            applied_pdr = "unsupported (< macOS 14)";
+            self.displayView.layer.contentsHeadroom = 1.0;
         }
-#else
-        if (!_warnedPdrUnavailable) {
-            msg_Warn(vd, "SDK max allowed < macOS 14; relying on wantsExtendedDynamicRangeContent");
-            _warnedPdrUnavailable = YES;
-        }
-        applied_pdr = "unsupported (< macOS 14)";
-#endif
+        applied_pdr = "High";
+        applied_headroom = (float)self.displayView.layer.contentsHeadroom;
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
-        if (@available(macOS 15.0, *)) {
-            self.displayView.layer.toneMapMode = CAToneMapModeIfSupported;
-            applied_tmm = "IfSupported";
-        } else {
-            if (!_warnedTmmUnavailable) {
-                msg_Warn(vd, "CALayer.toneMapMode unavailable (< macOS 15); relying on CADynamicRangeHigh");
-                _warnedTmmUnavailable = YES;
-            }
-            applied_tmm = "unsupported (< macOS 15)";
-        }
-#else
-        if (!_warnedTmmUnavailable) {
-            msg_Warn(vd, "SDK max allowed < macOS 15; relying on CADynamicRangeHigh");
-            _warnedTmmUnavailable = YES;
-        }
-        applied_tmm = "unsupported (< macOS 15)";
-#endif
+        self.displayView.layer.toneMapMode = CAToneMapModeIfSupported;
+        applied_tmm = "IfSupported";
 
         if (hdr_mode == 1) {
             msg_Dbg(vd, "HDR mode 1 (force EDR/HDR): preferredDynamicRange=%s, toneMapMode=%s, contentsHeadroom=%.2f, EDR %s",
@@ -1283,16 +1128,8 @@ shouldInheritContentsScale:(CGFloat)newScale
      * where HDR video puts MACLC_HDR_REFERENCE_WHITE, below its diffuse
      * white, so they need no dimming. */
     if (self.spuView) {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
-        if (@available(macOS 10.15, *)) {
-            self.spuView.layer.wantsExtendedDynamicRangeContent = NO;
-        }
-#endif
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
-        if (@available(macOS 14.0, *)) {
-            self.spuView.layer.contentsHeadroom = 1.0;
-        }
-#endif
+        self.spuView.layer.preferredDynamicRange = CADynamicRangeStandard;
+        self.spuView.layer.contentsHeadroom = 1.0;
         self.spuView.layer.opacity = 1.0f;
     }
 
@@ -1310,12 +1147,10 @@ shouldInheritContentsScale:(CGFloat)newScale
                              object:nil];
 #endif
 
-    if (@available(iOS 14.0, tvOS 14.0, macOS 11.0, *)) {
-        [notificationCenter addObserver:self
-                               selector:@selector(displayLayerRequiresFlushDidChange:)
-                                   name:AVSampleBufferDisplayLayerRequiresFlushToResumeDecodingDidChangeNotification
-                                 object:self.displayLayer];
-    }
+    [notificationCenter addObserver:self
+                           selector:@selector(displayLayerRequiresFlushDidChange:)
+                               name:AVSampleBufferVideoRendererRequiresFlushToResumeDecodingDidChangeNotification
+                             object:self.displayLayer.sampleBufferRenderer];
 }
 
 - (void)applicationDidBecomeActive:(NSNotification *)notification {
@@ -1329,19 +1164,18 @@ shouldInheritContentsScale:(CGFloat)newScale
 - (void)flushToResumeDecoding {
     AVSampleBufferDisplayLayer * const displayLayer = self.displayLayer;
     @synchronized(displayLayer) {
-        if (displayLayer.status != AVQueuedSampleBufferRenderingStatusFailed)
+        AVSampleBufferVideoRenderer * const renderer = displayLayer.sampleBufferRenderer;
+        if (renderer.status != AVQueuedSampleBufferRenderingStatusFailed)
             return;
 
         /* only a failure caused by revoked decoder resources is recoverable */
-        if (@available(iOS 14.0, tvOS 14.0, macOS 11.0, *)) {
-            if (!displayLayer.requiresFlushToResumeDecoding) {
-                msg_Err(_vd, "display layer failed permanently: %s",
-                        displayLayer.error.localizedDescription.UTF8String);
-                return;
-            }
+        if (!renderer.requiresFlushToResumeDecoding) {
+            msg_Err(_vd, "display layer failed permanently: %s",
+                    renderer.error.localizedDescription.UTF8String);
+            return;
         }
 
-        [displayLayer flush];
+        [renderer flush];
     }
 }
 
@@ -1474,15 +1308,9 @@ static BOOL IsRunningOnBattery(void)
             _cachedGpuClass = maclc_sdr2hdr_gpu_class_from_name(dev.name.UTF8String);
         }
 
-        BOOL lowPower = NO;
-        if (@available(macOS 12.0, *)) {
-            lowPower = [NSProcessInfo processInfo].isLowPowerModeEnabled;
-        }
+        BOOL lowPower = [NSProcessInfo processInfo].isLowPowerModeEnabled;
 
-        int thermal = 0;
-        if (@available(macOS 10.10, *)) {
-            thermal = (int)[NSProcessInfo processInfo].thermalState;
-        }
+        int thermal = (int)[NSProcessInfo processInfo].thermalState;
 
         double fps = 30.0;
         if (self.vd->source->i_frame_rate > 0 && self.vd->source->i_frame_rate_base > 0) {
@@ -1871,7 +1699,7 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
     }
 
     @synchronized(displayLayer) {
-        if (displayLayer.status == AVQueuedSampleBufferRenderingStatusFailed)
+        if (displayLayer.sampleBufferRenderer.status == AVQueuedSampleBufferRenderingStatusFailed)
             return;
     }
 
@@ -2191,24 +2019,10 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
         render_fmt.space = COLOR_SPACE_BT2020;
         break;
     case 2: /* Tone-map to SDR */
-#if TARGET_OS_OSX && (__MAC_OS_X_VERSION_MAX_ALLOWED >= 140000)
-        if (@available(macOS 14.0, *)) {
-            /* On macOS 14+, the compositor handles tone-mapping to SDR via
-             * CADynamicRangeStandard and CAToneMapModeAutomatic on the layer.
-             * Keep the true PQ/HLG/BT.2020 tagging on the CVPixelBuffer so the
-             * compositor has the true dynamic range metadata to compress. */
-            break;
-        }
-#endif
-        /* On older macOS where layer dynamic range controls are not available,
-         * fall back to retagging as BT.709 so the user gets an SDR presentation. */
-        if (!sys.warnedToneMapFallback) {
-            msg_Warn(vd, "Hardware tone mapping (CADynamicRangeStandard) unavailable on this OS version (< macOS 14); falling back to BT.709 buffer retagging");
-            sys.warnedToneMapFallback = true;
-        }
-        render_fmt.transfer = TRANSFER_FUNC_BT709;
-        render_fmt.primaries = COLOR_PRIMARIES_BT709;
-        render_fmt.space = COLOR_SPACE_BT709;
+        /* The compositor handles tone-mapping to SDR via
+         * CADynamicRangeStandard and CAToneMapModeAutomatic on the layer.
+         * Keep the true PQ/HLG/BT.2020 tagging on the CVPixelBuffer so the
+         * compositor has the true dynamic range metadata to compress. */
         break;
     case 3: /* Disable HDR */
         render_fmt.transfer = TRANSFER_FUNC_BT709;
@@ -2301,7 +2115,7 @@ static void RenderPicture(vout_display_t *vd, picture_t *pic, vlc_tick_t date) {
     }
 
     @synchronized(displayLayer) {
-        [displayLayer enqueueSampleBuffer:sampleBuffer];
+        [displayLayer.sampleBufferRenderer enqueueSampleBuffer:sampleBuffer];
     }
 
     CFRelease(sampleBuffer);

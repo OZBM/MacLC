@@ -1972,28 +1972,23 @@ SetDecoderColorProperties(CFMutableDictionaryRef decoderConfiguration,
         );
     }
 
-#if (TARGET_OS_OSX && defined(__MAC_10_13)) || (TARGET_OS_IPHONE && defined(__IPHONE_11_0))
-    if (__builtin_available(macOS 10.13, iOS 11, tvOS 11, watchOS 4, *))
+    CFDataRef mdcv = cvpx_create_mastering_display_color_volume_data(video_fmt);
+    if (mdcv)
     {
-        CFDataRef mdcv = cvpx_create_mastering_display_color_volume_data(video_fmt);
-        if (mdcv)
-        {
-            CFDictionarySetValue(decoderConfiguration,
-                                 kCVImageBufferMasteringDisplayColorVolumeKey,
-                                 mdcv);
-            CFRelease(mdcv);
-        }
-
-        CFDataRef clli = cvpx_create_content_light_level_data(video_fmt);
-        if (clli)
-        {
-            CFDictionarySetValue(decoderConfiguration,
-                                 kCVImageBufferContentLightLevelInfoKey,
-                                 clli);
-            CFRelease(clli);
-        }
+        CFDictionarySetValue(decoderConfiguration,
+                             kCVImageBufferMasteringDisplayColorVolumeKey,
+                             mdcv);
+        CFRelease(mdcv);
     }
-#endif
+
+    CFDataRef clli = cvpx_create_content_light_level_data(video_fmt);
+    if (clli)
+    {
+        CFDictionarySetValue(decoderConfiguration,
+                             kCVImageBufferContentLightLevelInfoKey,
+                             clli);
+        CFRelease(clli);
+    }
 }
 
 static CFMutableDictionaryRef CreateSessionDescriptionFormat(decoder_t *p_dec,
@@ -2440,19 +2435,13 @@ static int OpenDecoder(vlc_object_t *p_this)
 
 static Boolean deviceSupportsHEVC()
 {
-    if (__builtin_available(macOS 10.13, iOS 11.0, tvOS 11.0, *))
-        return VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC);
-    else
-        return false;
+    return VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC);
 }
 
 #if defined(__aarch64__)
 static Boolean deviceSupportsAV1()
 {
-    if (__builtin_available(macOS 14.0, iOS 17.0, tvOS 17.0, *))
-        return VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1);
-    else
-        return false;
+    return VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1);
 }
 #endif
 
@@ -3014,37 +3003,41 @@ static int UpdateVideoFormat(decoder_t *p_dec, CVPixelBufferRef imageBuffer)
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
     CFDictionaryRef attachmentDict =
-        CVBufferGetAttachments(imageBuffer, kCVAttachmentMode_ShouldPropagate);
+        CVBufferCopyAttachments(imageBuffer, kCVAttachmentMode_ShouldPropagate);
 
-    if (attachmentDict != NULL && CFDictionaryGetCount(attachmentDict) > 0 &&
-        p_dec->fmt_out.video.chroma_location == CHROMA_LOCATION_UNDEF)
+    if (attachmentDict != NULL)
     {
-        CFStringRef chromaLocation =
-            CFDictionaryGetValue(attachmentDict, kCVImageBufferChromaLocationTopFieldKey);
-        if (chromaLocation != NULL) {
-            if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_Left) ||
-                CFEqual(chromaLocation, kCVImageBufferChromaLocation_DV420)) {
-                p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_LEFT;
-            } else if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_Center)) {
-                p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_CENTER;
-            } else if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_TopLeft)) {
-                p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_TOP_LEFT;
-            } else if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_Top)) {
-                p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_TOP_CENTER;
-            }
-        }
-
-        if (p_dec->fmt_out.video.chroma_location == CHROMA_LOCATION_UNDEF) {
-            chromaLocation =
-                CFDictionaryGetValue(attachmentDict, kCVImageBufferChromaLocationBottomFieldKey);
+        if (CFDictionaryGetCount(attachmentDict) > 0 &&
+            p_dec->fmt_out.video.chroma_location == CHROMA_LOCATION_UNDEF)
+        {
+            CFStringRef chromaLocation =
+                CFDictionaryGetValue(attachmentDict, kCVImageBufferChromaLocationTopFieldKey);
             if (chromaLocation != NULL) {
-                if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_BottomLeft)) {
-                    p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_BOTTOM_LEFT;
-                } else if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_Bottom)) {
-                    p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_BOTTOM_CENTER;
+                if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_Left) ||
+                    CFEqual(chromaLocation, kCVImageBufferChromaLocation_DV420)) {
+                    p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_LEFT;
+                } else if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_Center)) {
+                    p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_CENTER;
+                } else if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_TopLeft)) {
+                    p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_TOP_LEFT;
+                } else if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_Top)) {
+                    p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_TOP_CENTER;
+                }
+            }
+
+            if (p_dec->fmt_out.video.chroma_location == CHROMA_LOCATION_UNDEF) {
+                chromaLocation =
+                    CFDictionaryGetValue(attachmentDict, kCVImageBufferChromaLocationBottomFieldKey);
+                if (chromaLocation != NULL) {
+                    if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_BottomLeft)) {
+                        p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_BOTTOM_LEFT;
+                    } else if (CFEqual(chromaLocation, kCVImageBufferChromaLocation_Bottom)) {
+                        p_dec->fmt_out.video.chroma_location = CHROMA_LOCATION_BOTTOM_CENTER;
+                    }
                 }
             }
         }
+        CFRelease(attachmentDict);
     }
 
     OSType cvfmt = CVPixelBufferGetPixelFormatType(imageBuffer);

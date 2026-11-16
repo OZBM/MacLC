@@ -388,17 +388,22 @@ static NSImage *EmptyStateImage(NSString *symbolName, NSString *fallbackName)
 
 - (instancetype)imageTintedWithColor:(NSColor *)color
 {
-    NSImage * const image = [self copy];
-
-    if (color != nil) {
-        [image lockFocus];
-        [color set];
-        const NSRect imageRect = {NSZeroPoint, image.size};
-        NSRectFillUsingOperation(imageRect, NSCompositingOperationSourceIn);
-        [image unlockFocus];
+    if (color == nil) {
+        return [self copy];
     }
 
-    return image;
+    NSImage * const source = [self copy];
+    NSImage * const tinted = [NSImage imageWithSize:self.size
+                                            flipped:NO
+                                     drawingHandler:^BOOL(const NSRect dstRect) {
+        [source drawInRect:dstRect];
+        [color set];
+        NSRectFillUsingOperation(dstRect, NSCompositingOperationSourceIn);
+        return YES;
+    }];
+    tinted.template = self.isTemplate;
+    tinted.accessibilityDescription = self.accessibilityDescription;
+    return tinted;
 }
 
 + (NSArray<NSValue *> *)framesForCompositeImageSquareGridWithImages:(NSArray<NSImage *> * const)images

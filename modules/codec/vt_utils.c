@@ -328,15 +328,13 @@ cvpx_map_YCbCrMatrix_from_vcs(video_color_space_t color_space)
     case COLOR_SPACE_BT601:
         return kCVImageBufferYCbCrMatrix_ITU_R_601_4;
     case COLOR_SPACE_BT2020:
-        if (__builtin_available(macOS 10.11, iOS 9, *))
-            return kCVImageBufferYCbCrMatrix_ITU_R_2020;
-        break;
+        return kCVImageBufferYCbCrMatrix_ITU_R_2020;
     case COLOR_SPACE_BT709:
         return kCVImageBufferYCbCrMatrix_ITU_R_709_2;
     case COLOR_SPACE_UNDEF:
         break;
     default:
-        if (__builtin_available(macOS 10.13, iOS 11, tvOS 11, watchOS 4, *)) {
+        {
             enum iso_23001_8_mc mc_cicp =
                 vlc_coeffs_to_iso_23001_8_mc(color_space);
             return CVYCbCrMatrixGetStringForIntegerCodePoint(mc_cicp);
@@ -360,7 +358,7 @@ cvpx_map_ColorPrimaries_from_vcp(video_color_primaries_t color_primaries)
     case COLOR_PRIMARIES_UNDEF:
         break;
     default:
-        if (__builtin_available(macOS 10.13, iOS 11, tvOS 11, watchOS 4, *)) {
+        {
             enum iso_23001_8_cp cp_cicp =
                 vlc_primaries_to_iso_23001_8_cp(color_primaries);
             return CVColorPrimariesGetStringForIntegerCodePoint(cp_cicp);
@@ -374,9 +372,7 @@ cvpx_map_TransferFunction_from_vtf(video_transfer_func_t transfer_func)
 {
     switch (transfer_func) {
     case TRANSFER_FUNC_SMPTE_ST2084:
-        if (__builtin_available(macOS 10.13, iOS 11, *))
-            return kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ;
-        break;
+        return kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ;
     case TRANSFER_FUNC_BT709:
     /* note: as stated by CVImageBuffer.h,
        kCVImageBufferTransferFunction_ITU_R_709_2 is equivalent to
@@ -386,24 +382,15 @@ cvpx_map_TransferFunction_from_vtf(video_transfer_func_t transfer_func)
     case TRANSFER_FUNC_SMPTE_240:
         return kCVImageBufferTransferFunction_SMPTE_240M_1995;
     case TRANSFER_FUNC_HLG:
-        if (__builtin_available(macOS 10.13, iOS 11, *))
-            return kCVImageBufferTransferFunction_ITU_R_2100_HLG;
-        break;
+        return kCVImageBufferTransferFunction_ITU_R_2100_HLG;
     case TRANSFER_FUNC_LINEAR:
-#if (TARGET_OS_OSX    && defined(__MAC_10_14)   && MAC_OS_X_VERSION_MAX_ALLOWED    >= __MAC_10_14) ||\
-    (TARGET_OS_IPHONE && defined(__IPHONE_12_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_12_0) || \
-    (TARGET_OS_TV     && defined(__TVOS_12_0)   && __TV_OS_VERSION_MAX_ALLOWED     >= __TVOS_12_0) || \
-    (TARGET_OS_WATCH  && defined(__WATCHOS_5_0) && __WATCH_OS_VERSION_MAX_ALLOWED  >= __WATCHOS_5_0)
-        if (__builtin_available(macOS 10.14, iOS 12, tvOS 12, watchOS 5, *))
-            return kCVImageBufferTransferFunction_Linear;
-#endif
-        break;
+        return kCVImageBufferTransferFunction_Linear;
     case TRANSFER_FUNC_SRGB:
         return kCVImageBufferTransferFunction_UseGamma;
     case TRANSFER_FUNC_UNDEF:
         break;
     default:
-        if (__builtin_available(macOS 10.13, iOS 11, tvOS 11, watchOS 4, *)) {
+        {
             enum iso_23001_8_tc tc_cicp =
                 vlc_xfer_to_iso_23001_8_tc(transfer_func);
             return CVTransferFunctionGetStringForIntegerCodePoint(tc_cicp);
@@ -413,19 +400,7 @@ cvpx_map_TransferFunction_from_vtf(video_transfer_func_t transfer_func)
 }
 
 bool cvpx_has_attachment(CVPixelBufferRef pixelBuffer, CFStringRef key) {
-#if (TARGET_OS_OSX    && defined(__MAC_12_0)    && MAC_OS_X_VERSION_MAX_ALLOWED    >= __MAC_12_0) ||\
-    (TARGET_OS_IOS    && defined(__IPHONE_15_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_15_0) || \
-    (TARGET_OS_TV     && defined(__TVOS_15_0)   && __TV_OS_VERSION_MAX_ALLOWED     >= __TVOS_15_0) || \
-    (TARGET_OS_WATCH  && defined(__WATCHOS_8_0) && __WATCH_OS_VERSION_MAX_ALLOWED  >= __WATCHOS_8_0)
-    if (__builtin_available(macOS 12.0, iOS 15, tvOS 15, watchOS 8, *)) {
-        return CVBufferHasAttachment(pixelBuffer, key);
-    }
-#endif
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    return CVBufferGetAttachment(pixelBuffer, key, NULL) != NULL;
-#pragma clang diagnostic pop
+    return CVBufferHasAttachment(pixelBuffer, key);
 }
 
 
@@ -562,26 +537,21 @@ cvpx_attach_hdr_metadata(CVPixelBufferRef cvpx, const video_format_t *fmt)
     if (!cvpx || !fmt)
         return;
 
-#if (TARGET_OS_OSX && defined(__MAC_10_13)) || (TARGET_OS_IPHONE && defined(__IPHONE_11_0))
-    if (__builtin_available(macOS 10.13, iOS 11, tvOS 11, watchOS 4, *))
+    CFDataRef mdcv = cvpx_create_mastering_display_color_volume_data(fmt);
+    if (mdcv)
     {
-        CFDataRef mdcv = cvpx_create_mastering_display_color_volume_data(fmt);
-        if (mdcv)
-        {
-            CVBufferSetAttachment(cvpx, kCVImageBufferMasteringDisplayColorVolumeKey,
-                                  mdcv, kCVAttachmentMode_ShouldPropagate);
-            CFRelease(mdcv);
-        }
-
-        CFDataRef clli = cvpx_create_content_light_level_data(fmt);
-        if (clli)
-        {
-            CVBufferSetAttachment(cvpx, kCVImageBufferContentLightLevelInfoKey,
-                                  clli, kCVAttachmentMode_ShouldPropagate);
-            CFRelease(clli);
-        }
+        CVBufferSetAttachment(cvpx, kCVImageBufferMasteringDisplayColorVolumeKey,
+                              mdcv, kCVAttachmentMode_ShouldPropagate);
+        CFRelease(mdcv);
     }
-#endif
+
+    CFDataRef clli = cvpx_create_content_light_level_data(fmt);
+    if (clli)
+    {
+        CVBufferSetAttachment(cvpx, kCVImageBufferContentLightLevelInfoKey,
+                              clli, kCVAttachmentMode_ShouldPropagate);
+        CFRelease(clli);
+    }
 }
 
 void
@@ -591,9 +561,14 @@ cvpx_extract_color_properties(CVPixelBufferRef cvpx, video_format_t *fmt)
         return;
 
     CFDictionaryRef attachmentDict =
-        CVBufferGetAttachments(cvpx, kCVAttachmentMode_ShouldPropagate);
-    if (!attachmentDict || CFDictionaryGetCount(attachmentDict) == 0)
+        CVBufferCopyAttachments(cvpx, kCVAttachmentMode_ShouldPropagate);
+    if (!attachmentDict)
         return;
+    if (CFDictionaryGetCount(attachmentDict) == 0)
+    {
+        CFRelease(attachmentDict);
+        return;
+    }
 
     CFStringRef matrix = CFDictionaryGetValue(attachmentDict, kCVImageBufferYCbCrMatrixKey);
     if (matrix)
@@ -602,8 +577,7 @@ cvpx_extract_color_properties(CVPixelBufferRef cvpx, video_format_t *fmt)
             fmt->space = COLOR_SPACE_BT709;
         else if (CFEqual(matrix, kCVImageBufferYCbCrMatrix_ITU_R_601_4))
             fmt->space = COLOR_SPACE_BT601;
-        else if (__builtin_available(macOS 10.11, iOS 9, *) &&
-                 CFEqual(matrix, kCVImageBufferYCbCrMatrix_ITU_R_2020))
+        else if (CFEqual(matrix, kCVImageBufferYCbCrMatrix_ITU_R_2020))
             fmt->space = COLOR_SPACE_BT2020;
     }
 
@@ -618,8 +592,7 @@ cvpx_extract_color_properties(CVPixelBufferRef cvpx, video_format_t *fmt)
             fmt->primaries = COLOR_PRIMARIES_SMTPE_170;
         else if (CFEqual(primaries, kCVImageBufferColorPrimaries_ITU_R_2020))
             fmt->primaries = COLOR_PRIMARIES_BT2020;
-        else if (__builtin_available(macOS 10.11, iOS 9, *) &&
-                 CFEqual(primaries, kCVImageBufferColorPrimaries_P3_D65))
+        else if (CFEqual(primaries, kCVImageBufferColorPrimaries_P3_D65))
             fmt->primaries = COLOR_PRIMARIES_DCI_P3;
     }
 
@@ -632,47 +605,41 @@ cvpx_extract_color_properties(CVPixelBufferRef cvpx, video_format_t *fmt)
             fmt->transfer = TRANSFER_FUNC_SMPTE_240;
         else if (CFEqual(transfer, kCVImageBufferTransferFunction_UseGamma))
             fmt->transfer = TRANSFER_FUNC_SRGB;
-        else if (__builtin_available(macOS 10.13, iOS 11, *) &&
-                 CFEqual(transfer, kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ))
+        else if (CFEqual(transfer, kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ))
             fmt->transfer = TRANSFER_FUNC_SMPTE_ST2084;
-        else if (__builtin_available(macOS 10.13, iOS 11, *) &&
-                 CFEqual(transfer, kCVImageBufferTransferFunction_ITU_R_2100_HLG))
+        else if (CFEqual(transfer, kCVImageBufferTransferFunction_ITU_R_2100_HLG))
             fmt->transfer = TRANSFER_FUNC_HLG;
-        else if (__builtin_available(macOS 10.14, iOS 12, *) &&
-                 CFEqual(transfer, kCVImageBufferTransferFunction_Linear))
+        else if (CFEqual(transfer, kCVImageBufferTransferFunction_Linear))
             fmt->transfer = TRANSFER_FUNC_LINEAR;
     }
 
-#if (TARGET_OS_OSX && defined(__MAC_10_13)) || (TARGET_OS_IPHONE && defined(__IPHONE_11_0))
-    if (__builtin_available(macOS 10.13, iOS 11, tvOS 11, watchOS 4, *))
+    CFDataRef mdcvData = CFDictionaryGetValue(attachmentDict, kCVImageBufferMasteringDisplayColorVolumeKey);
+    if (mdcvData && CFGetTypeID(mdcvData) == CFDataGetTypeID() && CFDataGetLength(mdcvData) >= 24)
     {
-        CFDataRef mdcvData = CFDictionaryGetValue(attachmentDict, kCVImageBufferMasteringDisplayColorVolumeKey);
-        if (mdcvData && CFGetTypeID(mdcvData) == CFDataGetTypeID() && CFDataGetLength(mdcvData) >= 24)
-        {
-            const uint8_t *bytes = CFDataGetBytePtr(mdcvData);
-            const uint16_t *u16 = (const uint16_t *)bytes;
-            const uint32_t *u32 = (const uint32_t *)(bytes + 16);
-            fmt->mastering.primaries[0] = ntohs(u16[0]);
-            fmt->mastering.primaries[1] = ntohs(u16[1]);
-            fmt->mastering.primaries[2] = ntohs(u16[2]);
-            fmt->mastering.primaries[3] = ntohs(u16[3]);
-            fmt->mastering.primaries[4] = ntohs(u16[4]);
-            fmt->mastering.primaries[5] = ntohs(u16[5]);
-            fmt->mastering.white_point[0] = ntohs(u16[6]);
-            fmt->mastering.white_point[1] = ntohs(u16[7]);
-            fmt->mastering.max_luminance = ntohl(u32[0]);
-            fmt->mastering.min_luminance = ntohl(u32[1]);
-        }
-
-        CFDataRef clliData = CFDictionaryGetValue(attachmentDict, kCVImageBufferContentLightLevelInfoKey);
-        if (clliData && CFGetTypeID(clliData) == CFDataGetTypeID() && CFDataGetLength(clliData) >= 4)
-        {
-            const uint16_t *u16 = (const uint16_t *)CFDataGetBytePtr(clliData);
-            fmt->lighting.MaxCLL = ntohs(u16[0]);
-            fmt->lighting.MaxFALL = ntohs(u16[1]);
-        }
+        const uint8_t *bytes = CFDataGetBytePtr(mdcvData);
+        const uint16_t *u16 = (const uint16_t *)bytes;
+        const uint32_t *u32 = (const uint32_t *)(bytes + 16);
+        fmt->mastering.primaries[0] = ntohs(u16[0]);
+        fmt->mastering.primaries[1] = ntohs(u16[1]);
+        fmt->mastering.primaries[2] = ntohs(u16[2]);
+        fmt->mastering.primaries[3] = ntohs(u16[3]);
+        fmt->mastering.primaries[4] = ntohs(u16[4]);
+        fmt->mastering.primaries[5] = ntohs(u16[5]);
+        fmt->mastering.white_point[0] = ntohs(u16[6]);
+        fmt->mastering.white_point[1] = ntohs(u16[7]);
+        fmt->mastering.max_luminance = ntohl(u32[0]);
+        fmt->mastering.min_luminance = ntohl(u32[1]);
     }
-#endif
+
+    CFDataRef clliData = CFDictionaryGetValue(attachmentDict, kCVImageBufferContentLightLevelInfoKey);
+    if (clliData && CFGetTypeID(clliData) == CFDataGetTypeID() && CFDataGetLength(clliData) >= 4)
+    {
+        const uint16_t *u16 = (const uint16_t *)CFDataGetBytePtr(clliData);
+        fmt->lighting.MaxCLL = ntohs(u16[0]);
+        fmt->lighting.MaxFALL = ntohs(u16[1]);
+    }
+
+    CFRelease(attachmentDict);
 }
 
 void cvpx_attach_mapped_color_properties(CVPixelBufferRef cvpx,
