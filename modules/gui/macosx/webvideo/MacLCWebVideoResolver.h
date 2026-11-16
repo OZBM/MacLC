@@ -95,6 +95,10 @@ typedef NS_ENUM(NSInteger, MacLCWebVideoErrorCode) {
 /** Looks for the extractor again, after the user installed it. */
 - (void)refreshExtractorPath;
 
+/** Environment for an extractor run: an app opened from the Finder gets a bare
+ * PATH, so yt-dlp would not find the JavaScript runtime YouTube needs. */
+- (NSDictionary<NSString *, NSString *> *)extractorEnvironment;
+
 /**
  * Starts a resolution. Returns a token for -cancelResolution:, or nil when
  * the address is not usable (the completion block still runs, with an error).

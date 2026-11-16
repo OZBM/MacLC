@@ -485,6 +485,7 @@ static NSString *PlaylistIdentifierFromURL(NSURL *url)
     NSTask * const task = [[NSTask alloc] init];
     task.executableURL = [NSURL fileURLWithPath:extractor ?: @"/usr/bin/false"];
     task.arguments = arguments;
+    task.environment = [MacLCWebVideoResolver.sharedResolver extractorEnvironment];
     NSPipe * const out = [NSPipe pipe];
     NSPipe * const err = [NSPipe pipe];
     task.standardOutput = out;

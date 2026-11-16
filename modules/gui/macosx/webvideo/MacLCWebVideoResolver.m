@@ -188,6 +188,21 @@ static id MacLCWebVideoJSON(NSData *data, NSError **error)
     self.extractorPath = foundPath;
 }
 
+- (NSDictionary<NSString *, NSString *> *)extractorEnvironment {
+    NSMutableDictionary<NSString *, NSString *> * const env =
+        [NSProcessInfo.processInfo.environment mutableCopy];
+    NSMutableArray<NSString *> * const dirs = [NSMutableArray array];
+    if (self.extractorPath) {
+        [dirs addObject:self.extractorPath.stringByDeletingLastPathComponent];
+    }
+    [dirs addObjectsFromArray:@[@"/opt/homebrew/bin", @"/usr/local/bin", @"/opt/local/bin",
+                                [NSHomeDirectory() stringByAppendingPathComponent:@".local/bin"],
+                                [NSHomeDirectory() stringByAppendingPathComponent:@".deno/bin"]]];
+    [dirs addObject:env[@"PATH"] ?: @"/usr/bin:/bin:/usr/sbin:/sbin"];
+    env[@"PATH"] = [dirs componentsJoinedByString:@":"];
+    return env;
+}
+
 - (void)cancelResolution:(NSUUID *)token {
     [self.tasksLock lock];
     NSTask *task = self.activeTasks[token];
@@ -307,6 +322,7 @@ static id MacLCWebVideoJSON(NSData *data, NSError **error)
     NSTask *task = [[NSTask alloc] init];
     task.executableURL = [NSURL fileURLWithPath:extractor];
     task.arguments = [self _extractorArgumentsForTarget:address];
+    task.environment = [self extractorEnvironment];
 
     NSPipe *outPipe = [NSPipe pipe];
     NSPipe *errPipe = [NSPipe pipe];
@@ -592,7 +608,28 @@ static id MacLCWebVideoJSON(NSData *data, NSError **error)
         
         [validFormats addObject:f];
     }
-    
+
+    NSNumber *maxHeightNum = [[NSUserDefaults standardUserDefaults] objectForKey:@"MacLCWebVideoMaximumHeight"];
+    NSInteger maxHeight = maxHeightNum ? [maxHeightNum integerValue] : 2160;
+
+    /* YouTube's HLS master playlist carries every size plus the audio, played
+     * by one input on one clock. Separate video and audio files joined with
+     * input-slave kept resetting the clock (hundreds of "clock gap" per
+     * minute) and drew HTTP 403s on the first range (measured 2026-11-16). */
+    for (NSDictionary *f in formats) {
+        if (![f isKindOfClass:[NSDictionary class]]) continue;
+        NSString * const manifest = f[@"manifest_url"];
+        if (![f[@"protocol"] hasPrefix:@"m3u8"] || ![manifest isKindOfClass:[NSString class]]) continue;
+        if (![[NSURL URLWithString:manifest].host hasSuffix:@".googlevideo.com"]) continue;
+        VLCOpenInputMetadata * const meta =
+            [self _createMetaWithVideoUrl:manifest audioUrl:nil userAgent:f[@"http_headers"][@"User-Agent"]
+                                  referer:item.pageAddress title:item.title isAdaptive:NO];
+        meta.playbackOptions = [meta.playbackOptions arrayByAddingObject:
+            [NSString stringWithFormat:@":adaptive-maxheight=%ld", (long)maxHeight]];
+        item.playQueueItem = meta;
+        return nil;
+    }
+
     if (validFormats.count == 0) {
         NSString *url = json[@"url"];
         if (url && url.length > 0) {
@@ -618,9 +655,6 @@ static id MacLCWebVideoJSON(NSData *data, NSError **error)
         }
         return [NSError errorWithDomain:MacLCWebVideoErrorDomain code:MacLCWebVideoErrorNotAVideo userInfo:@{NSLocalizedDescriptionKey: @"The extractor failed.", NSLocalizedFailureReasonErrorKey: @"No usable formats found."}];
     }
-    
-    NSNumber *maxHeightNum = [[NSUserDefaults standardUserDefaults] objectForKey:@"MacLCWebVideoMaximumHeight"];
-    NSInteger maxHeight = maxHeightNum ? [maxHeightNum integerValue] : 2160;
     
     NSDictionary *bestVideo = nil;
     for (NSDictionary *f in validFormats) {
