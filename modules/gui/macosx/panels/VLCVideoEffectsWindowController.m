@@ -31,6 +31,7 @@
 #import "panels/dialogs/VLCTextfieldPanelController.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "playqueue/VLCPlayerController.h"
+#import "theme/MacLCGlassView.h"
 #import "windows/video/VLCVideoOutputProvider.h"
 
 #import <vlc_configuration.h>
@@ -270,6 +271,7 @@ static NSString * const VLCVideoEffectsDefaultProfileString = @";;;0;1.000000;1.
     [self.window setTitle: _NS("Video Effects")];
     [self.window setExcludedFromWindowsMenu:YES];
     [self.window setCollectionBehavior: NSWindowCollectionBehaviorFullScreenAuxiliary];
+    [MacLCGlassView adoptGlassForPanel:self.window];
 
     [_segmentView setLabel:_NS("Basic") forSegment:0];
     [_segmentView setLabel:_NS("Crop") forSegment:1];

@@ -34,6 +34,7 @@
 #import "library/VLCLibraryWindow.h"
 #import "library/VLCLibrarySegment.h"
 #import "extensions/NSString+Helpers.h"
+#import "theme/MacLCGlassView.h"
 
 static NSString * const MacLCWatchFavoritesFilterKey = @"MacLCWatchFavoritesFilter";
 
@@ -211,6 +212,7 @@ void MacLCWatchResumeEntry(MacLCWatchEntry *entry, MacLCWatchSectionViewControll
     _segmentedFilter.selectedSegment = savedFilter;
     _segmentedFilter.accessibilityLabel = _NS("Filter Favorites");
     [_headerContainer addSubview:_segmentedFilter];
+    [MacLCGlassView installCapsuleBehindView:_segmentedFilter outset:4.0];
 
     _countLabel = [NSTextField labelWithString:@""];
     _countLabel.translatesAutoresizingMaskIntoConstraints = NO;

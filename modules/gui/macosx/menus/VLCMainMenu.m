@@ -391,6 +391,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
                                                editMenu:_editMenu];
     _viewMenu = view;
 
+    [MacLCMenuSymbols keepMenuImagesVisible];
     [MacLCMenuSymbols applySymbolsToMenu:[NSApp mainMenu]];
     if (_voutMenu != nil) {
         [MacLCMenuSymbols applySymbolsToMenu:_voutMenu];

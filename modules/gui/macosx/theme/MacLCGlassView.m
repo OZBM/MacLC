@@ -246,4 +246,75 @@
     }
 }
 
++ (nullable MacLCGlassView *)installCapsuleBehindView:(NSView *)view outset:(CGFloat)outset
+{
+    NSView * const parent = view.superview;
+    if (parent == nil)
+        return nil;
+    MacLCGlassView * const glass = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
+    glass.translatesAutoresizingMaskIntoConstraints = NO;
+    glass.cornerRadius = 1000.0; // clamped to half the height: a capsule
+    [parent addSubview:glass positioned:NSWindowBelow relativeTo:view];
+    [NSLayoutConstraint activateConstraints:@[
+        [glass.leadingAnchor constraintEqualToAnchor:view.leadingAnchor constant:-outset],
+        [glass.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:outset],
+        [glass.topAnchor constraintEqualToAnchor:view.topAnchor constant:-outset],
+        [glass.bottomAnchor constraintEqualToAnchor:view.bottomAnchor constant:outset],
+    ]];
+    [glass bind:NSHiddenBinding toObject:view withKeyPath:@"hidden" options:nil];
+    return glass;
+}
+
+static void MacLCGlassifyButtons(NSView *view)
+{
+    if ([view isKindOfClass:NSButton.class]) {
+        NSButton * const button = (NSButton *)view;
+        /* Push and pop-up bezels only: check boxes, radios and image
+         * buttons keep their own look. */
+        if (button.bezelStyle == NSBezelStylePush || button.bezelStyle == NSBezelStyleFlexiblePush)
+            button.bezelStyle = NSBezelStyleGlass;
+    }
+    if ([view isKindOfClass:NSTabView.class]) {
+        for (NSTabViewItem * const item in ((NSTabView *)view).tabViewItems)
+            if (item.view != nil)
+                MacLCGlassifyButtons(item.view);
+        return;
+    }
+    for (NSView * const subview in view.subviews)
+        MacLCGlassifyButtons(subview);
+}
+
++ (void)adoptGlassForPanel:(NSWindow *)window
+{
+    NSView * const content = window.contentView;
+    if (content == nil)
+        return;
+    /* The glass runs under the title bar too; the panel's own content is
+     * re-hosted below the title bar, so its layout does not move. */
+    NSView * const root = [[NSView alloc] initWithFrame:content.frame];
+    window.contentView = root;
+    window.styleMask |= NSWindowStyleMaskFullSizeContentView;
+    window.titlebarAppearsTransparent = YES;
+    window.opaque = NO;
+    window.backgroundColor = NSColor.clearColor;
+
+    MacLCGlassView * const glass = [[MacLCGlassView alloc] initWithFrame:root.bounds];
+    glass.translatesAutoresizingMaskIntoConstraints = NO;
+    [root addSubview:glass];
+    content.translatesAutoresizingMaskIntoConstraints = NO;
+    [root addSubview:content];
+    NSLayoutGuide * const belowTitleBar = (NSLayoutGuide *)window.contentLayoutGuide;
+    [NSLayoutConstraint activateConstraints:@[
+        [glass.leadingAnchor constraintEqualToAnchor:root.leadingAnchor],
+        [glass.trailingAnchor constraintEqualToAnchor:root.trailingAnchor],
+        [glass.topAnchor constraintEqualToAnchor:root.topAnchor],
+        [glass.bottomAnchor constraintEqualToAnchor:root.bottomAnchor],
+        [content.leadingAnchor constraintEqualToAnchor:root.leadingAnchor],
+        [content.trailingAnchor constraintEqualToAnchor:root.trailingAnchor],
+        [content.topAnchor constraintEqualToAnchor:belowTitleBar.topAnchor],
+        [content.bottomAnchor constraintEqualToAnchor:root.bottomAnchor],
+    ]];
+    MacLCGlassifyButtons(content);
+}
+
 @end

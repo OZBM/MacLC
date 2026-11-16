@@ -68,6 +68,7 @@
     _seasonButton.target = self;
     _seasonButton.action = @selector(seasonChanged:);
     _seasonButton.accessibilityLabel = _NS("Season");
+    _seasonButton.bezelStyle = NSBezelStyleGlass;
 
     MacLCDetailHeaderView * const header = self.headerView;
     [header.artworkView setArtworkFromItem:_show];

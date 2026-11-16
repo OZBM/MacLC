@@ -32,6 +32,10 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (void)applySymbolsToMenu:(NSMenu *)menu;
 
+/** Keeps item images visible on macOS 27, which hides them by default,
+ * including items added or changed later. Call once at launch. */
++ (void)keepMenuImagesVisible;
+
 @end
 
 NS_ASSUME_NONNULL_END

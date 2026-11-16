@@ -41,6 +41,7 @@
 #import "panels/dialogs/VLCTextfieldPanelController.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "playqueue/VLCPlayerController.h"
+#import "theme/MacLCGlassView.h"
 #import "windows/video/VLCVideoOutputProvider.h"
 
 NSString *VLCAudioEffectsEqualizerValuesKey = @"EQValues";
@@ -315,6 +316,7 @@ static inline void enableTextField(NSTextField *const __unsafe_unretained textFi
     [self.window setTitle:_NS("Audio Effects")];
     [self.window setExcludedFromWindowsMenu:YES];
     [self.window setCollectionBehavior: NSWindowCollectionBehaviorFullScreenAuxiliary];
+    [MacLCGlassView adoptGlassForPanel:self.window];
 
     [self equalizerUpdated];
     [self resetCompressor];

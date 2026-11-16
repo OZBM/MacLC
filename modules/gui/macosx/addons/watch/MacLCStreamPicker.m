@@ -1525,7 +1525,7 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
 {
     _languagePopUp = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     _languagePopUp.translatesAutoresizingMaskIntoConstraints = NO;
-    _languagePopUp.bezelStyle = NSBezelStylePush;
+    _languagePopUp.bezelStyle = NSBezelStyleGlass;
     _languagePopUp.controlSize = NSControlSizeSmall;
     _languagePopUp.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
     _languagePopUp.target = self;
@@ -1533,7 +1533,7 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
 
     _qualityPopUp = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     _qualityPopUp.translatesAutoresizingMaskIntoConstraints = NO;
-    _qualityPopUp.bezelStyle = NSBezelStylePush;
+    _qualityPopUp.bezelStyle = NSBezelStyleGlass;
     _qualityPopUp.controlSize = NSControlSizeSmall;
     _qualityPopUp.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
     _qualityPopUp.target = self;
@@ -1541,7 +1541,7 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
 
     _picturePopUp = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     _picturePopUp.translatesAutoresizingMaskIntoConstraints = NO;
-    _picturePopUp.bezelStyle = NSBezelStylePush;
+    _picturePopUp.bezelStyle = NSBezelStyleGlass;
     _picturePopUp.controlSize = NSControlSizeSmall;
     _picturePopUp.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
     _picturePopUp.target = self;
@@ -1586,7 +1586,7 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
 
     _sortPopUp = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     _sortPopUp.translatesAutoresizingMaskIntoConstraints = NO;
-    _sortPopUp.bezelStyle = NSBezelStylePush;
+    _sortPopUp.bezelStyle = NSBezelStyleGlass;
     _sortPopUp.controlSize = NSControlSizeSmall;
     _sortPopUp.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
     _sortPopUp.target = self;
@@ -1641,7 +1641,7 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
 
     _emptyActionButton = [NSButton buttonWithTitle:@"" target:nil action:nil];
     _emptyActionButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _emptyActionButton.bezelStyle = NSBezelStylePush;
+    _emptyActionButton.bezelStyle = NSBezelStyleGlass;
     [view addSubview:_emptyActionButton];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -1706,12 +1706,12 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
 
     _queueButton = [NSButton buttonWithTitle:_NS("Add to Queue") target:self action:@selector(addToQueueAction:)];
     _queueButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _queueButton.bezelStyle = NSBezelStylePush;
+    _queueButton.bezelStyle = NSBezelStyleGlass;
     _queueButton.enabled = NO;
 
     _cancelButton = [NSButton buttonWithTitle:_NS("Cancel") target:self action:@selector(cancelAction:)];
     _cancelButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _cancelButton.bezelStyle = NSBezelStylePush;
+    _cancelButton.bezelStyle = NSBezelStyleGlass;
     _cancelButton.keyEquivalent = @"\e";
 
     /* Something half-watched: Play becomes Resume, and Start Over appears. */
@@ -1722,7 +1722,7 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
 
     _startOverButton = [NSButton buttonWithTitle:_NS("Start Over") target:self action:@selector(startOverAction:)];
     _startOverButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _startOverButton.bezelStyle = NSBezelStylePush;
+    _startOverButton.bezelStyle = NSBezelStyleGlass;
     _startOverButton.hidden = (_resumeProgress == nil);
     _startOverButton.enabled = NO;
 
@@ -1730,7 +1730,8 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
                                      target:self
                                      action:@selector(playAction:)];
     _playButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _playButton.bezelStyle = NSBezelStylePush;
+    _playButton.bezelStyle = NSBezelStyleGlass;
+    _playButton.tintProminence = NSTintProminencePrimary;
     _playButton.image = [NSImage imageWithSystemSymbolName:@"play.fill" accessibilityDescription:nil];
     _playButton.imagePosition = NSImageLeading;
     _playButton.keyEquivalent = @"\r";

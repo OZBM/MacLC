@@ -40,6 +40,7 @@
 #import "playqueue/VLCPlayQueueItem.h"
 #import "playqueue/VLCPlayQueueModel.h"
 #import "theme/MacLCDesign.h"
+#import "theme/MacLCGlassView.h"
 #import "windows/VLCOpenInputMetadata.h"
 
 static NSPasteboardType const MacLCUpNextRowPasteboardType = @"org.maclc.up-next.rows";
@@ -219,6 +220,7 @@ static NSUserInterfaceItemIdentifier const MacLCUpNextCellIdentifier = @"MacLCUp
     trailingControls.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     trailingControls.spacing = MacLCDesign.spacingS;
     trailingControls.alignment = NSLayoutAttributeCenterY;
+    [MacLCGlassView installCapsuleBehindView:_segmentedControl outset:3.0];
 
     /* Title leading, controls trailing, whatever the inspector's width (a
      * stack view kept them side by side). */

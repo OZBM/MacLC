@@ -22,11 +22,13 @@
 
 #import "medialib/components/MacLCDetailHeaderView.h"
 #import "medialib/data/MacLCLibraryStore.h"
+#import "theme/MacLCGlassView.h"
 
 @interface MacLCLibraryDetailScaffold ()
 {
     MacLCArtworkShape _shape;
     NSView *_choiceContainer;
+    NSView *_choiceGlass;
     NSView *_bodyContainer;
     NSView *_bodyView;
     NSLayoutConstraint *_choiceHeight;
@@ -109,6 +111,8 @@
 {
     [self view];
     [_choiceView removeFromSuperview];
+    [_choiceGlass removeFromSuperview];
+    _choiceGlass = nil;
     _choiceView = choiceView;
     if (choiceView == nil) {
         _choiceHeight.constant = 0.0;
@@ -121,6 +125,7 @@
         [choiceView.centerYAnchor constraintEqualToAnchor:_choiceContainer.centerYAnchor],
         [choiceView.trailingAnchor constraintLessThanOrEqualToAnchor:_choiceContainer.trailingAnchor],
     ]];
+    _choiceGlass = [MacLCGlassView installCapsuleBehindView:choiceView outset:4.0];
     _choiceHeight.constant = 36.0;
 }
 

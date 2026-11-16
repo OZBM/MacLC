@@ -686,6 +686,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/medialib/shell/MacLCUpNextViewController.m \
 	gui/macosx/menus/MacLCLibraryMenus.h \
 	gui/macosx/menus/MacLCLibraryMenus.m \
+	gui/macosx/menus/MacLCGlassMenuPopover.h \
+	gui/macosx/menus/MacLCGlassMenuPopover.m \
 	gui/macosx/menus/MacLCMenuSymbols.h \
 	gui/macosx/menus/MacLCMenuSymbols.m \
 	video_filter/maclc_frc_geometry.h \

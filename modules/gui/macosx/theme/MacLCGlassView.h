@@ -65,6 +65,20 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, copy, nullable) NSColor *tintColor;
 
+/**
+ * Lays a glass capsule under an existing control, in the same superview,
+ * `outset` points around it; it follows the control's frame and visibility,
+ * so the caller's layout does not change. Nil when the view has no superview.
+ */
++ (nullable MacLCGlassView *)installCapsuleBehindView:(NSView *)view outset:(CGFloat)outset;
+
+/**
+ * Puts a utility panel on Liquid Glass: transparent title bar, glass behind
+ * the whole content, glass push and pop-up buttons (every tab included).
+ * Under Reduce Transparency the glass falls back to an opaque material.
+ */
++ (void)adoptGlassForPanel:(NSWindow *)window;
+
 @end
 
 NS_ASSUME_NONNULL_END

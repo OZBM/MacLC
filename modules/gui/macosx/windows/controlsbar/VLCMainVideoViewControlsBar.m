@@ -59,6 +59,7 @@
 #import "windows/video/VLCMainVideoViewController.h"
 #import "windows/video/VLCVideoOutputProvider.h"
 #import "windows/video/VLCVideoWindowCommon.h"
+#import "menus/MacLCGlassMenuPopover.h"
 
 @interface VLCMainVideoViewControlsBar ()
 {
@@ -744,26 +745,17 @@
 
 - (IBAction)openSubtitlesMenu:(id)sender
 {
-    NSMenu * const menu = VLCMain.sharedInstance.mainMenu.subtitlesMenu;
-    [menu popUpMenuPositioningItem:nil
-                        atLocation:_subtitlesButton.frame.origin
-                            inView:((NSView *)sender).superview];
+    [MacLCGlassMenuPopover showMenu:VLCMain.sharedInstance.mainMenu.subtitlesMenu relativeToView:_subtitlesButton];
 }
 
 - (IBAction)openAudioMenu:(id)sender
 {
-    NSMenu * const menu = VLCMain.sharedInstance.mainMenu.audioMenu;
-    [menu popUpMenuPositioningItem:nil
-                        atLocation:_audioButton.frame.origin
-                            inView:((NSView *)sender).superview];
+    [MacLCGlassMenuPopover showMenu:VLCMain.sharedInstance.mainMenu.audioMenu relativeToView:_audioButton];
 }
 
 - (IBAction)openVideoMenu:(id)sender
 {
-    NSMenu * const menu = VLCMain.sharedInstance.mainMenu.videoMenu;
-    [menu popUpMenuPositioningItem:nil
-                        atLocation:self.videoButton.frame.origin
-                            inView:((NSView *)sender).superview];
+    [MacLCGlassMenuPopover showMenu:VLCMain.sharedInstance.mainMenu.videoMenu relativeToView:self.videoButton];
 }
 
 - (IBAction)toggleFloatOnTop:(id)sender

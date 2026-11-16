@@ -28,7 +28,41 @@
 
 @end
 
+/* macOS 27 hides menu item images unless an item asks for them: MacLC's items
+ * keep their symbols, unless the user turned action images off. */
+static void MacLCMenuItemKeepImageVisible(NSMenuItem *item)
+{
+    if (item.image != nil && item.preferredImageVisibility != NSMenuItemImageVisibilityVisible)
+        item.preferredImageVisibility = NSMenuItemImageVisibilityVisible;
+}
+
+static BOOL MacLCMenuActionImagesDisabled(void)
+{
+    NSNumber * const enabled = [NSUserDefaults.standardUserDefaults objectForKey:@"NSMenuEnableActionImages"];
+    return enabled != nil && !enabled.boolValue;
+}
+
 @implementation MacLCMenuSymbols
+
++ (void)keepMenuImagesVisible
+{
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        if (MacLCMenuActionImagesDisabled())
+            return;
+        /* Menus rebuilt on the fly (tracks, HDR, renderers) get their
+         * images after launch: catch every added or changed item. */
+        void (^ const keep)(NSNotification *) = ^(NSNotification *notification) {
+            NSMenu * const menu = notification.object;
+            const NSInteger index = [notification.userInfo[@"NSMenuItemIndex"] integerValue];
+            if ([menu isKindOfClass:NSMenu.class] && index >= 0 && index < menu.numberOfItems)
+                MacLCMenuItemKeepImageVisible([menu itemAtIndex:index]);
+        };
+        NSNotificationCenter * const center = NSNotificationCenter.defaultCenter;
+        [center addObserverForName:NSMenuDidAddItemNotification object:nil queue:nil usingBlock:keep];
+        [center addObserverForName:NSMenuDidChangeItemNotification object:nil queue:nil usingBlock:keep];
+    });
+}
 
 + (nullable NSString *)symbolNameForMenuItem:(NSMenuItem *)item
 {
@@ -344,8 +378,7 @@
     [visitedMenus addObject:menu];
 
     if (@available(macOS 11.0, *)) {
-        NSNumber * const enabled = [NSUserDefaults.standardUserDefaults objectForKey:@"NSMenuEnableActionImages"];
-        if (enabled != nil && !enabled.boolValue) {
+        if (MacLCMenuActionImagesDisabled()) {
             return;
         }
 
@@ -413,6 +446,7 @@
 
         // Recurse into submenus
         for (NSMenuItem *item in menu.itemArray) {
+            MacLCMenuItemKeepImageVisible(item);
             if (item.submenu != nil) {
                 [self applySymbolsToMenu:item.submenu visitedMenus:visitedMenus];
             }
