@@ -34,6 +34,14 @@ The `auhal` output remains available as a fallback (`--aout=auhal`).
 
 DRM-protected files (e.g. Apple Music downloads) are not supported.
 
+## A/B comparison
+
+The `avsamplebuffer` output has a **Pass through Dolby Atmos (E-AC-3 JOC)**
+preference (on by default). Turn it off — or use `--no-atmos-passthrough` —
+to decode the same E-AC-3 stream to PCM with avcodec and spatialize that
+instead. This is useful for comparing Apple's native Atmos rendering against
+the decoded-PCM path on the same headphones.
+
 ## Hardware compatibility
 
 The path uses public `AVSampleBufferAudioRenderer` APIs. Apple-silicon Macs

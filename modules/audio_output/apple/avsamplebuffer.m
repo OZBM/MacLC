@@ -49,6 +49,10 @@
 #define MIN_TVOS 14.5
 #define MIN_WATCHOS 7.4
 
+#define ATS_PASSTHROUGH_TEXT N_("Pass through Dolby Atmos (E-AC-3 JOC)")
+#define ATS_PASSTHROUGH_LONGTEXT N_("Send compressed E-AC-3/Atmos streams to " \
+    "Apple's native renderer. Disable to decode to PCM instead (A/B test).")
+
 // work-around to fix compilation on older Xcode releases
 #if defined(TARGET_OS_VISION) && TARGET_OS_VISION
     #define MIN_VISIONOS 1.0
@@ -1068,6 +1072,15 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
 #if TARGET_OS_OSX
     if (fmt->i_format == VLC_CODEC_EAC3)
     {
+        /* A/B switch: disable compressed passthrough so the same stream is
+         * decoded by avcodec and spatialised as PCM instead. */
+        if (!var_InheritBool(_aout, "atmos-passthrough"))
+        {
+            msg_Dbg(_aout, "Atmos passthrough disabled by preference; "
+                    "using decoded PCM");
+            return NO;
+        }
+
         /* Some demuxers (e.g. MP4/M4A) do not report the channel count for
          * E-AC-3; the real count (and JOC flag) come from the first packet's
          * dec3 parsing below. */
@@ -1360,4 +1373,6 @@ vlc_module_begin ()
 #endif
     set_subcategory(SUBCAT_AUDIO_AOUT)
     set_callbacks(Open, Close)
+    add_bool("atmos-passthrough", true, ATS_PASSTHROUGH_TEXT,
+             ATS_PASSTHROUGH_LONGTEXT)
 vlc_module_end ()
