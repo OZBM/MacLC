@@ -705,6 +705,7 @@ int aout_OutputNew(audio_output_t *aout, vlc_aout_stream *stream,
     vlc_fourcc_t formats[] = {
         fmt->i_format, 0, 0
     };
+    bool atmos_714 = false;
 
     var_Change(aout, "stereo-mode", VLC_VAR_CLEARCHOICES);
     var_Change(aout, "mix-mode", VLC_VAR_CLEARCHOICES);
@@ -714,10 +715,10 @@ int aout_OutputNew(audio_output_t *aout, vlc_aout_stream *stream,
      * But that scheme would not really play well with digital pass-through. */
     if (AOUT_FMT_LINEAR(fmt))
     {
-        const bool atmos_714 = (fmt->channel_type == AUDIO_CHANNEL_TYPE_BITMAP
-                             && fmt->i_channels == 12
-                             && (aout_FormatNbChannels(fmt) == 0
-                              || fmt->i_physical_channels == AOUT_CHANS_7_1_4));
+        /* Only the exact 7.1.4 mask marks an Atmos bed. A 12-channel stream
+         * with no map must keep the ordinary WAVE fallback. */
+        atmos_714 = (fmt->channel_type == AUDIO_CHANNEL_TYPE_BITMAP
+                  && fmt->i_physical_channels == AOUT_CHANS_7_1_4);
 
         if (fmt->channel_type == AUDIO_CHANNEL_TYPE_BITMAP
          && aout_FormatNbChannels(fmt) == 0
@@ -786,7 +787,8 @@ int aout_OutputNew(audio_output_t *aout, vlc_aout_stream *stream,
         }
     }
 
-    int stereo_mode = aout_PrepareStereoMode(aout, fmt);
+    int stereo_mode = atmos_714 ? AOUT_VAR_CHAN_UNSET
+                                : aout_PrepareStereoMode(aout, fmt);
 
     if (stereo_mode != AOUT_VAR_CHAN_UNSET
      && aout_HasStereoMode(aout, stereo_mode))

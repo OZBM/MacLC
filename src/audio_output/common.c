@@ -467,6 +467,12 @@ bool aout_CheckChannelExtraction( int *pi_selection,
     if( !pi_order_dst )
         pi_order_dst = pi_vlc_chan_order_wg4;
 
+    /* The default WG4 order is a short, zero-terminated table. Do not walk
+     * AOUT_CHAN_MAX entries over it (the rest is out of bounds). */
+    const unsigned order_count = (pi_order_dst == pi_vlc_chan_order_wg4)
+                               ? ARRAY_SIZE(pi_vlc_chan_order_wg4) - 1
+                               : AOUT_CHAN_MAX;
+
     /* */
     for( int i = 0; i < i_channels; i++ )
     {
@@ -474,7 +480,7 @@ bool aout_CheckChannelExtraction( int *pi_selection,
         if( !pi_order_src[i] || (i_layout & pi_order_src[i]) )
             continue;
 
-        for( int j = 0; j < AOUT_CHAN_MAX; j++ )
+        for( unsigned j = 0; j < order_count; j++ )
         {
             if( pi_order_dst[j] == pi_order_src[i] )
             {
@@ -487,7 +493,7 @@ bool aout_CheckChannelExtraction( int *pi_selection,
     }
 
     /* */
-    for( int i = 0, j = 0; i < AOUT_CHAN_MAX; i++ )
+    for( unsigned i = 0, j = 0; i < order_count; i++ )
     {
         for( int k = 0; k < i_out; k++ )
         {

@@ -19,10 +19,10 @@ each available under the MIT license or the Apache License, Version 2.0 (memchr:
 license or the Unlicense): anyhow, bitstream-io, log, memchr, no_std_io2, thiserror.
 
 The truehd and oamd crates are compiled into the static library; their license, the Apache
-License, Version 2.0, is in LICENSE-APACHE.
+License, Version 2.0, is in LICENSE-APACHE.truehd.
 
-The code in this directory (src/, include/, harness/, tests/, examples/, build.sh) is licensed
-under the MIT license; see LICENSE. It frames access units itself, following the
+The C API wrapper in this directory is licensed under the MIT license; see
+LICENSE.truehd. It frames access units itself, following the
 validation rules of truehd::process::extract::Extractor, and computes object metadata update
 times per ETSI TS 103 420 clause 5.3.
 

@@ -1,11 +1,27 @@
 /*****************************************************************************
- * dtsx.c: DTS:X decoder (LibDTSX + 7.1 render) - experimental
+ * dtsx.c: DTS:X decoder (LibDTSX + 7.1 render)
  *****************************************************************************
  * Renders standard DTS:X presentations (7.1 bed + 4 fixed heights) to a 7.1
  * bed by folding heights at -3 dB. LibDTSX refuses alternate/object
  * presentations; in that case (and for plain DTS-HD without an X extension)
  * the decoder requests a reload so VLC falls back to avcodec automatically.
  * It scores above avcodec but below the S/PDIF passthrough decoder.
+ *****************************************************************************
+ * Copyright (C) 2026 VLC authors, VideoLAN and VideoLABS
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -17,6 +33,8 @@
 #include <vlc_codec.h>
 #include <vlc_aout.h>
 
+#include <string.h>
+
 #include "dtsx.h"
 #include "dtsx_render.h"
 
@@ -25,7 +43,7 @@ static void CloseDecoder(vlc_object_t *);
 
 vlc_module_begin()
     set_shortname("dtsx")
-    set_description(N_("DTS:X decoder (experimental, standard presentation)"))
+    set_description(N_("DTS:X decoder (standard presentation)"))
     /* Above avcodec (70), below S/PDIF passthrough (120). Unsupported streams
      * trigger a decoder reload with the "dtsx-unsupported" flag set, so the
      * next Open() declines and avcodec is selected instead. */
@@ -120,7 +138,7 @@ drain:
         if (dec->fmt_out.audio.i_rate != out.sample_rate && out.sample_rate != 0)
         {
             dec->fmt_out.audio.i_rate = out.sample_rate;
-            date_Init(&sys->end_date, out.sample_rate, 1);
+            date_Change(&sys->end_date, out.sample_rate, 1);
             if (decoder_UpdateAudioFormat(dec))
                 continue;
         }
@@ -128,6 +146,7 @@ drain:
         block_t *pcm = decoder_NewAudioBuffer(dec, samples);
         if (pcm == NULL)
             continue;
+        memset(pcm->p_buffer, 0, pcm->i_buffer);
 
         dtsx_render_block_71(&out, (float *) pcm->p_buffer);
         if (sys->have_date)
@@ -139,22 +158,16 @@ drain:
         decoder_QueueAudio(dec, pcm);
     }
 
-    /* On refusal the frame must be handed untouched to the replacement
-     * decoder, so do not release it in that case. */
-    if (block != NULL && !refuse)
-        block_Release(block);
-
-    if (refuse)
+    if (refuse && !sys->forced)
     {
-        if (sys->forced)
-            sys->dead = true; /* explicit --codec dtsx: keep the error local */
-        else
-        {
-            var_SetBool(dec, DTSX_UNSUPPORTED_VAR, true);
-            msg_Warn(dec, "reloading with a different DTS decoder");
-            return VLCDEC_RELOAD;
-        }
+        var_SetBool(dec, DTSX_UNSUPPORTED_VAR, true);
+        msg_Warn(dec, "reloading with a different DTS decoder");
+        return VLCDEC_RELOAD; /* frame ownership stays with the core */
     }
+    if (refuse)
+        sys->dead = true; /* explicit --codec dtsx: keep the error local */
+    if (block != NULL)
+        block_Release(block);
 
     return VLCDEC_SUCCESS;
 }

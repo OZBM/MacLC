@@ -78,6 +78,8 @@ channel_layout_MapFromVLC(audio_output_t *p_aout, const audio_sample_format_t *f
             return VLC_ENOMEM;
         *inlayoutp = inlayout;
         *inlayout_size = size;
+        inlayout->mChannelBitmap = 0;
+        inlayout->mNumberChannelDescriptions = 0;
 
         if (channels == 1)
             inlayout->mChannelLayoutTag = kAudioChannelLayoutTag_Mono;
@@ -107,7 +109,7 @@ channel_layout_MapFromVLC(audio_output_t *p_aout, const audio_sample_format_t *f
         msg_Dbg(p_aout, "swapping Surround and RearSurround channels "
                 "for 7.1 Rear Surround");
     unsigned chan_idx = 0;
-    for (unsigned i = 0; i < AOUT_CHAN_MAX; ++i)
+    for (unsigned i = 0; i < ARRAY_SIZE(pi_vlc_chan_order_wg4) - 1; ++i)
     {
         unsigned vlcchan = pi_vlc_chan_order_wg4[i];
         if ((vlcchan & fmt->i_physical_channels) == 0)

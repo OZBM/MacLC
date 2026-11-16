@@ -233,13 +233,14 @@ static int Create( vlc_object_t *p_this )
     /* Fill src_chans: contains a sorted index of all presents in channels */
     int i_src_idx = 0;
     int src_chans[AOUT_CHAN_MAX];
-    for( unsigned i = 0; i < AOUT_CHAN_MAX; ++i )
+    const unsigned wg4_count = ARRAY_SIZE(pi_vlc_chan_order_wg4) - 1;
+    for( unsigned i = 0; i < wg4_count; ++i )
         src_chans[i] = pi_vlc_chan_order_wg4[i] & i_in_physical_channels ?
                        i_src_idx++ : -1;
 
     unsigned i_dst_idx = 0;
     int channel_map[AOUT_CHAN_MAX];
-    for( unsigned i = 0; i < AOUT_CHAN_MAX; ++i )
+    for( unsigned i = 0; i < wg4_count; ++i )
     {
         const uint32_t i_chan = pi_vlc_chan_order_wg4[i];
         if( !( i_chan & i_out_physical_channels ) )

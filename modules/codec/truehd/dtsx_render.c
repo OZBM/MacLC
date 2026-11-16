@@ -1,12 +1,9 @@
 /*****************************************************************************
  * dtsx_render.c: render a DTS:X standard presentation to a 7.1 bed
  *****************************************************************************
- * This is a proof of concept, not built into MacLC yet. LibDTSX refuses
- * alternate DTS:X presentations (the ones with objects), and a decoder module
- * that selects itself for every DTS-HD MA track would leave those silent. A
- * safe fallback to VLC's own DTS decoder is needed first. To build the
- * proof of concept, link DTSX.framework and compile this file with
- * dtsx_render_test.c.
+ * Renders the standard DTS:X presentation (7.1 bed plus four fixed heights)
+ * to a 7.1 FL32 bed for the Apple spatial-audio output. Heights are folded
+ * back into the bed speaker LibDTSX removed them from. Used by dtsx.c.
  *
  * Copyright (C) 2026 VLC authors, VideoLAN and VideoLABS
  *
@@ -57,16 +54,18 @@ dtsx_bed_channel(uint8_t speaker)
     }
 }
 
-static bool
-dtsx_height_position(uint8_t speaker, float *x, float *y)
+/* LibDTSX removes each fixed height from exactly one bed speaker at -3 dB.
+ * Fold it back into that same speaker to reproduce the compatible 7.1 mix. */
+static int
+dtsx_height_bed_channel(uint8_t speaker)
 {
     switch (speaker)
     {
-        case DTSX_SPEAKER_TFL: *x = 0.25f; *y = 0.25f; return true;
-        case DTSX_SPEAKER_TFR: *x = 0.75f; *y = 0.25f; return true;
-        case DTSX_SPEAKER_TBL: *x = 0.25f; *y = 0.75f; return true;
-        case DTSX_SPEAKER_TBR: *x = 0.75f; *y = 0.75f; return true;
-        default:               return false;
+        case DTSX_SPEAKER_TFL: return 0; /* L  */
+        case DTSX_SPEAKER_TFR: return 1; /* R  */
+        case DTSX_SPEAKER_TBL: return 4; /* Lb */
+        case DTSX_SPEAKER_TBR: return 5; /* Rb */
+        default:               return -1;
     }
 }
 
@@ -94,20 +93,13 @@ dtsx_render_block_71(const DTSXBlock *block, float *out)
             continue;
         }
 
-        float x, y;
-        if (!dtsx_height_position(block->speakers[ch], &x, &y))
+        const int height_ch = dtsx_height_bed_channel(block->speakers[ch]);
+        if (height_ch < 0)
             continue;
 
-        float gains[ATMOS_BED_CHANNELS_71];
-        atmos_pan_71(x, y, gains);
         for (unsigned f = 0; f < frames; ++f)
-        {
-            const float sample = plane[f] * DTSX_HEIGHT_FOLD_GAIN;
-            for (unsigned out_ch = 0; out_ch < ATMOS_BED_CHANNELS_71; ++out_ch)
-                if (gains[out_ch] > 0.0f)
-                    out[f * ATMOS_BED_CHANNELS_71 + out_ch] +=
-                        sample * gains[out_ch];
-        }
+            out[f * ATMOS_BED_CHANNELS_71 + height_ch] +=
+                plane[f] * DTSX_HEIGHT_FOLD_GAIN;
     }
 
     return frames;

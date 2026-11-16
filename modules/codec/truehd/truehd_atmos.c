@@ -22,6 +22,8 @@
 # include "config.h"
 #endif
 
+#include <string.h>
+
 #include <vlc_common.h>
 #include <vlc_plugin.h>
 #include <vlc_codec.h>
@@ -45,12 +47,16 @@ typedef struct
     TrueHDAtmosDecoder *handle;
     date_t end_date;
     bool have_date;
+    bool forced;
 } decoder_sys_t;
+
+#define TRUEHD_ATMOS_UNSUPPORTED_VAR "truehd-atmos-unsupported"
 
 static int
 DecodeBlock(decoder_t *dec, block_t *block)
 {
     decoder_sys_t *sys = dec->p_sys;
+    bool refuse = false;
 
     if (block == NULL) /* drain */
         goto drain;
@@ -87,14 +93,24 @@ DecodeBlock(decoder_t *dec, block_t *block)
          && status != TRUEHD_ATMOS_ERR_BUFFER_FULL)
             msg_Warn(dec, "LibTrueHD push failed: %s",
                      truehd_atmos_decoder_last_error(sys->handle));
-    }
 
-    block_Release(block);
+        /* A plain (non-Atmos) TrueHD stream has no object presentation; this
+         * decoder would render silence. Let VLC reload with avcodec instead. */
+        TrueHDAtmosStreamInfo info;
+        if (truehd_atmos_decoder_get_stream_info(sys->handle, &info) == TRUEHD_ATMOS_OK
+         && !info.has_objects)
+        {
+            msg_Warn(dec, "TrueHD stream has no Atmos objects");
+            refuse = true;
+        }
+    }
 
 drain:
     for (;;)
     {
         TrueHDAtmosBlock out;
+        if (refuse)
+            break;
         TrueHDAtmosStatus status = truehd_atmos_decoder_pull(sys->handle, &out);
         if (status == TRUEHD_ATMOS_NEED_MORE_DATA)
             break;
@@ -106,12 +122,14 @@ drain:
         }
 
         unsigned samples = out.frame_count;
-        if (samples == 0 || dec->fmt_out.audio.i_rate != out.sample_rate)
+        if (samples == 0)
+            continue;
+        if (dec->fmt_out.audio.i_rate != out.sample_rate)
         {
             if (out.sample_rate == 0)
                 continue;
             dec->fmt_out.audio.i_rate = out.sample_rate;
-            date_Init(&sys->end_date, out.sample_rate, 1);
+            date_Change(&sys->end_date, out.sample_rate, 1);
             if (decoder_UpdateAudioFormat(dec))
                 continue;
         }
@@ -119,6 +137,7 @@ drain:
         block_t *pcm = decoder_NewAudioBuffer(dec, samples);
         if (pcm == NULL)
             continue;
+        memset(pcm->p_buffer, 0, pcm->i_buffer);
 
 #ifdef ATMOS_714
         atmos_render_block(&out, (float *) pcm->p_buffer);
@@ -130,6 +149,15 @@ drain:
         pcm->i_length = date_Get(&sys->end_date) - pcm->i_pts;
         decoder_QueueAudio(dec, pcm);
     }
+
+    if (refuse && !sys->forced)
+    {
+        var_SetBool(dec, TRUEHD_ATMOS_UNSUPPORTED_VAR, true);
+        msg_Warn(dec, "reloading with a different TrueHD decoder");
+        return VLCDEC_RELOAD; /* frame ownership stays with the core */
+    }
+    if (block != NULL)
+        block_Release(block);
 
     return VLCDEC_SUCCESS;
 }
@@ -150,6 +178,13 @@ OpenDecoder(vlc_object_t *obj)
     if (dec->fmt_in->i_codec != VLC_CODEC_TRUEHD)
         return VLC_EGENERIC;
 
+    /* On reload after a non-Atmos stream was detected, decline so avcodec is
+     * selected instead of looping back here. */
+    if (var_Create(obj, TRUEHD_ATMOS_UNSUPPORTED_VAR, VLC_VAR_BOOL) != VLC_SUCCESS)
+        return VLC_EGENERIC;
+    if (var_GetBool(obj, TRUEHD_ATMOS_UNSUPPORTED_VAR))
+        return VLC_EGENERIC;
+
     TrueHDAtmosDecoder *handle =
         truehd_atmos_decoder_create(TRUEHD_ATMOS_PRESENTATION_HIGHEST);
     if (handle == NULL)
@@ -166,6 +201,7 @@ OpenDecoder(vlc_object_t *obj)
     }
     sys->handle = handle;
     sys->have_date = false;
+    sys->forced = dec->obj.force;
     date_Init(&sys->end_date, 48000, 1);
 
     dec->fmt_out.i_codec = VLC_CODEC_FL32;

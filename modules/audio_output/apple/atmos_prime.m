@@ -31,6 +31,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <dispatch/dispatch.h>
 
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -230,16 +231,14 @@ static dispatch_once_t s_prime_once;
 static dispatch_semaphore_t s_ready;
 static AVPlayer *s_player;
 static NSString *s_path;
+static atomic_bool s_done;
+static atomic_bool s_ok;
 
 static void
-atmos_prime_release(void)
+atmos_prime_finish(bool ok)
 {
-    s_player = nil;
-    if (s_path != NULL)
-    {
-        unlink(s_path.fileSystemRepresentation);
-        s_path = nil;
-    }
+    atomic_store_explicit(&s_ok, ok, memory_order_relaxed);
+    atomic_store_explicit(&s_done, true, memory_order_release);
     dispatch_semaphore_signal(s_ready);
 }
 
@@ -258,21 +257,23 @@ atmos_prime_Begin(void)
         if (![stream writeToFile:s_path atomically:YES])
         {
             s_path = nil;
-            dispatch_semaphore_signal(s_ready);
+            atmos_prime_finish(false);
             return;
         }
 
         /* AVPlayer registers the process's Atmos decoder as a side effect of
          * creating an item. Nothing has to play, and the registration holds
-         * after the player is gone. */
+         * after the player is gone. Keep the player alive briefly, then drop
+         * it synchronously: a delayed dispatch block would call back into
+         * this plugin after it may have been unloaded. */
         s_player = [[AVPlayer alloc] initWithURL:[NSURL fileURLWithPath:s_path]];
         s_player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
+        usleep(300000);
+        s_player = nil;
 
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
-                                     (int64_t) (0.3 * NSEC_PER_SEC)),
-                       dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-            atmos_prime_release();
-        });
+        unlink(s_path.fileSystemRepresentation);
+        s_path = nil;
+        atmos_prime_finish(true);
     });
 }
 
@@ -282,8 +283,12 @@ atmos_prime_Wait(double timeout_seconds)
     atmos_prime_Begin();
     if (s_ready == NULL)
         return false;
+    if (atomic_load_explicit(&s_done, memory_order_acquire))
+        return atomic_load_explicit(&s_ok, memory_order_relaxed);
 
     const int64_t timeout = (int64_t) (timeout_seconds * NSEC_PER_SEC);
-    return dispatch_semaphore_wait(s_ready,
-                                   dispatch_time(DISPATCH_TIME_NOW, timeout)) == 0;
+    if (dispatch_semaphore_wait(s_ready,
+                                dispatch_time(DISPATCH_TIME_NOW, timeout)) != 0)
+        return false;
+    return atomic_load_explicit(&s_ok, memory_order_relaxed);
 }

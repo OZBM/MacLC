@@ -465,8 +465,14 @@ foreach module : vlc_modules
         kwargs += { 'link_language': module.get('link_language') }
     endif
 
-    # 'shortname' handling varies across meson versions; omit for compatibility.
+    # Meson requires shortname <= 8 chars; truncate long module shortnames.
+    shortname = ''
+    if module.has_key('shortname')
+        shortname = module['shortname'].substring(0, 8)
+    endif
+
     lib_kwargs = kwargs
+    lib_kwargs += { 'shortname': shortname }
 
     vlc_plugin = library(
         module['name'] + '_plugin',

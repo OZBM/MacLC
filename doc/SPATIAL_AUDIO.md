@@ -16,7 +16,8 @@ own renderer** instead of a custom HRTF/spatializer:
   tracking / Personalized Spatial Audio on supported AirPods);
 * Dolby TrueHD Atmos and DTS:X are decoded locally (macOS has no native
   decoder or bitstream passthrough for those formats) and rendered to a 7.1
-  bed, which is then spatialized by Apple's renderer.
+  bed (or a discrete 7.1.4 bed with the rebuilt core), which is then
+  spatialized by Apple's renderer.
 
 The `auhal` output remains available as a fallback (`--aout=auhal`).
 
@@ -28,20 +29,22 @@ The `auhal` output remains available as a fallback (`--aout=auhal`).
 | 5.1 / 7.1 E-AC-3 (no JOC) | compressed passthrough | native Apple DD+ decoding |
 | Plain AC-3 | software decode to PCM | |
 | PCM 2.1 - 7.1 | spatial layout tags | standard CoreAudio layouts, channel reorder |
-| TrueHD / TrueHD Atmos | LibTrueHD decode + object render | 7.1 bed (heights folded); 7.1.4 renderer hooks prepared |
+| TrueHD / TrueHD Atmos | LibTrueHD decode + object render | 7.1 bed on stock core; discrete 7.1.4 bed on full rebuild |
 | DTS:X (standard presentation) | LibDTSX decode + object render | auto-selected for DTS-HD; falls back to avcodec when refused |
 
 DRM-protected files (e.g. Apple Music downloads) are not supported.
 
 ## Hardware compatibility
 
-The path uses only public `AVSampleBufferAudioRenderer` APIs, so it works on
-any Mac that supports Apple's spatial audio — including Apple-silicon MacBook
-Air built-in speakers (same renderer as MacBook Pro, just smaller drivers) and
-compatible headphones (AirPods 3/Pro/Max, Beats with Spatial Audio). Head
-tracking and Personalized Spatial Audio are controlled by macOS/AirPods, not
-by this code. Older Intel Macs without spatial-audio support fall back to
-ordinary multichannel rendering.
+The path uses public `AVSampleBufferAudioRenderer` APIs. Apple-silicon Macs
+(including MacBook Air) and compatible headphones (AirPods 3/Pro/Max, Beats
+with Spatial Audio) use the same spatial renderer as QuickTime/Apple TV;
+built-in speakers simply have fewer drivers. Head tracking and Personalized
+Spatial Audio are controlled by macOS and the headphones, not by this code.
+Minimum OS versions are set by the components: multichannel spatialization
+needs macOS 12+, compressed Atmos priming macOS 11.3+, and the bundled DTS:X
+framework macOS 15+. On hardware without spatial support the OS renders
+ordinary multichannel audio.
 
 ## Key files
 
@@ -79,4 +82,7 @@ into an existing app bundle is not ABI-compatible.
 
 * LibTrueHD / `truehdd` — see `modules/codec/truehd/LICENSE.truehd`,
   `LICENSE-APACHE.truehd` and `NOTICE.truehd`.
-* LibDTSX — see `modules/codec/truehd/LICENSE.dtsx`.
+* LibDTSX / `harletty-bridge` — see `modules/codec/truehd/LICENSE.dtsx` and
+  `NOTICE.dtsx`.
+* The E-AC-3 `dec3` bitstream construction follows published Dolby/FFmpeg
+  format specifications; no third-party source code is copied.

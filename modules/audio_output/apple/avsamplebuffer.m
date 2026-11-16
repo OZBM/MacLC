@@ -82,6 +82,7 @@ API_AVAILABLE(macos(MIN_MACOS), ios(MIN_IOS), tvos(MIN_TVOS) VISIONOS_API_AVAILA
 #endif
 #if TARGET_OS_OSX
     NSString *_deviceUID;
+    BOOL _useDefaultDevice;
 #endif
 
     vlc_mutex_t _bufferLock;
@@ -100,6 +101,7 @@ API_AVAILABLE(macos(MIN_MACOS), ios(MIN_IOS), tvos(MIN_TVOS) VISIONOS_API_AVAILA
 
 - (void)reportDevices;
 - (void)stopDeviceListener;
+- (void)updateDefaultDevice;
 @end
 
 #if TARGET_OS_OSX
@@ -181,6 +183,17 @@ DeviceListChanged(AudioObjectID inObjectID, UInt32 inNumberAddresses,
 {
     VLCAVSample *self = (__bridge VLCAVSample *) inClientData;
     [self reportDevices];
+    [self updateDefaultDevice];
+    return noErr;
+}
+
+static OSStatus
+DefaultDeviceChanged(AudioObjectID inObjectID, UInt32 inNumberAddresses,
+                     const AudioObjectPropertyAddress *inAddresses,
+                     void *inClientData)
+{
+    VLCAVSample *self = (__bridge VLCAVSample *) inClientData;
+    [self updateDefaultDevice];
     return noErr;
 }
 
@@ -215,6 +228,7 @@ CopyDefaultDeviceUID(void)
         return nil;
     return CopyDeviceUID(device);
 }
+
 #endif
 
 @implementation VLCAVSample
@@ -307,6 +321,7 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
     if (status != noErr)
     {
         msg_Err(_aout, "CMBlockBufferRef creation failure %li", (long)status);
+        block_Release(block);
         return nil;
     }
 
@@ -402,6 +417,17 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
 #endif
 }
 
+- (void)updateDefaultDevice
+{
+#if TARGET_OS_OSX
+    if (!_useDefaultDevice || _renderer == nil)
+        return;
+    NSString *uid = CopyDefaultDeviceUID();
+    if (uid != nil)
+        _renderer.audioOutputDeviceUniqueID = uid;
+#endif
+}
+
 - (void)stopDeviceListener
 {
 #if TARGET_OS_OSX
@@ -415,6 +441,13 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
     };
     AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &devices,
                                       DeviceListChanged, (__bridge void *) self);
+    AudioObjectPropertyAddress defdev = {
+        .mSelector = kAudioHardwarePropertyDefaultOutputDevice,
+        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mElement = kAudioObjectPropertyElementMain,
+    };
+    AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &defdev,
+                                      DefaultDeviceChanged, (__bridge void *) self);
     _listeningDevices = NO;
 #endif
 }
@@ -426,11 +459,15 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
      * empty string mean the system default. */
     NSString *uid;
     if (name == NULL || name[0] == '\0' || strcmp(name, "0") == 0)
-        /* The property rejects nil, so resolve the current default output
-         * instead of clearing it. */
+    {
+        /* The renderer property does not accept nil; resolve the current
+         * default output instead and follow future default changes. */
+        _useDefaultDevice = YES;
         uid = CopyDefaultDeviceUID();
+    }
     else
     {
+        _useDefaultDevice = NO;
         char *end;
         unsigned long device = strtoul(name, &end, 10);
         if (end != NULL && *end == '\0' && device <= UINT32_MAX)
@@ -855,21 +892,28 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
 
     if (info.channels == 6)
         tagLayout.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_5_1_C;
-    else if (info.channels == 8)
-        tagLayout.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_7_1_C;
     else
     {
         static const AudioChannelLabel ac3Labels[8][5] = {
             { kAudioChannelLabel_Left, kAudioChannelLabel_Right },
             { kAudioChannelLabel_Center },
             { kAudioChannelLabel_Left, kAudioChannelLabel_Right },
-            { kAudioChannelLabel_Left, kAudioChannelLabel_Right, kAudioChannelLabel_Center },
+            { kAudioChannelLabel_Left, kAudioChannelLabel_Center, kAudioChannelLabel_Right },
             { kAudioChannelLabel_Left, kAudioChannelLabel_Right, kAudioChannelLabel_CenterSurround },
-            { kAudioChannelLabel_Left, kAudioChannelLabel_Right, kAudioChannelLabel_Center, kAudioChannelLabel_CenterSurround },
+            { kAudioChannelLabel_Left, kAudioChannelLabel_Center, kAudioChannelLabel_Right, kAudioChannelLabel_CenterSurround },
             { kAudioChannelLabel_Left, kAudioChannelLabel_Right, kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround },
-            { kAudioChannelLabel_Left, kAudioChannelLabel_Right, kAudioChannelLabel_Center, kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround },
+            { kAudioChannelLabel_Left, kAudioChannelLabel_Center, kAudioChannelLabel_Right, kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround },
         };
         static const unsigned ac3Channels[8] = { 2, 1, 2, 3, 3, 4, 4, 5 };
+        /* Apple's E-AC-3 decoder emits 7.1 in this order, which is not the
+         * order implied by kAudioChannelLayoutTag_MPEG_7_1_C. */
+        static const AudioChannelLabel eac3_71_labels[8] = {
+            kAudioChannelLabel_Left, kAudioChannelLabel_Center,
+            kAudioChannelLabel_Right, kAudioChannelLabel_LeftSurround,
+            kAudioChannelLabel_RightSurround, kAudioChannelLabel_LFEScreen,
+            kAudioChannelLabel_RearSurroundLeft,
+            kAudioChannelLabel_RearSurroundRight,
+        };
 
         layout_size = offsetof(AudioChannelLayout, mChannelDescriptions)
                     + info.channels * sizeof(AudioChannelDescription);
@@ -882,12 +926,21 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
         layoutBuf->mNumberChannelDescriptions = info.channels;
 
         unsigned n = 0;
-        for (unsigned i = 0; i < ac3Channels[info.acmod]; ++i)
-            layoutBuf->mChannelDescriptions[n++].mChannelLabel =
-                ac3Labels[info.acmod][i];
-        if (info.lfeon)
-            layoutBuf->mChannelDescriptions[n++].mChannelLabel =
-                kAudioChannelLabel_LFEScreen;
+        if (info.channels == 8)
+        {
+            for (unsigned i = 0; i < 8; ++i)
+                layoutBuf->mChannelDescriptions[n++].mChannelLabel =
+                    eac3_71_labels[i];
+        }
+        else
+        {
+            for (unsigned i = 0; i < ac3Channels[info.acmod]; ++i)
+                layoutBuf->mChannelDescriptions[n++].mChannelLabel =
+                    ac3Labels[info.acmod][i];
+            if (info.lfeon)
+                layoutBuf->mChannelDescriptions[n++].mChannelLabel =
+                    kAudioChannelLabel_LFEScreen;
+        }
 
         if (n != info.channels)
         {
@@ -945,6 +998,15 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
                                        DeviceListChanged,
                                        (__bridge void *) self) == noErr)
         _listeningDevices = YES;
+
+    AudioObjectPropertyAddress defdev = {
+        .mSelector = kAudioHardwarePropertyDefaultOutputDevice,
+        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mElement = kAudioObjectPropertyElementMain,
+    };
+    AudioObjectAddPropertyListener(kAudioObjectSystemObject, &defdev,
+                                   DefaultDeviceChanged,
+                                   (__bridge void *) self);
 #endif
 
 #if !TARGET_OS_WATCH

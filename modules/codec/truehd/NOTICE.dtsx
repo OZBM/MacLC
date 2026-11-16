@@ -1,0 +1,13 @@
+LibDTSX (DTSX.framework)
+C API and Apple packaging of a DTS:X decoder.
+
+This product includes software from the harletty-bridge project
+(https://github.com/harletty/harletty-bridge): the `dca` Rust crate
+(DTS/DTS-HD/DTS:X decoder), licensed under the Apache License, Version 2.0.
+Copyright harletty and the harletty-bridge contributors.
+
+The Apple framework packaging is identified as com.aetherengine.DTSX.
+Its license is in LICENSE.dtsx (Apache License, Version 2.0).
+
+DTS and DTS:X are trademarks of DTS, Inc. This software is not affiliated
+with or endorsed by DTS, Inc.

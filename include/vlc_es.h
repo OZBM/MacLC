@@ -110,7 +110,7 @@ struct audio_format_t
  * a decoder that outputs Atmos_7_1_4 emits the channels in CoreAudio order
  * and the output module skips the reorder for this mask. */
 #define AOUT_CHAN_TOP_FRONT_LEFT    0x0008
-#define AOUT_CHAN_TOP_FRONT_RIGHT   0x0010
+#define AOUT_CHAN_TOP_FRONT_RIGHT   0x0800 /* 0x10 is AOUT_CHAN_REARCENTER */
 #define AOUT_CHAN_TOP_REAR_LEFT     0x0080
 #define AOUT_CHAN_TOP_REAR_RIGHT    0x0400
 

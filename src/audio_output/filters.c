@@ -508,12 +508,16 @@ static int AppendRemapFilter(vlc_object_t *obj, aout_filters_t *restrict filters
     static const uint8_t wg4_to_remap[] = { 0, 2, 6, 7, 3, 5, 4, 1, 8 };
     int remap[AOUT_CHAN_MAX];
     bool needed = false;
-    for (int i = 0; i < AOUT_CHAN_MAX; ++i)
+    /* The remap filter only understands the 9 WG4 channels. */
+    const unsigned remap_count = ARRAY_SIZE(wg4_to_remap);
+    for (unsigned i = 0; i < remap_count; ++i)
     {
-        if (wg4_remap[i] != i)
+        if (wg4_remap[i] != (int)i)
             needed = true;
         remap[i] = wg4_remap[i] >= 0 ? wg4_to_remap[wg4_remap[i]] : -1;
     }
+    for (unsigned i = remap_count; i < AOUT_CHAN_MAX; ++i)
+        remap[i] = -1;
     if (!needed)
         return 0;
 
