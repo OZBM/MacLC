@@ -358,7 +358,7 @@ Apple Silicon上のVLC 4.0.0-devにおけるmacOS HDRパスの監査（2026年9�
 <details>
 <summary><b>ソースからのビルド</b></summary>
 
-MacLCはApple Silicon搭載Mac上で、Homebrewのライブラリに対してautotoolsを使ってビルドします。MesonではmacOSインターフェースはビルドできないため、autotoolsを使用するか、インターフェース作業にはXcodeプロジェクトを使用してください。
+MacLCはApple Silicon搭載Mac上で、Homebrewのライブラリに対してautotoolsを使ってビルドします。Mesonは削除されました。ビルドはすべてautotoolsで行い、インターフェース作業にはルートにあるXcodeプロジェクトを使用してください。ソースツリーの案内は [`doc/STRUCTURE.md`](doc/STRUCTURE.md)（英語）にあります。
 
 ```bash
 # once: the media library engine, TagLib and libdvbpsi, built from contrib/src's pinned versions

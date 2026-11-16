@@ -358,7 +358,7 @@ Licences : NIS et FSR 1 (MIT, avec les mentions de NVIDIA et d'AMD conservées t
 <details>
 <summary><b>Compiler depuis les sources</b></summary>
 
-MacLC se compile sur un Mac Apple Silicon avec autotools et les bibliothèques de Homebrew. Meson ne compile pas l'interface macOS : utilisez autotools, ou le projet Xcode pour travailler sur l'interface.
+MacLC se compile sur un Mac Apple Silicon avec autotools et les bibliothèques de Homebrew. Meson a été retiré : autotools compile tout, et le projet Xcode à la racine sert au travail sur l'interface. [`doc/STRUCTURE.md`](doc/STRUCTURE.md) décrit l'arborescence du code (en anglais).
 
 ```bash
 # once: the media library engine, TagLib and libdvbpsi, built from contrib/src's pinned versions

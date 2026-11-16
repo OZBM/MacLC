@@ -358,7 +358,7 @@ Lizenzen: NIS und FSR 1 (MIT, mit wortgetreu übernommenen Hinweisen von NVIDIA 
 <details>
 <summary><b>Aus dem Quellcode bauen</b></summary>
 
-MacLC wird auf einem Mac mit Apple Silicon per autotools gegen die Bibliotheken von Homebrew gebaut. Meson baut die macOS-Oberfläche nicht: Nutze autotools – oder das Xcode-Projekt für Arbeiten an der Oberfläche.
+MacLC wird auf einem Mac mit Apple Silicon per autotools gegen die Bibliotheken von Homebrew gebaut. Meson wurde entfernt: autotools baut alles, das Xcode-Projekt im Hauptverzeichnis dient der Arbeit an der Oberfläche. [`doc/STRUCTURE.md`](doc/STRUCTURE.md) beschreibt den Quellbaum (auf Englisch).
 
 ```bash
 # once: the media library engine, TagLib and libdvbpsi, built from contrib/src's pinned versions

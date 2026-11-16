@@ -358,7 +358,7 @@ MacLC 基于 VLC 4 的部分开源代码构建，核心是其播放引擎（`lib
 <details>
 <summary><b>从源代码构建</b></summary>
 
-MacLC 在搭载 Apple Silicon 的 Mac 上使用 autotools 配合 Homebrew 依赖库进行构建。Meson 不会构建 macOS 界面：请使用 autotools，或使用 Xcode 项目进行界面开发。
+MacLC 在搭载 Apple Silicon 的 Mac 上使用 autotools 配合 Homebrew 依赖库进行构建。Meson 已移除：全部使用 autotools 构建，界面开发请使用根目录下的 Xcode 项目。源代码结构说明见 [`doc/STRUCTURE.md`](doc/STRUCTURE.md)（英文）。
 
 ```bash
 # once: the media library engine, TagLib and libdvbpsi, built from contrib/src's pinned versions
