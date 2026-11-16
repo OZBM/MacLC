@@ -552,7 +552,7 @@ static MTLScissorRect ScissorInside(CGRect rect, id<MTLTexture> target)
                                     height:1
                                  mipmapped:NO];
     tDesc.usage = MTLTextureUsageShaderRead;
-    tDesc.storageMode = MTLStorageModeManaged;
+    tDesc.storageMode = MTLStorageModeShared; // Managed is deprecated in macOS 27: one memory on Apple Silicon
     id<MTLTexture> tex = [_device newTextureWithDescriptor:tDesc];
     if (tex != nil) {
         [tex replaceRegion:MTLRegionMake2D(0, 0, LUT_ENTRIES, 1)

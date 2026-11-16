@@ -1,6 +1,6 @@
 # Project structure
 
-MacLC is a macOS-only media player targeting macOS 26.0 and later on Apple Silicon, compiled with Xcode 27.2 against the macOS 27 SDK. It builds on the VLC 4 core; code for other operating systems has been removed.
+MacLC is a macOS-only media player targeting macOS 27.2 and later on Apple Silicon, compiled with Xcode 27.2 against the macOS 27 SDK. It builds on the VLC 4 core; code for other operating systems has been removed.
 
 ## Top level
 

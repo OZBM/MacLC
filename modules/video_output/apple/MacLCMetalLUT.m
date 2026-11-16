@@ -230,7 +230,7 @@ static NSString * const kLUTShaderSource =
     tDesc.depth = lutSize;
     tDesc.mipmapLevelCount = 1;
     tDesc.usage = MTLTextureUsageShaderRead;
-    tDesc.storageMode = MTLStorageModeManaged;
+    tDesc.storageMode = MTLStorageModeShared; // Managed is deprecated in macOS 27: one memory on Apple Silicon
 
     id<MTLTexture> lut3DTex = [device newTextureWithDescriptor:tDesc];
     if (lut3DTex == nil) {

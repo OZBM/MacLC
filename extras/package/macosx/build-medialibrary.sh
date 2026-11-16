@@ -43,7 +43,7 @@ EOF
 rm -rf "$DEPS/src/medialibrary-$VERSION" "$DEPS/ml-build-static"
 tar xjf "$TARBALL" -C "$DEPS/src"
 cd "$DEPS/src/medialibrary-$VERSION"
-export MACOSX_DEPLOYMENT_TARGET=26.0 NINJA
+export MACOSX_DEPLOYMENT_TARGET=27.2 NINJA
 PKG_CONFIG_LIBDIR=$DEPS/pkgconfig PKG_CONFIG_PATH=$DEPS/pkgconfig \
     $MESON setup "$DEPS/ml-build-static" --prefix="$DEPS/prefix" \
         -Dlibvlc=disabled -Dtests=disabled -Dlibtool_workaround=true \

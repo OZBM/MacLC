@@ -72,11 +72,9 @@ static NSMutableArray *blackoutWindows = NULL;
     // `defaults write <bundle id> MacLCForceTouchUI -bool YES` lays out the touch UI on any Mac.
     if ([NSUserDefaults.standardUserDefaults boolForKey:@"MacLCForceTouchUI"])
         return YES;
-    if (@available(macOS 27.0, *)) {
-        for (NSScreen * const screen in NSScreen.screens) {
-            if (screen.touchCapabilities & NSScreenTouchCapabilitiesMultiTouch)
-                return YES;
-        }
+    for (NSScreen * const screen in NSScreen.screens) {
+        if (screen.touchCapabilities & NSScreenTouchCapabilitiesMultiTouch)
+            return YES;
     }
     return NO;
 }
@@ -142,10 +140,8 @@ static NSMutableArray *blackoutWindows = NULL;
     if ([self hasMenuBar] || [self hasDock])
         presentationOpts |= NSApplicationPresentationAutoHideDock;
     // A finger near a corner of a touch screen should not open a system feature over the video.
-    if (@available(macOS 27.0, *)) {
-        if ((presentationOpts & NSApplicationPresentationAutoHideDock) && NSScreen.touchInterfaceEnabled)
-            presentationOpts |= NSApplicationPresentationDisableScreenCornerInteractions;
-    }
+    if ((presentationOpts & NSApplicationPresentationAutoHideDock) && NSScreen.touchInterfaceEnabled)
+        presentationOpts |= NSApplicationPresentationDisableScreenCornerInteractions;
     [NSApp setPresentationOptions:presentationOpts];
 }
 
@@ -156,8 +152,7 @@ static NSMutableArray *blackoutWindows = NULL;
         presentationOpts &= (~NSApplicationPresentationAutoHideMenuBar);
     if ([self hasMenuBar] || [self hasDock])
         presentationOpts &= (~NSApplicationPresentationAutoHideDock);
-    if (@available(macOS 27.0, *))
-        presentationOpts &= (~NSApplicationPresentationDisableScreenCornerInteractions);
+    presentationOpts &= (~NSApplicationPresentationDisableScreenCornerInteractions);
     [NSApp setPresentationOptions:presentationOpts];
 }
 

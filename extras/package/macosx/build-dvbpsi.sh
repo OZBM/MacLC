@@ -55,7 +55,7 @@ cp "$AUTOMAKE_DIR/config.guess" "$AUTOMAKE_DIR/config.sub" "$SRC/.auto/" 2>/dev/
 
 cd "$SRC"
 ./configure --prefix="$DEPS/prefix" --disable-shared --enable-static --with-pic \
-    CFLAGS="-O2 -g -mmacosx-version-min=26.0"
+    CFLAGS="-O2 -g -mmacosx-version-min=27.2"
 make -j "$(sysctl -n hw.ncpu)"
 make install
 echo "libdvbpsi $VERSION (static) installed in $DEPS/prefix"

@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img alt="macOS 26 Tahoe 以降" src="https://img.shields.io/badge/macOS-26%20Tahoe%20or%20later-24292f?logo=apple&logoColor=white">
+  <img alt="macOS 27.2 以降" src="https://img.shields.io/badge/macOS-27.2%20or%20later-24292f?logo=apple&logoColor=white">
   <img alt="Apple Silicon、M1 以降" src="https://img.shields.io/badge/Apple%20Silicon-M1%20or%20newer-24292f">
   <img alt="無料、広告なし、トラッキングなし" src="https://img.shields.io/badge/free-no%20ads%20%C2%B7%20no%20tracking-24292f">
   <a href="COPYING"><img alt="ライセンス：GPL 2.0 以降" src="https://img.shields.io/badge/licence-GPL--2.0--or--later-24292f"></a>
@@ -232,7 +232,7 @@ shasum -a 256 ~/Downloads/maclc-1.6.dmg
 **動作環境**
 
 - Apple Silicon（M1以降）を搭載したMac。Intel Macには対応していません。
-- macOS 26 Tahoe以降。
+- macOS 27.2以降。
 - SDR to HDRには、通常の白より明るく表示できる画面（XDRディスプレイ搭載のMacBook Pro、Pro Display XDR、HDRモニター）が必要です。それ以外の機能はどの画面でも動作します。
 - 任意：YouTubeやWeb動画の再生には [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)（`brew install yt-dlp`）。
 
@@ -285,7 +285,7 @@ MacLCは個人プロジェクトです。広告もサブスクリプションも
 <details>
 <summary><b>Intel Macや、macOS 15以前でも動作しますか？</b></summary>
 
-いいえ。MacLCはApple SiliconおよびmacOS 26 Tahoe以降を対象としており、同梱ライブラリもmacOS 26を必要とします。
+いいえ。MacLCはApple SiliconおよびmacOS 27.2以降を対象としており、同梱ライブラリもmacOS 27.2を必要とします。
 </details>
 
 <details>

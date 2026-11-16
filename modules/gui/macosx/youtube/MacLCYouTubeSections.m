@@ -231,12 +231,10 @@
     _scrollView.drawsBackground = NO;
     _scrollView.hasVerticalScroller = YES;
     _scrollView.autohidesScrollers = YES;
-    if (@available(macOS 27.0, *)) {
-        NSRefreshController * const refreshController = [[NSRefreshController alloc] init];
-        refreshController.target = self;
-        refreshController.action = @selector(refreshPulled:);
-        _scrollView.refreshController = refreshController;
-    }
+    NSRefreshController * const refreshController = [[NSRefreshController alloc] init];
+    refreshController.target = self;
+    refreshController.action = @selector(refreshPulled:);
+    _scrollView.refreshController = refreshController;
     [rootView addSubview:_scrollView];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -345,9 +343,7 @@
 {
     _isLoading = NO;
     _inFlightRequest = nil;
-    if (@available(macOS 27.0, *)) {
-        [_scrollView.refreshController endRefreshing];
-    }
+    [_scrollView.refreshController endRefreshing];
 
     if (error != nil) {
         if (!isAppend) {

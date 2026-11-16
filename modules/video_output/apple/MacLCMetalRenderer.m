@@ -874,7 +874,7 @@ static NSString * const kMacLCMetalShaderSource =
                                             height:texH
                                          mipmapped:NO];
             tDesc.usage = MTLTextureUsageShaderRead;
-            tDesc.storageMode = MTLStorageModeManaged;
+            tDesc.storageMode = MTLStorageModeShared; // Managed is deprecated in macOS 27: one memory on Apple Silicon
             regionTex = [_device newTextureWithDescriptor:tDesc];
         }
 

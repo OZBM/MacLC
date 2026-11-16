@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img alt="macOS 26 Tahoe oder neuer" src="https://img.shields.io/badge/macOS-26%20Tahoe%20or%20later-24292f?logo=apple&logoColor=white">
+  <img alt="macOS 27.2 oder neuer" src="https://img.shields.io/badge/macOS-27.2%20or%20later-24292f?logo=apple&logoColor=white">
   <img alt="Apple Silicon, M1 oder neuer" src="https://img.shields.io/badge/Apple%20Silicon-M1%20or%20newer-24292f">
   <img alt="Kostenlos, keine Werbung, kein Tracking" src="https://img.shields.io/badge/free-no%20ads%20%C2%B7%20no%20tracking-24292f">
   <a href="COPYING"><img alt="Lizenz: GPL 2.0 oder neuer" src="https://img.shields.io/badge/licence-GPL--2.0--or--later-24292f"></a>
@@ -232,7 +232,7 @@ Falls macOS jemals meldet, MacLC „ist beschädigt und kann nicht geöffnet wer
 **Voraussetzungen**
 
 - Ein Mac mit Apple Silicon (M1 oder neuer). Intel-Macs werden nicht unterstützt.
-- macOS 26 Tahoe oder neuer.
+- macOS 27.2 oder neuer.
 - SDR zu HDR erfordert ein Display, das heller als Weiß leuchten kann (ein MacBook Pro mit XDR-Display, ein Pro Display XDR oder einen HDR-Monitor). Alles andere funktioniert auf jedem Bildschirm.
 - Optional: [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) für YouTube und Webvideos (`brew install yt-dlp`).
 
@@ -285,7 +285,7 @@ Nein. MacLC spielt jedes Video auf jedem Mac-Bildschirm ab und passt HDR-Filme a
 <details>
 <summary><b>Läuft es auf Intel-Macs oder unter macOS 15 und älter?</b></summary>
 
-Nein. MacLC ist für Apple Silicon und macOS 26 Tahoe oder neuer entwickelt, und auch die mitgelieferten Bibliotheken setzen macOS 26 voraus.
+Nein. MacLC ist für Apple Silicon und macOS 27.2 oder neuer entwickelt, und auch die mitgelieferten Bibliotheken setzen macOS 27.2 voraus.
 </details>
 
 <details>

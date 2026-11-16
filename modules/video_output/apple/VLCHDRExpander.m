@@ -1230,15 +1230,9 @@ static NSString * const kVLCHDRExpanderShaderSource =
         return nil;
     }
 
-    _storageMode = MTLStorageModeManaged;
-#if TARGET_OS_OSX
-    if (@available(macOS 10.15, *)) {
-        if (_device.hasUnifiedMemory)
-            _storageMode = MTLStorageModeShared;
-    }
-#else
+    /* macOS 27 runs on Apple silicon only: one memory for CPU and GPU, where
+     * Managed storage (deprecated in macOS 27) has no effect. */
     _storageMode = MTLStorageModeShared;
-#endif
 
     NSError *error = nil;
     id<MTLLibrary> library =
@@ -2059,14 +2053,6 @@ static void FillSourceColorimetry(VLCHDRExpandUniforms *uniforms,
             [enc endEncoding];
         }
     }
-
-#if TARGET_OS_OSX
-    if (_storageMode == MTLStorageModeManaged) {
-        id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
-        [blit synchronizeResource:outRGBA];
-        [blit endEncoding];
-    }
-#endif
 
     [commandBuffer commit];
     [commandBuffer waitUntilCompleted];

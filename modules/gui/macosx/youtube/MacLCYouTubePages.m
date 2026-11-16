@@ -455,10 +455,8 @@ static NSString * const MacLCYouTubeChannelHeaderItemIdentifier = @"MacLCYouTube
                                                                 action:@selector(segmentChanged:)];
     _segmentedControl.translatesAutoresizingMaskIntoConstraints = NO;
     _segmentedControl.segmentStyle = NSSegmentStyleTexturedRounded;
-    if (@available(macOS 27.0, *)) {
-        // The segments switch the page content below: they are tabs.
-        _segmentedControl.role = NSSegmentedControlRoleTabs;
-    }
+    // The segments switch the page content below: they are tabs.
+    _segmentedControl.role = NSSegmentedControlRoleTabs;
     [root addSubview:_segmentedControl];
 
     _bannerHeightConstraint = [_bannerImageView.heightAnchor constraintEqualToConstant:0.0];
