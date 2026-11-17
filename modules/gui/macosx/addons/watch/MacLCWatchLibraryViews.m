@@ -665,7 +665,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchContinueItemIdentifier = @"MacLCWa
 - (void)updateHoverState:(BOOL)hovered animated:(BOOL)animated
 {
     const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
-        ? CATransform3DMakeScale(1.04, 1.04, 1.0)
+        ? [MacLCDesign centeredScale:1.04 forLayer:_cardWrapperView.layer]
         : CATransform3DIdentity;
     const float targetOpacity = hovered ? 0.30f : 0.0f;
     const CGFloat controlsAlpha = hovered ? 1.0 : 0.0;
@@ -1014,7 +1014,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchContinueItemIdentifier = @"MacLCWa
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
     section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
     section.interGroupSpacing = 20.0;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, 40.0, 36.0, 40.0);
+    section.contentInsets = NSDirectionalEdgeInsetsMake(12.0, 40.0, 36.0, 40.0);
     section.boundarySupplementaryItems = @[[self headerSupplementaryItem]];
     return section;
 }

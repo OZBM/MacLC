@@ -528,7 +528,7 @@
         self.layer.shadowOffset = CGSizeMake(0.0, -4.0);
 
         if (!reducedMotion) {
-            self.layer.transform = CATransform3DMakeScale(1.02, 1.02, 1.0);
+            self.layer.transform = [MacLCDesign centeredScale:1.02 forLayer:self.layer];
         }
     } else {
         self.layer.shadowOpacity = 0.0;

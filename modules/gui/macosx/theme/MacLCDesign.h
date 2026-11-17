@@ -615,6 +615,25 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (MacLCCardView *)cardViewWithTitle:(nullable NSString *)title;
 
+/**
+ * A scale about the centre of the layer's bounds, whatever its anchor point.
+ * AppKit gives a view's backing layer an anchor of (0, 0), so a plain scale
+ * grows the view up and to the right, where its neighbours and the enclosing
+ * scroll view cut it off.
+ */
+/**
+ * A page arriving: fades in and settles from `offset` points sideways (or
+ * from a little below when 0) with a slight scale, on the emphasized spring.
+ * Reduce Motion keeps only the fade. Does nothing off screen.
+ */
++ (void)animatePageEntranceOfView:(NSView *)view fromOffset:(CGFloat)offset;
+
+/// A page leaving sideways over `duration` (pair it with a fade); the
+/// transform stays at the end until the caller removes the view.
++ (void)animatePageExitOfView:(NSView *)view toOffset:(CGFloat)offset duration:(NSTimeInterval)duration;
+
++ (CATransform3D)centeredScale:(CGFloat)scale forLayer:(CALayer *)layer;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -395,6 +395,7 @@ static int ShowController(vlc_object_t * __unused p_this,
     }
 
     view.translatesAutoresizingMaskIntoConstraints = NO;
+    const BOOL changed = ![self.libraryTargetView.subviews containsObject:view];
     if ([self.libraryTargetView.subviews containsObject:self.loadingOverlayView]) {
         self.libraryTargetView.subviews = @[view, self.loadingOverlayView];
     } else {
@@ -415,6 +416,9 @@ static int ShowController(vlc_object_t * __unused p_this,
         [view.leadingAnchor constraintEqualToAnchor:leading],
         [view.trailingAnchor constraintEqualToAnchor:trailing]
     ]];
+    /* A new section rises into place instead of popping in. */
+    if (changed)
+        [MacLCDesign animatePageEntranceOfView:view fromOffset:0.0];
 
     if (VLCMain.sharedInstance.metalLibrary && ((VLCApplication *)NSApplication.sharedApplication).winterHolidaysTheming) {
         VLCSnowEffectView * const snowView =
@@ -702,6 +706,7 @@ static int ShowController(vlc_object_t * __unused p_this,
 
     [_libraryTargetView addSubview:videoView];
     [videoView applyConstraintsToFillSuperview];
+    [MacLCDesign animatePageEntranceOfView:videoView fromOffset:0.0];
 }
 
 - (void)enableVideoPlaybackAppearance

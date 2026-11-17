@@ -36,6 +36,16 @@
 
 #pragma mark - Facts Line
 
+/* A rating worth showing ("7.8"), nil for none, zero or "N/A". */
+static NSString * _Nullable MacLCWatchRatingText(NSString * _Nullable rating)
+{
+    NSString * const trimmed = [[rating stringByReplacingOccurrencesOfString:@"★" withString:@""]
+        stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+    if (trimmed.length == 0 || trimmed.doubleValue <= 0.0)
+        return nil;
+    return trimmed;
+}
+
 NSString *MacLCWatchFactsLine(NSString *type,
                               NSArray<NSString *> *genres,
                               NSString * _Nullable releaseInfo,
@@ -271,6 +281,9 @@ NSString *MacLCWatchFactsLine(NSString *type,
 NSString * const MacLCWatchHeaderElementKind = @"MacLCWatchHeaderElementKind";
 
 static const CGFloat MacLCWatchHorizontalInset = 40.0;
+/* Room above a shelf for a hovered card: it grows 5 % about its centre and
+ * casts a shadow, and the shelf's own scroll view clips at its top edge. */
+static const CGFloat MacLCWatchHoverHeadroom = 12.0;
 static const CGFloat MacLCWatchItemSpacing = 20.0;
 static const CGFloat MacLCWatchSectionSpacing = 36.0;
 static const CGFloat MacLCWatchRankColumnWidth = 52.0;
@@ -341,7 +354,7 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
     section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
     section.interGroupSpacing = MacLCWatchItemSpacing;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
                                                         MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
     section.boundarySupplementaryItems = @[[self headerSupplementaryItem]];
     return section;
@@ -406,7 +419,7 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
     section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
     section.interGroupSpacing = MacLCWatchItemSpacing;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
                                                         MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
     section.boundarySupplementaryItems = @[[self headerSupplementaryItem]];
     return section;
@@ -445,7 +458,7 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
     section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
     section.interGroupSpacing = MacLCWatchItemSpacing;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
                                                         MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
     section.boundarySupplementaryItems = @[[self headerSupplementaryItemWithSubtitle:YES]];
     return section;
@@ -470,7 +483,7 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
     section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
     section.interGroupSpacing = 16.0;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
                                                         MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
     section.boundarySupplementaryItems = @[[self headerSupplementaryItemWithSubtitle:NO]];
     return section;
@@ -486,7 +499,7 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
         [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:size subitems:@[item]];
 
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
-    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
                                                         MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
     return section;
 }
@@ -514,6 +527,8 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
 @property (nonatomic, readonly) MacLCWatchedBadge *watchedBadge;
 @property (nonatomic, readonly) MacLCWatchFavoriteButton *favoriteButton;
 @property (nonatomic, readonly) NSTextField *rankLabel;
+/// "★ 7.8" from the add-on's metadata, top leading on the poster.
+@property (nonatomic, readonly) NSTextField *ratingBadge;
 @property (nonatomic, readonly) NSTextField *titleLabel;
 @property (nonatomic, readonly) NSTextField *subtitleLabel;
 @property (nonatomic, readonly) CAShapeLayer *selectionRingLayer;
@@ -592,6 +607,18 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
         _favoriteButton.hidden = YES;
         [_posterContainerView addSubview:_favoriteButton];
 
+        _ratingBadge = [NSTextField labelWithString:@""];
+        _ratingBadge.translatesAutoresizingMaskIntoConstraints = NO;
+        _ratingBadge.font = [NSFont systemFontOfSize:MacLCDesign.caption.pointSize weight:NSFontWeightSemibold];
+        _ratingBadge.textColor = NSColor.whiteColor;
+        _ratingBadge.alignment = NSTextAlignmentCenter;
+        _ratingBadge.wantsLayer = YES;
+        _ratingBadge.layer.backgroundColor = [NSColor colorWithWhite:0.0 alpha:0.62].CGColor;
+        _ratingBadge.layer.cornerRadius = 6.0;
+        _ratingBadge.layer.cornerCurve = kCACornerCurveContinuous;
+        _ratingBadge.hidden = YES;
+        [_posterContainerView addSubview:_ratingBadge];
+
         _rankLabel = [NSTextField labelWithString:@""];
         _rankLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _rankLabel.textColor = NSColor.labelColor;
@@ -661,6 +688,11 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
             [_watchedBadge.bottomAnchor constraintEqualToAnchor:_posterContainerView.bottomAnchor constant:-8.0],
             [_watchedBadge.widthAnchor constraintEqualToConstant:24.0],
             [_watchedBadge.heightAnchor constraintEqualToConstant:24.0],
+
+            [_ratingBadge.leadingAnchor constraintEqualToAnchor:_posterContainerView.leadingAnchor constant:6.0],
+            [_ratingBadge.topAnchor constraintEqualToAnchor:_posterContainerView.topAnchor constant:6.0],
+            [_ratingBadge.heightAnchor constraintEqualToConstant:20.0],
+            [_ratingBadge.widthAnchor constraintGreaterThanOrEqualToConstant:40.0],
 
             [_favoriteButton.trailingAnchor constraintEqualToAnchor:_posterContainerView.trailingAnchor constant:-6.0],
             [_favoriteButton.topAnchor constraintEqualToAnchor:_posterContainerView.topAnchor constant:6.0],
@@ -764,7 +796,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
 - (void)updateHoverState:(BOOL)hovered animated:(BOOL)animated
 {
     const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
-        ? CATransform3DMakeScale(1.05, 1.05, 1.0)
+        ? [MacLCDesign centeredScale:1.05 forLayer:_posterWrapperView.layer]
         : CATransform3DIdentity;
     const float targetOpacity = hovered ? 0.30f : 0.0f;
 
@@ -1091,6 +1123,17 @@ NSUserInterfaceItemIdentifier const MacLCWatchPosterItemIdentifier = @"MacLCWatc
     v.titleLabel.stringValue = item.name ?: @"";
     v.subtitleLabel.stringValue = self.subtitleString ?: @"";
 
+    /* What an add-on adds to a title shows in MacLC's own style: its rating
+     * as a badge, and landscape or square art fitted rather than cropped. */
+    NSString * const rating = MacLCWatchRatingText(item.imdbRating);
+    v.ratingBadge.stringValue = rating ? [NSString stringWithFormat:@" ★ %@ ", rating] : @"";
+    v.ratingBadge.hidden = rating == nil;
+    v.ratingBadge.accessibilityLabel = rating ? [NSString stringWithFormat:_NS("Rated %@"), rating] : nil;
+    id const shape = item.rawMeta[@"posterShape"];
+    const BOOL fitted = [shape isKindOfClass:NSString.class]
+        && ([shape isEqualToString:@"landscape"] || [shape isEqualToString:@"square"]);
+    v.posterImageView.layer.contentsGravity = fitted ? kCAGravityResizeAspect : kCAGravityResizeAspectFill;
+
     if (item.posterURL != nil) {
         const CGFloat scale = self.view.window.backingScaleFactor > 0.0 ? self.view.window.backingScaleFactor : 2.0;
         const NSSize drawnSize = NSMakeSize(168.0, 252.0);
@@ -1366,7 +1409,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchEpisodeItemIdentifier = @"MacLCWat
 - (void)updateHoverState:(BOOL)hovered animated:(BOOL)animated
 {
     const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
-        ? CATransform3DMakeScale(1.05, 1.05, 1.0)
+        ? [MacLCDesign centeredScale:1.05 forLayer:_stillWrapperView.layer]
         : CATransform3DIdentity;
     const float targetOpacity = hovered ? 0.30f : 0.0f;
 

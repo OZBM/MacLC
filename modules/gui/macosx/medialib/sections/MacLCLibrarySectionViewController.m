@@ -157,12 +157,16 @@ NSNotificationName const MacLCLibrarySectionChromeDidChangeNotification = @"MacL
         [self chromeDidChange];
     } else {
         viewController.view.alphaValue = 0.0;
+        /* Forward: the new page comes in from the trailing side. */
+        [MacLCDesign animatePageEntranceOfView:viewController.view fromOffset:36.0];
+        [MacLCDesign animatePageExitOfView:oldTop.view toOffset:-24.0 duration:MacLCDesign.motionStandardDuration];
         [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
             context.duration = MacLCDesign.motionStandardDuration;
             oldTop.view.animator.alphaValue = 0.0;
             viewController.view.animator.alphaValue = 1.0;
         } completionHandler:^{
             [oldTop.view removeFromSuperview];
+            [oldTop.view.layer removeAnimationForKey:@"MacLCPageExit"];
             oldTop.view.alphaValue = 1.0;
             if (self.view.window) {
                 [self.view.window makeFirstResponder:viewController.view];
@@ -202,6 +206,7 @@ NSNotificationName const MacLCLibrarySectionChromeDidChangeNotification = @"MacL
 
     void (^completionBlock)(void) = ^{
         [oldTop.view removeFromSuperview];
+        [oldTop.view.layer removeAnimationForKey:@"MacLCPageExit"];
         [oldTop removeFromParentViewController];
         if (savedResponder && [savedResponder isKindOfClass:[NSView class]] &&
             [(NSView *)savedResponder isDescendantOf:newTop.view]) {
@@ -218,6 +223,9 @@ NSNotificationName const MacLCLibrarySectionChromeDidChangeNotification = @"MacL
         [self chromeDidChange];
     } else {
         newTop.view.alphaValue = 0.0;
+        /* Back: the old page leaves to the trailing side. */
+        [MacLCDesign animatePageEntranceOfView:newTop.view fromOffset:-24.0];
+        [MacLCDesign animatePageExitOfView:oldTop.view toOffset:36.0 duration:MacLCDesign.motionStandardDuration];
         [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
             context.duration = MacLCDesign.motionStandardDuration;
             oldTop.view.animator.alphaValue = 0.0;

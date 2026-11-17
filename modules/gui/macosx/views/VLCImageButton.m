@@ -22,6 +22,7 @@
  *****************************************************************************/
 
 #import "VLCImageButton.h"
+#import "theme/MacLCDesign.h"
 
 @implementation VLCImageButton
 
@@ -40,6 +41,36 @@
 {
     [(NSButtonCell*)[self cell] setHighlightsBy:NSPushInCellMask];
     [(NSButtonCell*)[self cell] setShowsStateBy:(_toggle) ? NSContentsCellMask : NSNoCellMask];
+}
+
+/* A press sinks the button a little and lets it spring back: every control on
+ * the player bar answers the click, not only the action behind it. The
+ * tracking loop runs inside super, so the sink lasts as long as the press. */
+- (void)mouseDown:(NSEvent *)event
+{
+    [self animatePressed:YES];
+    [super mouseDown:event];
+    [self animatePressed:NO];
+}
+
+- (void)animatePressed:(BOOL)pressed
+{
+    if (MacLCDesign.reducedMotion || !self.enabled)
+        return;
+    self.wantsLayer = YES;
+    CALayer * const layer = self.layer;
+    const CATransform3D target = pressed ? [MacLCDesign centeredScale:0.88 forLayer:layer] : CATransform3DIdentity;
+    CASpringAnimation * const spring = [CASpringAnimation animationWithKeyPath:@"transform"];
+    spring.fromValue = [NSValue valueWithCATransform3D:((CALayer *)layer.presentationLayer ?: layer).transform];
+    spring.toValue = [NSValue valueWithCATransform3D:target];
+    spring.damping = pressed ? 30.0 : 11.0;
+    spring.stiffness = 420.0;
+    spring.duration = spring.settlingDuration;
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    layer.transform = target;
+    [CATransaction commit];
+    [layer addAnimation:spring forKey:@"VLCImageButtonPress"];
 }
 
 - (void)setToggle:(BOOL)toggle

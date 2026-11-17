@@ -320,9 +320,29 @@ static const NSTimeInterval MacLCSearchDebounce = 0.12;
     ]];
 }
 
+/* The customization palette asks for its own copies of every item. Only the
+ * items going into the toolbar may be kept: a palette copy kept in their
+ * place takes every later update (hidden, enabled, the sort menu) and the
+ * real toolbar stops following the section. */
 - (nullable NSToolbarItem *)toolbar:(NSToolbar *)toolbar
               itemForItemIdentifier:(NSToolbarItemIdentifier)itemIdentifier
           willBeInsertedIntoToolbar:(BOOL)flag
+{
+    NSToolbarItemGroup * const navigationGroup = _navigationGroup;
+    NSToolbarItemGroup * const viewModeGroup = _viewModeGroup;
+    NSMenuToolbarItem * const sortItem = _sortItem;
+    NSSearchToolbarItem * const searchItem = _searchItem;
+    NSToolbarItem * const item = [self makeItemForIdentifier:itemIdentifier];
+    if (!flag) {
+        _navigationGroup = navigationGroup;
+        _viewModeGroup = viewModeGroup;
+        _sortItem = sortItem;
+        _searchItem = searchItem;
+    }
+    return item;
+}
+
+- (nullable NSToolbarItem *)makeItemForIdentifier:(NSToolbarItemIdentifier)itemIdentifier
 {
     VLCLibraryWindowSplitViewController * const splitViewController = _libraryWindow.splitViewController;
 

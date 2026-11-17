@@ -367,6 +367,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchShelfHeaderIdentifier = @"MacLCWat
     MacLCWatchShelfActionButton *_actionButton;
     MacLCWatchCirclePagingButton *_prevButton;
     MacLCWatchCirclePagingButton *_nextButton;
+    NSPopUpButton *_filterButton;
 
     NSLayoutConstraint *_titleCenterYConstraint;
     NSLayoutConstraint *_titleTopConstraint;
@@ -478,6 +479,44 @@ NSUserInterfaceItemIdentifier const MacLCWatchShelfHeaderIdentifier = @"MacLCWat
         [_actionButton.trailingAnchor constraintEqualToAnchor:_prevButton.leadingAnchor constant:-12.0],
         [_actionButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
     ]];
+
+    _filterButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    _filterButton.translatesAutoresizingMaskIntoConstraints = NO;
+    _filterButton.controlSize = NSControlSizeSmall;
+    _filterButton.font = MacLCDesign.subheadline;
+    _filterButton.target = self;
+    _filterButton.action = @selector(filterChosen:);
+    _filterButton.hidden = YES;
+    [self addSubview:_filterButton];
+    [NSLayoutConstraint activateConstraints:@[
+        [_filterButton.trailingAnchor constraintEqualToAnchor:_actionButton.leadingAnchor constant:-12.0],
+        [_filterButton.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+        [_filterButton.leadingAnchor constraintGreaterThanOrEqualToAnchor:_titleLabel.trailingAnchor constant:16.0],
+    ]];
+}
+
+- (void)setFilterTitles:(nullable NSArray<NSString *> *)filterTitles
+{
+    _filterTitles = [filterTitles copy];
+    [_filterButton removeAllItems];
+    if (filterTitles.count > 0)
+        [_filterButton addItemsWithTitles:filterTitles];
+    _filterButton.hidden = filterTitles.count == 0;
+    _filterButton.accessibilityLabel = [NSString stringWithFormat:_NS("Filter %@"), _title ?: @""];
+}
+
+- (void)setSelectedFilterIndex:(NSInteger)selectedFilterIndex
+{
+    _selectedFilterIndex = selectedFilterIndex;
+    if (selectedFilterIndex >= 0 && selectedFilterIndex < _filterButton.numberOfItems)
+        [_filterButton selectItemAtIndex:selectedFilterIndex];
+}
+
+- (void)filterChosen:(NSPopUpButton *)sender
+{
+    _selectedFilterIndex = sender.indexOfSelectedItem;
+    if (_filterHandler != nil)
+        _filterHandler(_selectedFilterIndex);
 }
 
 - (void)setTitle:(NSString *)title
@@ -1227,7 +1266,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchGenreTileIdentifier = @"MacLCWatch
 - (void)updateHoverState:(BOOL)hovered animated:(BOOL)animated
 {
     const CATransform3D cardTarget = (hovered && !MacLCDesign.reducedMotion)
-        ? CATransform3DMakeScale(1.03, 1.03, 1.0)
+        ? [MacLCDesign centeredScale:1.03 forLayer:self.layer]
         : CATransform3DIdentity;
 
     const CGFloat posterRot = 10.0 * M_PI / 180.0;

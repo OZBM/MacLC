@@ -25,6 +25,7 @@
 #import "extensions/NSScreen+VLCAdditions.h"
 
 #import <os/lock.h>
+#import <objc/runtime.h>
 
 @interface MacLCVisualEffectView : NSVisualEffectView
 
@@ -712,7 +713,10 @@
         fromTransform = pLayer.transform;
     } else {
         const CGFloat startY = view.isFlipped ? 8.0 : -8.0;
-        fromTransform = CATransform3DScale(CATransform3DMakeTranslation(0.0, startY, 0.0), 0.96, 0.96, 1.0);
+        if (NSIsEmptyRect(view.bounds))
+            [view.superview layoutSubtreeIfNeeded];
+        fromTransform = CATransform3DConcat([self centeredScale:0.96 forLayer:layer],
+                                            CATransform3DMakeTranslation(0.0, startY, 0.0));
     }
 
     [layer removeAnimationForKey:@"MacLCEntranceOpacity"];
@@ -801,6 +805,84 @@
 + (MacLCCardView *)cardViewWithTitle:(nullable NSString *)title
 {
     return [MacLCCardView cardViewWithTitle:title];
+}
+
++ (void)animatePageEntranceOfView:(NSView *)view fromOffset:(CGFloat)offset
+{
+    if (view == nil || view.window == nil)
+        return;
+    view.wantsLayer = YES;
+    if (NSIsEmptyRect(view.bounds))
+        [view.superview layoutSubtreeIfNeeded];
+    CALayer * const layer = view.layer;
+    CABasicAnimation * const fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    fade.fromValue = @0.0;
+    fade.toValue = @1.0;
+    fade.duration = self.reducedMotion ? 0.2 : 0.28;
+    fade.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    [layer addAnimation:fade forKey:@"MacLCPageOpacity"];
+    if (self.reducedMotion)
+        return;
+    CASpringAnimation * const move = [self emphasizedSpringForKeyPath:@"transform"];
+    move.fromValue = [NSValue valueWithCATransform3D:
+        CATransform3DConcat([self centeredScale:0.985 forLayer:layer],
+                            CATransform3DMakeTranslation(offset, offset == 0.0 ? (view.isFlipped ? 10.0 : -10.0) : 0.0, 0.0))];
+    move.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+    [layer addAnimation:move forKey:@"MacLCPageTransform"];
+}
+
++ (void)animatePageExitOfView:(NSView *)view toOffset:(CGFloat)offset duration:(NSTimeInterval)duration
+{
+    if (view.layer == nil || self.reducedMotion)
+        return;
+    CABasicAnimation * const move = [CABasicAnimation animationWithKeyPath:@"transform"];
+    move.fromValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+    move.toValue = [NSValue valueWithCATransform3D:CATransform3DMakeTranslation(offset, 0.0, 0.0)];
+    move.duration = duration;
+    move.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn];
+    move.fillMode = kCAFillModeForwards;
+    move.removedOnCompletion = NO;
+    [view.layer addAnimation:move forKey:@"MacLCPageExit"];
+}
+
++ (CATransform3D)centeredScale:(CGFloat)scale forLayer:(CALayer *)layer
+{
+    const CGRect bounds = layer.bounds;
+    const CGFloat dx = (0.5 - layer.anchorPoint.x) * CGRectGetWidth(bounds);
+    const CGFloat dy = (0.5 - layer.anchorPoint.y) * CGRectGetHeight(bounds);
+    CATransform3D t = CATransform3DMakeTranslation(dx, dy, 0.0);
+    t = CATransform3DScale(t, scale, scale, 1.0);
+    return CATransform3DTranslate(t, -dx, -dy, 0.0);
+}
+
+@end
+
+/* No scroll bars anywhere in MacLC: content still scrolls with the trackpad,
+ * the wheel (Shift for sideways) and the keyboard, and shelves keep their
+ * arrow buttons. Every scroll view, including the ones AppKit makes for
+ * collection view shelves, goes through -tile when its scrollers change, so
+ * that is the one place they are switched off. */
+@implementation NSScrollView (MacLCHiddenScrollers)
+
++ (void)load
+{
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        const SEL selector = @selector(tile);
+        const Method method = class_getInstanceMethod(self, selector);
+        const Method inherited = class_getInstanceMethod(class_getSuperclass(self), selector);
+        if (method == NULL || (inherited != NULL
+            && method_getImplementation(method) == method_getImplementation(inherited)))
+            return;
+        void (*original)(id, SEL) = (void (*)(id, SEL))method_getImplementation(method);
+        method_setImplementation(method, imp_implementationWithBlock(^(NSScrollView *scrollView) {
+            if (scrollView.hasVerticalScroller)
+                scrollView.hasVerticalScroller = NO;
+            if (scrollView.hasHorizontalScroller)
+                scrollView.hasHorizontalScroller = NO;
+            original(scrollView, selector);
+        }));
+    });
 }
 
 @end

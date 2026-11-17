@@ -403,6 +403,10 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     MacLCWatchServicesSheetController *_servicesSheetController;
 
     NSMutableArray<MacLCAddonTitleCatalog *> *_matchingCatalogs;
+    /* Shelves of add-on catalogs that offer filters: the catalog per section
+     * and the filter chosen per catalog (absent: everything). */
+    NSMutableDictionary<NSString *, MacLCAddonTitleCatalog *> *_catalogsBySectionID;
+    NSMutableDictionary<NSString *, NSString *> *_catalogGenreByKey;
     NSMutableArray<MacLCAddonTitleCatalog *> *_topCatalogs;
     MacLCAddonTitleCatalog *_topCatalog;
 
@@ -465,6 +469,8 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
         _observedShelfClipViews = [NSMutableSet set];
 
         _matchingCatalogs = [NSMutableArray array];
+        _catalogsBySectionID = [NSMutableDictionary dictionary];
+        _catalogGenreByKey = [NSMutableDictionary dictionary];
         _topCatalogs = [NSMutableArray array];
         _catalogItems = [NSMutableDictionary dictionary];
         _catalogFailed = [NSMutableDictionary dictionary];
@@ -843,6 +849,25 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
         BOOL showsPaging = [strongSelf->_shelfShowsPagingBySectionID[sectionID] boolValue];
         header.showsPaging = showsPaging;
 
+        MacLCAddonTitleCatalog * const filtered = strongSelf->_catalogsBySectionID[sectionID];
+        if (filtered != nil && filtered.genres.count > 0) {
+            NSMutableArray<NSString *> * const titles = [NSMutableArray array];
+            if (!filtered.requiresGenre)
+                [titles addObject:_NS("All Genres")];
+            [titles addObjectsFromArray:filtered.genres];
+            header.filterTitles = titles;
+            NSString * const chosen = strongSelf->_catalogGenreByKey[CatalogKey(filtered)];
+            const NSUInteger at = chosen ? [titles indexOfObject:chosen] : 0;
+            header.selectedFilterIndex = at == NSNotFound ? 0 : (NSInteger)at;
+            header.filterHandler = ^(NSInteger index) {
+                NSString * const genre = (!filtered.requiresGenre && index == 0) ? nil : titles[(NSUInteger)index];
+                [weakSelf reloadCatalog:filtered genre:genre];
+            };
+        } else {
+            header.filterTitles = nil;
+            header.filterHandler = nil;
+        }
+
         if (showsPaging) {
             NSScrollView *shelfScrollView = [strongSelf->_shelfScrollViewsBySectionID objectForKey:sectionID];
             if (shelfScrollView) {
@@ -962,6 +987,34 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     if (self.section.mediaType != nil && _topCatalog != nil && _selectedServiceCode == nil) {
         [self prefetchGenreShelvesNearSection:0];
     }
+}
+
+/* An add-on filter chosen on a shelf: that catalog alone loads again, and the
+ * shelf takes the new titles in place. */
+- (void)reloadCatalog:(MacLCAddonTitleCatalog *)catalog genre:(nullable NSString *)genre
+{
+    NSString * const key = CatalogKey(catalog);
+    if (genre != nil)
+        _catalogGenreByKey[key] = genre;
+    else
+        [_catalogGenreByKey removeObjectForKey:key];
+    __weak typeof(self) weakSelf = self;
+    MacLCAddonRequest * const request =
+        [MacLCAddonStore.sharedStore fetchTitleCatalog:catalog
+                                                 genre:genre
+                                                  skip:0
+                                            completion:^(NSArray<MacLCAddonItem *> * _Nullable items, NSError * _Nullable __unused error) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil || items == nil)
+            return;
+        /* A later choice wins over an answer that arrives late. */
+        if (![strongSelf->_catalogGenreByKey[key] ?: @"" isEqualToString:genre ?: @""])
+            return;
+        strongSelf->_catalogItems[key] = items;
+        [strongSelf rebuildBrowseSnapshotAnimated:YES];
+    }];
+    if (request != nil)
+        [_activeRequests addObject:request];
 }
 
 /* Pull to refresh (trackpad or touch screen) loads the shelves again.
@@ -1604,6 +1657,7 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
 
             NSString *sectionID = [NSString stringWithFormat:@"%@catalog_%@", scopePrefix, catKey];
             [_activeSections addObject:sectionID];
+            _catalogsBySectionID[sectionID] = catalog;
             [snapshot appendSectionsWithIdentifiers:@[sectionID]];
 
             NSString *plural = PluralTypeName(catalog.type);

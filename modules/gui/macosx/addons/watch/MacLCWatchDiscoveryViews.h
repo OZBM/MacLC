@@ -94,6 +94,12 @@ extern NSUserInterfaceItemIdentifier const MacLCWatchShelfHeaderIdentifier;
 @property (nonatomic) BOOL canPageForward;
 /// direction -1 / +1.
 @property (nonatomic, copy, nullable) void (^pageHandler)(NSInteger direction);
+/// Filters an add-on offers for this shelf (its catalog's genres), shown as
+/// a pop-up before "See All". Nil hides it. The first entry may stand for
+/// "everything" when the catalog does not require a filter.
+@property (nonatomic, copy, nullable) NSArray<NSString *> *filterTitles;
+@property (nonatomic) NSInteger selectedFilterIndex;
+@property (nonatomic, copy, nullable) void (^filterHandler)(NSInteger index);
 + (CGFloat)heightWithSubtitle:(BOOL)hasSubtitle;
 @end
 
