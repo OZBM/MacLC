@@ -382,16 +382,39 @@ static int WindowFloatOnTop(vlc_object_t *obj,
 
 - (VLCVideoWindowCommon *)setupMainLibraryVideoWindow
 {
-    VLCLibraryWindow * const libraryWindow = VLCMain.sharedInstance.libraryWindow;
-    /* The library window is only created once the application finished
-     * launching. A video output can be requested before that, in which case
-     * there is no window to embed the video into. */
+    /* One window plays everything. A video output can be requested before
+     * the application finished launching (a file opened from the Finder):
+     * the library window is created for it then. */
+    VLCLibraryWindow * const libraryWindow = [VLCMain.sharedInstance libraryWindowCreatingIfNeeded];
     if (libraryWindow == nil) {
         return nil;
     }
 
+    /* Registrations a finished video left on the window (the audio
+     * decorative view and the end-of-playback screen keep theirs): the new
+     * video takes the window over, without cascading it as a second one. */
+    for (NSValue * const key in [_voutWindows allKeysForObject:libraryWindow]) {
+        [_voutWindows removeObjectForKey:key];
+    }
+
     b_mainWindowHasVideo = YES;
     return libraryWindow;
+}
+
+/* The library window is taken only while a video output still draws in it;
+ * the registration of a video that ended does not count. */
+- (BOOL)libraryWindowShowsLiveVideo
+{
+    if (!b_mainWindowHasVideo) {
+        return NO;
+    }
+    vout_thread_t * const p_vout =
+        VLCMain.sharedInstance.libraryWindow.videoViewController.voutView.voutThread; /* held */
+    if (p_vout == NULL) {
+        return NO;
+    }
+    vout_Release(p_vout);
+    return YES;
 }
 
 - (VLCVideoWindowCommon *)setupDetachedVideoWindow
@@ -448,7 +471,7 @@ static int WindowFloatOnTop(vlc_object_t *obj,
         return [self borderlessVideoWindowAsVideoWallpaper:videoWallpaper withWindowDecorations:windowDecorations];
     }
 
-    BOOL isEmbedded = var_InheritBool(getIntf(), "embedded-video") && !b_mainWindowHasVideo;
+    BOOL isEmbedded = var_InheritBool(getIntf(), "embedded-video") && ![self libraryWindowShowsLiveVideo];
     if (isEmbedded) {
         VLCVideoWindowCommon * const libraryVideoWindow =
             [self setupMainLibraryVideoWindow];

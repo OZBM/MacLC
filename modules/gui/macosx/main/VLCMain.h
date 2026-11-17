@@ -87,6 +87,9 @@ extern NSString * const kVLCPreferencesVersion;
 @property (readonly) VLCLogWindowController *debugMsgPanel;
 @property (readonly) VLCLibraryController *libraryController;
 @property (readonly) VLCLibraryWindow *libraryWindow;
+/// The library window, created now if the application has not finished
+/// launching yet: a video opened from the Finder at launch plays in it too.
+- (VLCLibraryWindow *)libraryWindowCreatingIfNeeded;
 @property (readwrite) VLCLibraryWindowController *libraryWindowController;
 @property (readonly) VLCMainMenu *mainMenu;
 @property (readonly) VLCOpenWindowController *open;

@@ -622,8 +622,34 @@ static VLCMain *sharedInstance = nil;
                 NSView * const view = window.contentView.superview ?: window.contentView;
                 if (!window.isVisible || view == nil || NSWidth(view.bounds) < 200.0)
                     continue;
-                NSBitmapImageRep * const rep = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
-                [view cacheDisplayInRect:view.bounds toBitmapImageRep:rep];
+                NSBitmapImageRep *rep = nil;
+                NSView * const content = window.contentView;
+                if (getenv("MACLC_DEBUG_SNAPSHOT_LAYERS") != NULL && content.layer != nil) {
+                    /* Views that only set layer properties (the library window's)
+                     * come out blank through cacheDisplayInRect: render their
+                     * layer tree instead. Glass still comes out plain. */
+                    const CGFloat scale = window.backingScaleFactor > 0.0 ? window.backingScaleFactor : 2.0;
+                    rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                                                                  pixelsWide:(NSInteger)(NSWidth(content.bounds) * scale)
+                                                                  pixelsHigh:(NSInteger)(NSHeight(content.bounds) * scale)
+                                                               bitsPerSample:8
+                                                             samplesPerPixel:4
+                                                                    hasAlpha:YES
+                                                                    isPlanar:NO
+                                                              colorSpaceName:NSDeviceRGBColorSpace
+                                                                 bytesPerRow:0
+                                                                bitsPerPixel:0];
+                    CGContextRef const context = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep].CGContext;
+                    CGContextScaleCTM(context, scale, scale);
+                    [window.effectiveAppearance performAsCurrentDrawingAppearance:^{
+                        CGContextSetFillColorWithColor(context, NSColor.windowBackgroundColor.CGColor);
+                    }];
+                    CGContextFillRect(context, content.bounds);
+                    [content.layer renderInContext:context];
+                } else {
+                    rep = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
+                    [view cacheDisplayInRect:view.bounds toBitmapImageRep:rep];
+                }
                 NSData * const png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
                 NSString * const path = [NSString stringWithFormat:@"%@-%ld.png", prefix, (long)window.windowNumber];
                 [png writeToFile:path atomically:YES];
@@ -944,6 +970,14 @@ static VLCMain *sharedInstance = nil;
 
 - (VLCLibraryWindow *)libraryWindow
 {
+    return (VLCLibraryWindow *)_libraryWindowController.window;
+}
+
+- (VLCLibraryWindow *)libraryWindowCreatingIfNeeded
+{
+    if (_libraryWindowController == nil && getIntf() != NULL) {
+        _libraryWindowController = [[VLCLibraryWindowController alloc] initWithLibraryWindow];
+    }
     return (VLCLibraryWindow *)_libraryWindowController.window;
 }
 

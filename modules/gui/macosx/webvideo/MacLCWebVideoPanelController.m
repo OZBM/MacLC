@@ -29,6 +29,7 @@
 #import "theme/MacLCSymbolButton.h"
 #import "theme/MacLCFormatBadgeView.h"
 
+#import "library/VLCLibraryWindow.h"
 #import "main/VLCMain.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "windows/VLCOpenInputMetadata.h"
@@ -286,27 +287,26 @@ NS_ASSUME_NONNULL_BEGIN
         [self startResolution];
     }
     
-    if (MacLCDesign.reduceTransparency || MacLCDesign.reducedMotion) {
-        [self.window center];
+    /* One window for the whole application: the panel is a sheet of the
+     * library window (a free panel only when that window is not on screen). */
+    NSWindow * const parent = VLCMain.sharedInstance.libraryWindow;
+    if (self.window.sheetParent != nil) {
         [self.window makeKeyAndOrderFront:nil];
+    } else if (parent != nil && parent.visible) {
+        [parent beginSheet:self.window completionHandler:nil];
     } else {
-        self.window.alphaValue = 0.0;
         [self.window center];
-        
-        NSRect frame = self.window.frame;
-        frame.origin.y -= 8.0;
-        [self.window setFrame:frame display:YES];
-        
         [self.window makeKeyAndOrderFront:nil];
-        
-        frame.origin.y += 8.0;
-        
-        [NSAnimationContext runAnimationGroup:^(NSAnimationContext * _Nonnull context) {
-            context.duration = MacLCDesign.motionStandardDuration;
-            context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-            [[self.window animator] setFrame:frame display:YES];
-            [[self.window animator] setAlphaValue:1.0];
-        }];
+    }
+}
+
+/* Ends the sheet, or closes the free panel. */
+- (void)dismissPanel {
+    NSWindow * const parent = self.window.sheetParent;
+    if (parent != nil) {
+        [parent endSheet:self.window];
+    } else {
+        [self.window close];
     }
 }
 
@@ -392,7 +392,7 @@ NS_ASSUME_NONNULL_BEGIN
         [self stopResolution];
         return;
     }
-    [self.window close];
+    [self dismissPanel];
 }
 
 - (void)playAction:(nullable id)sender {
@@ -771,7 +771,7 @@ NS_ASSUME_NONNULL_BEGIN
     if (items.count > 0) {
         if (start) {
             [VLCMain.sharedInstance.playQueueController addPlayQueueItems:items atPosition:(size_t)-1 startPlayback:YES];
-            [self.window close];
+            [self dismissPanel];
         } else {
             [VLCMain.sharedInstance.playQueueController addPlayQueueItems:items];
             _addressField.stringValue = @"";
@@ -797,7 +797,7 @@ NS_ASSUME_NONNULL_BEGIN
     
     if (start) {
         [VLCMain.sharedInstance.playQueueController addPlayQueueItems:@[meta] atPosition:(size_t)-1 startPlayback:YES];
-        [self.window close];
+        [self dismissPanel];
     } else {
         [VLCMain.sharedInstance.playQueueController addPlayQueueItems:@[meta]];
         _addressField.stringValue = @"";
