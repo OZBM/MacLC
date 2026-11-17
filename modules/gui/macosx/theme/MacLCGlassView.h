@@ -66,6 +66,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy, nullable) NSColor *tintColor;
 
 /**
+ * The glass responds when the controls it holds are used (macOS 27
+ * `effectIsInteractive`). Set it only when those controls live in
+ * `contentView`: glass laid behind a sibling control never sees its events.
+ * No effect on the Reduce Transparency fallback.
+ */
+@property (nonatomic, getter=isInteractive) BOOL interactive;
+
+/**
  * Lays a glass capsule under an existing control, in the same superview,
  * `outset` points around it; it follows the control's frame and visibility,
  * so the caller's layout does not change. Nil when the view has no superview.

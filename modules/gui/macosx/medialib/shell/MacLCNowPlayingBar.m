@@ -206,6 +206,7 @@
     _glassView = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
     _glassView.translatesAutoresizingMaskIntoConstraints = NO;
     _glassView.cornerRadius = 30.0;
+    _glassView.interactive = YES;
     [self addSubview:_glassView];
 
     [NSLayoutConstraint activateConstraints:@[

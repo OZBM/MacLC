@@ -503,6 +503,10 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     _scrollView.hasVerticalScroller = YES;
     _scrollView.autohidesScrollers = YES;
     _scrollView.automaticallyAdjustsContentInsets = NO;
+    NSRefreshController * const refreshController = [[NSRefreshController alloc] init];
+    refreshController.target = self;
+    refreshController.action = @selector(refreshPulled:);
+    _scrollView.refreshController = refreshController;
     [root addSubview:_scrollView];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -891,6 +895,7 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     }
 
     if (_matchingCatalogs.count == 0) {
+        [_scrollView.refreshController endRefreshing];
         [self showNoCatalogsEmptyState];
         return;
     }
@@ -959,12 +964,24 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     }
 }
 
+/* Pull to refresh (trackpad or touch screen) loads the shelves again.
+ * shortcut: catalogs go through the shared URL cache, so a pull returns what
+ * the HTTP cache allows; pass a reload policy through fetchTitleCatalog if
+ * fresher shelves are wanted. */
+- (void)refreshPulled:(id)sender
+{
+    [self reloadData];
+}
+
 - (void)handleCatalogLoaded:(MacLCAddonTitleCatalog *)catalog
                       items:(nullable NSArray<MacLCAddonItem *> *)items
                       error:(nullable NSError *)error
 {
     NSString *catKey = CatalogKey(catalog);
     _completedCatalogCount++;
+    /* A pull to refresh ends once every catalog answered, loaded or not. */
+    if (_completedCatalogCount >= _matchingCatalogs.count)
+        [_scrollView.refreshController endRefreshing];
 
     if (error || items == nil) {
         _failedCatalogCount++;

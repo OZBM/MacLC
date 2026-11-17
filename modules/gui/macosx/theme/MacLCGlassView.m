@@ -141,6 +141,14 @@
     }
 }
 
+- (void)setInteractive:(BOOL)interactive
+{
+    _interactive = interactive;
+    if (@available(macOS 26.0, *)) {
+        ((NSGlassEffectView *)_glassEffectView).effectIsInteractive = interactive;
+    }
+}
+
 - (void)setForcesDarkAppearance:(BOOL)forcesDarkAppearance
 {
     if (_forcesDarkAppearance != forcesDarkAppearance) {
@@ -179,6 +187,7 @@
             NSGlassEffectView *glass = (NSGlassEffectView *)_glassEffectView;
             glass.cornerRadius = [self effectiveCornerRadius];
             glass.tintColor = _tintColor;
+            glass.effectIsInteractive = _interactive;
 
             if (glass.superview != self) {
                 [self addSubview:glass positioned:NSWindowBelow relativeTo:nil];

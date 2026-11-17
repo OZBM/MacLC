@@ -185,6 +185,7 @@
         glassFooterView.translatesAutoresizingMaskIntoConstraints = NO;
         glassFooterView.contentView = self.buttonStack;
         glassFooterView.cornerRadius = CGFLOAT_MAX;
+        glassFooterView.effectIsInteractive = YES;
 
         self.footerContainerView.subviews = @[glassFooterView];
         self.footerContainerView.clipsToBounds = NO;

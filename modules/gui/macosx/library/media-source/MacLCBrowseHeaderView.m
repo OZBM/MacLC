@@ -105,6 +105,7 @@
     _glassCapsuleView = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
     _glassCapsuleView.translatesAutoresizingMaskIntoConstraints = NO;
     _glassCapsuleView.cornerRadius = MacLCDesign.capsuleCornerRadius;
+    _glassCapsuleView.interactive = YES;
     [self addSubview:_glassCapsuleView];
 
     [NSLayoutConstraint activateConstraints:@[
