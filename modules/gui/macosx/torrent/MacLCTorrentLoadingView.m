@@ -37,7 +37,7 @@
 
 #pragma mark - Small helpers
 
-/* The story's five steps; the stage → step map is the one place that knows. */
+/* The steps VoiceOver announces, once each; the stage → step map. */
 static NSInteger MLCStepForStage(MacLCTorrentStage stage)
 {
     switch (stage) {
@@ -57,18 +57,6 @@ static NSAppearance *MLCDark(void)
     return [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
 }
 
-/* Dynamic colours are resolved here, for the dark appearance this screen
- * always has, at the moment a layer needs them. */
-static CGColorRef MLCResolved(NSColor *color)
-{
-    __block CGColorRef resolved = NULL;
-    [MLCDark() performAsCurrentDrawingAppearance:^{
-        resolved = CGColorRetain(color.CGColor);
-    }];
-    return resolved ? (CGColorRef)CFAutorelease(resolved) : NULL;
-}
-
-static CGColorRef MLCAccent(void)      { return MLCResolved(MacLCDesign.accent); }
 static CGColorRef MLCWhite(CGFloat a)  { return [NSColor colorWithWhite:1.0 alpha:a].CGColor; }
 static CGColorRef MLCClear(void)       { return NSColor.clearColor.CGColor; }
 
@@ -78,12 +66,6 @@ static CAShapeLayer *MLCShape(void)
     layer.fillColor = MLCClear();
     layer.strokeColor = MLCClear();
     return layer;
-}
-
-static CGPathRef MLCCirclePath(CGFloat radius)
-{
-    return (CGPathRef)CFAutorelease(CGPathCreateWithEllipseInRect(
-        CGRectMake(-radius, -radius, 2 * radius, 2 * radius), NULL));
 }
 
 static void MLCNoActions(void (^block)(void))
@@ -119,21 +101,42 @@ static NSTextField *MLCLabel(NSFont *font, CGFloat alpha, NSTextAlignment alignm
     return label;
 }
 
-/* Numbers and words change with a 0.25 s cross-fade (also under Reduce
- * Motion: a cross-fade is not movement). */
+/* A text style at another weight ("title1, semibold"). */
+static NSFont *MLCWeighted(NSFont *font, NSFontWeight weight)
+{
+    NSFontDescriptor * const descriptor = [font.fontDescriptor fontDescriptorByAddingAttributes:@{
+        NSFontTraitsAttribute: @{ NSFontWeightTrait: @(weight) } }];
+    return [NSFont fontWithDescriptor:descriptor size:font.pointSize] ?: font;
+}
+
+/* Everything before the first digit: "Downloading the first " for
+ * "Downloading the first 42 MB so playback won't stop: 15 % there". */
+static NSString *MLCWordsBeforeNumbers(NSString *text)
+{
+    const NSRange digit = [text rangeOfCharacterFromSet:NSCharacterSet.decimalDigitCharacterSet];
+    return digit.location == NSNotFound ? text : [text substringToIndex:digit.location];
+}
+
+/* Another sentence cross-fades in 0.25 s (also under Reduce Motion: a
+ * cross-fade is not movement); the same sentence with new numbers changes in
+ * place. A fade restarted at every 4 Hz update would blur the line, and show
+ * the previous numbers. */
 static void MLCSetText(NSTextField *label, NSString *text)
 {
     if (text == nil)
         text = @"";
-    if ([label.stringValue isEqualToString:text])
+    NSString * const previous = label.stringValue;
+    if ([previous isEqualToString:text])
         return;
-    if (label.window != nil && !label.hiddenOrHasHiddenAncestor) {
+    label.stringValue = text;
+    if (label.window != nil && !label.hiddenOrHasHiddenAncestor &&
+        ![MLCWordsBeforeNumbers(previous) isEqualToString:MLCWordsBeforeNumbers(text)]) {
+        [label displayIfNeeded];
         CATransition * const fade = [CATransition animation];
         fade.type = kCATransitionFade;
         fade.duration = 0.25;
         [label.layer addAnimation:fade forKey:@"mlc.text"];
     }
-    label.stringValue = text;
 }
 
 static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
@@ -160,189 +163,6 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     return self;
 }
 - (NSView *)hitTest:(NSPoint)point { return nil; }
-@end
-
-#pragma mark - Step indicator
-
-@interface MacLCTorrentSteps : NSView
-@property (nonatomic) BOOL animating;
-- (void)setStep:(NSInteger)step failed:(BOOL)failed;
-@end
-
-@implementation MacLCTorrentSteps
-{
-    NSArray<CAShapeLayer *> *_nodes;
-    NSArray<CAShapeLayer *> *_connectors;
-    NSArray<CAShapeLayer *> *_checks;
-    NSArray<CATextLayer *> *_labels;
-    CAShapeLayer *_halo;
-    NSInteger _step;
-    BOOL _failed;
-    CGFloat _scale;
-}
-
-- (instancetype)initWithFrame:(NSRect)frame
-{
-    self = [super initWithFrame:frame];
-    if (self == nil)
-        return nil;
-    self.wantsLayer = YES;
-    self.translatesAutoresizingMaskIntoConstraints = NO;
-    _scale = 2.0;
-    _step = -1;
-    NSArray *titles = @[_NS("Find peers"), _NS("File list"), _NS("Connect"), _NS("Download"), _NS("Start")];
-    NSMutableArray *nodes = [NSMutableArray array], *connectors = [NSMutableArray array],
-                   *checks = [NSMutableArray array], *labels = [NSMutableArray array];
-    for (NSInteger i = 0; i < 5; i++) {
-        if (i > 0) {
-            CAShapeLayer * const connector = MLCShape();
-            connector.lineWidth = 2.0;
-            connector.lineCap = kCALineCapRound;
-            [self.layer addSublayer:connector];
-            [connectors addObject:connector];
-        }
-        CAShapeLayer * const node = MLCShape();
-        node.path = MLCCirclePath(1.0);
-        [self.layer addSublayer:node];
-        [nodes addObject:node];
-        CAShapeLayer * const check = MLCShape();
-        check.lineWidth = 1.8;
-        check.lineCap = kCALineCapRound;
-        check.lineJoin = kCALineJoinRound;
-        check.strokeColor = MLCWhite(1.0);
-        CGMutablePathRef p = CGPathCreateMutable();
-        CGPathMoveToPoint(p, NULL, -3.2, 0.0);
-        CGPathAddLineToPoint(p, NULL, -1.0, -2.4);
-        CGPathAddLineToPoint(p, NULL, 3.2, 2.6);
-        check.path = p;
-        CGPathRelease(p);
-        check.opacity = 0.0;
-        [self.layer addSublayer:check];
-        [checks addObject:check];
-        CATextLayer * const label = [CATextLayer layer];
-        label.string = titles[i];
-        label.fontSize = 11.0;
-        label.font = (__bridge CFTypeRef)[NSFont systemFontOfSize:11.0 weight:NSFontWeightMedium];
-        label.alignmentMode = kCAAlignmentCenter;
-        label.truncationMode = kCATruncationEnd;
-        [self.layer addSublayer:label];
-        [labels addObject:label];
-    }
-    _nodes = nodes; _connectors = connectors; _checks = checks; _labels = labels;
-    _halo = MLCShape();
-    _halo.lineWidth = 1.5;
-    _halo.strokeColor = MLCAccent();
-    _halo.path = MLCCirclePath(7.0);
-    _halo.opacity = 0.0;
-    [self.layer addSublayer:_halo];
-    return self;
-}
-
-- (BOOL)isFlipped { return NO; }
-- (NSView *)hitTest:(NSPoint)point { return nil; }
-
-- (void)viewDidMoveToWindow
-{
-    [super viewDidMoveToWindow];
-    [self viewDidChangeBackingProperties];
-}
-
-- (void)viewDidChangeBackingProperties
-{
-    [super viewDidChangeBackingProperties];
-    _scale = self.window.backingScaleFactor ?: 2.0;
-    MLCNoActions(^{
-        for (CATextLayer *label in self->_labels)
-            label.contentsScale = self->_scale;
-    });
-}
-
-- (CGFloat)xForNode:(NSInteger)i
-{
-    const CGFloat w = NSWidth(self.bounds);
-    const CGFloat inset = MIN(48.0, w / 10.0);
-    return inset + (w - 2 * inset) * i / 4.0;
-}
-
-- (void)layout
-{
-    [super layout];
-    const CGFloat y = NSHeight(self.bounds) - 12.0;
-    MLCNoActions(^{
-        for (NSInteger i = 0; i < 5; i++) {
-            const CGFloat x = [self xForNode:i];
-            self->_nodes[i].position = CGPointMake(x, y);
-            self->_checks[i].position = CGPointMake(x, y);
-            self->_labels[i].frame = CGRectMake(x - 44, y - 30, 88, 14);
-            if (i > 0) {
-                CGMutablePathRef p = CGPathCreateMutable();
-                CGPathMoveToPoint(p, NULL, [self xForNode:i - 1] + 12, y);
-                CGPathAddLineToPoint(p, NULL, x - 12, y);
-                self->_connectors[i - 1].path = p;
-                CGPathRelease(p);
-            }
-        }
-        if (self->_step >= 0 && self->_step < 5)
-            self->_halo.position = CGPointMake([self xForNode:self->_step], y);
-    });
-    [self installHalo];
-}
-
-- (void)setAnimating:(BOOL)animating
-{
-    if (_animating == animating)
-        return;
-    _animating = animating;
-    [self installHalo];
-}
-
-- (void)installHalo
-{
-    [_halo removeAnimationForKey:@"mlc.loop"];
-    if (!_animating || self.window == nil || _failed || _step < 0 || _step > 4)
-        return;
-    CABasicAnimation * const scale = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
-    scale.fromValue = @0.6;
-    scale.toValue = @1.9;
-    CABasicAnimation * const fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
-    fade.fromValue = @0.8;
-    fade.toValue = @0.0;
-    CAAnimationGroup * const group = [CAAnimationGroup animation];
-    group.animations = @[scale, fade];
-    group.duration = 1.8;
-    group.repeatCount = HUGE_VALF;
-    group.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
-    [_halo addAnimation:group forKey:@"mlc.loop"];
-}
-
-/* step 5 (playing) means every step is done. */
-- (void)setStep:(NSInteger)step failed:(BOOL)failed
-{
-    if (step == _step && failed == _failed)
-        return;
-    _step = step;
-    _failed = failed;
-    CGColorRef accent = MLCAccent();
-    CGColorRef danger = MLCResolved(MacLCDesign.destructive);
-    const CGFloat y = NSHeight(self.bounds) - 12.0;
-    MLCAnimated(0.35, ^{
-        for (NSInteger i = 0; i < 5; i++) {
-            const BOOL done = i < step;
-            const BOOL current = i == step;
-            const CGFloat r = done ? 7.0 : (current ? 5.5 : 4.0);
-            self->_nodes[i].transform = CATransform3DMakeScale(r, r, 1.0);
-            self->_nodes[i].fillColor = done ? accent : (current ? (failed ? danger : accent) : MLCWhite(0.22));
-            self->_checks[i].opacity = done ? 1.0 : 0.0;
-            self->_labels[i].foregroundColor = current ? MLCWhite(0.95) : (done ? MLCWhite(0.7) : MLCWhite(0.38));
-            if (i > 0)
-                self->_connectors[i - 1].strokeColor = (i <= step) ? accent : MLCWhite(0.16);
-        }
-        self->_halo.position = CGPointMake([self xForNode:MAX(0, MIN(4, step))], y);
-        self->_halo.strokeColor = failed ? danger : accent;
-    });
-    [self installHalo];
-}
-
 @end
 
 #pragma mark - Progress ring
@@ -469,29 +289,23 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     MacLCTorrentGradientView *_scrim;
 
     NSView *_fullContainer;
-    NSStackView *_titleBlock;
+    NSStackView *_stack;
     NSTextField *_title;
     NSTextField *_episode;
-    NSStackView *_stack;
     MacLCTorrentSwarmView *_swarm;
     NSTextField *_stageLabel;
     NSTextField *_explanation;
     NSTextField *_counters;
-    MacLCTorrentSteps *_steps;
-    MacLCGlassView *_cancelGlass;
     NSButton *_cancel;
     MacLCTorrentStallCapsule *_stall;
 
     int _mode;               /* 0 hidden, 1 full, 2 compact */
     NSUInteger _fadeToken;
     BOOL _showsFailure;
-    MacLCTorrentStage _lastStage;
-    NSInteger _lastStep;
     NSInteger _lastAnnouncedStep;
-    NSString *_lastExplanation;
     NSURL *_loadedBackdropURL;
     MacLCWatchImageRequest *_imageRequest;
-    BOOL _compactLayout;
+    NSInteger _compactLevel;  /* 0 roomy, 1 short, 2 very short */
 }
 @end
 
@@ -506,9 +320,7 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     self.appearance = MLCDark();
     self.hidden = YES;
     self.alphaValue = 0.0;
-    _lastStep = -1;
     _lastAnnouncedStep = -1;
-    _lastStage = MacLCTorrentStageUnknown;
     [self build];
     [self accessibilityOptionsChanged:nil];
     [NSWorkspace.sharedWorkspace.notificationCenter
@@ -566,98 +378,75 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
         ]];
     }
 
-    _title = MLCLabel(MacLCDesign.title2, 1.0, NSTextAlignmentCenter);
-    _episode = MLCLabel(MacLCDesign.callout, 0.7, NSTextAlignmentCenter);
-    _titleBlock = [NSStackView stackViewWithViews:@[_title, _episode]];
-    _titleBlock.orientation = NSUserInterfaceLayoutOrientationVertical;
-    _titleBlock.alignment = NSLayoutAttributeCenterX;
-    _titleBlock.spacing = 2;
-    _titleBlock.translatesAutoresizingMaskIntoConstraints = NO;
-
+    /* One centred column: the film, the dial, what is happening, Cancel. */
+    _title = MLCLabel(MLCWeighted(MacLCDesign.title1, NSFontWeightSemibold), 1.0, NSTextAlignmentCenter);
+    /* Below the window-size priorities (490 < 500): a long title truncates
+     * inside the column, it never widens the window. */
+    [_title setContentCompressionResistancePriority:490 forOrientation:NSLayoutConstraintOrientationHorizontal];
+    _episode = MLCLabel(MacLCDesign.callout, 0.65, NSTextAlignmentCenter);
     _swarm = [[MacLCTorrentSwarmView alloc] initWithFrame:NSZeroRect];
-    _stageLabel = MLCLabel(MacLCDesign.title3, 1.0, NSTextAlignmentCenter);
+    _stageLabel = MLCLabel(MLCWeighted(MacLCDesign.title3, NSFontWeightSemibold), 1.0, NSTextAlignmentCenter);
     _explanation = MLCLabel(MacLCDesign.body, 0.72, NSTextAlignmentCenter);
     _explanation.lineBreakMode = NSLineBreakByWordWrapping;
-    _explanation.maximumNumberOfLines = 3;
-    _counters = MLCLabel([MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleFootnote],
-                         0.6, NSTextAlignmentCenter);
-    _steps = [[MacLCTorrentSteps alloc] initWithFrame:NSZeroRect];
+    _explanation.maximumNumberOfLines = 2;
+    _counters = MLCLabel([MacLCDesign monospacedDigitFontForTextStyle:NSFontTextStyleSubheadline],
+                         0.5, NSTextAlignmentCenter);
 
-    _cancelGlass = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
-    _cancelGlass.translatesAutoresizingMaskIntoConstraints = NO;
-    _cancelGlass.forcesDarkAppearance = YES;
-    _cancelGlass.cornerRadius = MacLCDesign.cornerRadiusCapsule;
     _cancel = [NSButton buttonWithTitle:_NS("Cancel") target:self action:@selector(cancelPressed:)];
-    _cancel.bordered = NO;
     _cancel.translatesAutoresizingMaskIntoConstraints = NO;
-    _cancel.font = MacLCDesign.bodyEmphasized;
-    _cancel.contentTintColor = NSColor.whiteColor;
+    _cancel.bezelStyle = NSBezelStyleGlass;
+    _cancel.controlSize = NSControlSizeLarge;
     _cancel.toolTip = _NS("Stop and go back");
-    [_cancelGlass.contentView addSubview:_cancel];
-    [NSLayoutConstraint activateConstraints:@[
-        [_cancel.leadingAnchor constraintEqualToAnchor:_cancelGlass.contentView.leadingAnchor constant:22],
-        [_cancel.trailingAnchor constraintEqualToAnchor:_cancelGlass.contentView.trailingAnchor constant:-22],
-        [_cancel.centerYAnchor constraintEqualToAnchor:_cancelGlass.contentView.centerYAnchor],
-        [_cancelGlass.heightAnchor constraintEqualToConstant:32],
-    ]];
 
-    _stack = [NSStackView stackViewWithViews:@[_swarm, _stageLabel, _explanation, _counters,
-                                               _steps, _cancelGlass]];
+    _stack = [NSStackView stackViewWithViews:@[_title, _episode, _swarm, _stageLabel, _explanation,
+                                               _counters, _cancel]];
     _stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     _stack.alignment = NSLayoutAttributeCenterX;
     _stack.distribution = NSStackViewDistributionFill;
-    _stack.spacing = 8;
+    _stack.spacing = 6;
     _stack.translatesAutoresizingMaskIntoConstraints = NO;
-    [_stack setCustomSpacing:14 afterView:_swarm];
-    [_stack setCustomSpacing:14 afterView:_counters];
-    [_stack setCustomSpacing:14 afterView:_steps];
-    [_fullContainer addSubview:_titleBlock];
+    [_stack setCustomSpacing:2 afterView:_title];
+    [_stack setCustomSpacing:4 afterView:_episode];
+    [_stack setCustomSpacing:4 afterView:_swarm];
+    [_stack setCustomSpacing:18 afterView:_counters];
     [_fullContainer addSubview:_stack];
 
     /* Everything that sizes or places the content is weak (<= 250): inside
      * the library window a constraint above 500 resizes the window itself, and
      * the overlay is pinned by autoresizing, not by constraints. Content is
      * centred in the safe area: the library's floating sidebar covers the left
-     * of the window, and the backdrop alone extends under it. */
+     * of the window, and the backdrop alone extends under it. The bottom keeps
+     * clear of the Now Playing bar or the controls. */
     NSLayoutGuide * const safe = self.safeAreaLayoutGuide;
     NSLayoutConstraint * const stackWidth = [_stack.widthAnchor constraintEqualToAnchor:safe.widthAnchor
                                                                               constant:-48];
     stackWidth.priority = 250;
-    NSLayoutConstraint * const sceneHeight = [_swarm.heightAnchor constraintEqualToConstant:440];
-    sceneHeight.priority = 100;
+    NSLayoutConstraint * const dialHeight = [_swarm.heightAnchor constraintEqualToConstant:360];
+    dialHeight.priority = 100;
+    NSLayoutConstraint * const dialMin = [_swarm.heightAnchor constraintGreaterThanOrEqualToConstant:180];
+    dialMin.priority = 250;
+    NSLayoutConstraint * const top = [_stack.topAnchor constraintGreaterThanOrEqualToAnchor:safe.topAnchor
+                                                                                   constant:28];
+    top.priority = 250;
     NSLayoutConstraint * const bottom = [_stack.bottomAnchor constraintLessThanOrEqualToAnchor:safe.bottomAnchor
-                                                                                       constant:-112];
+                                                                                       constant:-104];
     bottom.priority = 250;
     NSLayoutConstraint * const center = [_stack.centerYAnchor constraintEqualToAnchor:safe.centerYAnchor
-                                                                              constant:36];
+                                                                              constant:-12];
     center.priority = 200;
-    NSLayoutConstraint * const titleTop = [_titleBlock.topAnchor constraintEqualToAnchor:safe.topAnchor constant:56];
-    titleTop.priority = 250;
-    NSLayoutConstraint * const titleWidth = [_titleBlock.widthAnchor constraintLessThanOrEqualToAnchor:safe.widthAnchor
-                                                                                              constant:-96];
-    titleWidth.priority = 250;
-    NSLayoutConstraint * const stackTop = [_stack.topAnchor constraintGreaterThanOrEqualToAnchor:_titleBlock.bottomAnchor
-                                                                                        constant:10];
-    stackTop.priority = 250;
-    NSLayoutConstraint * const sceneMin = [_swarm.heightAnchor constraintGreaterThanOrEqualToConstant:200];
-    sceneMin.priority = 250;
     [_swarm setContentHuggingPriority:100 forOrientation:NSLayoutConstraintOrientationVertical];
     [_swarm setContentCompressionResistancePriority:100 forOrientation:NSLayoutConstraintOrientationVertical];
     [NSLayoutConstraint activateConstraints:@[
-        titleTop, titleWidth,
-        [_titleBlock.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor],
-
         [_stack.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor],
-        [_stack.widthAnchor constraintLessThanOrEqualToConstant:640],
-        stackWidth, sceneHeight, bottom, center, stackTop, sceneMin,
+        [_stack.widthAnchor constraintLessThanOrEqualToConstant:560],
+        [_stack.widthAnchor constraintLessThanOrEqualToAnchor:safe.widthAnchor constant:-32],
+        stackWidth, top, bottom, center, dialHeight, dialMin,
 
+        [_title.widthAnchor constraintLessThanOrEqualToAnchor:_stack.widthAnchor],
         [_swarm.widthAnchor constraintEqualToAnchor:_stack.widthAnchor],
         [_swarm.heightAnchor constraintLessThanOrEqualToConstant:400],
         [_explanation.widthAnchor constraintLessThanOrEqualToConstant:520],
         [_explanation.widthAnchor constraintLessThanOrEqualToAnchor:_stack.widthAnchor],
-        [_steps.widthAnchor constraintEqualToAnchor:_stack.widthAnchor],
-        [_steps.widthAnchor constraintLessThanOrEqualToConstant:520],
-        [_steps.heightAnchor constraintEqualToConstant:44],
     ]];
 
     NSLayoutConstraint * const fullLeading = [_fullContainer.leadingAnchor constraintEqualToAnchor:self.leadingAnchor];
@@ -697,13 +486,19 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
 - (void)setFrameSize:(NSSize)size
 {
     [super setFrameSize:size];
-    const BOOL compact = size.height > 0 && size.height < 620;
-    if (compact != _compactLayout) {
-        _compactLayout = compact;
-        _counters.hidden = compact;
-        _episode.hidden = compact || _episode.stringValue.length == 0;
-        _stack.spacing = compact ? 6 : 8;
+    /* A short picture keeps the dial and the essentials. */
+    const NSInteger level = size.height <= 0 ? 0 : size.height < 460 ? 2 : size.height < 620 ? 1 : 0;
+    if (level != _compactLevel) {
+        _compactLevel = level;
+        [self refreshOptionalLabels];
     }
+}
+
+- (void)refreshOptionalLabels
+{
+    _episode.hidden = _compactLevel >= 1 || _episode.stringValue.length == 0;
+    _counters.hidden = _compactLevel >= 1 || _counters.stringValue.length == 0;
+    _explanation.hidden = _compactLevel >= 2;
 }
 
 - (void)layout
@@ -769,7 +564,6 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
                          (self.window.occlusionState & NSWindowOcclusionStateVisible);
     const BOOL running = visible && !MacLCDesign.reducedMotion;
     _swarm.animating = running;
-    _steps.animating = running;
 }
 
 #pragma mark Backdrop
@@ -843,15 +637,16 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
 - (void)setTitleText:(NSString *)titleText
 {
     _titleText = [titleText copy];
-    MLCSetText(_title, titleText ?: @"");
-    _title.hidden = titleText.length == 0;
+    /* A magnet has no name until its metadata arrives: keep the line, so the
+     * column does not jump when the name shows up. */
+    MLCSetText(_title, titleText.length > 0 ? titleText : @" ");
 }
 
 - (void)setEpisodeText:(NSString *)episodeText
 {
     _episodeText = [episodeText copy];
     MLCSetText(_episode, episodeText ?: @"");
-    _episode.hidden = episodeText.length == 0 || _compactLayout;
+    [self refreshOptionalLabels];
 }
 
 - (void)fadeInIfNeeded
@@ -877,12 +672,11 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
         _stall.hidden = YES;
         _stall.alphaValue = 0.0;
         _fullContainer.hidden = NO;
-        _lastStep = -1;
         _lastAnnouncedStep = -1;
+        [_swarm reset];
         [self fadeInIfNeeded];
         [self loadBackdropIfNeeded];
     }
-    _lastStage = stage;
     const BOOL failed = stage == MacLCTorrentStageFailed;
     _showsFailure = failed;
     const NSInteger step = MLCStepForStage(stage);
@@ -894,14 +688,11 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
         : _NS("Asking the trackers and the network who has this.");
     MLCSetText(_stageLabel, stageTitle);
     MLCSetText(_explanation, explanation);
-    MLCSetText(_counters, [self counterTextForStep:step torrent:torrent dht:dhtNodes failed:failed]);
-    if (!failed)
-        _cancel.title = _NS("Cancel");
-    else
-        _cancel.title = _NS("Close");
+    MLCSetText(_counters, [self countersForStage:shown torrent:torrent dht:dhtNodes]);
+    [self refreshOptionalLabels];
+    _cancel.title = failed ? _NS("Close") : _NS("Cancel");
 
     [_swarm applyStage:stage torrent:torrent reader:reader dhtNodes:dhtNodes];
-    [_steps setStep:step failed:failed];
 
     /* VoiceOver: one element, the step and its words as the value. */
     NSString * const value = [NSString stringWithFormat:@"%@. %@", stageTitle, explanation];
@@ -916,17 +707,16 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     [self refreshRunning];
 }
 
-- (NSString *)counterTextForStep:(NSInteger)step
-                         torrent:(MacLCTorrentInfo *)torrent
-                             dht:(NSInteger)dht
-                          failed:(BOOL)failed
+/* The numbers under the sentence: who answered while peers are searched
+ * for, then the peers (and the connections still opening). */
+- (NSString *)countersForStage:(MacLCTorrentStage)stage
+                       torrent:(MacLCTorrentInfo *)torrent
+                           dht:(NSInteger)dht
 {
-    if (failed)
+    if (torrent == nil || stage == MacLCTorrentStageFailed)
         return @"";
-    NSMutableArray<NSString *> *parts = [NSMutableArray array];
-    if (step <= 0) {
-        if (dht >= 0)
-            [parts addObject:MLCCount(dht, _NS("DHT node"), _NS("DHT nodes"))];
+    NSMutableArray<NSString *> * const parts = [NSMutableArray array];
+    if (stage == MacLCTorrentStageTrackers) {
         NSInteger answered = 0;
         for (MacLCTorrentTrackerInfo *tracker in torrent.trackers)
             if (tracker.state == MacLCTorrentTrackerStateOK)
@@ -934,17 +724,14 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
         if (torrent.trackers.count > 0)
             [parts addObject:[NSString stringWithFormat:_NS("%ld of %ld trackers answered"),
                               (long)answered, (long)torrent.trackers.count]];
+        if (dht > 0)
+            [parts addObject:MLCCount(dht, _NS("DHT node"), _NS("DHT nodes"))];
         return [parts componentsJoinedByString:@" · "];
     }
-    if (torrent != nil && step <= 2) {
+    if (torrent.peers > 0 || torrent.seeds > 0)
         [parts addObject:[MacLCTorrentFormat peersString:torrent]];
-        if (step == 2) {
-            if (torrent.peersConnecting > 0)
-                [parts addObject:[NSString stringWithFormat:_NS("%ld connecting"), (long)torrent.peersConnecting]];
-            if (torrent.peersUnchoked > 0)
-                [parts addObject:[NSString stringWithFormat:_NS("%ld sending data"), (long)torrent.peersUnchoked]];
-        }
-    }
+    if (stage == MacLCTorrentStageConnecting && torrent.peersConnecting > 0)
+        [parts addObject:[NSString stringWithFormat:_NS("%ld connecting"), (long)torrent.peersConnecting]];
     return [parts componentsJoinedByString:@" · "];
 }
 
@@ -1034,6 +821,8 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     NSTimeInterval _stalledSince;
     BOOL _debugOverlay;
     BOOL _stopped;
+    __weak NSWindow *_darkenedWindow;
+    NSAppearance *_appearanceBeforeOverlay;
 }
 
 - (instancetype)initWithHostView:(NSView *)hostView
@@ -1091,6 +880,7 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     _stopped = YES;
     [_overlay hideAnimated:NO];
     [_overlay removeFromSuperview];
+    [self restoreWindowAppearance];
     [NSNotificationCenter.defaultCenter removeObserver:self];
 }
 
@@ -1103,7 +893,7 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
         [VLCMain.sharedInstance.playQueueController.playerController stop];
     }
     _failureLatched = NO;
-    [_overlay hideAnimated:YES];
+    [self hideOverlay];
 }
 
 - (void)playerStateChanged:(NSNotification *)note
@@ -1145,6 +935,7 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     if (target == nil || target.window == nil) {
         if (_overlay.superview != nil)
             [_overlay removeFromSuperview];
+        [self restoreWindowAppearance];
         return;
     }
     NSView * const current = _overlay.superview;
@@ -1166,6 +957,40 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
         [target addSubview:_overlay positioned:NSWindowBelow relativeTo:relative];
     else
         [target addSubview:_overlay positioned:NSWindowAbove relativeTo:nil];
+}
+
+/* Over the library's own content the window turns dark, as it does for the
+ * video that follows: its title and toolbar read on the dark screen. */
+- (void)darkenWindow:(NSWindow *)window
+{
+    if (_darkenedWindow == window)
+        return;
+    [self restoreWindowAppearance];
+    if (window == nil)
+        return;
+    _darkenedWindow = window;
+    _appearanceBeforeOverlay = window.appearance;
+    window.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+}
+
+- (void)restoreWindowAppearance
+{
+    NSWindow * const window = _darkenedWindow;
+    NSAppearance * const previous = _appearanceBeforeOverlay;
+    _darkenedWindow = nil;
+    _appearanceBeforeOverlay = nil;
+    /* Once the video shows, it keeps the window dark and restores it itself. */
+    if (window == nil ||
+        ([window isKindOfClass:VLCLibraryWindow.class] &&
+         ((VLCLibraryWindow *)window).embeddedVideoPlaybackActive))
+        return;
+    window.appearance = previous;
+}
+
+- (void)hideOverlay
+{
+    [_overlay hideAnimated:YES];
+    [self restoreWindowAppearance];
 }
 
 #pragma mark Following the monitor
@@ -1200,7 +1025,7 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
         _stalledSince = 0;
         if (_failureLatched && _overlay.isPresenting)
             return;
-        [_overlay hideAnimated:YES];
+        [self hideOverlay];
         return;
     }
 
@@ -1220,11 +1045,11 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     if (stage == MacLCTorrentStageFailed) {
         _failureLatched = !_dismissed;
     } else if (playerStopped && !_failureLatched) {
-        [_overlay hideAnimated:YES];
+        [self hideOverlay];
         return;
     }
     if (_dismissed) {
-        [_overlay hideAnimated:YES];
+        [self hideOverlay];
         return;
     }
 
@@ -1232,7 +1057,7 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     (void)_debugOverlay;
 
     if (stage == MacLCTorrentStagePlaying) {
-        [_overlay hideAnimated:YES];
+        [self hideOverlay];
         return;
     }
 
@@ -1246,6 +1071,7 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
         const NSTimeInterval waited = MAX(now - _stalledSince, reader.stallDuration);
         if (waited > 1.0) {
             [self placeOverlay];
+            [self restoreWindowAppearance];
             [_overlay showStallWithTorrent:torrent reader:reader];
         } else if (!_overlay.isPresenting) {
             [_overlay hideAnimated:NO];
@@ -1255,6 +1081,8 @@ static NSString *MLCCount(NSInteger n, NSString *one, NSString *many)
     _stalledSince = 0;
 
     [self placeOverlay];
+    NSView * const placedIn = _overlay.superview;
+    [self darkenWindow:placedIn != nil && placedIn != _hostView ? placedIn.window : nil];
     [self updateTitle];
     [_overlay showFullWithStage:stage torrent:torrent reader:reader
                        dhtNodes:monitor.snapshot.dhtNodes];

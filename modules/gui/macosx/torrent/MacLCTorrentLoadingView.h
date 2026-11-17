@@ -20,21 +20,19 @@
 
 /* Main thread only.
  *
- * While a torrent opens, the picture area tells the story of what happens, in
- * the order it happens, with the numbers the BitTorrent module reports:
- *   1. Finding peers      a radar: trackers and DHT nodes answer
- *   2. Getting the files  peers fly in, the list of files fills
- *   3. Connecting         lines to the peers; data flows along the ones
- *                         that send
- *   4. Receiving / Filling the buffer
- *                         the film as a strip, the start buffer filling
- *   5. Starting           everything converges and fades into the picture
+ * While a torrent opens, the picture area shows one centred column over the
+ * film's blurred artwork: its title, a dial (MacLCTorrentSwarmView: the start
+ * buffer filling piece by piece, the peers around it sending pieces in), the
+ * step's name ("Filling the buffer"), one sentence with the numbers the
+ * BitTorrent module reports, the peers in a line, and Cancel. Short pictures
+ * drop the episode and the numbers, then the sentence. Over the library's own
+ * content the window turns dark while it shows, as it does for the video.
  * Once playback has started, a stall shows a small capsule instead.
  *
  * Everything sits on video, so the view is always dark. Reduce Motion: the
- * same drawings without pulses, particles or flights (cross-fades only);
- * Reduce Transparency: an opaque dark backdrop; VoiceOver: one element whose
- * value is the step and its explanation, with Cancel as its only child. */
+ * same drawings without sweep, rotation or travelling pieces (cross-fades
+ * only); Reduce Transparency: an opaque dark backdrop; VoiceOver: one element
+ * whose value is the step and its explanation, with Cancel as its only child. */
 #import <Cocoa/Cocoa.h>
 
 #import "torrent/MacLCTorrentStats.h"

@@ -18,189 +18,169 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 
-#import "MacLCTorrentSwarmView.h"
+#import "torrent/MacLCTorrentSwarmView.h"
 
 #import <QuartzCore/QuartzCore.h>
 
-#import "extensions/NSString+Helpers.h"
 #import "theme/MacLCDesign.h"
 
-/* The picture shows the order of magnitude; the exact numbers are written in
- * the text below it. */
-enum { kPeerSlots = 24, kInnerSlots = 10, kSwarmDots = 64, kTrackerPins = 8, kMaxPieces = 40 };
-static const CGFloat kStripBand = 92.0;
-static const CGFloat kLegendLine = 18.0;
-static const CGFloat kPeerRadius = 6.5;
-static const NSTimeInterval kTick = 0.25;
+/* An enum: it sizes the per-slot arrays below. */
+enum { kPeerSlots = 16 };
+static const NSInteger kTicks = 60;
+static const NSInteger kDustSlots = 40;
+static const NSInteger kMaxFlights = 24;
+static const NSTimeInterval kFlightTick = 0.1;
+/* π (3 - √5): consecutive slots spread evenly round the orbit, however many. */
+static const double kGoldenAngle = 2.39996322972865332;
 
 typedef NS_ENUM(NSInteger, SWPeerKind) {
-    SWPeerHidden,
-    SWPeerPending,  // connection opening
-    SWPeerPartial,  // has part of the film
-    SWPeerSeed,     // has all of it
+    SWPeerNone = 0,
+    SWPeerConnecting,
+    SWPeerPartial,
+    SWPeerSeed,
 };
 
+#pragma mark - Helpers
+
+/* A stable pseudo-random number in [0, 1) for slot i. */
 static double SWHash(NSInteger i, double salt)
 {
-    const double v = sin((double)i * 12.9898 + salt * 78.233) * 43758.5453;
-    return v - floor(v);
+    const double x = sin((double)i * 12.9898 + salt * 78.233) * 43758.5453;
+    return x - floor(x);
 }
 
-static NSAppearance *SWDark(void)
+static double SWRandom(void)
 {
-    return [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
-}
-
-/* Dynamic colours resolved for the dark appearance this view always has. */
-static CGColorRef SWColor(NSColor *color)
-{
-    __block CGColorRef resolved = NULL;
-    [SWDark() performAsCurrentDrawingAppearance:^{
-        resolved = CGColorRetain(color.CGColor);
-    }];
-    return resolved ? (CGColorRef)CFAutorelease(resolved) : NULL;
+    return (double)arc4random_uniform(1u << 24) / (double)(1u << 24);
 }
 
 static CGColorRef SWWhite(CGFloat alpha)
 {
-    return [NSColor colorWithWhite:1.0 alpha:alpha].CGColor;
+    return (CGColorRef)CFAutorelease(CGColorCreateSRGB(1.0, 1.0, 1.0, alpha));
 }
 
-static CGColorRef SWAccent(CGFloat alpha)
+/* A system colour as it looks on this always-dark screen. */
+static CGColorRef SWDarkColor(NSColor *color, CGFloat alpha)
 {
-    return SWColor([MacLCDesign.accent colorWithAlphaComponent:alpha]);
+    __block CGColorRef resolved = NULL;
+    [[NSAppearance appearanceNamed:NSAppearanceNameDarkAqua] performAsCurrentDrawingAppearance:^{
+        resolved = CGColorCreateCopyWithAlpha(color.CGColor, alpha);
+    }];
+    return resolved != NULL ? (CGColorRef)CFAutorelease(resolved) : SWWhite(alpha);
 }
 
-static CAShapeLayer *SWShape(void)
+static void SWNoActions(void (^block)(void))
 {
-    CAShapeLayer * const layer = [CAShapeLayer layer];
-    layer.fillColor = NSColor.clearColor.CGColor;
-    layer.strokeColor = NSColor.clearColor.CGColor;
-    return layer;
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    block();
+    [CATransaction commit];
 }
 
-static CATextLayer *SWText(CGFloat size, NSFontWeight weight, CGFloat alpha)
+static void SWAnimated(NSTimeInterval duration, void (^block)(void))
 {
-    CATextLayer * const text = [CATextLayer layer];
-    text.font = (__bridge CFTypeRef)[NSFont systemFontOfSize:size weight:weight];
-    text.fontSize = size;
-    text.foregroundColor = SWWhite(alpha);
-    text.alignmentMode = kCAAlignmentCenter;
-    text.truncationMode = kCATruncationEnd;
-    return text;
+    [CATransaction begin];
+    [CATransaction setAnimationDuration:duration];
+    [CATransaction setAnimationTimingFunction:
+     [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
+    block();
+    [CATransaction commit];
 }
 
-static CGSize SWTextSize(CATextLayer *layer)
+static void SWSetScale(CALayer *layer, CGFloat scale)
 {
-    NSSize size;
-    if ([layer.string isKindOfClass:NSAttributedString.class]) {
-        size = [(NSAttributedString *)layer.string size];
-    } else {
-        NSString * const string = [layer.string isKindOfClass:NSString.class] ? layer.string : @"";
-        NSFont * const font = [NSFont systemFontOfSize:layer.fontSize];
-        size = [string sizeWithAttributes:@{NSFontAttributeName: (__bridge NSFont *)layer.font ?: font}];
-    }
-    return CGSizeMake(ceil(size.width) + 2.0, ceil(size.height));
-}
-
-/* An SF Symbol drawn once into a bitmap, for a CALayer. */
-static void SWSetGlyph(CALayer *layer, NSString *name, CGFloat pointSize, NSColor *color, CGFloat scale)
-{
-    NSImageSymbolConfiguration *config =
-        [NSImageSymbolConfiguration configurationWithPointSize:pointSize weight:NSFontWeightRegular];
-    config = [config configurationByApplyingConfiguration:
-              [NSImageSymbolConfiguration configurationWithPaletteColors:@[color]]];
-    NSImage * const image = [[NSImage imageWithSystemSymbolName:name accessibilityDescription:nil]
-                             imageWithSymbolConfiguration:config];
-    if (image == nil)
-        return;
-    const NSSize size = image.size;
-    const NSRect rect = NSMakeRect(0, 0, size.width, size.height);
-    NSBitmapImageRep * const rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
-                                                                           pixelsWide:(NSInteger)ceil(size.width * scale)
-                                                                           pixelsHigh:(NSInteger)ceil(size.height * scale)
-                                                                        bitsPerSample:8
-                                                                      samplesPerPixel:4
-                                                                             hasAlpha:YES
-                                                                             isPlanar:NO
-                                                                       colorSpaceName:NSDeviceRGBColorSpace
-                                                                          bytesPerRow:0
-                                                                         bitsPerPixel:0];
-    rep.size = size;
-    [NSGraphicsContext saveGraphicsState];
-    NSGraphicsContext.currentContext = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
-    [image drawInRect:rect];
-    [NSGraphicsContext restoreGraphicsState];
-    layer.contents = (__bridge id)rep.CGImage;
     layer.contentsScale = scale;
-    layer.bounds = CGRectMake(0, 0, size.width, size.height);
+    for (CALayer *sublayer in layer.sublayers)
+        SWSetScale(sublayer, scale);
+    if (layer.mask != nil)
+        SWSetScale(layer.mask, scale);
 }
+
+static NSFont *SWRoundedFont(CGFloat size, NSFontWeight weight)
+{
+    NSFont * const base = [NSFont monospacedDigitSystemFontOfSize:size weight:weight];
+    NSFontDescriptor * const rounded =
+        [base.fontDescriptor fontDescriptorWithDesign:NSFontDescriptorSystemDesignRounded];
+    NSFont * const font = rounded != nil ? [NSFont fontWithDescriptor:rounded size:size] : nil;
+    return font ?: base;
+}
+
+/* The ticks of the start buffer, from `from` on, whose bytes are all verified. */
+static NSIndexSet *SWVerifiedTicks(MacLCTorrentReaderInfo *reader, NSInteger from)
+{
+    NSMutableIndexSet * const ticks = [NSMutableIndexSet indexSet];
+    const double start = (double)reader.position;
+    const double need = (double)reader.need;
+    if (need <= 0.0)
+        return ticks;
+    for (NSInteger i = MAX(0, from); i < kTicks; i++) {
+        const double s = start + need * (double)i / kTicks;
+        const double e = start + need * (double)(i + 1) / kTicks;
+        for (NSArray<NSNumber *> *range in reader.ranges) {
+            if (range.count >= 2 && range[0].doubleValue <= s && range[1].doubleValue >= e) {
+                [ticks addIndex:(NSUInteger)i];
+                break;
+            }
+        }
+    }
+    return ticks;
+}
+
+#pragma mark - The view
 
 @implementation MacLCTorrentSwarmView
 {
-    /* swarm */
-    CAShapeLayer *_swarmDots;
-    CAShapeLayer *_links;
-    CAShapeLayer *_pendingLinks;
-    CAShapeLayer *_radar;
-    CALayer *_peerLayers[kPeerSlots];
-    CALayer *_peerCores[kPeerSlots];
-    CALayer *_pins[kTrackerPins];
-    CALayer *_pieces;
-    CALayer *_macTile;
-    CALayer *_macGlyph;
-    CATextLayer *_macLabel;
-    CATextLayer *_rateLabel;
-    CATextLayer *_moreLabel;
-    CATextLayer *_legend;
-
-    /* film strip */
+    NSView *_canvas;
+    CALayer *_dustSpin;
+    NSMutableArray<CALayer *> *_dust;
+    CALayer *_orbitSpin;
+    NSMutableArray<CAShapeLayer *> *_peers;
+    SWPeerKind _kinds[kPeerSlots];
+    BOOL _sending[kPeerSlots];
+    BOOL _dimmed[kPeerSlots];
     CAShapeLayer *_track;
-    CAShapeLayer *_have;
-    CAShapeLayer *_haveMask;
-    CAShapeLayer *_need;
-    CAShapeLayer *_window;
-    CALayer *_playhead;
-    CATextLayer *_stripTitle;
-    CATextLayer *_startLabel;
-    CATextLayer *_endLabel;
-    CAShapeLayer *_zoomTrack;
-    CALayer *_zoomFill;
-    CAShapeLayer *_wedge;
-    CGRect _zoomRect;
+    CAShapeLayer *_received;
+    CAShapeLayer *_filled;
+    CALayer *_sweepHost;
+    CAShapeLayer *_sweepMask;
+    CAGradientLayer *_sweep;
+    CALayer *_flashes;
+    CALayer *_flights;
+    NSMutableArray<CALayer *> *_piecePool;
+    NSInteger _inFlight;
 
-    /* geometry */
-    CGPoint _slot[kPeerSlots];
-    NSInteger _slotOrder[kPeerSlots];
-    CGPoint _swarmPoint[kSwarmDots];
-    CGPoint _pinPoint[kTrackerPins];
-    CGPoint _macCenter;
-    CGRect _trackRect;
-    CGFloat _scale;
+    NSStackView *_center;
+    NSImageView *_symbol;
+    NSTextField *_percent;
+    NSTextField *_caption;
 
-    /* state */
-    MacLCTorrentStage _stage;
-    NSInteger _connected;
-    NSInteger _seeds;
-    NSInteger _sending;
-    NSInteger _opening;
-    NSInteger _swarmTotal;
-    NSInteger _dht;
-    int64_t _rate;
-    NSArray<MacLCTorrentTrackerInfo *> *_trackers;
-    BOOL _hasReader;
-    NSArray<NSNumber *> *_ranges;
-    double _position;
-    double _needEnd;
-    double _windowEnd;
-    double _head;
-    double _bufferProgress;
-    BOOL _indexArrived;
-    NSTimeInterval _aheadSeconds;
+    /* Geometry, from the bounds. */
+    CGPoint _c;
+    CGFloat _R;          /* outer radius of the ticks */
+    CGFloat _L;          /* tick length */
+    CGFloat _W;          /* tick width */
+    CGFloat _orbit;      /* radius of the peers' orbit */
+    CGFloat _peerRadius;
+    CGFloat _fontRadius; /* the _R the fonts were made for */
+    CGFloat _symbolPointSize;
 
+    /* What the numbers said last. */
+    BOOL _failed;
+    BOOL _ready;
+    BOOL _gated;
+    BOOL _waiting;
+    BOOL _needsEntrance;
+    NSInteger _filledCount;
+    NSIndexSet *_receivedTicks;
+    NSInteger _dustCount;
+    NSInteger _senders;
+    double _piecesPerSecond;
+    double _owed;
+    NSString *_symbolName;
+    NSColor *_symbolColor;
+    BOOL _symbolPulses;
+    NSInteger _percentValue;
     NSTimer *_timer;
-    double _pieceDebt;
-    NSUInteger _tickCount;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame
@@ -208,22 +188,12 @@ static void SWSetGlyph(CALayer *layer, NSString *name, CGFloat pointSize, NSColo
     self = [super initWithFrame:frame];
     if (self == nil)
         return nil;
-    self.wantsLayer = YES;
-    self.appearance = SWDark();
     self.translatesAutoresizingMaskIntoConstraints = NO;
-    self.accessibilityElement = NO;
-    _scale = 2.0;
-    _stage = MacLCTorrentStageUnknown;
-
-    /* Spread the first peers over both arcs rather than filling one side. */
-    for (NSInteger i = 0; i < kPeerSlots; i++)
-        _slotOrder[i] = i;
-    for (NSInteger i = kPeerSlots - 1; i > 0; i--) {
-        const NSInteger j = (NSInteger)(SWHash(i, 3.1) * (double)(i + 1)) % (i + 1);
-        const NSInteger t = _slotOrder[i];
-        _slotOrder[i] = _slotOrder[j];
-        _slotOrder[j] = t;
-    }
+    self.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+    [self setAccessibilityElement:NO];
+    _receivedTicks = [NSIndexSet indexSet];
+    _needsEntrance = YES;
+    _percentValue = -1;
     [self build];
     return self;
 }
@@ -234,545 +204,551 @@ static void SWSetGlyph(CALayer *layer, NSString *name, CGFloat pointSize, NSColo
 }
 
 - (BOOL)isFlipped { return NO; }
+- (NSView *)hitTest:(NSPoint)point { return nil; }
+
+- (CAShapeLayer *)tickLayerWithColor:(CGColorRef)color
+{
+    CAShapeLayer * const layer = [CAShapeLayer layer];
+    layer.fillColor = NULL;
+    layer.strokeColor = color;
+    layer.lineCap = kCALineCapRound;
+    return layer;
+}
+
+- (NSTextField *)centerLabel
+{
+    NSTextField * const label = [NSTextField labelWithString:@""];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    label.alignment = NSTextAlignmentCenter;
+    label.textColor = NSColor.whiteColor;
+    label.hidden = YES;
+    [label setAccessibilityElement:NO];
+    return label;
+}
 
 - (void)build
 {
-    CALayer * const root = self.layer;
+    /* Layer hosting: every sublayer of the canvas is ours to arrange. */
+    _canvas = [[NSView alloc] initWithFrame:self.bounds];
+    _canvas.layer = [CALayer layer];
+    _canvas.wantsLayer = YES;
+    _canvas.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    [self addSubview:_canvas];
+    CALayer * const root = _canvas.layer;
 
-    _swarmDots = SWShape();
-    _swarmDots.fillColor = SWWhite(0.22);
-    [root addSublayer:_swarmDots];
-
-    _radar = SWShape();
-    _radar.strokeColor = SWAccent(0.55);
-    _radar.lineWidth = 1.5;
-    _radar.opacity = 0.0;
-    [root addSublayer:_radar];
-
-    _pendingLinks = SWShape();
-    _pendingLinks.strokeColor = SWWhite(0.22);
-    _pendingLinks.lineWidth = 1.0;
-    _pendingLinks.lineDashPattern = @[@3, @4];
-    [root addSublayer:_pendingLinks];
-
-    _links = SWShape();
-    _links.strokeColor = SWAccent(0.55);
-    _links.lineWidth = 1.5;
-    [root addSublayer:_links];
-
-    for (NSInteger i = 0; i < kTrackerPins; i++) {
-        CALayer * const pin = [CALayer layer];
-        pin.opacity = 0.0;
-        _pins[i] = pin;
-        [root addSublayer:pin];
+    _dustSpin = [CALayer layer];
+    [root addSublayer:_dustSpin];
+    _dust = [NSMutableArray arrayWithCapacity:kDustSlots];
+    for (NSInteger j = 0; j < kDustSlots; j++) {
+        CALayer * const mote = [CALayer layer];
+        const CGFloat size = 1.4 + (CGFloat)SWHash(j, 4.0) * 1.4;
+        mote.bounds = CGRectMake(0, 0, size, size);
+        mote.cornerRadius = size / 2.0;
+        mote.backgroundColor = SWWhite(0.12 + (CGFloat)SWHash(j, 5.0) * 0.18);
+        mote.opacity = 0.0;
+        [_dustSpin addSublayer:mote];
+        [_dust addObject:mote];
     }
 
+    _orbitSpin = [CALayer layer];
+    [root addSublayer:_orbitSpin];
+    _peers = [NSMutableArray arrayWithCapacity:kPeerSlots];
     for (NSInteger i = 0; i < kPeerSlots; i++) {
-        CAShapeLayer * const peer = SWShape();
-        CGPathRef const circle = CGPathCreateWithEllipseInRect(CGRectMake(-kPeerRadius, -kPeerRadius, 2 * kPeerRadius, 2 * kPeerRadius), NULL);
-        peer.path = circle;
-        CGPathRelease(circle);
-        peer.lineWidth = 1.5;
+        CAShapeLayer * const peer = [CAShapeLayer layer];
         peer.opacity = 0.0;
-        peer.shadowColor = SWAccent(1.0);
+        peer.shadowColor = SWWhite(1.0);
         peer.shadowOffset = CGSizeZero;
-        peer.shadowRadius = 6.0;
         peer.shadowOpacity = 0.0;
-        CALayer * const core = [CALayer layer];
-        core.bounds = CGRectMake(0, 0, 5, 5);
-        core.cornerRadius = 2.5;
-        core.backgroundColor = SWAccent(1.0);
-        core.position = CGPointZero;
-        [peer addSublayer:core];
-        _peerLayers[i] = peer;
-        _peerCores[i] = core;
-        [root addSublayer:peer];
+        [_orbitSpin addSublayer:peer];
+        [_peers addObject:peer];
     }
 
-    _pieces = [CALayer layer];
-    [root addSublayer:_pieces];
-
-    _macTile = [CALayer layer];
-    _macTile.bounds = CGRectMake(0, 0, 64, 46);
-    _macTile.cornerRadius = 12.0;
-    _macTile.backgroundColor = SWWhite(0.10);
-    _macTile.borderColor = SWWhite(0.22);
-    _macTile.borderWidth = 1.0;
-    [root addSublayer:_macTile];
-    _macGlyph = [CALayer layer];
-    [_macTile addSublayer:_macGlyph];
-
-    _macLabel = SWText(11.0, NSFontWeightSemibold, 0.85);
-    _macLabel.string = _NS("This Mac");
-    [root addSublayer:_macLabel];
-    _rateLabel = SWText(11.0, NSFontWeightMedium, 0.6);
-    [root addSublayer:_rateLabel];
-    _moreLabel = SWText(10.0, NSFontWeightMedium, 0.55);
-    [root addSublayer:_moreLabel];
-    _legend = SWText(10.0, NSFontWeightRegular, 0.5);
-    {
-        NSDictionary * const words = @{NSFontAttributeName: [NSFont systemFontOfSize:10.0],
-                                       NSForegroundColorAttributeName: [NSColor colorWithWhite:1.0 alpha:0.55]};
-        NSDictionary * const marks = @{NSFontAttributeName: [NSFont systemFontOfSize:10.0 weight:NSFontWeightBold],
-                                       NSForegroundColorAttributeName: [NSColor colorWithCGColor:SWAccent(1.0)]};
-        NSMutableAttributedString * const legend = [[NSMutableAttributedString alloc] init];
-        NSArray<NSArray<NSString *> *> * const items = @[@[@"●", _NS("has the whole film")],
-                                                          @[@"◉", _NS("has part of it")],
-                                                          @[@"━", _NS("sending to you")]];
-        for (NSArray<NSString *> * const item in items) {
-            if (legend.length > 0)
-                [legend appendAttributedString:[[NSAttributedString alloc] initWithString:@"      " attributes:words]];
-            [legend appendAttributedString:[[NSAttributedString alloc] initWithString:item[0] attributes:marks]];
-            [legend appendAttributedString:[[NSAttributedString alloc] initWithString:[@"  " stringByAppendingString:item[1]] attributes:words]];
-        }
-        _legend.string = legend;
-    }
-    _legend.opacity = 0.0;
-    [root addSublayer:_legend];
-
-    _track = SWShape();
-    _track.fillColor = SWWhite(0.08);
-    _track.strokeColor = SWWhite(0.20);
-    _track.lineWidth = 1.0;
+    _track = [self tickLayerWithColor:SWWhite(0.16)];
+    _received = [self tickLayerWithColor:SWWhite(0.42)];
+    _filled = [self tickLayerWithColor:SWWhite(0.96)];
     [root addSublayer:_track];
-    _have = SWShape();
-    _have.fillColor = SWAccent(0.9);
-    _haveMask = SWShape();
-    _haveMask.fillColor = NSColor.blackColor.CGColor;
-    _have.mask = _haveMask;
-    [root addSublayer:_have];
-    _window = SWShape();
-    _window.strokeColor = SWWhite(0.35);
-    _window.lineWidth = 1.0;
-    [root addSublayer:_window];
-    _need = SWShape();
-    _need.strokeColor = SWWhite(0.85);
-    _need.lineWidth = 1.25;
-    _need.lineDashPattern = @[@3, @2];
-    [root addSublayer:_need];
-    _playhead = [CALayer layer];
-    _playhead.backgroundColor = SWWhite(0.95);
-    _playhead.cornerRadius = 1.0;
-    [root addSublayer:_playhead];
+    [root addSublayer:_received];
+    [root addSublayer:_filled];
 
-    _stripTitle = SWText(11.0, NSFontWeightMedium, 0.75);
-    [root addSublayer:_stripTitle];
-    _startLabel = SWText(10.0, NSFontWeightRegular, 0.45);
-    _startLabel.string = _NS("Start");
-    _startLabel.alignmentMode = kCAAlignmentLeft;
-    [root addSublayer:_startLabel];
-    _endLabel = SWText(10.0, NSFontWeightRegular, 0.45);
-    _endLabel.string = _NS("End");
-    _endLabel.alignmentMode = kCAAlignmentRight;
-    [root addSublayer:_endLabel];
-    _wedge = SWShape();
-    _wedge.fillColor = SWWhite(0.05);
-    _wedge.strokeColor = SWWhite(0.16);
-    _wedge.lineWidth = 1.0;
-    [root addSublayer:_wedge];
-    _zoomTrack = SWShape();
-    _zoomTrack.fillColor = SWWhite(0.10);
-    _zoomTrack.strokeColor = SWWhite(0.30);
-    _zoomTrack.lineWidth = 1.0;
-    [root addSublayer:_zoomTrack];
-    _zoomFill = [CALayer layer];
-    _zoomFill.backgroundColor = SWAccent(1.0);
-    _zoomFill.anchorPoint = CGPointMake(0.0, 0.5);
-    _zoomFill.cornerRadius = 4.0;
-    [root addSublayer:_zoomFill];
+    /* While nothing arrives, a light runs round the ticks: a conic gradient
+     * turning under a mask made of the ticks themselves. */
+    _sweepHost = [CALayer layer];
+    _sweepHost.opacity = 0.0;
+    _sweepMask = [self tickLayerWithColor:SWWhite(1.0)];
+    _sweepHost.mask = _sweepMask;
+    _sweep = [CAGradientLayer layer];
+    _sweep.type = kCAGradientLayerConic;
+    _sweep.startPoint = CGPointMake(0.5, 0.5);
+    _sweep.endPoint = CGPointMake(0.5, 1.0);
+    /* Bright at the start angle, fading counter-clockwise: a tail behind a
+     * head that turns clockwise, the way the ticks fill. */
+    _sweep.colors = @[(__bridge id)SWWhite(0.9), (__bridge id)SWWhite(0.0), (__bridge id)SWWhite(0.0)];
+    _sweep.locations = @[@0.0, @0.45, @1.0];
+    [_sweepHost addSublayer:_sweep];
+    [root addSublayer:_sweepHost];
 
-    [self refreshScale];
+    _flashes = [CALayer layer];
+    _flights = [CALayer layer];
+    [root addSublayer:_flashes];
+    [root addSublayer:_flights];
+    _piecePool = [NSMutableArray array];
+
+    _symbol = [[NSImageView alloc] initWithFrame:NSZeroRect];
+    _symbol.translatesAutoresizingMaskIntoConstraints = NO;
+    _symbol.wantsLayer = YES;
+    _symbol.imageScaling = NSImageScaleNone;
+    [_symbol setAccessibilityElement:NO];
+    _percent = [self centerLabel];
+    _caption = [self centerLabel];
+    _caption.textColor = [NSColor colorWithWhite:1.0 alpha:0.62];
+    _center = [NSStackView stackViewWithViews:@[_symbol, _percent, _caption]];
+    _center.orientation = NSUserInterfaceLayoutOrientationVertical;
+    _center.alignment = NSLayoutAttributeCenterX;
+    _center.spacing = 2.0;
+    _center.translatesAutoresizingMaskIntoConstraints = NO;
+    [self addSubview:_center];
+    [NSLayoutConstraint activateConstraints:@[
+        [_center.centerXAnchor constraintEqualToAnchor:self.centerXAnchor],
+        [_center.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
+    ]];
 }
 
 #pragma mark Geometry
 
+- (CGFloat)backingScale
+{
+    const CGFloat scale = self.window.backingScaleFactor;
+    return scale > 0.0 ? scale : 2.0;
+}
+
 - (void)viewDidChangeBackingProperties
 {
     [super viewDidChangeBackingProperties];
-    [self refreshScale];
+    SWNoActions(^{ SWSetScale(self->_canvas.layer, [self backingScale]); });
 }
 
 - (void)viewDidMoveToWindow
 {
     [super viewDidMoveToWindow];
-    [self refreshScale];
+    SWNoActions(^{ SWSetScale(self->_canvas.layer, [self backingScale]); });
     [self updateTimer];
 }
 
-- (void)refreshScale
+- (CGPathRef)newPathForTicks:(NSIndexSet *)ticks CF_RETURNS_RETAINED
 {
-    _scale = self.window.backingScaleFactor ?: (NSScreen.mainScreen.backingScaleFactor ?: 2.0);
-    for (CATextLayer * const text in @[_macLabel, _rateLabel, _moreLabel, _legend, _stripTitle,
-                                        _startLabel, _endLabel])
-        text.contentsScale = _scale;
-    SWSetGlyph(_macGlyph, @"laptopcomputer", 24.0, NSColor.whiteColor, _scale);
-    [self styleTrackerPins];
-    [self setNeedsLayout:YES];
+    CGMutablePathRef path = CGPathCreateMutable();
+    const CGFloat inner = _R - _L;
+    const CGFloat outer = _R;
+    const CGPoint c = _c;
+    [ticks enumerateIndexesUsingBlock:^(NSUInteger i, BOOL * __unused stop) {
+        /* Tick 0 at twelve o'clock, then clockwise (y points up). */
+        const double a = M_PI_2 - (double)i * 2.0 * M_PI / kTicks;
+        CGPathMoveToPoint(path, NULL, c.x + inner * cos(a), c.y + inner * sin(a));
+        CGPathAddLineToPoint(path, NULL, c.x + outer * cos(a), c.y + outer * sin(a));
+    }];
+    return path;
+}
+
+- (CGPoint)offsetForPeer:(NSInteger)slot
+{
+    const double angle = M_PI_2 - (double)slot * kGoldenAngle;
+    const CGFloat radius = _orbit + (CGFloat)(SWHash(slot, 1.0) - 0.5) * _R * 0.2;
+    return CGPointMake(radius * cos(angle), radius * sin(angle));
 }
 
 - (void)layout
 {
     [super layout];
-    const CGFloat W = NSWidth(self.bounds);
-    const CGFloat H = NSHeight(self.bounds);
-    if (W < 40.0 || H < 40.0)
+    const NSRect bounds = self.bounds;
+    const CGFloat side = MIN(NSWidth(bounds), NSHeight(bounds));
+    if (side < 1.0)
         return;
+    _c = CGPointMake(round(NSMidX(bounds)), round(NSMidY(bounds)));
+    _R = MAX(40.0, MIN(96.0, floor(side * 0.25)));
+    _L = MAX(6.0, round(_R * 0.17));
+    _W = MAX(2.0, round(_R * 0.068) / 2.0);
+    _orbit = _R * 1.46;
+    _peerRadius = MAX(2.5, _R * 0.046);
 
-    /* Zones, bottom up, so that no two words ever share a place: the strip
-     * band (Start and End, the film, the start-buffer zoom and its title),
-     * the Mac with its name and rate, two arcs of peers, the wider swarm,
-     * the legend on the top line. */
-    const CGFloat band = kStripBand;
-    const CGFloat top = H - kLegendLine;
-    _macCenter = CGPointMake(round(W / 2.0), round(band + 58.0));
-    const CGFloat r2 = MAX(36.0, MIN(W * 0.40, (top - (_macCenter.y + 10.0) - 30.0) / 0.92));
-    const CGFloat r1 = r2 * 0.58;
+    SWNoActions(^{
+        for (CALayer *layer in @[self->_dustSpin, self->_orbitSpin, self->_track, self->_received,
+                                 self->_filled, self->_sweepHost, self->_sweepMask, self->_flashes,
+                                 self->_flights])
+            layer.frame = bounds;
+        const CGFloat sweepSide = 2.0 * (self->_R + 4.0);
+        self->_sweep.frame = CGRectMake(self->_c.x - sweepSide / 2.0, self->_c.y - sweepSide / 2.0,
+                                        sweepSide, sweepSide);
+        for (CAShapeLayer *layer in @[self->_track, self->_received, self->_filled, self->_sweepMask])
+            layer.lineWidth = self->_W;
+        CGPathRef all = [self newPathForTicks:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, kTicks)]];
+        self->_track.path = all;
+        self->_sweepMask.path = all;
+        CGPathRelease(all);
+        [self refreshTickPaths];
 
-    for (NSInteger i = 0; i < kPeerSlots; i++) {
-        const BOOL inner = i < kInnerSlots;
-        const NSInteger n = inner ? i : i - kInnerSlots;
-        const NSInteger count = inner ? kInnerSlots : kPeerSlots - kInnerSlots;
-        const double from = inner ? 30.0 : 16.0, to = inner ? 150.0 : 164.0;
-        const double angle = (from + (to - from) * (double)n / (double)(count - 1)) * M_PI / 180.0;
-        const CGFloat r = inner ? r1 : r2;
-        _slot[i] = CGPointMake(_macCenter.x + r * cos(angle), _macCenter.y + 10.0 + r * sin(angle) * 0.92);
+        const CGFloat r = self->_peerRadius;
+        CGPathRef dot = CGPathCreateWithEllipseInRect(CGRectMake(-r, -r, 2.0 * r, 2.0 * r), NULL);
+        for (NSInteger i = 0; i < kPeerSlots; i++) {
+            CAShapeLayer * const peer = self->_peers[i];
+            const CGPoint offset = [self offsetForPeer:i];
+            peer.bounds = CGRectMake(-r - 2.0, -r - 2.0, 2.0 * r + 4.0, 2.0 * r + 4.0);
+            peer.path = dot;
+            peer.position = CGPointMake(self->_c.x + offset.x, self->_c.y + offset.y);
+            peer.shadowRadius = r * 1.2;
+        }
+        CGPathRelease(dot);
+
+        for (NSInteger j = 0; j < kDustSlots; j++) {
+            const double angle = SWHash(j, 2.0) * 2.0 * M_PI;
+            const CGFloat radius = self->_R * (1.70 + (CGFloat)SWHash(j, 3.0) * 0.26);
+            self->_dust[j].position = CGPointMake(self->_c.x + radius * cos(angle),
+                                                  self->_c.y + radius * sin(angle));
+        }
+    });
+
+    if (fabs(_fontRadius - _R) > 0.5) {
+        _fontRadius = _R;
+        _symbolPointSize = round(_R * 0.42);
+        _caption.font = [NSFont monospacedDigitSystemFontOfSize:MAX(10.0, round(_R * 0.13))
+                                                         weight:NSFontWeightMedium];
+        if (_symbolName != nil)
+            [self refreshSymbolImageAnimated:NO];
+        [self refreshPercentText];
     }
-    for (NSInteger i = 0; i < kTrackerPins; i++) {
-        const double angle = (24.0 + 132.0 * (double)i / (double)(kTrackerPins - 1)) * M_PI / 180.0;
-        _pinPoint[i] = CGPointMake(_macCenter.x + (r2 + 6.0) * cos(angle),
-                                   _macCenter.y + 10.0 + (r2 + 6.0) * sin(angle) * 0.92);
-    }
-    const CGFloat outerRoom = MAX(6.0, MIN(46.0, top - (_macCenter.y + 10.0 + r2 * 0.92) - 6.0));
-    for (NSInteger i = 0; i < kSwarmDots; i++) {
-        const double angle = (6.0 + 168.0 * SWHash(i, 1.7)) * M_PI / 180.0;
-        const CGFloat r = r2 + 14.0 + outerRoom * SWHash(i, 5.3);
-        CGFloat x = _macCenter.x + (r + 30.0 * SWHash(i, 9.1)) * cos(angle);
-        CGFloat y = _macCenter.y + 10.0 + r * sin(angle) * 0.92;
-        x = MIN(MAX(x, 6.0), W - 6.0);
-        y = MIN(MAX(y, _macCenter.y + 30.0), top - 4.0);
-        _swarmPoint[i] = CGPointMake(x, y);
-    }
-
-    const CGFloat trackWidth = MIN(W - 40.0, 560.0);
-    _trackRect = CGRectMake(round((W - trackWidth) / 2.0), 24.0, trackWidth, 12.0);
-    const CGFloat zoomWidth = MIN(240.0, round(trackWidth * 0.5));
-    _zoomRect = CGRectMake(round((W - zoomWidth) / 2.0), 62.0, zoomWidth, 8.0);
-
-    [CATransaction begin];
-    [CATransaction setDisableActions:YES];
-    _macTile.position = _macCenter;
-    _macGlyph.position = CGPointMake(32.0, 23.0);
-    CGPathRef const radar = CGPathCreateWithEllipseInRect(CGRectMake(-r2, -r2 * 0.92, 2 * r2, 2 * r2 * 0.92), NULL);
-    _radar.path = radar;
-    CGPathRelease(radar);
-    _radar.position = CGPointMake(_macCenter.x, _macCenter.y + 10.0);
-    for (NSInteger i = 0; i < kPeerSlots; i++)
-        _peerLayers[i].position = _slot[_slotOrder[i]];
-    for (NSInteger i = 0; i < kTrackerPins; i++)
-        _pins[i].position = _pinPoint[i];
-    CGPathRef const track = CGPathCreateWithRoundedRect(_trackRect, 6.0, 6.0, NULL);
-    _track.path = track;
-    _haveMask.path = track;
-    CGPathRelease(track);
-    CGPathRef const zoom = CGPathCreateWithRoundedRect(_zoomRect, 4.0, 4.0, NULL);
-    _zoomTrack.path = zoom;
-    CGPathRelease(zoom);
-    _zoomFill.position = CGPointMake(CGRectGetMinX(_zoomRect), CGRectGetMidY(_zoomRect));
-    [CATransaction commit];
-    [self refreshLayersAnimated:NO];
 }
 
-#pragma mark State
+- (void)refreshTickPaths
+{
+    const NSInteger filled = _ready ? kTicks : _filledCount;
+    CGPathRef filledPath =
+        [self newPathForTicks:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, (NSUInteger)filled)]];
+    CGPathRef receivedPath = [self newPathForTicks:_ready ? [NSIndexSet indexSet] : _receivedTicks];
+    _filled.path = filledPath;
+    _received.path = receivedPath;
+    CGPathRelease(filledPath);
+    CGPathRelease(receivedPath);
+}
+
+#pragma mark Numbers
+
+- (void)reset
+{
+    _needsEntrance = YES;
+    _filledCount = 0;
+    _receivedTicks = [NSIndexSet indexSet];
+    _ready = NO;
+    _failed = NO;
+    _gated = NO;
+    _senders = 0;
+    _piecesPerSecond = 0.0;
+    _owed = 0.0;
+    _dustCount = 0;
+    [self dropFlights];
+    SWNoActions(^{
+        for (NSInteger i = 0; i < kPeerSlots; i++) {
+            self->_kinds[i] = SWPeerNone;
+            self->_sending[i] = NO;
+            self->_dimmed[i] = NO;
+            [self->_peers[i] removeAllAnimations];
+            self->_peers[i].opacity = 0.0;
+        }
+        for (CALayer *mote in self->_dust)
+            mote.opacity = 0.0;
+        for (CALayer *flash in [self->_flashes.sublayers copy])
+            [flash removeFromSuperlayer];
+        [self refreshTickPaths];
+    });
+}
 
 - (void)applyStage:(MacLCTorrentStage)stage
            torrent:(MacLCTorrentInfo *)torrent
             reader:(MacLCTorrentReaderInfo *)reader
           dhtNodes:(NSInteger)dhtNodes
 {
-    _stage = stage;
-    _connected = MAX(0, torrent.peers);
-    _seeds = MIN(_connected, MAX(0, torrent.seeds));
-    _sending = MIN(_connected, MAX(0, torrent.peersUnchoked));
-    _opening = MAX(0, torrent.peersConnecting) + MAX(0, torrent.peersHandshaking);
-    _swarmTotal = MAX(0, torrent.swarmSeeds) + MAX(0, torrent.swarmLeechers);
-    _dht = dhtNodes;
-    _rate = MAX(0, torrent.downloadRate);
-    _trackers = torrent.trackers ?: @[];
+    (void)dhtNodes;
+    if (stage == MacLCTorrentStageUnknown)
+        stage = MacLCTorrentStageTrackers;
+    const BOOL failed = stage == MacLCTorrentStageFailed;
+    const BOOL ready = stage == MacLCTorrentStageReady;
+    const BOOL gated = !failed && !ready && reader != nil && reader.need > 0;
+    const BOOL wasReady = _ready;
+    _failed = failed;
+    _ready = ready;
+    _gated = gated;
+    _waiting = !failed && !ready && !gated;
 
-    _hasReader = reader != nil && reader.size > 0;
-    if (_hasReader) {
-        const double size = (double)reader.size;
-        _ranges = reader.rangeFractions;
-        _position = reader.positionFraction;
-        _needEnd = reader.need > 0 ? MIN(1.0, ((double)reader.position + (double)reader.need) / size) : _position;
-        _windowEnd = reader.windowEnd > 0 ? MIN(1.0, (double)reader.windowEnd / size) : _position;
-        _head = reader.headFraction;
-        _bufferProgress = reader.bufferProgress;
-        _aheadSeconds = reader.aheadSeconds;
-        _indexArrived = NO;
-        for (NSArray<NSNumber *> * const range in reader.ranges) {
-            if (range.count == 2 && range[1].doubleValue >= size * 0.995 && range[0].doubleValue > size * 0.5)
-                _indexArrived = YES;
-        }
+    /* The dial: the bright run playback can use, the pieces ahead of it. */
+    NSInteger filled = 0;
+    NSIndexSet *received = [NSIndexSet indexSet];
+    if (gated) {
+        filled = MIN(kTicks, MAX(0, (NSInteger)floor(reader.bufferProgress * kTicks)));
+        received = SWVerifiedTicks(reader, filled);
+    }
+    NSMutableIndexSet * const lit = [NSMutableIndexSet indexSet];
+    for (NSInteger i = _filledCount; i < filled; i++)
+        if (![_receivedTicks containsIndex:(NSUInteger)i])
+            [lit addIndex:(NSUInteger)i];
+    [received enumerateIndexesUsingBlock:^(NSUInteger i, BOOL * __unused stop) {
+        if ((NSInteger)i >= self->_filledCount && ![self->_receivedTicks containsIndex:i])
+            [lit addIndex:i];
+    }];
+    _filledCount = filled;
+    _receivedTicks = received;
+    SWNoActions(^{ [self refreshTickPaths]; });
+    SWAnimated(0.4, ^{
+        self->_track.strokeColor = failed ? SWDarkColor(MacLCDesign.warning, 0.55) : SWWhite(0.16);
+        self->_filled.opacity = failed ? 0.0f : 1.0f;
+        self->_received.opacity = failed ? 0.0f : 1.0f;
+        self->_dustSpin.opacity = failed ? 0.35f : 1.0f;
+    });
+    NSIndexSet * const allTicks = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, kTicks)];
+    if (_needsEntrance) {
+        _needsEntrance = NO;
+        [self flashTicks:allTicks stagger:0.008];
+    } else if (ready && !wasReady) {
+        [self flashTicks:allTicks stagger:0.005];
+    } else if (lit.count > 0) {
+        [self flashTicks:lit stagger:0.03];
+    }
+
+    /* The peers: seeds first, then peers with part of the film, then the
+     * connections still opening; the first ones send. */
+    const NSInteger connected = MIN(MAX(torrent.peers, 0), kPeerSlots);
+    const NSInteger seeds = MIN(MAX(torrent.seeds, 0), connected);
+    const NSInteger opening = MIN(MAX(torrent.peersConnecting + torrent.peersHandshaking, 0),
+                                  kPeerSlots - connected);
+    NSInteger sending = MIN(MAX(torrent.peersUnchoked, 0), connected);
+    if (sending == 0 && connected > 0 && torrent.downloadRate > 0)
+        sending = 1;
+    if (failed || ready)
+        sending = 0;
+    for (NSInteger i = 0; i < kPeerSlots; i++) {
+        SWPeerKind kind = SWPeerNone;
+        if (i < seeds)
+            kind = SWPeerSeed;
+        else if (i < connected)
+            kind = SWPeerPartial;
+        else if (i < connected + opening)
+            kind = SWPeerConnecting;
+        [self setPeer:i kind:kind sending:i < sending dim:failed];
+    }
+    _senders = sending;
+
+    /* The swarm the trackers know about, as dust: more of it for a bigger
+     * swarm, without drowning the picture (4 motes for 1 peer, 40 for 100). */
+    NSInteger swarm = -1;
+    if (torrent.swarmSeeds >= 0 && torrent.swarmLeechers >= 0)
+        swarm = torrent.swarmSeeds + torrent.swarmLeechers;
+    for (MacLCTorrentTrackerInfo *tracker in torrent.trackers)
+        swarm = MAX(swarm, tracker.peers);
+    swarm = MAX(swarm, torrent.peers + torrent.peersConnecting);
+    const NSInteger dust = swarm > 0 ? MIN(kDustSlots, (NSInteger)ceil(sqrt((double)swarm) * 4.0)) : 0;
+    if (dust != _dustCount) {
+        _dustCount = dust;
+        SWAnimated(0.8, ^{
+            for (NSInteger j = 0; j < kDustSlots; j++)
+                self->_dust[j].opacity = j < dust ? 1.0f : 0.0f;
+        });
+    }
+
+    /* Pieces in flight: one for every 256 KB/s, 2 to 14 a second. */
+    double perSecond = 0.0;
+    if (sending > 0 && torrent.downloadRate > 0)
+        perSecond = MAX(2.0, MIN(14.0, (double)torrent.downloadRate / 262144.0));
+    _piecesPerSecond = perSecond;
+
+    /* The middle. */
+    NSString * const rate = torrent.downloadRate > 0 ? [MacLCTorrentFormat rateString:torrent.downloadRate] : nil;
+    NSColor * const white = [NSColor colorWithWhite:1.0 alpha:0.92];
+    if (failed) {
+        [self showSymbol:@"exclamationmark.triangle" color:MacLCDesign.warning pulse:NO caption:nil];
+    } else if (ready) {
+        [self showSymbol:@"play.fill" color:white pulse:NO caption:nil];
+    } else if (gated) {
+        [self showPercent:(NSInteger)floor(reader.bufferProgress * 100.0) caption:rate];
     } else {
-        _ranges = @[];
-        _position = _needEnd = _windowEnd = _head = 0.0;
-        _bufferProgress = 0.0;
-        _indexArrived = NO;
-    }
-    [self refreshLayersAnimated:YES];
-    [self updateTimer];
-}
-
-- (NSInteger)shownConnected { return MIN(_connected, kPeerSlots); }
-
-- (BOOL)isDiscovering
-{
-    return _connected == 0 && (_stage == MacLCTorrentStageUnknown || _stage == MacLCTorrentStageTrackers ||
-                               _stage == MacLCTorrentStageMetadata || _stage == MacLCTorrentStageConnecting);
-}
-
-- (SWPeerKind)kindForIndex:(NSInteger)n
-{
-    const NSInteger shown = [self shownConnected];
-    if (n < shown)
-        return n < MIN(_seeds, shown) ? SWPeerSeed : SWPeerPartial;
-    if (n < MIN(kPeerSlots, shown + MIN(_opening, 8)))
-        return SWPeerPending;
-    return SWPeerHidden;
-}
-
-/* Seeds send first: the first `sending` connected peers carry the lines. */
-- (BOOL)isSendingIndex:(NSInteger)n
-{
-    return n < MIN(_sending, [self shownConnected]);
-}
-
-- (void)styleTrackerPins
-{
-    for (NSInteger i = 0; i < kTrackerPins; i++) {
-        MacLCTorrentTrackerInfo * const tracker = i < (NSInteger)_trackers.count ? _trackers[i] : nil;
-        NSColor *color = [NSColor colorWithWhite:1.0 alpha:0.35];
-        if (tracker.state == MacLCTorrentTrackerStateOK)
-            color = NSColor.systemGreenColor;
-        else if (tracker.state == MacLCTorrentTrackerStateError)
-            color = NSColor.systemRedColor;
-        else if (tracker.state == MacLCTorrentTrackerStateUpdating)
-            color = [NSColor colorWithWhite:1.0 alpha:0.8];
-        SWSetGlyph(_pins[i], @"antenna.radiowaves.left.and.right", 11.0, color, _scale);
-    }
-}
-
-- (void)refreshLayersAnimated:(BOOL)animated
-{
-    const BOOL reduced = MacLCDesign.reducedMotion;
-    [CATransaction begin];
-    [CATransaction setAnimationDuration:animated ? (reduced ? 0.25 : 0.45) : 0.0];
-    [CATransaction setDisableActions:!animated];
-    [CATransaction setAnimationTimingFunction:
-     [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
-
-    const BOOL failed = _stage == MacLCTorrentStageFailed;
-    const BOOL discovering = [self isDiscovering];
-
-    /* The wider swarm, or the DHT network while it is searched. */
-    NSInteger dots = 0;
-    if (_swarmTotal > 0)
-        dots = MIN(kSwarmDots, _swarmTotal);
-    else if (_dht > 0)
-        dots = MIN(kSwarmDots, 10 + _dht / 12);
-    CGMutablePathRef const swarm = CGPathCreateMutable();
-    for (NSInteger i = 0; i < dots; i++)
-        CGPathAddEllipseInRect(swarm, NULL, CGRectMake(_swarmPoint[i].x - 1.6, _swarmPoint[i].y - 1.6, 3.2, 3.2));
-    _swarmDots.path = swarm;
-    CGPathRelease(swarm);
-    _swarmDots.opacity = failed ? 0.3 : 1.0;
-
-    /* Trackers: shown while nobody answered yet. */
-    [self styleTrackerPins];
-    for (NSInteger i = 0; i < kTrackerPins; i++)
-        _pins[i].opacity = (discovering && i < (NSInteger)_trackers.count) ? 1.0 : 0.0;
-
-    /* Peers and the lines to the ones sending. */
-    CGMutablePathRef const links = CGPathCreateMutable();
-    CGMutablePathRef const pending = CGPathCreateMutable();
-    for (NSInteger n = 0; n < kPeerSlots; n++) {
-        CAShapeLayer * const peer = (CAShapeLayer *)_peerLayers[n];
-        CALayer * const core = _peerCores[n];
-        const SWPeerKind kind = [self kindForIndex:n];
-        const BOOL sending = [self isSendingIndex:n] && !failed;
-        const CGPoint p = _slot[_slotOrder[n]];
-        switch (kind) {
-            case SWPeerSeed:
-                peer.fillColor = SWAccent(1.0);
-                peer.strokeColor = SWAccent(1.0);
-                peer.lineDashPattern = nil;
-                core.opacity = 0.0;
+        NSString *name = @"dot.radiowaves.left.and.right";
+        switch (stage) {
+            case MacLCTorrentStageMetadata:
+                name = @"doc.text.magnifyingglass";
                 break;
-            case SWPeerPartial:
-                peer.fillColor = SWAccent(0.12);
-                peer.strokeColor = SWAccent(1.0);
-                peer.lineDashPattern = nil;
-                core.opacity = 1.0;
+            case MacLCTorrentStageConnecting:
+                name = @"point.3.connected.trianglepath.dotted";
                 break;
-            case SWPeerPending:
-                peer.fillColor = NSColor.clearColor.CGColor;
-                peer.strokeColor = SWWhite(0.45);
-                peer.lineDashPattern = @[@2, @2];
-                core.opacity = 0.0;
+            case MacLCTorrentStageDownloading:
+            case MacLCTorrentStageBuffering:
+            case MacLCTorrentStageStalled:
+            case MacLCTorrentStagePlaying:
+                name = @"arrow.down";
                 break;
-            case SWPeerHidden:
+            default:
                 break;
         }
-        peer.opacity = kind == SWPeerHidden ? 0.0 : (failed ? 0.35 : 1.0);
-        peer.shadowOpacity = sending ? 0.9 : 0.0;
-        if (kind == SWPeerHidden)
-            continue;
-        /* Lines stop at the peer's edge and at the Mac tile. */
-        const CGFloat dx = _macCenter.x - p.x, dy = _macCenter.y - p.y;
-        const CGFloat len = MAX(1.0, hypot(dx, dy));
-        const CGPoint a = CGPointMake(p.x + dx / len * (kPeerRadius + 2.0), p.y + dy / len * (kPeerRadius + 2.0));
-        const CGPoint b = CGPointMake(_macCenter.x - dx / len * 30.0, _macCenter.y - dy / len * 26.0);
-        if (sending) {
-            CGPathMoveToPoint(links, NULL, a.x, a.y);
-            CGPathAddLineToPoint(links, NULL, b.x, b.y);
-        } else if (kind == SWPeerPending) {
-            CGPathMoveToPoint(pending, NULL, a.x, a.y);
-            CGPathAddLineToPoint(pending, NULL, b.x, b.y);
+        [self showSymbol:name color:white pulse:YES caption:rate];
+    }
+
+    [self refreshMotion];
+}
+
+- (void)setPeer:(NSInteger)i kind:(SWPeerKind)kind sending:(BOOL)sending dim:(BOOL)dim
+{
+    CAShapeLayer * const peer = _peers[i];
+    const SWPeerKind before = _kinds[i];
+    /* Unchanged: leave the layer alone, or its implicit animations would
+     * cut the connecting pulse every update. */
+    if (kind == before && sending == _sending[i] && dim == _dimmed[i])
+        return;
+    _kinds[i] = kind;
+    _sending[i] = sending;
+    _dimmed[i] = dim;
+
+    CGColorRef fill = SWWhite(0.0);
+    CGColorRef stroke = SWWhite(0.0);
+    NSArray<NSNumber *> *dash = nil;
+    switch (kind) {
+        case SWPeerSeed:
+            fill = SWWhite(0.92);
+            break;
+        case SWPeerPartial:
+            fill = SWWhite(0.14);
+            stroke = SWWhite(0.82);
+            break;
+        case SWPeerConnecting:
+            stroke = SWWhite(0.55);
+            dash = @[@1.6, @1.6];
+            break;
+        case SWPeerNone:
+            break;
+    }
+    const CGFloat scale = sending ? 1.2 : 1.0;
+    SWAnimated(0.35, ^{
+        peer.fillColor = fill;
+        peer.strokeColor = stroke;
+        peer.lineWidth = 1.2;
+        peer.lineDashPattern = dash;
+        peer.shadowOpacity = sending ? 0.7f : 0.0f;
+        peer.opacity = kind == SWPeerNone ? 0.0f : (dim ? 0.35f : 1.0f);
+        peer.transform = CATransform3DMakeScale(scale, scale, 1.0);
+    });
+    if (before == SWPeerNone && kind != SWPeerNone && self.window != nil && !MacLCDesign.reducedMotion) {
+        CASpringAnimation * const grow = [MacLCDesign emphasizedSpringForKeyPath:@"transform.scale"];
+        grow.fromValue = @0.2;
+        grow.toValue = @(scale);
+        [peer addAnimation:grow forKey:@"mlc.appear"];
+    }
+    [self refreshPulseForPeer:i];
+}
+
+#pragma mark The middle
+
+- (void)showSymbol:(NSString *)name color:(NSColor *)color pulse:(BOOL)pulse caption:(NSString *)caption
+{
+    _percentValue = -1;
+    _percent.hidden = YES;
+    _symbol.hidden = NO;
+    if (![name isEqualToString:_symbolName] || ![color isEqual:_symbolColor]) {
+        _symbolName = [name copy];
+        _symbolColor = color;
+        [self refreshSymbolImageAnimated:YES];
+    }
+    _symbolPulses = pulse;
+    [self refreshSymbolPulse];
+    [self setCaption:caption];
+}
+
+- (void)showPercent:(NSInteger)percent caption:(NSString *)caption
+{
+    _symbolName = nil;
+    _symbolPulses = NO;
+    [self refreshSymbolPulse];
+    _symbol.hidden = YES;
+    _percent.hidden = NO;
+    percent = MIN(100, MAX(0, percent));
+    if (percent != _percentValue) {
+        _percentValue = percent;
+        [self refreshPercentText];
+    }
+    [self setCaption:caption];
+}
+
+- (void)setCaption:(NSString *)caption
+{
+    if (caption.length > 0 && ![_caption.stringValue isEqualToString:caption])
+        _caption.stringValue = caption;
+    _caption.hidden = caption.length == 0;
+}
+
+- (void)refreshPercentText
+{
+    if (_percentValue < 0 || _R <= 0.0)
+        return;
+    const CGFloat size = round(_R * 0.44);
+    NSMutableAttributedString * const text = [[NSMutableAttributedString alloc]
+        initWithString:[NSString stringWithFormat:@"%ld", (long)_percentValue]
+            attributes:@{ NSFontAttributeName: SWRoundedFont(size, NSFontWeightSemibold),
+                          NSForegroundColorAttributeName: NSColor.whiteColor }];
+    [text appendAttributedString:[[NSAttributedString alloc]
+        initWithString:@"%"
+            attributes:@{ NSFontAttributeName: SWRoundedFont(round(size * 0.5), NSFontWeightMedium),
+                          NSForegroundColorAttributeName: [NSColor colorWithWhite:1.0 alpha:0.7] }]];
+    _percent.attributedStringValue = text;
+}
+
+/* A transform that scales a layer-backed view's layer about its centre
+ * (AppKit anchors those layers at their bottom-left corner). */
+static NSValue *SWScaleAboutCentre(CALayer *layer, CGFloat scale)
+{
+    const CGPoint c = CGPointMake(CGRectGetMidX(layer.bounds), CGRectGetMidY(layer.bounds));
+    CATransform3D t = CATransform3DMakeTranslation(c.x, c.y, 0.0);
+    t = CATransform3DScale(t, scale, scale, 1.0);
+    t = CATransform3DTranslate(t, -c.x, -c.y, 0.0);
+    return [NSValue valueWithCATransform3D:t];
+}
+
+- (void)refreshSymbolImageAnimated:(BOOL)animated
+{
+    if (_symbolName == nil || _symbolPointSize <= 0.0)
+        return;
+    /* Size and colour in one configuration: applying the colour on its own
+     * would drop the size. */
+    NSImageSymbolConfiguration * const configuration =
+        [[NSImageSymbolConfiguration configurationWithPointSize:_symbolPointSize weight:NSFontWeightRegular]
+         configurationByApplyingConfiguration:
+             [NSImageSymbolConfiguration configurationWithHierarchicalColor:_symbolColor ?: NSColor.whiteColor]];
+    NSImage * const image = [[MacLCDesign symbolNamed:_symbolName accessibilityLabel:nil]
+                             imageWithSymbolConfiguration:configuration];
+    CALayer * const layer = _symbol.layer;
+    if (animated && _symbol.window != nil && layer != nil) {
+        CATransition * const fade = [CATransition animation];
+        fade.type = kCATransitionFade;
+        fade.duration = 0.25;
+        [layer addAnimation:fade forKey:@"mlc.swap"];
+        if (!MacLCDesign.reducedMotion) {
+            CASpringAnimation * const pop = [MacLCDesign emphasizedSpringForKeyPath:@"transform"];
+            pop.fromValue = SWScaleAboutCentre(layer, 0.8);
+            pop.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+            [layer addAnimation:pop forKey:@"mlc.pop"];
         }
     }
-    _links.path = links;
-    _pendingLinks.path = pending;
-    CGPathRelease(links);
-    CGPathRelease(pending);
-
-    const BOOL more = _connected > kPeerSlots;
-    _moreLabel.string = more ? [NSString stringWithFormat:_NS("+%ld more"), (long)(_connected - kPeerSlots)] : @"";
-    _moreLabel.opacity = more ? 1.0 : 0.0;
-    _legend.opacity = _connected > 0 && !failed ? 1.0 : 0.0;
-
-    _rateLabel.string = _rate > 0 ? [NSString stringWithFormat:@"↓ %@", [MacLCTorrentFormat rateString:_rate]] : @"";
-    _macTile.borderColor = failed ? SWColor(NSColor.systemRedColor) : (_rate > 0 ? SWAccent(0.8) : SWWhite(0.22));
-
-    [self refreshStrip];
-    [self placeLabels];
-    [CATransaction commit];
-
-    [self updateRadar];
+    _symbol.image = image;
 }
 
-- (CGFloat)xForFraction:(double)fraction
+- (void)refreshSymbolPulse
 {
-    return CGRectGetMinX(_trackRect) + CGRectGetWidth(_trackRect) * MIN(1.0, MAX(0.0, fraction));
-}
-
-- (void)refreshStrip
-{
-    const CGRect t = _trackRect;
-    CGMutablePathRef const have = CGPathCreateMutable();
-    for (NSUInteger i = 0; i + 1 < _ranges.count; i += 2) {
-        const CGFloat x0 = [self xForFraction:_ranges[i].doubleValue];
-        const CGFloat x1 = MAX(x0 + 1.5, [self xForFraction:_ranges[i + 1].doubleValue]);
-        CGPathAddRect(have, NULL, CGRectMake(x0, CGRectGetMinY(t), x1 - x0, CGRectGetHeight(t)));
+    CALayer * const layer = _symbol.layer;
+    const BOOL want = _symbolPulses && _animating && !_symbol.hidden;
+    if (want && [layer animationForKey:@"mlc.pulse"] == nil) {
+        CABasicAnimation * const pulse = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        pulse.fromValue = @1.0;
+        pulse.toValue = @0.45;
+        pulse.duration = 1.1;
+        pulse.autoreverses = YES;
+        pulse.repeatCount = HUGE_VALF;
+        pulse.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+        [layer addAnimation:pulse forKey:@"mlc.pulse"];
+    } else if (!want) {
+        [layer removeAnimationForKey:@"mlc.pulse"];
     }
-    _have.path = have;
-    CGPathRelease(have);
-
-    const BOOL buffering = _hasReader && _needEnd > _position &&
-                           _stage != MacLCTorrentStagePlaying && _stage != MacLCTorrentStageFailed;
-    if (buffering) {
-        const CGFloat x0 = [self xForFraction:_position];
-        const CGFloat x1 = MAX(x0 + 6.0, [self xForFraction:_needEnd]);
-        CGPathRef const need = CGPathCreateWithRoundedRect(CGRectInset(CGRectMake(x0, CGRectGetMinY(t), x1 - x0, CGRectGetHeight(t)), -2.0, -3.0), 4.0, 4.0, NULL);
-        _need.path = need;
-        CGPathRelease(need);
-        _need.opacity = 1.0;
-    } else {
-        _need.opacity = 0.0;
-    }
-
-    CGMutablePathRef const window = CGPathCreateMutable();
-    if (_hasReader && _windowEnd > _position) {
-        const CGFloat y = CGRectGetMinY(t) - 5.0;
-        CGPathMoveToPoint(window, NULL, [self xForFraction:_position], y + 2.0);
-        CGPathAddLineToPoint(window, NULL, [self xForFraction:_position], y);
-        CGPathAddLineToPoint(window, NULL, [self xForFraction:_windowEnd], y);
-        CGPathAddLineToPoint(window, NULL, [self xForFraction:_windowEnd], y + 2.0);
-    }
-    _window.path = window;
-    CGPathRelease(window);
-
-    _playhead.bounds = CGRectMake(0, 0, 2.0, CGRectGetHeight(t) + 8.0);
-    _playhead.position = CGPointMake([self xForFraction:_position], CGRectGetMidY(t));
-    _playhead.opacity = _hasReader ? 1.0 : 0.0;
-    _track.opacity = _hasReader ? 1.0 : 0.45;
-
-    NSString *title;
-    if (!_hasReader)
-        title = _NS("The film, in pieces: they can arrive in any order");
-    else if (_stage == MacLCTorrentStagePlaying)
-        title = [NSString stringWithFormat:_NS("Playing · %@ ready ahead"), [MacLCTorrentFormat durationString:_aheadSeconds]];
-    else if (_stage == MacLCTorrentStageReady || _bufferProgress >= 0.999)
-        title = _NS("Start of the film ready");
-    else
-        title = [NSString stringWithFormat:_NS("Needed to start: %ld %%"), (long)lround(_bufferProgress * 100.0)];
-    _stripTitle.string = title;
-    _endLabel.string = _hasReader && _indexArrived ? _NS("Index ✓   End") : _NS("End");
-
-    /* The start buffer is a sliver of a whole film: a zoom above the strip
-     * shows it filling, joined to its place by a wedge. */
-    _zoomTrack.opacity = buffering ? 1.0 : 0.0;
-    _zoomFill.opacity = buffering ? 1.0 : 0.0;
-    _wedge.opacity = buffering ? 1.0 : 0.0;
-    _zoomFill.bounds = CGRectMake(0, 0, MAX(buffering ? 8.0 : 0.0, CGRectGetWidth(_zoomRect) * MIN(1.0, MAX(0.0, _bufferProgress))),
-                                  CGRectGetHeight(_zoomRect));
-    if (buffering) {
-        const CGFloat x0 = [self xForFraction:_position];
-        const CGFloat x1 = MAX(x0 + 6.0, [self xForFraction:_needEnd]);
-        CGMutablePathRef const wedge = CGPathCreateMutable();
-        CGPathMoveToPoint(wedge, NULL, x0 - 2.0, CGRectGetMaxY(t) + 3.0);
-        CGPathAddLineToPoint(wedge, NULL, CGRectGetMinX(_zoomRect), CGRectGetMinY(_zoomRect) - 2.0);
-        CGPathAddLineToPoint(wedge, NULL, CGRectGetMaxX(_zoomRect), CGRectGetMinY(_zoomRect) - 2.0);
-        CGPathAddLineToPoint(wedge, NULL, x1 + 2.0, CGRectGetMaxY(t) + 3.0);
-        CGPathCloseSubpath(wedge);
-        _wedge.path = wedge;
-        CGPathRelease(wedge);
-    }
-}
-
-- (void)placeLabels
-{
-    const CGRect t = _trackRect;
-    const CGFloat W = NSWidth(self.bounds);
-
-    CGSize s = SWTextSize(_macLabel);
-    _macLabel.bounds = CGRectMake(0, 0, s.width, s.height);
-    _macLabel.position = CGPointMake(_macCenter.x, _macCenter.y - 23.0 - 10.0);
-    s = SWTextSize(_rateLabel);
-    _rateLabel.bounds = CGRectMake(0, 0, MAX(s.width, 1.0), s.height);
-    _rateLabel.position = CGPointMake(_macCenter.x, _macCenter.y - 23.0 - 24.0);
-
-    s = SWTextSize(_moreLabel);
-    _moreLabel.bounds = CGRectMake(0, 0, MAX(s.width, 1.0), s.height);
-    const CGPoint last = _slot[kPeerSlots - 1];
-    _moreLabel.position = CGPointMake(MIN(W - s.width / 2.0 - 4.0, last.x + 4.0), last.y + 16.0);
-
-    s = SWTextSize(_legend);
-    _legend.bounds = CGRectMake(0, 0, MIN(s.width, W - 16.0), s.height);
-    _legend.position = CGPointMake(W / 2.0, NSHeight(self.bounds) - kLegendLine / 2.0);
-
-    /* Strip words: the title above the strip, Start and End under it, the
-     * index chip above its end; nothing shares a line, nothing collides. */
-    s = SWTextSize(_stripTitle);
-    _stripTitle.bounds = CGRectMake(0, 0, MIN(s.width, CGRectGetWidth(t)), s.height);
-    const BOOL zoomed = _zoomTrack.opacity > 0.5;
-    _stripTitle.position = CGPointMake(CGRectGetMidX(t), (zoomed ? CGRectGetMaxY(_zoomRect) : CGRectGetMaxY(t)) + 5.0 + s.height / 2.0);
-    s = SWTextSize(_startLabel);
-    _startLabel.bounds = CGRectMake(0, 0, s.width, s.height);
-    _startLabel.position = CGPointMake(CGRectGetMinX(t) + s.width / 2.0, CGRectGetMinY(t) - 4.0 - s.height / 2.0);
-    s = SWTextSize(_endLabel);
-    _endLabel.bounds = CGRectMake(0, 0, s.width, s.height);
-    _endLabel.position = CGPointMake(CGRectGetMaxX(t) - s.width / 2.0, CGRectGetMinY(t) - 4.0 - s.height / 2.0);
 }
 
 #pragma mark Motion
@@ -782,152 +758,223 @@ static void SWSetGlyph(CALayer *layer, NSString *name, CGFloat pointSize, NSColo
     if (_animating == animating)
         return;
     _animating = animating;
+    [self refreshMotion];
+}
+
+/* Positive periods turn clockwise (y points up, so towards negative angles). */
+static void SWSetSpin(CALayer *layer, NSString *key, NSTimeInterval period)
+{
+    if (period == 0.0) {
+        [layer removeAnimationForKey:key];
+        return;
+    }
+    if ([layer animationForKey:key] != nil)
+        return;
+    CABasicAnimation * const spin = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
+    spin.fromValue = @0.0;
+    spin.toValue = @(period > 0.0 ? -2.0 * M_PI : 2.0 * M_PI);
+    spin.duration = fabs(period);
+    spin.repeatCount = HUGE_VALF;
+    [layer addAnimation:spin forKey:key];
+}
+
+- (void)refreshMotion
+{
+    const BOOL on = _animating;
+    SWSetSpin(_orbitSpin, @"mlc.spin", on ? 170.0 : 0.0);
+    SWSetSpin(_dustSpin, @"mlc.spin", on ? -260.0 : 0.0);
+    SWSetSpin(_sweep, @"mlc.sweep", on && _waiting ? 1.8 : 0.0);
+    SWAnimated(0.5, ^{ self->_sweepHost.opacity = on && self->_waiting ? 1.0f : 0.0f; });
+    for (NSInteger i = 0; i < kPeerSlots; i++)
+        [self refreshPulseForPeer:i];
+    [self refreshSymbolPulse];
+    if (!on)
+        [self dropFlights];
     [self updateTimer];
-    [self updateRadar];
+}
+
+- (void)refreshPulseForPeer:(NSInteger)i
+{
+    CAShapeLayer * const peer = _peers[i];
+    const BOOL want = _animating && _kinds[i] == SWPeerConnecting;
+    if (want && [peer animationForKey:@"mlc.pulse"] == nil) {
+        CABasicAnimation * const pulse = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        pulse.fromValue = @1.0;
+        pulse.toValue = @0.25;
+        pulse.duration = 0.8 + SWHash(i, 6.0) * 0.4;
+        pulse.autoreverses = YES;
+        pulse.repeatCount = HUGE_VALF;
+        [peer addAnimation:pulse forKey:@"mlc.pulse"];
+    } else if (!want) {
+        [peer removeAnimationForKey:@"mlc.pulse"];
+    }
 }
 
 - (void)updateTimer
 {
-    const BOOL run = _animating && self.window != nil && !MacLCDesign.reducedMotion;
-    if (run && _timer == nil) {
-        __weak typeof(self) weakSelf = self;
-        _timer = [NSTimer timerWithTimeInterval:kTick repeats:YES block:^(NSTimer * __unused timer) {
+    const BOOL want = _animating && self.window != nil;
+    if (want && _timer == nil) {
+        __weak MacLCTorrentSwarmView * const weakSelf = self;
+        _timer = [NSTimer timerWithTimeInterval:kFlightTick repeats:YES block:^(NSTimer * __unused timer) {
             [weakSelf tick];
         }];
         [NSRunLoop.mainRunLoop addTimer:_timer forMode:NSRunLoopCommonModes];
-    } else if (!run && _timer != nil) {
+    } else if (!want && _timer != nil) {
         [_timer invalidate];
         _timer = nil;
-        [_pieces.sublayers makeObjectsPerformSelector:@selector(removeFromSuperlayer)];
-    }
-}
-
-- (void)updateRadar
-{
-    const BOOL show = [self isDiscovering] && _animating && !MacLCDesign.reducedMotion &&
-                      _stage != MacLCTorrentStageFailed;
-    if (show && [_radar animationForKey:@"sw.radar"] == nil) {
-        CABasicAnimation * const scale = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
-        scale.fromValue = @0.15;
-        scale.toValue = @1.0;
-        CABasicAnimation * const fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
-        fade.fromValue = @0.9;
-        fade.toValue = @0.0;
-        CAAnimationGroup * const group = [CAAnimationGroup animation];
-        group.animations = @[scale, fade];
-        group.duration = 2.2;
-        group.repeatCount = HUGE_VALF;
-        group.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
-        [_radar addAnimation:group forKey:@"sw.radar"];
-    } else if (!show) {
-        [_radar removeAnimationForKey:@"sw.radar"];
     }
 }
 
 - (void)tick
 {
-    _tickCount++;
-    const NSInteger sendingShown = MIN(_sending, [self shownConnected]);
-    const BOOL flowing = _rate > 0 && sendingShown > 0 && _stage != MacLCTorrentStageFailed;
-    if (flowing) {
-        /* One visible piece per ~256 KB, between 2 and 20 a second. */
-        const double perSecond = MIN(20.0, MAX(2.0, (double)_rate / 262144.0));
-        _pieceDebt += perSecond * kTick;
-        while (_pieceDebt >= 1.0) {
-            _pieceDebt -= 1.0;
-            if (_pieces.sublayers.count >= kMaxPieces)
-                break;
-            const NSInteger n = (NSInteger)arc4random_uniform((uint32_t)sendingShown);
-            [self sendPieceFrom:_slot[_slotOrder[n]] color:SWAccent(1.0) size:5.0 land:_hasReader];
-        }
-    } else if (_stage == MacLCTorrentStageMetadata && _connected > 0 && _tickCount % 3 == 0) {
-        /* The file list travels from a peer as one white sheet. */
-        const NSInteger n = (NSInteger)arc4random_uniform((uint32_t)[self shownConnected]);
-        [self sendPieceFrom:_slot[_slotOrder[n]] color:SWWhite(0.9) size:7.0 land:NO];
-    } else if ([self isDiscovering] && _tickCount % 2 == 0) {
-        /* Trackers that answered hand over addresses of peers. */
-        NSMutableArray<NSNumber *> * const answered = [NSMutableArray array];
-        for (NSInteger i = 0; i < MIN(kTrackerPins, (NSInteger)_trackers.count); i++)
-            if (_trackers[i].state == MacLCTorrentTrackerStateOK)
-                [answered addObject:@(i)];
-        if (answered.count > 0) {
-            const NSInteger i = answered[arc4random_uniform((uint32_t)answered.count)].integerValue;
-            [self sendPieceFrom:_pinPoint[i] color:SWColor(NSColor.systemGreenColor) size:3.5 land:NO];
-        }
+    if (_piecesPerSecond <= 0.0 || _senders <= 0) {
+        _owed = 0.0;
+        return;
+    }
+    /* Irregular, like the network. */
+    _owed += _piecesPerSecond * kFlightTick * (0.4 + 1.2 * SWRandom());
+    while (_owed >= 1.0) {
+        _owed -= 1.0;
+        [self launchPiece];
     }
 }
 
-- (void)sendPieceFrom:(CGPoint)from color:(CGColorRef)color size:(CGFloat)size land:(BOOL)land
+- (void)dropFlights
 {
-    CALayer * const piece = [CALayer layer];
-    piece.bounds = CGRectMake(0, 0, size, size);
-    piece.cornerRadius = size * 0.3;
-    piece.backgroundColor = color;
-    piece.shadowColor = color;
-    piece.shadowOpacity = 0.8;
-    piece.shadowRadius = 3.0;
-    piece.shadowOffset = CGSizeZero;
-    const CGPoint to = _macCenter;
-    piece.position = to;
-    [_pieces addSublayer:piece];
+    _inFlight = 0;
+    _owed = 0.0;
+    for (CALayer *piece in [_flights.sublayers copy]) {
+        [piece removeAllAnimations];
+        [piece removeFromSuperlayer];
+    }
+}
 
-    /* A slight arc, different for every piece, so the flow looks alive. */
-    CGMutablePathRef const path = CGPathCreateMutable();
-    const CGFloat bend = ((CGFloat)arc4random_uniform(1000) / 1000.0 - 0.5) * 40.0;
-    const CGPoint mid = CGPointMake((from.x + to.x) / 2.0 - (to.y - from.y) / 200.0 * bend,
-                                    (from.y + to.y) / 2.0 + (to.x - from.x) / 200.0 * bend);
+/* Where a piece lands: just after the bright run mostly, sometimes further
+ * (the part being fetched first), anywhere when there is no start buffer. */
+- (NSInteger)landingTick
+{
+    if (!_gated)
+        return (NSInteger)arc4random_uniform((uint32_t)kTicks);
+    const NSInteger span = MIN(12, kTicks - _filledCount);
+    if (span <= 0)
+        return kTicks - 1;
+    return MIN(kTicks - 1, _filledCount + (NSInteger)floor(pow(SWRandom(), 1.6) * span));
+}
+
+- (void)launchPiece
+{
+    if (_inFlight >= kMaxFlights || _senders <= 0 || _R <= 0.0)
+        return;
+
+    /* From one of the sending peers, where the turning orbit has it now. */
+    const NSInteger slot = (NSInteger)arc4random_uniform((uint32_t)_senders);
+    CALayer * const orbit = _orbitSpin.presentationLayer ?: _orbitSpin;
+    const double spin = [[orbit valueForKeyPath:@"transform.rotation.z"] doubleValue];
+    const CGPoint offset = [self offsetForPeer:slot];
+    const CGPoint from = CGPointMake(_c.x + offset.x * cos(spin) - offset.y * sin(spin),
+                                     _c.y + offset.x * sin(spin) + offset.y * cos(spin));
+    const double a = M_PI_2 - (double)[self landingTick] * 2.0 * M_PI / kTicks;
+    const CGFloat landing = _R - _L * 0.5;
+    const CGPoint to = CGPointMake(_c.x + landing * cos(a), _c.y + landing * sin(a));
+    const CGFloat bend = (CGFloat)(SWRandom() - 0.5) * 0.7;
+    const CGPoint control = CGPointMake((from.x + to.x) / 2.0 - (to.y - from.y) * bend,
+                                        (from.y + to.y) / 2.0 + (to.x - from.x) * bend);
+    CGMutablePathRef path = CGPathCreateMutable();
     CGPathMoveToPoint(path, NULL, from.x, from.y);
-    CGPathAddQuadCurveToPoint(path, NULL, mid.x, mid.y, to.x, to.y);
-    CAKeyframeAnimation * const travel = [CAKeyframeAnimation animationWithKeyPath:@"position"];
-    travel.path = path;
-    CGPathRelease(path);
-    travel.duration = 0.85;
-    travel.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn];
+    CGPathAddQuadCurveToPoint(path, NULL, control.x, control.y, to.x, to.y);
 
-    __weak typeof(self) weakSelf = self;
+    CALayer *piece = _piecePool.lastObject;
+    if (piece != nil) {
+        [_piecePool removeLastObject];
+    } else {
+        piece = [CALayer layer];
+        piece.backgroundColor = SWWhite(0.95);
+    }
+    const CGFloat size = MAX(2.5, round(_R * 0.042 * 2.0) / 2.0);
+    SWNoActions(^{
+        piece.contentsScale = [self backingScale];
+        piece.bounds = CGRectMake(0, 0, size, size);
+        piece.cornerRadius = size * 0.28;
+        piece.position = to;
+        piece.opacity = 0.0;
+    });
+
+    CAKeyframeAnimation * const move = [CAKeyframeAnimation animationWithKeyPath:@"position"];
+    move.path = path;
+    CGPathRelease(path);
+    move.timingFunction = [CAMediaTimingFunction functionWithControlPoints:0.5f :0.0f :0.9f :0.7f];
+    CAKeyframeAnimation * const fade = [CAKeyframeAnimation animationWithKeyPath:@"opacity"];
+    fade.values = @[@0.0, @1.0, @1.0, @0.0];
+    fade.keyTimes = @[@0.0, @0.15, @0.85, @1.0];
+    CABasicAnimation * const shrink = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+    shrink.fromValue = @1.0;
+    shrink.toValue = @0.55;
+    CAAnimationGroup * const group = [CAAnimationGroup animation];
+    group.animations = @[move, fade, shrink];
+    group.duration = 0.75 + 0.3 * SWRandom();
+
+    _inFlight++;
+    __weak MacLCTorrentSwarmView * const weakSelf = self;
+    __weak CALayer * const flights = _flights;
     [CATransaction begin];
     [CATransaction setCompletionBlock:^{
+        MacLCTorrentSwarmView * const strongSelf = weakSelf;
+        if (strongSelf == nil || piece.superlayer != flights)
+            return;
         [piece removeFromSuperlayer];
-        if (land)
-            [weakSelf dropPieceIntoStripWithColor:color];
+        strongSelf->_inFlight = MAX(0, strongSelf->_inFlight - 1);
+        [strongSelf->_piecePool addObject:piece];
     }];
-    [piece addAnimation:travel forKey:@"sw.travel"];
+    [_flights addSublayer:piece];
+    [piece addAnimation:group forKey:@"mlc.flight"];
     [CATransaction commit];
 }
 
-/* From the Mac into the film, at the download head: a piece takes its place. */
-- (void)dropPieceIntoStripWithColor:(CGColorRef)color
+/* A tick that lights up flares and fades into its new shade; the flare
+ * pushes outwards a little (a fade alone under Reduce Motion). */
+- (void)flashTicks:(NSIndexSet *)ticks stagger:(NSTimeInterval)stagger
 {
-    if (!_animating || _pieces.sublayers.count >= kMaxPieces)
+    if (ticks.count == 0 || self.window == nil || _R <= 0.0)
         return;
-    CALayer * const piece = [CALayer layer];
-    piece.bounds = CGRectMake(0, 0, 4.0, 4.0);
-    piece.cornerRadius = 1.0;
-    piece.backgroundColor = color;
-    const double target = _needEnd > _position && _bufferProgress < 1.0
-        ? _position + (_needEnd - _position) * MIN(1.0, _bufferProgress + 0.02)
-        : _head;
-    const CGPoint to = CGPointMake([self xForFraction:target], CGRectGetMidY(_trackRect));
-    piece.position = to;
-    piece.opacity = 0.0;
-    [_pieces addSublayer:piece];
+    const BOOL reduce = MacLCDesign.reducedMotion;
+    if (reduce)
+        stagger = 0.0;
+    const CFTimeInterval now = [_flashes convertTime:CACurrentMediaTime() fromLayer:nil];
+    const CGFloat scale = [self backingScale];
+    __block NSInteger n = 0;
+    [ticks enumerateIndexesUsingBlock:^(NSUInteger i, BOOL * __unused stop) {
+        CAShapeLayer * const flash = [self tickLayerWithColor:SWWhite(1.0)];
+        flash.frame = self->_flashes.bounds;
+        flash.contentsScale = scale;
+        flash.lineWidth = self->_W * 1.5;
+        CGPathRef path = [self newPathForTicks:[NSIndexSet indexSetWithIndex:i]];
+        flash.path = path;
+        CGPathRelease(path);
+        flash.opacity = 0.0;
 
-    CABasicAnimation * const fall = [CABasicAnimation animationWithKeyPath:@"position"];
-    fall.fromValue = [NSValue valueWithPoint:NSPointFromCGPoint(CGPointMake(_macCenter.x, _macCenter.y - 24.0))];
-    fall.toValue = [NSValue valueWithPoint:NSPointFromCGPoint(to)];
-    CABasicAnimation * const fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
-    fade.fromValue = @1.0;
-    fade.toValue = @0.0;
-    fade.beginTime = 0.35;
-    fade.duration = 0.15;
-    CAAnimationGroup * const group = [CAAnimationGroup animation];
-    group.animations = @[fall, fade];
-    group.duration = 0.5;
-    group.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn];
-    [CATransaction begin];
-    [CATransaction setCompletionBlock:^{ [piece removeFromSuperlayer]; }];
-    [piece addAnimation:group forKey:@"sw.drop"];
-    [CATransaction commit];
+        CABasicAnimation * const fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        fade.fromValue = @0.9;
+        fade.toValue = @0.0;
+        CAAnimationGroup * const group = [CAAnimationGroup animation];
+        if (reduce) {
+            group.animations = @[fade];
+        } else {
+            CABasicAnimation * const push = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+            push.fromValue = @1.0;
+            push.toValue = @1.08;
+            group.animations = @[fade, push];
+        }
+        group.duration = 0.7;
+        group.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+        group.beginTime = now + (double)n * stagger;
+
+        [CATransaction begin];
+        [CATransaction setCompletionBlock:^{ [flash removeFromSuperlayer]; }];
+        [self->_flashes addSublayer:flash];
+        [flash addAnimation:group forKey:@"mlc.flash"];
+        [CATransaction commit];
+        n++;
+    }];
 }
 
 @end

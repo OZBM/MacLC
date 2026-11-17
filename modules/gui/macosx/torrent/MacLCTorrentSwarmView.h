@@ -24,19 +24,23 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/* How a torrent reaches the screen, drawn from the module's live numbers:
- *   - the wider swarm: faint dots for everyone the trackers know about;
- *   - the peers this Mac is connected to, on two arcs: filled when they have
- *     the whole film (seeds), half filled when they have part of it, dashed
- *     while the connection opens; the ones sending data are joined to the Mac
- *     by a line that pieces travel along, as many as the download rate says;
- *   - before any peer: the trackers as pins coloured by their answer and the
- *     DHT search as a ring, without per-tracker text that could collide;
- *   - the film as a strip of pieces: what has arrived, where playback starts,
- *     the start buffer filling, the index at the end; arriving pieces drop
- *     from the Mac into the strip where they belong.
- * Always dark (it sits on video). Reduce Motion: no travelling pieces and no
- * radar, the same picture with cross-fades. Main thread only. */
+/* The heart of the torrent loading screen, drawn from the module's live
+ * numbers:
+ *   - a dial of 60 ticks, the start buffer: ticks light up as its pieces are
+ *     verified, in the order they really arrive (BitTorrent fetches pieces
+ *     out of order, so a few light up ahead of the bright run that playback
+ *     can already use);
+ *   - before any data the dial waits: a light sweeps around it and the
+ *     step's symbol sits in the middle;
+ *   - the peers this Mac is connected to orbit the dial: seeds filled, peers
+ *     with part of the film ringed, connections still opening dashed and
+ *     pulsing; the ones sending data glow and send pieces into the dial, as
+ *     many as the download rate says;
+ *   - the rest of the swarm the trackers know about: faint dust further out;
+ *   - in the middle: how full the start buffer is and the download rate, the
+ *     play symbol once it is full, a warning when the download failed.
+ * Always dark (it sits on video). Reduce Motion: no sweep, no travelling
+ * pieces, no rotation, the same picture with cross-fades. Main thread only. */
 @interface MacLCTorrentSwarmView : NSView
 
 /// The latest numbers; call at about 4 Hz. Everything animates to them.
@@ -45,8 +49,12 @@ NS_ASSUME_NONNULL_BEGIN
             reader:(nullable MacLCTorrentReaderInfo *)reader
           dhtNodes:(NSInteger)dhtNodes;
 
-/// Continuous motion (travelling pieces, radar): off while hidden, occluded
-/// or under Reduce Motion.
+/// Forgets the previous torrent (no peer, an empty dial); the next
+/// -applyStage... draws the dial on.
+- (void)reset;
+
+/// Continuous motion (sweep, orbit, travelling pieces, pulses): off while
+/// hidden, occluded or under Reduce Motion.
 @property (nonatomic) BOOL animating;
 
 @end
