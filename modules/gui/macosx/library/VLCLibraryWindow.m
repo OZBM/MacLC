@@ -128,6 +128,7 @@ NSString * const VLCLibraryWindowEmbeddedVideoPlaybackActiveKey = @"embeddedVide
     VLCVideoWindowCommon *_temporaryAudioDecorativeWindow;
     NSView *_acquiredVideoView;
     libvlc_int_t *_libvlc;
+    NSWindowTitleVisibility _titleVisibilityBeforeVideo;
 }
 
 @property NSTimer *searchInputTimer;
@@ -733,6 +734,13 @@ static int ShowController(vlc_object_t * __unused p_this,
         self.appearance = darkAppearance;
     }
 
+    /* The controls bar names the media; in the title bar the title and its
+     * proxy icon would sit on the back button. */
+    if (!self.embeddedVideoPlaybackActive) {
+        _titleVisibilityBeforeVideo = self.titleVisibility;
+    }
+    self.titleVisibility = NSWindowTitleHidden;
+
     if (_acquiredVideoView) {
         [self.splitViewController.nowPlayingBar setLiveVideoView:nil];
         [self.videoViewController returnVideoView:_acquiredVideoView];
@@ -766,6 +774,9 @@ static int ShowController(vlc_object_t * __unused p_this,
 
 - (void)disableVideoPlaybackAppearance
 {
+    if (self.embeddedVideoPlaybackActive) {
+        self.titleVisibility = _titleVisibilityBeforeVideo;
+    }
     [self endVideoFitSessionRestoringFrame:YES];
 
     self.appearance = nil;

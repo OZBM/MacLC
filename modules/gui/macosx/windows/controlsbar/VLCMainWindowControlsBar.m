@@ -192,7 +192,9 @@
     NSDictionary<NSString *, id> * const boldAttribute = @{NSFontAttributeName: boldSystemFont};
 
     VLCMediaLibraryMediaItem * const mediaItem = _playerController.currentMediaLibraryItem;
-    NSString * const displayTitle = mediaItem.title.length > 0 ? mediaItem.title : inputItem.name;
+    NSString * const composedTitle = MacLCComposedMediaTitle(inputItem.title, inputItem.nowPlaying);
+    NSString * const displayTitle = mediaItem.title.length > 0 ? mediaItem.title
+                                  : composedTitle.length > 0 ? composedTitle : (inputItem.name ?: @"");
     NSMutableAttributedString * const displayString = [[NSMutableAttributedString alloc] initWithString:displayTitle attributes:boldAttribute];
 
     if (inputItem.artist.length != 0) {

@@ -620,7 +620,11 @@
     VLCMediaLibraryMediaItem * const mediaItem =
         [VLCMediaLibraryMediaItem mediaItemForURL:_playerController.URLOfCurrentMediaItem];
 
-    NSString * const displayTitle = mediaItem.title.length > 0 ? mediaItem.title : inputItem.name;
+    /* The window's title in video mode: a stream's own title ("index.m3u8"
+     * is only the name of its playlist). */
+    NSString * const composedTitle = MacLCComposedMediaTitle(inputItem.title, inputItem.nowPlaying);
+    NSString * const displayTitle = mediaItem.title.length > 0 ? mediaItem.title
+                                  : composedTitle.length > 0 ? composedTitle : inputItem.name;
     self.playingItemDisplayField.stringValue = displayTitle ?: _NS("No current item");
     self.detailLabel.hidden =
         mediaItem == nil ||

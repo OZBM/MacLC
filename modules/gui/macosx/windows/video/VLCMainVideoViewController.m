@@ -67,6 +67,12 @@
 
 NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerLayoutKey";
 
+/* The back and play queue glass circles: the large control size, the
+ * tallest that fits the 32 pt title bar beside the traffic lights. */
+static const CGFloat VLCMainVideoTopButtonDiameter = 28.0;
+/* From the traffic lights to the back button, as in the library toolbar. */
+static const CGFloat VLCMainVideoTopButtonGap = 14.0;
+
 @interface PIPVoutViewController : NSViewController
 @property (nonatomic) NSRect previousBounds;
 @property (nonatomic, copy) void (^boundsChangeHandler)(void);
@@ -302,15 +308,15 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     [self updateLibraryControls];
 
     self.returnButton.image = [MacLCDesign symbolNamed:@"chevron.backward"
-                                             pointSize:14.
-                                                weight:NSFontWeightMedium
+                                             pointSize:15.
+                                                weight:NSFontWeightSemibold
                                     accessibilityLabel:_NS("Back to Library")];
     self.returnButton.toolTip = _NS("Back to Library");
     [self.returnButton.cell setAccessibilityLabel:_NS("Back to Library")];
 
     self.playQueueButton.image = [MacLCDesign symbolNamed:@"list.bullet"
-                                                pointSize:14.
-                                                   weight:NSFontWeightMedium
+                                                pointSize:15.
+                                                   weight:NSFontWeightSemibold
                                        accessibilityLabel:_NS("Play Queue")];
     self.playQueueButton.toolTip = _NS("Play Queue");
     [self.playQueueButton.cell setAccessibilityLabel:_NS("Play Queue")];
@@ -398,38 +404,36 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
                      options:nil];
     }
 
+    /* Back and play queue: system glass circles, so the glass itself shows
+     * hover, press, focus and the queue's on state. -updateLibraryControls
+     * centres them on the traffic lights. */
     for (NSButton * const button in @[self.returnButton, self.playQueueButton]) {
-        NSView * const parent = button.superview;
-        if (parent == nil)
-            continue;
         button.shadow = nil;
-        MacLCGlassView * const circle = [[MacLCGlassView alloc] initWithFrame:NSZeroRect];
-        circle.translatesAutoresizingMaskIntoConstraints = NO;
-        circle.forcesDarkAppearance = YES;
-        const CGFloat diameter = MAX(36.0, MacLCDesign.minimumHitTarget);
-        circle.cornerRadius = diameter / 2.0;
-        [parent addSubview:circle positioned:NSWindowBelow relativeTo:button];
-        // The button, not the circle, takes the click: it should cover the circle.
-        // Not required: the XIB pins the buttons inside a 32 pt title bar.
-        NSLayoutConstraint * const coverWidth = [button.widthAnchor constraintGreaterThanOrEqualToConstant:diameter];
-        NSLayoutConstraint * const coverHeight = [button.heightAnchor constraintGreaterThanOrEqualToConstant:diameter];
-        coverWidth.priority = coverHeight.priority = NSLayoutPriorityDefaultHigh;
-        /* In the transparent title bar the button is pinned to the bar's
-         * height (28-32 pt): the circle shrinks to fit inside it, with a
-         * 3 pt margin, instead of touching the window's top edge. */
-        NSLayoutConstraint * const preferredSize = [circle.heightAnchor constraintEqualToConstant:diameter];
-        preferredSize.priority = NSLayoutPriorityDefaultHigh - 1;
+        button.bezelStyle = NSBezelStyleGlass;
+        button.borderShape = NSControlBorderShapeCircle;
+        button.controlSize = NSControlSizeLarge;
+        button.contentTintColor = nil;
+        button.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
         [NSLayoutConstraint activateConstraints:@[
-            [circle.centerXAnchor constraintEqualToAnchor:button.centerXAnchor],
-            [circle.centerYAnchor constraintEqualToAnchor:button.centerYAnchor],
-            [circle.widthAnchor constraintEqualToAnchor:circle.heightAnchor],
-            [circle.heightAnchor constraintLessThanOrEqualToAnchor:button.heightAnchor constant:-6.0],
-            preferredSize,
-            coverWidth,
-            coverHeight,
+            [button.widthAnchor constraintEqualToConstant:VLCMainVideoTopButtonDiameter],
+            [button.heightAnchor constraintEqualToConstant:VLCMainVideoTopButtonDiameter],
         ]];
-        [circle bind:NSHiddenBinding toObject:button withKeyPath:@"hidden" options:nil];
     }
+
+    /* No title bar strip behind them: glass floats on the picture, and the
+     * overlay's gradient, pulled up to the window's top edge, keeps the
+     * traffic lights and the circles readable on a bright frame. The strip
+     * stays as an invisible spacer (lyrics insets, cover art). */
+    self.fakeTitleBar.hidden = YES;
+    for (NSLayoutConstraint * const constraint in self.overlayView.superview.constraints) {
+        if (constraint.firstItem == self.overlayView &&
+            constraint.firstAttribute == NSLayoutAttributeTop &&
+            constraint.secondItem == self.fakeTitleBar) {
+            constraint.active = NO;
+        }
+    }
+    [self.overlayView.topAnchor constraintEqualToAnchor:self.fakeTitleBar.topAnchor].active = YES;
+    self.overlayView.drawGradientForTopControls = YES;
 }
 
 - (void)updateLyricsInsets
@@ -760,6 +764,37 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
     [self updateLibraryControls];
 }
 
+/* The glass circles. In a window: on the traffic lights' centre line, the
+ * back button VLCMainVideoTopButtonGap after them, the play queue as far from
+ * the right edge as the lights are from the left. In full screen (no lights):
+ * at the overlay inset. */
+- (void)placeGlassTopButtonsInTitleBar:(BOOL)inTitleBar
+{
+    CGFloat top = VLCUIUnits.largeSpacing;
+    CGFloat leading = VLCUIUnits.largeSpacing;
+    CGFloat trailing = VLCUIUnits.largeSpacing;
+
+    NSView * const container = _returnButton.superview;
+    NSWindow * const window = self.view.window;
+    NSButton * const closeButton = [window standardWindowButton:NSWindowCloseButton];
+    NSButton * const zoomButton = [window standardWindowButton:NSWindowZoomButton];
+    if (inTitleBar && container != nil && closeButton.superview != nil && zoomButton.superview != nil) {
+        const NSRect close = [container convertRect:closeButton.bounds fromView:closeButton];
+        const NSRect zoom = [container convertRect:zoomButton.bounds fromView:zoomButton];
+        const CGFloat lightsMidFromTop = container.isFlipped
+            ? NSMidY(close) : NSHeight(container.bounds) - NSMidY(close);
+        top = MAX(0.0, round(lightsMidFromTop - VLCMainVideoTopButtonDiameter / 2.0));
+        leading = MAX(VLCUIUnits.largeSpacing, round(NSMaxX(zoom) + VLCMainVideoTopButtonGap));
+        trailing = MAX(8.0, NSMinX([closeButton convertRect:closeButton.bounds toView:nil]));
+    }
+    _returnButtonTopConstraint.constant = top;
+    _playQueueButtonTopConstraint.constant = top;
+    _returnButtonBottomConstraint.active = NO;
+    _playQueueButtonBottomConstraint.active = NO;
+    _returnButtonLeadingConstraint.constant = leading;
+    _playQueueButtonTrailingConstraint.constant = trailing;
+}
+
 - (void)updateLibraryControls
 {
     const NSWindow * const viewWindow = self.view.window;
@@ -782,6 +817,11 @@ NSString * const VLCUseClassicVideoPlayerLayoutKey = @"VLCUseClassicVideoPlayerL
                                              selector:@selector(updateLibraryControls:)
                                                  name:VLCVideoWindowDidEnterFullscreen
                                                object:nil];
+
+    if (!self.classic) {
+        [self placeGlassTopButtonsInTitleBar:placeInFakeToolbar];
+        return;
+    }
 
     _returnButtonTopConstraint.constant = buttonTopSpace;
     _playQueueButtonTopConstraint.constant = buttonTopSpace;

@@ -172,8 +172,11 @@ NSString *VLCWindowShouldShowController = @"VLCWindowShouldShowController";
         MacLCComposedMediaTitle(inputItem.title, inputItem.nowPlaying);
     [self setTitle:composedTitle.length > 0 ? composedTitle : _NS("MacLC")];
 
-    self.representedURL = [NSURL URLWithString:inputItem.MRL];
-    
+    /* Only a file can back the proxy icon: dragging one for a stream says
+     * "Cannot drag document (null)". */
+    NSURL * const mediaURL = [NSURL URLWithString:inputItem.MRL];
+    self.representedURL = mediaURL.isFileURL ? mediaURL : nil;
+
     if (self.hasActiveVideo && !self.isVisible && !self.playerController.currentMediaIsAudioOnly && self.playerController.videoTracksEnabled) {
         [self makeKeyAndOrderFront:self];
     }
