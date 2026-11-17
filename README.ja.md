@@ -134,6 +134,8 @@ Appleのニューラル処理、Anime、Anime4K、FSRCNNXは8ビットのSDR映�
 
 **Compare Before and After。** 視聴中の映像を中央で左右に分割します。左側はSDR to HDR・アップスケーリング・フレーム補間なし、右側は適用後の映像です。
 
+**Stats for Nerds。** プレーヤーバーの情報ボタンで、実際に起きていることを表示します。ファイルのフレームレートと画面に届いているフレームレート、ドロップしたフレーム、解像度、色、HDR、アップスケーリング、ビットレート、トレントの速度をリアルタイムで確認できます。
+
 **なめらかな動き。** フレーム補間により、24 fpsの映像をお使いの画面のリフレッシュレート（60 Hz、ProMotion搭載MacBook Proなら120 Hz、高速な外部ディスプレイならそれ以上）まで引き上げます。自動設定ではリアルタイムで追いつく方式が選ばれ、オプティカルフローやニューラルネットワークのRIFEを手動で選ぶこともできます。映画本来の見え方を重んじる方の意見ももっともなので、デフォルトではオフになっています。
 
 <picture>
@@ -205,7 +207,7 @@ MacLCに映画、番組、ストリームは一切同梱されていません。
   <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="MacLC をダウンロード" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
 </p>
 
-1. [最新リリース](https://github.com/OZBM/MacLC/releases/latest)から `maclc-1.7.dmg`（57.7 MB）をダウンロードします。
+1. [最新リリース](https://github.com/OZBM/MacLC/releases/latest)から `maclc-1.8.dmg`（57.7 MB）をダウンロードします。
 2. ファイルを開き、**MacLC** を **アプリケーション** にドラッグします。
 3. MacLCを開きます。初回はmacOSによって停止されるため、**完了** をクリックしてから **システム設定 › プライバシーとセキュリティ** を開き、**セキュリティ** までスクロールして「MacLC はブロックされました」の横にある **このまま開く** をクリックします。Touch IDまたはパスワードで確認してください。この操作はバージョンごとに1回だけです。
 
@@ -221,10 +223,10 @@ MacLCに映画、番組、ストリームは一切同梱されていません。
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-お手元のファイルが公開されているものと完全に一致するか確認します（期待値はリリースページに記載されています。1.7 では `e8c174517c9d3b7905221143c7c349426afbe2a7b7d6ef0e7b37b805bbc32a8a` です）：
+お手元のファイルが公開されているものと完全に一致するか確認します（期待値はリリースページに記載されています。1.8 では `aaf25223c9ac1b89c2942b86b4162e7d9bd692f8bffe92625b0ee2060784ffa2` です）：
 
 ```bash
-shasum -a 256 ~/Downloads/maclc-1.7.dmg
+shasum -a 256 ~/Downloads/maclc-1.8.dmg
 ```
 
 もしmacOSにMacLCは「壊れているため開けません」と表示された場合は、ダウンロードが不完全です。削除してもう一度ダウンロードしてください。そのメッセージは回避しないでください。
@@ -384,7 +386,7 @@ configure時は `PKG_CONFIG_PATH` の先頭に `build-deps/prefix/lib/pkgconfig`
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
-  <img src=".github/readme/releases-light.svg" width="100%" alt="タイムライン：2026年9月22日の 1.0 から 2026年11月17日の 1.7 まで、9回のリリース。">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="タイムライン：2026年9月22日の 1.0 から 2026年11月17日の 1.8 まで、10回のリリース。">
 </picture>
 
 各バージョンでの変更点は [Releases](https://github.com/OZBM/MacLC/releases) にあります。次のリリースの通知を受け取るには、このページ上部のGitHubの **Watch** ボタンをクリックし、**Custom › Releases** を選択してください。

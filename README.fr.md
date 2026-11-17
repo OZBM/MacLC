@@ -134,6 +134,8 @@ Les passes neuronales d'Apple, Anime, Anime4K et FSRCNNX fonctionnent sur les vi
 
 **Compare Before and After.** Partagez l'image en deux sur la vidéo en cours : à gauche sans SDR vers HDR, mise à l'échelle ni interpolation, à droite avec.
 
+**Stats for Nerds.** Le bouton d'information de la barre du lecteur montre ce qui se passe vraiment : la cadence du fichier et celle qui arrive à l'écran, les images perdues, la définition, la couleur, le HDR, la mise à l'échelle, les débits et la vitesse du torrent, en direct.
+
 **Mouvement fluide.** L'interpolation d'images porte le 24 i/s à la fréquence de rafraîchissement de votre écran : 60 Hz, 120 Hz sur un MacBook Pro ProMotion, ou davantage sur un moniteur externe rapide. Le mode automatique choisit une méthode qui suit en temps réel ; le flux optique et RIFE, un réseau de neurones, peuvent être sélectionnés à la main. L'option est désactivée par défaut, parce que les puristes du cinéma ont raison eux aussi.
 
 <picture>
@@ -205,7 +207,7 @@ Une seule fenêtre, une barre latérale et un champ de recherche. Chaque ligne d
   <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="Télécharger MacLC" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
 </p>
 
-1. Téléchargez `maclc-1.7.dmg` (57,7 Mo) depuis [la dernière version](https://github.com/OZBM/MacLC/releases/latest).
+1. Téléchargez `maclc-1.8.dmg` (57,7 Mo) depuis [la dernière version](https://github.com/OZBM/MacLC/releases/latest).
 2. Ouvrez l'image disque et glissez **MacLC** dans **Applications**.
 3. Ouvrez MacLC. La première fois, macOS bloque l'ouverture : cliquez sur **Terminé**, puis ouvrez **Réglages Système › Confidentialité et sécurité**, descendez jusqu'à **Sécurité** et cliquez sur **Ouvrir quand même** à côté du message « L'ouverture de MacLC a été bloquée pour protéger votre Mac ». Confirmez avec Touch ID ou votre mot de passe. Vous ne le faites qu'une seule fois par version.
 
@@ -221,10 +223,10 @@ Plutôt que **Ouvrir quand même**, vous pouvez retirer l'attribut « téléchar
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-Vérifiez que votre copie est identique à celle publiée (la valeur attendue figure sur la page de la version ; pour la 1.7, c'est `e8c174517c9d3b7905221143c7c349426afbe2a7b7d6ef0e7b37b805bbc32a8a`) :
+Vérifiez que votre copie est identique à celle publiée (la valeur attendue figure sur la page de la version ; pour la 1.8, c'est `aaf25223c9ac1b89c2942b86b4162e7d9bd692f8bffe92625b0ee2060784ffa2`) :
 
 ```bash
-shasum -a 256 ~/Downloads/maclc-1.7.dmg
+shasum -a 256 ~/Downloads/maclc-1.8.dmg
 ```
 
 Si macOS indique un jour que MacLC « est endommagé et ne peut pas être ouvert », le téléchargement est incomplet : supprimez-le et téléchargez-le de nouveau. Ne contournez pas ce message.
@@ -384,7 +386,7 @@ Configurez en plaçant d'abord `build-deps/prefix/lib/pkgconfig` et `build-deps/
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
-  <img src=".github/readme/releases-light.svg" width="100%" alt="Chronologie : neuf versions, de la 1.0 le 22 septembre 2026 à la 1.7 le 17 novembre 2026.">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="Chronologie : dix versions, de la 1.0 le 22 septembre 2026 à la 1.8 le 17 novembre 2026.">
 </picture>
 
 Les changements de chaque version figurent dans [Releases](https://github.com/OZBM/MacLC/releases). Pour être prévenu de la prochaine, cliquez sur le bouton **Watch** de GitHub en haut de cette page, puis sur **Custom › Releases**.

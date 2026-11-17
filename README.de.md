@@ -134,6 +134,8 @@ Apples neuronale Verfahren, Anime, Anime4K und FSRCNNX arbeiten mit 8-Bit-SDR-Vi
 
 **Compare Before and After.** Teile das Bild mitten im laufenden Video: links ohne SDR zu HDR, Upscaling und Zwischenbildberechnung, rechts mit.
 
+**Stats for Nerds.** Die Info-Taste in der Player-Leiste zeigt, was wirklich passiert: die Bildrate der Datei und die auf dem Display ankommende, verworfene Bilder, Auflösung, Farbe, HDR, Upscaling, Bitraten und Torrent-Tempo, live aktualisiert.
+
 **Flüssige Bewegung.** Die Zwischenbildberechnung hebt 24 fps auf die Bildwiederholrate deines Displays an: 60 Hz, 120 Hz auf einem MacBook Pro mit ProMotion oder mehr auf einem schnellen externen Monitor. Automatisch wählt ein Verfahren, das in Echtzeit mithält; optischer Fluss und RIFE, ein neuronales Netz, lassen sich auch manuell auswählen. Standardmäßig ist die Funktion ausgeschaltet – denn auch Kinopuristen haben recht.
 
 <picture>
@@ -205,7 +207,7 @@ Ein Fenster, eine Seitenleiste und ein Suchfeld. Jede Zeile beschreibt, was der 
   <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="MacLC laden" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
 </p>
 
-1. Lade `maclc-1.7.dmg` (57,7 MB) von [der neuesten Version](https://github.com/OZBM/MacLC/releases/latest) herunter.
+1. Lade `maclc-1.8.dmg` (57,7 MB) von [der neuesten Version](https://github.com/OZBM/MacLC/releases/latest) herunter.
 2. Öffne die Datei und ziehe **MacLC** in den Ordner **Programme**.
 3. Öffne MacLC. Beim ersten Start blockiert macOS die App: Klicke auf **Fertig**, öffne dann **Systemeinstellungen › Datenschutz & Sicherheit**, scrolle zu **Sicherheit** und klicke neben „MacLC wurde blockiert“ auf **Dennoch öffnen**. Bestätige mit Touch ID oder deinem Passwort. Das ist pro Version nur einmal nötig.
 
@@ -221,10 +223,10 @@ Statt auf **Dennoch öffnen** zu klicken, kannst du die Markierung „aus dem In
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-Prüfe, ob deine Datei exakt der veröffentlichten entspricht (der erwartete Wert steht auf der Release-Seite; für 1.7 lautet er `e8c174517c9d3b7905221143c7c349426afbe2a7b7d6ef0e7b37b805bbc32a8a`):
+Prüfe, ob deine Datei exakt der veröffentlichten entspricht (der erwartete Wert steht auf der Release-Seite; für 1.8 lautet er `aaf25223c9ac1b89c2942b86b4162e7d9bd692f8bffe92625b0ee2060784ffa2`):
 
 ```bash
-shasum -a 256 ~/Downloads/maclc-1.7.dmg
+shasum -a 256 ~/Downloads/maclc-1.8.dmg
 ```
 
 Falls macOS jemals meldet, MacLC „ist beschädigt und kann nicht geöffnet werden“, war der Download unvollständig: Lösche die Datei und lade sie erneut herunter. Umgehe diese Meldung nicht.
@@ -384,7 +386,7 @@ Konfiguriere den Build mit `build-deps/prefix/lib/pkgconfig` und `build-deps/pkg
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
-  <img src=".github/readme/releases-light.svg" width="100%" alt="Zeitstrahl: neun Versionen von 1.0 am 22. September 2026 bis 1.7 am 17. November 2026.">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="Zeitstrahl: zehn Versionen von 1.0 am 22. September 2026 bis 1.8 am 17. November 2026.">
 </picture>
 
 Was sich in jeder Version geändert hat, steht unter [Releases](https://github.com/OZBM/MacLC/releases). Um über die nächste informiert zu werden, klicke oben auf dieser Seite auf GitHubs Schaltfläche **Watch** und dann auf **Custom › Releases**.

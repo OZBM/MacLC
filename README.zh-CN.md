@@ -134,6 +134,8 @@ Apple 的神经网络模型、Anime、Anime4K 和 FSRCNNX 适用于 8 位 SDR �
 
 **Compare Before and After。** 将正在观看的视频画面从中一分为二：左侧不开启 SDR 转 HDR、画面放大与帧插值，右侧开启。
 
+**Stats for Nerds。** 播放栏上的信息按钮会实时显示真实情况：文件帧率与实际送达屏幕的帧率、丢帧、分辨率、色彩、HDR、画面放大、码率以及种子下载速度。
+
 **流畅动态。** 帧插值可将 24 fps 提升至屏幕刷新率：60 Hz、ProMotion MacBook Pro 上的 120 Hz，或高刷新率外接显示器的更高帧率。自动模式会挑选能实时跟上的算法；你也可以手动选择光流法或神经网络 RIFE。该功能默认关闭，因为追求原汁原味电影感的人说得也没错。
 
 <picture>
@@ -205,7 +207,7 @@ MacLC 不附带任何电影、剧集或流媒体源。扩展插件均为第三�
   <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="下载 MacLC" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
 </p>
 
-1. 从[最新发布页面](https://github.com/OZBM/MacLC/releases/latest)下载 `maclc-1.7.dmg`（57.7 MB）。
+1. 从[最新发布页面](https://github.com/OZBM/MacLC/releases/latest)下载 `maclc-1.8.dmg`（57.7 MB）。
 2. 打开它，将 **MacLC** 拖入**应用程序**。
 3. 打开 MacLC。首次打开时 macOS 会拦截：点击**完成**，然后打开**系统设置 › 隐私与安全性**，滚动到**安全性**，点击“已阻止使用 MacLC”旁边的**仍要打开**，再用 Touch ID 或密码确认。每个版本只需操作这一次。
 
@@ -221,10 +223,10 @@ MacLC 不附带任何电影、剧集或流媒体源。扩展插件均为第三�
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-核对你下载的文件与发布版本完全一致（预期值见发布页面；1.7 版本为 `e8c174517c9d3b7905221143c7c349426afbe2a7b7d6ef0e7b37b805bbc32a8a`）：
+核对你下载的文件与发布版本完全一致（预期值见发布页面；1.8 版本为 `aaf25223c9ac1b89c2942b86b4162e7d9bd692f8bffe92625b0ee2060784ffa2`）：
 
 ```bash
-shasum -a 256 ~/Downloads/maclc-1.7.dmg
+shasum -a 256 ~/Downloads/maclc-1.8.dmg
 ```
 
 如果 macOS 提示 MacLC“已损坏，无法打开”，说明下载不完整：请将其删除并重新下载，切勿绕过该提示。
@@ -384,7 +386,7 @@ extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
-  <img src=".github/readme/releases-light.svg" width="100%" alt="时间线：从 2026 年 9 月 22 日的 1.0 到 2026 年 11 月 17 日的 1.7，共九个版本。">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="时间线：从 2026 年 9 月 22 日的 1.0 到 2026 年 11 月 17 日的 1.8，共十个版本。">
 </picture>
 
 每个版本的更新内容见 [Releases](https://github.com/OZBM/MacLC/releases)。若想获知下一版本的消息，请点击本页顶部的 GitHub **Watch** 按钮，然后选择 **Custom › Releases**。
