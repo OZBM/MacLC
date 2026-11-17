@@ -328,7 +328,21 @@
     [self updateCachedURLOfCurrentMedia:inputItem];
 
     if (inputItem) {
-        coverArtImage = [[NSImage alloc] initWithContentsOfURL:inputItem.artworkURL];
+        /* Local artwork shows at once; anything else arrives off the main thread. */
+        NSURL * const artworkURL = inputItem.artworkURL;
+        if (artworkURL.isFileURL) {
+            coverArtImage = [[NSImage alloc] initWithContentsOfURL:artworkURL];
+        } else if (artworkURL != nil) {
+            __weak typeof(self) weakSelf = self;
+            NSString * const pendingTitle = inputItem.title, * const pendingArtist = inputItem.artist ?: inputItem.nowPlaying,
+                     * const pendingAlbum = inputItem.album;
+            [NSImage loadImageAtURL:artworkURL completion:^(NSImage * _Nullable image) {
+                typeof(self) strongSelf = weakSelf;
+                if (image != nil && strongSelf != nil
+                 && [playerController.currentMedia.artworkURL isEqual:artworkURL])
+                    [strongSelf setMetadataTitle:pendingTitle artist:pendingArtist album:pendingAlbum andCover:image];
+            }];
+        }
         title = inputItem.title;
         nowPlaying = inputItem.nowPlaying;
         artist = inputItem.artist;

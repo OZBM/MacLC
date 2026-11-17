@@ -62,6 +62,10 @@ struct vlc_object_t;
 + (void)quickLookPreviewForLocalURL:(NSURL *)url 
                            withSize:(NSSize)size 
                   completionHandler:(void (^)(NSImage * _Nullable))completionHandler;
+/// Reads and decodes the image off the main thread (a network URL may take
+/// seconds, or never answer), then calls completion on the main thread with
+/// the image or nil.
++ (void)loadImageAtURL:(nullable NSURL *)url completion:(void (^)(NSImage * _Nullable image))completion;
 + (instancetype)quickLookPreviewForLocalPath:(NSString*)path withSize:(NSSize)size;
 + (instancetype)quickLookPreviewForLocalURL:(NSURL*)url withSize:(NSSize)size;
 + (nullable NSImage *)imageFromVLCPicture:(struct picture_t *)picture

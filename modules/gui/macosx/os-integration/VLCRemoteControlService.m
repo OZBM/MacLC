@@ -24,6 +24,7 @@
 #import <MediaPlayer/MediaPlayer.h>
 
 #import "VLCRemoteControlService.h"
+#import "extensions/NSImage+VLCAdditions.h"
 #import "main/VLCMain.h"
 #import "main/CompatibilityFixes.h"
 #import "playqueue/VLCPlayQueueController.h"
@@ -162,16 +163,25 @@ static inline NSArray * RemoteCommandCenterCommandsToHandle()
     currentlyPlayingTrackInfo[MPMediaItemPropertyPlaybackDuration] = @(SEC_FROM_VLC_TICK(duration));
     currentlyPlayingTrackInfo[MPNowPlayingInfoPropertyIsLiveStream] = @(duration <= 0);
 
+    /* The artwork may be on a server: it is added once it arrives, so Now
+     * Playing never waits for it (and neither does the interface). */
     NSURL * const artworkURL = inputItem.artworkURL;
     if (artworkURL) {
-        NSImage * const coverArtImage = [[NSImage alloc] initWithContentsOfURL:artworkURL];
-        if (coverArtImage) {
+        __weak typeof(self) weakSelf = self;
+        [NSImage loadImageAtURL:artworkURL completion:^(NSImage * _Nullable coverArtImage) {
+            typeof(self) strongSelf = weakSelf;
+            if (coverArtImage == nil || strongSelf == nil
+             || ![strongSelf->_playerController.currentMedia.artworkURL isEqual:artworkURL])
+                return;
             MPMediaItemArtwork * const mpartwork = [[MPMediaItemArtwork alloc] initWithBoundsSize:coverArtImage.size
                                                                                    requestHandler:^NSImage* _Nonnull(CGSize __unused size) {
                 return coverArtImage;
             }];
-            currentlyPlayingTrackInfo[MPMediaItemPropertyArtwork] = mpartwork;
-        }
+            MPNowPlayingInfoCenter * const center = [MPNowPlayingInfoCenter defaultCenter];
+            NSMutableDictionary * const info = [center.nowPlayingInfo mutableCopy] ?: [NSMutableDictionary dictionary];
+            info[MPMediaItemPropertyArtwork] = mpartwork;
+            center.nowPlayingInfo = info;
+        }];
     }
 
     [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = currentlyPlayingTrackInfo;

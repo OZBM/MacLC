@@ -244,6 +244,35 @@ static NSImage *EmptyStateImage(NSString *symbolName, NSString *fallbackName)
     }];
 }
 
++ (void)loadImageAtURL:(nullable NSURL *)url completion:(void (^)(NSImage * _Nullable image))completion
+{
+    if (url == nil) {
+        completion(nil);
+        return;
+    }
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        NSImage *image = nil;
+        if (url.isFileURL) {
+            image = [[NSImage alloc] initWithContentsOfURL:url];
+        } else {
+            /* Bounded: artwork from a dead server must not keep a thread. */
+            NSURLRequest * const request = [NSURLRequest requestWithURL:url
+                                                            cachePolicy:NSURLRequestReturnCacheDataElseLoad
+                                                        timeoutInterval:10.0];
+            dispatch_semaphore_t const done = dispatch_semaphore_create(0);
+            __block NSData *data = nil;
+            [[NSURLSession.sharedSession dataTaskWithRequest:request
+                                           completionHandler:^(NSData *body, NSURLResponse * __unused response, NSError * __unused error) {
+                data = body;
+                dispatch_semaphore_signal(done);
+            }] resume];
+            dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW, 12 * NSEC_PER_SEC));
+            image = data.length > 0 ? [[NSImage alloc] initWithData:data] : nil;
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{ completion(image); });
+    });
+}
+
 + (instancetype)quickLookPreviewForLocalPath:(NSString *)path withSize:(NSSize)size
 {
     NSURL *pathUrl = [NSURL fileURLWithPath:path];
