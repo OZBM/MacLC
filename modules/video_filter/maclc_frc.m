@@ -301,6 +301,15 @@ struct maclc_frc_params
     unsigned _factor;       /* output frames per source frame, >= 2 */
     bool _passthrough;
 
+    /* No declared frame rate (Matroska without a default duration, raw
+     * streams): the rate is measured on the first timestamps, the source
+     * passing through untouched meanwhile, then the factor is set from it. */
+    bool _probing;
+    int _target;
+    unsigned _probe_count;
+    vlc_tick_t _probe_last;
+    vlc_tick_t _probe_deltas[12];
+
     picture_t *_prev;
     CVPixelBufferRef _prev_buffer;
     bool _restart;          /* first pair of a new sequence */
@@ -1565,6 +1574,76 @@ static void CopyLeftHalf(CVPixelBufferRef dst, CVPixelBufferRef src)
     CVPixelBufferUnlockBaseAddress(dst, 0);
 }
 
+static unsigned FactorFor(filter_t *filter, unsigned source_fps, int target);
+
+static CVPixelBufferPoolRef OutPoolCreate(filter_t *filter, MacLCFrcContext *ctx,
+                                          unsigned factor)
+{
+    return ctx->_software
+        ? PoolFromAttributes(@{
+              (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(ctx->_cv_fmt),
+              (__bridge NSString *)kCVPixelBufferWidthKey: @(ctx->_width),
+              (__bridge NSString *)kCVPixelBufferHeightKey: @(ctx->_height),
+              (__bridge NSString *)kCVPixelBufferMetalCompatibilityKey: @YES,
+          }, (factor + 1) * 3)
+        : cvpxpool_create(&filter->fmt_out.video, (factor + 1) * 3);
+}
+
+static int CompareTicks(const void *a, const void *b)
+{
+    const vlc_tick_t x = *(const vlc_tick_t *)a, y = *(const vlc_tick_t *)b;
+    return x < y ? -1 : x > y;
+}
+
+/* The real rate comes from the shortest gaps between the first timestamps:
+ * pictures dropped as late while playback starts leave gaps of two or three
+ * frames, so a median would halve the rate. The second shortest gap is used,
+ * so one stray timestamp cannot double it either. The engine is started again
+ * for the factor the rate calls for. */
+static void ProbeFinish(filter_t *filter, MacLCFrcContext *ctx)
+{
+    ctx->_probing = false;
+    vlc_tick_t deltas[ARRAY_SIZE(ctx->_probe_deltas)];
+    memcpy(deltas, ctx->_probe_deltas, sizeof(deltas));
+    qsort(deltas, ARRAY_SIZE(deltas), sizeof(deltas[0]), CompareTicks);
+    const vlc_tick_t shortest = deltas[1];
+    const vlc_tick_t gap = shortest;
+    if (gap <= 0)
+    {
+        ctx->_passthrough = true;
+        return;
+    }
+    const unsigned source_fps = (unsigned)((CLOCK_FREQ + gap / 2) / gap);
+    const unsigned factor = FactorFor(filter, source_fps, ctx->_target);
+    ctx->_budget = gap;
+    if (factor < 2)
+    {
+        msg_Info(filter, "measured %u fps, which the display already matches: "
+                 "not interpolating", source_fps);
+        ctx->_passthrough = true;
+        return;
+    }
+    if (factor != ctx->_factor)
+    {
+        const int engine = ctx->_engine;
+        EngineRelease(ctx);
+        DropHistory(ctx);
+        CVPixelBufferPoolRelease(ctx->_out_pool);
+        ctx->_factor = factor;
+        ctx->_out_pool = OutPoolCreate(filter, ctx, factor);
+        if (ctx->_out_pool == NULL
+         || !(EngineStart(ctx, engine) || EngineStart(ctx, ENGINE_MOTION)
+              || EngineStart(ctx, ENGINE_BLEND)))
+        {
+            msg_Warn(filter, "frame interpolation cannot restart for %u fps", source_fps);
+            ctx->_passthrough = true;
+            return;
+        }
+    }
+    msg_Info(filter, "measured %u fps: interpolating to %u fps with the %s engine",
+             source_fps, source_fps * factor, EngineName(ctx->_engine));
+}
+
 static picture_t *Filter(filter_t *filter, picture_t *source)
 {
     MacLCFrcContext *ctx = (__bridge MacLCFrcContext *)filter->p_sys;
@@ -1573,6 +1652,21 @@ static picture_t *Filter(filter_t *filter, picture_t *source)
         return NULL;
     if (ctx->_passthrough)
         return source;
+
+    if (ctx->_probing)
+    {
+        if (source->date != VLC_TICK_INVALID)
+        {
+            if (ctx->_probe_last != VLC_TICK_INVALID && source->date > ctx->_probe_last)
+                ctx->_probe_deltas[ctx->_probe_count++] = source->date - ctx->_probe_last;
+            ctx->_probe_last = source->date;
+        }
+        if (ctx->_probe_count < ARRAY_SIZE(ctx->_probe_deltas))
+            return source;
+        ProbeFinish(filter, ctx);
+        if (ctx->_passthrough)
+            return source;
+    }
 
     @autoreleasepool {
         if (source->date == VLC_TICK_INVALID || !source->b_progressive)
@@ -1765,13 +1859,13 @@ static int Open(filter_t *filter)
     }
 
     const video_format_t *fmt = &filter->fmt_in.video;
-    if (fmt->i_frame_rate == 0 || fmt->i_frame_rate_base == 0)
-    {
-        msg_Dbg(filter, "no frame rate, not interpolating");
-        return VLC_EGENERIC;
-    }
-    const unsigned source_fps =
-        (fmt->i_frame_rate + fmt->i_frame_rate_base / 2) / fmt->i_frame_rate_base;
+    /* Without a declared rate, start as if it were film and measure it. */
+    const bool probing = fmt->i_frame_rate == 0 || fmt->i_frame_rate_base == 0;
+    const unsigned rate = probing ? 24000 : fmt->i_frame_rate;
+    const unsigned rate_base = probing ? 1001 : fmt->i_frame_rate_base;
+    if (probing)
+        msg_Dbg(filter, "no declared frame rate: measuring it");
+    const unsigned source_fps = (rate + rate_base / 2) / rate_base;
 
     const int target = var_InheritInteger(filter, CFG_PREFIX "target");
     const unsigned factor = FactorFor(filter, source_fps, target);
@@ -1803,19 +1897,14 @@ static int Open(filter_t *filter)
         ctx->_ten_bit = ten_bit;
         ctx->_software = software;
         ctx->_planar = filter->fmt_in.video.i_chroma == VLC_CODEC_I420;
-        ctx->_budget = vlc_tick_from_samples(fmt->i_frame_rate_base,
-                                             fmt->i_frame_rate);
+        ctx->_budget = vlc_tick_from_samples(rate_base, rate);
+        ctx->_probing = probing;
+        ctx->_target = target;
+        ctx->_probe_last = VLC_TICK_INVALID;
 
         /* In software mode this pool stages the planes on their way in and out;
          * with hardware decoding it holds the pictures we hand back. */
-        ctx->_out_pool = software
-            ? PoolFromAttributes(@{
-                  (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(cv_fmt),
-                  (__bridge NSString *)kCVPixelBufferWidthKey: @(ctx->_width),
-                  (__bridge NSString *)kCVPixelBufferHeightKey: @(ctx->_height),
-                  (__bridge NSString *)kCVPixelBufferMetalCompatibilityKey: @YES,
-              }, (factor + 1) * 3)
-            : cvpxpool_create(&filter->fmt_out.video, (factor + 1) * 3);
+        ctx->_out_pool = OutPoolCreate(filter, ctx, factor);
         if (ctx->_out_pool == NULL)
         {
             FreeOptions(ctx);
@@ -1866,7 +1955,7 @@ static int Open(filter_t *filter)
             return VLC_EGENERIC;
         }
 
-        filter->fmt_out.video.i_frame_rate = fmt->i_frame_rate * factor;
+        filter->fmt_out.video.i_frame_rate = probing ? 0 : fmt->i_frame_rate * factor;
         filter->vctx_out = software ? NULL
                                     : vlc_video_context_Hold(filter->vctx_in);
         filter->ops = &filter_ops;
