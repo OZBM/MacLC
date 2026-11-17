@@ -1,7 +1,8 @@
 #!/bin/zsh
 # Rebuilds the README pictures in .github/readme/ from the sources in this folder.
 # Needs Google Chrome, Python 3 with numpy and Pillow, and the Xcode command-line tools.
-# After a release, add it to `rel` in make_charts.py and run this script.
+# After a release, add it to `rel` in make_charts.py with a label slot (move d1 past it and update the
+# title and the alt texts, here and in the READMEs), then run this script.
 set -euo pipefail
 src=${0:A:h}
 out=${src:h}

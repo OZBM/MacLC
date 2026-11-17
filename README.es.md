@@ -205,7 +205,7 @@ Una ventana, una barra lateral y un campo de búsqueda. Cada fila indica qué ha
   <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="Descargar MacLC" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
 </p>
 
-1. Descarga `maclc-1.6.dmg` (57,8 MB) desde [la última versión](https://github.com/OZBM/MacLC/releases/latest).
+1. Descarga `maclc-1.7.dmg` (57,7 MB) desde [la última versión](https://github.com/OZBM/MacLC/releases/latest).
 2. Ábrelo y arrastra **MacLC** a **Aplicaciones**.
 3. Abre MacLC. La primera vez, macOS lo detiene: haz clic en **OK**, abre **Ajustes del Sistema › Privacidad y seguridad**, baja hasta **Seguridad** y haz clic en **Abrir igualmente** junto a "Se bloqueó MacLC". Confirma con Touch ID o con tu contraseña. Solo haces esto una vez por versión.
 
@@ -221,10 +221,10 @@ En lugar de **Abrir igualmente**, puedes quitar la marca de "descargado de inter
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-Comprueba que tu copia sea exactamente la publicada (el valor esperado está en la página de la versión; para la 1.6 es `194de0b42a836985dba92a75d283264e21b4285f5a24934769b0e2aad5aae805`):
+Comprueba que tu copia sea exactamente la publicada (el valor esperado está en la página de la versión; para la 1.7 es `e8c174517c9d3b7905221143c7c349426afbe2a7b7d6ef0e7b37b805bbc32a8a`):
 
 ```bash
-shasum -a 256 ~/Downloads/maclc-1.6.dmg
+shasum -a 256 ~/Downloads/maclc-1.7.dmg
 ```
 
 Si alguna vez macOS dice que MacLC "está dañado y no se puede abrir", la descarga está incompleta: elimínala y descárgala de nuevo. No omitas ese mensaje.
@@ -384,7 +384,7 @@ Configura con `build-deps/prefix/lib/pkgconfig` y `build-deps/pkgconfig` primero
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
-  <img src=".github/readme/releases-light.svg" width="100%" alt="Cronología: ocho versiones desde la 1.0 el 22 de septiembre de 2026 hasta la 1.6 el 2 de noviembre de 2026.">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="Cronología: nueve versiones desde la 1.0 el 22 de septiembre de 2026 hasta la 1.7 el 17 de noviembre de 2026.">
 </picture>
 
 Los cambios de cada versión están en [Releases](https://github.com/OZBM/MacLC/releases). Para enterarte de la próxima, haz clic en el botón **Watch** de GitHub en la parte superior de esta página y luego en **Custom › Releases**.

@@ -124,12 +124,14 @@ def timeline_chart(t):
            ("1.3", date(2026, 10, 7), "Watch, add-ons, sound"),
            ("1.4", date(2026, 10, 10), "history, YouTube"),
            ("1.5", date(2026, 11, 1), "Xcode, macOS 27"),
-           ("1.6", date(2026, 11, 2), "upscaling, compare")]
-    W, H = 960, 250
-    L, R, Yt = 60, 930, 142
-    d0, d1 = date(2026, 9, 20), date(2026, 11, 4)
+           ("1.6", date(2026, 11, 2), "upscaling, compare"),
+           ("1.7", date(2026, 11, 17), "Liquid Glass, add-ons")]
+    latest = rel[-1][0]
+    W, H = 960, 290
+    L, R, Yt = 76, 930, 182
+    d0, d1 = date(2026, 9, 20), date(2026, 11, 19)
     X = lambda d: L + (d - d0).days / (d1 - d0).days * (R - L)
-    out = [text(24, 40, "8 releases in 6 weeks", 22, t["ink"], weight=600),
+    out = [text(24, 40, "9 releases in 8 weeks", 22, t["ink"], weight=600),
            text(24, 64, "Every version since the first beta, with what it brought.", 14, t["ink2"])]
     out.append(f'<line x1="{L}" y1="{Yt}" x2="{R}" y2="{Yt}" stroke="{t["track"]}" stroke-width="2"/>')
     for m, lab in ((date(2026, 10, 1), "Oct"), (date(2026, 11, 1), "Nov")):
@@ -138,24 +140,25 @@ def timeline_chart(t):
     out.append(text(X(date(2026, 10, 1)), Yt + 84, "Oct", 12, t["ink3"], "middle"))
     out.append(text(X(date(2026, 11, 1)), Yt + 84, "Nov", 12, t["ink3"], "middle"))
     # label rows chosen by hand so nothing collides: (row, anchor, dx); row <0 above the axis, >0 below
-    slots = {"1.0": (-1, "end", 6), "1.1": (1, "start", -6), "1.1.1": (-1, "start", -4), "1.2": (1, "middle", 0),
-             "1.3": (-1, "middle", 0), "1.4": (1, "middle", 0), "1.5": (-1, "end", 6), "1.6": (1, "end", 10)}
+    slots = {"1.0": (-1, "end", 4), "1.1": (1, "start", -6), "1.1.1": (-2, "start", 4), "1.2": (-1, "middle", 0),
+             "1.3": (1, "start", -6), "1.4": (-1, "start", -6), "1.5": (-1, "end", 6), "1.6": (1, "end", 10),
+             "1.7": (-1, "end", 6)}
     for v, d, what in rel:
         x = X(d)
         row, anchor, dx = slots[v]
         lx = x + dx
-        col = t["orange"] if v == "1.6" else t["ink2"]
+        col = t["orange"] if v == latest else t["ink2"]
         base = Yt - 28 - (abs(row) - 1) * 44 if row < 0 else Yt + 34
         if row == -2:
             out.append(f'<line x1="{x:.1f}" y1="{Yt - 8}" x2="{lx - 4:.1f}" y2="{base + 10:.1f}" stroke="{t["axis"]}" stroke-width="1"/>')
-        out.append(f'<circle cx="{x:.1f}" cy="{Yt}" r="{7 if v == "1.6" else 6}" fill="{col}" stroke="{t["dot_ring"]}" stroke-width="2.5"/>')
+        out.append(f'<circle cx="{x:.1f}" cy="{Yt}" r="{7 if v == latest else 6}" fill="{col}" stroke="{t["dot_ring"]}" stroke-width="2.5"/>')
         if row < 0:
             out.append(text(lx, base - 17, v, 15, t["ink"], anchor, 600))
             out.append(text(lx, base, what, 12, t["ink2"], anchor))
         else:
             out.append(text(lx, base, v, 15, t["ink"], anchor, 600))
             out.append(text(lx, base + 17, what, 12, t["ink2"], anchor))
-    return svg(W, H, "\n".join(out), "Timeline: MacLC 1.0 on 22 September 2026 to 1.6 on 2 November 2026, eight releases.")
+    return svg(W, H, "\n".join(out), "Timeline: MacLC 1.0 on 22 September 2026 to 1.7 on 17 November 2026, nine releases.")
 
 
 def motion_demo(t):

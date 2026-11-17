@@ -205,7 +205,7 @@ MacLCに映画、番組、ストリームは一切同梱されていません。
   <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="MacLC をダウンロード" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
 </p>
 
-1. [最新リリース](https://github.com/OZBM/MacLC/releases/latest)から `maclc-1.6.dmg`（57.8 MB）をダウンロードします。
+1. [最新リリース](https://github.com/OZBM/MacLC/releases/latest)から `maclc-1.7.dmg`（57.7 MB）をダウンロードします。
 2. ファイルを開き、**MacLC** を **アプリケーション** にドラッグします。
 3. MacLCを開きます。初回はmacOSによって停止されるため、**完了** をクリックしてから **システム設定 › プライバシーとセキュリティ** を開き、**セキュリティ** までスクロールして「MacLC はブロックされました」の横にある **このまま開く** をクリックします。Touch IDまたはパスワードで確認してください。この操作はバージョンごとに1回だけです。
 
@@ -221,10 +221,10 @@ MacLCに映画、番組、ストリームは一切同梱されていません。
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-お手元のファイルが公開されているものと完全に一致するか確認します（期待値はリリースページに記載されています。1.6 では `194de0b42a836985dba92a75d283264e21b4285f5a24934769b0e2aad5aae805` です）：
+お手元のファイルが公開されているものと完全に一致するか確認します（期待値はリリースページに記載されています。1.7 では `e8c174517c9d3b7905221143c7c349426afbe2a7b7d6ef0e7b37b805bbc32a8a` です）：
 
 ```bash
-shasum -a 256 ~/Downloads/maclc-1.6.dmg
+shasum -a 256 ~/Downloads/maclc-1.7.dmg
 ```
 
 もしmacOSにMacLCは「壊れているため開けません」と表示された場合は、ダウンロードが不完全です。削除してもう一度ダウンロードしてください。そのメッセージは回避しないでください。
@@ -384,7 +384,7 @@ configure時は `PKG_CONFIG_PATH` の先頭に `build-deps/prefix/lib/pkgconfig`
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
-  <img src=".github/readme/releases-light.svg" width="100%" alt="タイムライン：2026年9月22日の 1.0 から 2026年11月2日の 1.6 まで、8回のリリース。">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="タイムライン：2026年9月22日の 1.0 から 2026年11月17日の 1.7 まで、9回のリリース。">
 </picture>
 
 各バージョンでの変更点は [Releases](https://github.com/OZBM/MacLC/releases) にあります。次のリリースの通知を受け取るには、このページ上部のGitHubの **Watch** ボタンをクリックし、**Custom › Releases** を選択してください。
