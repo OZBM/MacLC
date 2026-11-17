@@ -47,6 +47,10 @@ extern NSNotificationName const MacLCLibraryRouterSectionDidChangeNotification;
 /// Home, Favorites, Videos, Shows, Movies (shown as Videos), Music (shown as
 /// Albums), Artists, Albums, Songs, Genres, Playlists and their subsegments.
 + (BOOL)handlesSegmentType:(NSInteger)segmentType;
+/// Brings the library window forward on a section, out of the video if one
+/// plays in the window (it goes on in the Now Playing bar); the sidebar
+/// follows. What "Browse Add-ons…" buttons and menu items call.
++ (void)showSegmentType:(NSInteger)segmentType;
 
 - (void)presentSegmentType:(NSInteger)segmentType;
 

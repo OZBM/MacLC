@@ -29,7 +29,6 @@
 #import "settings/panes/MacLCSubtitlesSettingsViewController.h"
 #import "settings/panes/MacLCInterfaceSettingsViewController.h"
 #import "settings/panes/MacLCShortcutsSettingsViewController.h"
-#import "settings/panes/MacLCAddonsSettingsViewController.h"
 #import "theme/MacLCDesign.h"
 #import "main/VLCMain.h"
 
@@ -119,7 +118,6 @@ static NSString * const kMacLCSettingsAutosaveName = @"MacLCSettingsWindowAutosa
     [panes addObject:[[MacLCSubtitlesSettingsViewController alloc] initWithIntf:_p_intf]];
     [panes addObject:[[MacLCInterfaceSettingsViewController alloc] initWithIntf:_p_intf]];
     [panes addObject:[[MacLCShortcutsSettingsViewController alloc] initWithIntf:_p_intf]];
-    [panes addObject:[[MacLCAddonsSettingsViewController alloc] initWithIntf:_p_intf]];
 
     _allPanes = [panes copy];
     [_filteredPanes setArray:_allPanes];

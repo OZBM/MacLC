@@ -1,5 +1,5 @@
 /*****************************************************************************
- * MacLCAddonsSettingsViewController.h: the Add-ons settings pane
+ * MacLCAddonsSectionViewController.h: the Add-ons section of the library window
  *****************************************************************************
  * Copyright (C) 2026 Hazen Studio
  *
@@ -18,22 +18,17 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 
-#import <Cocoa/Cocoa.h>
-#import <vlc_common.h>
-#import <vlc_interface.h>
-
-#import "settings/MacLCSettingsPane.h"
+#import "medialib/sections/MacLCLibrarySectionViewController.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// Installed add-ons, the add-on catalogs to install more from, and
-/// installing one from its address. Changes apply at once.
-@interface MacLCAddonsSettingsViewController : NSViewController <MacLCSettingsPane>
+/// The installed add-ons as cards, an "Add from Address…" button, and the
+/// Discover grid of the add-on catalogs of the installed add-ons. It replaces
+/// the Add-ons pane of the Settings window. The toolbar search field filters
+/// both lists by name and description.
+@interface MacLCAddonsSectionViewController : MacLCLibrarySectionViewController
 
-- (instancetype)initWithIntf:(intf_thread_t *)intf NS_DESIGNATED_INITIALIZER;
-- (nullable instancetype)initWithCoder:(NSCoder *)coder NS_DESIGNATED_INITIALIZER;
-- (instancetype)initWithNibName:(nullable NSNibName)nibNameOrNil
-                         bundle:(nullable NSBundle *)nibBundleOrNil NS_UNAVAILABLE;
+- (instancetype)init;
 
 @end
 

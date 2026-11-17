@@ -504,8 +504,6 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/settings/MacLCSettingsSelfTest.m \
 	gui/macosx/settings/MacLCSettingsWindowController.h \
 	gui/macosx/settings/MacLCSettingsWindowController.m \
-	gui/macosx/settings/panes/MacLCAddonsSettingsViewController.h \
-	gui/macosx/settings/panes/MacLCAddonsSettingsViewController.m \
 	gui/macosx/settings/panes/MacLCAudioSettingsViewController.h \
 	gui/macosx/settings/panes/MacLCAudioSettingsViewController.m \
 	gui/macosx/settings/panes/MacLCGeneralSettingsViewController.h \
@@ -565,6 +563,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/addons/MacLCStreamFacts.m \
 	gui/macosx/addons/MacLCAddonSearchWindowController.h \
 	gui/macosx/addons/MacLCAddonSearchWindowController.m \
+	gui/macosx/addons/MacLCAddonsSectionViewController.h \
+	gui/macosx/addons/MacLCAddonsSectionViewController.m \
 	gui/macosx/addons/watch/MacLCWatchBrowse.m \
 	gui/macosx/addons/watch/MacLCWatchComponents.h \
 	gui/macosx/addons/watch/MacLCWatchComponents.m \

@@ -32,10 +32,10 @@
 #import "main/VLCMain.h"
 #import "library/VLCLibraryWindow.h"
 #import "library/VLCLibrarySegment.h"
-#import "settings/MacLCSettingsWindowController.h"
 #import "medialib/components/MacLCEmptyStateView.h"
 #import "theme/MacLCDesign.h"
 #import "extensions/NSString+Helpers.h"
+#import "medialib/shell/MacLCLibraryRouter.h"
 
 static NSString * const MacLCWatchHeroItemIdentifier = @"watch_hero_item";
 static NSString * const MacLCWatchServiceBarItemIdentifier = @"watch_service_bar_item";
@@ -1974,9 +1974,8 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
 
 - (void)openAddonsSettings
 {
-    MacLCSettingsWindowController *swc = VLCMain.sharedInstance.settingsWindowController;
-    [swc showSettingsWindowWithLevel:NSNormalWindowLevel];
-    [swc selectPaneWithIdentifier:@"addons"];
+    /* The add-ons are managed in this window, in Watch ▸ Add-ons. */
+    [MacLCLibraryRouter showSegmentType:VLCLibraryWatchAddonsSegmentType];
 }
 
 #pragma mark - Properties & Hooks

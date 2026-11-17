@@ -146,6 +146,8 @@ extern NSString * const VLCLibraryWindowEmbeddedVideoPlaybackActiveKey;
 - (void)browseFolderByMrl:(NSString *)mrl;
 
 - (IBAction)goToBrowseSection:(id)sender;
+/// Edit ▸ Find: out of the video if one plays here, then into the toolbar search.
+- (IBAction)highlightSearchField:(id)sender;
 - (IBAction)sortLibrary:(id)sender;
 - (IBAction)filterLibrary:(id)sender;
 - (IBAction)backwardsNavigationAction:(id)sender;

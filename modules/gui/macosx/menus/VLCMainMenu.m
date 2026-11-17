@@ -70,12 +70,13 @@
 
 #include "../../../video_output/apple/maclc_upscale_vars.h"
 #import "addons/MacLCAddons.h"
-#import "addons/MacLCAddonSearchWindowController.h"
 #import "windows/convertandsave/VLCConvertAndSaveWindowController.h"
 #import "windows/logging/VLCLogWindowController.h"
 #import "windows/addons/VLCAddonsWindowController.h"
 #import "windows/video/VLCVoutView.h"
 #import "windows/video/VLCVideoOutputProvider.h"
+#import "library/VLCLibrarySegment.h"
+#import "medialib/shell/MacLCLibraryRouter.h"
 
 #import <vlc_configuration.h>
 #import <vlc_interface.h>
@@ -194,7 +195,7 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
         [_fileMenu insertItem:webVideoItem atIndex:netIndex + 1];
 
         /* Shown once an installed add-on provides streams. */
-        _addonSearchMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Search Add-ons…") action:@selector(intfOpenAddonSearch:) keyEquivalent:@""];
+        _addonSearchMenuItem = [[NSMenuItem alloc] initWithTitle:_NS("Search Movies and TV Shows…") action:@selector(intfOpenAddonSearch:) keyEquivalent:@""];
         _addonSearchMenuItem.target = self;
         _addonSearchMenuItem.hidden = !MacLCAddonStore.sharedStore.hasStreamAddon;
         [_fileMenu insertItem:_addonSearchMenuItem atIndex:netIndex + 2];
@@ -1532,7 +1533,9 @@ typedef NS_ENUM(NSInteger, VLCObjectType) {
 
 - (IBAction)intfOpenAddonSearch:(id)sender
 {
-    [MacLCAddonSearchWindowController.sharedController showWindow:nil];
+    /* Watch's own search, in the library window: no window of its own. */
+    [MacLCLibraryRouter showSegmentType:VLCLibraryWatchHomeSegmentType];
+    [VLCMain.sharedInstance.libraryWindow highlightSearchField:sender];
 }
 
 - (void)addonsDidChange:(NSNotification *)aNotification

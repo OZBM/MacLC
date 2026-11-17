@@ -64,6 +64,8 @@ typedef NS_ENUM(NSInteger, VLCLibrarySegmentType) {
     VLCLibraryYouTubeWatchLaterSegmentType,
     VLCLibraryYouTubeLikedSegmentType,
     VLCLibraryYouTubePlaylistsSegmentType,
+    /* Watch ▸ Add-ons: install and manage the add-ons. Appended too. */
+    VLCLibraryWatchAddonsSegmentType,
     VLCLibraryHighSentinelSegment,
 };
 

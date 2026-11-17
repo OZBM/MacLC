@@ -29,11 +29,12 @@
 #import "main/VLCMain.h"
 #import "playqueue/VLCPlayQueueController.h"
 #import "windows/VLCOpenInputMetadata.h"
-#import "settings/MacLCSettingsWindowController.h"
 #import "extensions/NSString+Helpers.h"
 
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
+#import "library/VLCLibrarySegment.h"
+#import "medialib/shell/MacLCLibraryRouter.h"
 
 /// "52:10", "1:12:05": a position in seconds.
 static NSString *ClockText(NSTimeInterval seconds)
@@ -2246,9 +2247,8 @@ typedef NS_ENUM(NSInteger, MacLCStreamSelectionSource) {
 - (void)openAddonsSettings:(id)sender
 {
     [self endSheetWithResponse:NSModalResponseCancel];
-    MacLCSettingsWindowController *swc = VLCMain.sharedInstance.settingsWindowController;
-    [swc showSettingsWindowWithLevel:NSNormalWindowLevel];
-    [swc selectPaneWithIdentifier:@"addons"];
+    /* The add-ons are managed in the library window, in Watch ▸ Add-ons. */
+    [MacLCLibraryRouter showSegmentType:VLCLibraryWatchAddonsSegmentType];
 }
 
 #pragma mark - Table View Data Source & Delegate

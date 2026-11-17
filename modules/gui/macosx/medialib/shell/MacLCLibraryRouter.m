@@ -25,12 +25,15 @@
 #import "library/VLCLibraryDataTypes.h"
 #import "library/VLCLibrarySegment.h"
 #import "library/VLCLibraryWindow.h"
+#import "library/VLCLibraryWindowSplitViewController.h"
 
 #import "main/VLCMain.h"
 
 #import "medialib/sections/MacLCLibrarySections.h"
 #import "medialib/sections/MacLCLibrarySectionViewController.h"
+#import "medialib/shell/MacLCLibrarySidebarViewController.h"
 
+#import "addons/MacLCAddonsSectionViewController.h"
 #import "addons/watch/MacLCWatchSections.h"
 #import "addons/watch/MacLCWatchLibrarySections.h"
 #import "youtube/MacLCYouTubeSections.h"
@@ -72,6 +75,19 @@ static NSMapTable<VLCLibraryWindow *, MacLCLibraryRouter *> *sRouterTable;
 
 #pragma mark - Segment type → section class mapping
 
++ (void)showSegmentType:(NSInteger)segmentType
+{
+    VLCLibraryWindow * const window = [VLCMain.sharedInstance libraryWindowCreatingIfNeeded];
+    if (window == nil) {
+        return;
+    }
+    if (window.embeddedVideoPlaybackActive) {
+        [window disableVideoPlaybackAppearance];
+    }
+    [window.splitViewController.navSidebarViewController selectSegment:segmentType];
+    [window makeKeyAndOrderFront:nil];
+}
+
 + (BOOL)handlesSegmentType:(NSInteger)segmentType
 {
     switch (segmentType) {
@@ -95,6 +111,7 @@ static NSMapTable<VLCLibraryWindow *, MacLCLibraryRouter *> *sRouterTable;
         case VLCLibraryWatchShowsSegmentType:
         case VLCLibraryWatchFavoritesSegmentType:
         case VLCLibraryWatchHistorySegmentType:
+        case VLCLibraryWatchAddonsSegmentType:
         case VLCLibraryYouTubeHomeSegmentType:
         case VLCLibraryYouTubeSubscriptionsSegmentType:
         case VLCLibraryYouTubeHistorySegmentType:
@@ -146,6 +163,8 @@ static NSMapTable<VLCLibraryWindow *, MacLCLibraryRouter *> *sRouterTable;
             return MacLCWatchFavoritesSectionViewController.class;
         case VLCLibraryWatchHistorySegmentType:
             return MacLCWatchHistorySectionViewController.class;
+        case VLCLibraryWatchAddonsSegmentType:
+            return MacLCAddonsSectionViewController.class;
         case VLCLibraryYouTubeHomeSegmentType:
             return MacLCYouTubeHomeSectionViewController.class;
         case VLCLibraryYouTubeSubscriptionsSegmentType:

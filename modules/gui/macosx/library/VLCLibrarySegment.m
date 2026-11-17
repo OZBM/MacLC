@@ -800,6 +800,8 @@ NSArray<NSString *> *defaultBookmarkedLocations()
             return [[self alloc] initWithSegmentType:segmentType title:_NS("Favorites") symbolName:@"heart"];
         case VLCLibraryWatchHistorySegmentType:
             return [[self alloc] initWithSegmentType:segmentType title:_NS("History") symbolName:@"clock"];
+        case VLCLibraryWatchAddonsSegmentType:
+            return [[self alloc] initWithSegmentType:segmentType title:_NS("Add-ons") symbolName:@"puzzlepiece.extension"];
         default:
             return [[self alloc] initWithSegmentType:VLCLibraryWatchHomeSegmentType title:_NS("Home") symbolName:@"play.tv"];
     }
@@ -935,6 +937,7 @@ NSArray<NSString *> *defaultBookmarkedLocations()
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchShowsSegmentType],
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchFavoritesSegmentType],
         [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchHistorySegmentType],
+        [VLCLibraryWatchSegment segmentWithWatchSegmentType:VLCLibraryWatchAddonsSegmentType],
         [[VLCLibraryHeaderSegment alloc] initWithDisplayString:_NS("YouTube")],
         [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:VLCLibraryYouTubeHomeSegmentType],
         [VLCLibraryYouTubeSegment segmentWithYouTubeSegmentType:VLCLibraryYouTubeSubscriptionsSegmentType],
@@ -1002,6 +1005,7 @@ NSArray<NSString *> *defaultBookmarkedLocations()
         case VLCLibraryWatchShowsSegmentType:
         case VLCLibraryWatchFavoritesSegmentType:
         case VLCLibraryWatchHistorySegmentType:
+        case VLCLibraryWatchAddonsSegmentType:
             return [VLCLibraryWatchSegment segmentWithWatchSegmentType:segmentType];
         case VLCLibraryYouTubeHomeSegmentType:
         case VLCLibraryYouTubeSubscriptionsSegmentType:
