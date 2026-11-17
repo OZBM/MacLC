@@ -60,6 +60,9 @@
 #import "windows/video/VLCVideoOutputProvider.h"
 #import "windows/video/VLCVideoWindowCommon.h"
 #import "menus/MacLCGlassMenuPopover.h"
+#import "menus/VLCMainMenu.h"
+#import "windows/video/MacLCStatsOverlay.h"
+#include "../../../../video_output/apple/maclc_upscale_vars.h"
 
 @interface VLCMainVideoViewControlsBar ()
 {
@@ -70,6 +73,8 @@
     NSString *_upscaleBadge;      /* last title shown, to announce changes */
     NSView *_airPlayButton;
     NSButton *_castButton;
+    NSButton *_compareButton;
+    NSButton *_statsButton;
 }
 
 @end
@@ -220,6 +225,19 @@
                                name:NSApplicationDidChangeScreenParametersNotification
                              object:nil];
 
+    [notificationCenter addObserver:self
+                           selector:@selector(frameInterpolationChanged:)
+                               name:MacLCPlaybackMetricsDidChangeNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(statsOrCompareChanged:)
+                               name:VLCPlayerListOfVideoOutputThreadsChanged
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(statsOrCompareChanged:)
+                               name:MacLCStatsOverlayToggleNotification
+                             object:nil];
+
     [self setupSoundAndCastButtons];
     [self update];
 }
@@ -263,6 +281,17 @@
     [stack insertArrangedSubview:upscale atIndex:index == NSNotFound ? stack.arrangedSubviews.count : index + 1];
     [MacLCUpscaling startWatching];
 
+    /* Compare and Stats for Nerds sit after the enhancements they report on. */
+    const NSUInteger after = [stack.arrangedSubviews indexOfObject:sound];
+    _compareButton = [self makeSymbolButton:@"rectangle.split.2x1"
+                                      label:_NS("Compare Before and After")
+                                     action:@selector(toggleCompare:)];
+    [stack insertArrangedSubview:_compareButton atIndex:after + 1];
+    _statsButton = [self makeSymbolButton:@"info.circle"
+                                    label:_NS("Stats for Nerds")
+                                   action:@selector(toggleStats:)];
+    [stack insertArrangedSubview:_statsButton atIndex:after + 2];
+
     MacLCCastController * const cast = MacLCCastController.sharedController;
     _airPlayButton = [cast makeAirPlayButtonWithTint:MacLCDesign.primaryLabel];
     _airPlayButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -295,7 +324,71 @@
                              object:nil];
 }
 
+- (NSButton *)makeSymbolButton:(NSString *)symbol label:(NSString *)label action:(SEL)action
+{
+    VLCImageButton * const button = [[VLCImageButton alloc] initWithFrame:NSMakeRect(0, 0, 44, 28)];
+    button.bezelStyle = NSBezelStyleRecessed;
+    button.controlSize = NSControlSizeLarge;
+    button.imagePosition = NSImageOnly;
+    button.imageScaling = NSImageScaleProportionallyDown;
+    button.image = [MacLCDesign symbolNamed:symbol pointSize:14. weight:NSFontWeightMedium accessibilityLabel:label];
+    button.toolTip = label;
+    button.accessibilityLabel = label;
+    button.contentTintColor = MacLCDesign.primaryLabel;
+    button.target = self;
+    button.action = action;
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    [button setContentHuggingPriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+    return button;
+}
+
+- (BOOL)isComparing
+{
+    vout_thread_t * const vout = _playerController.mainVideoOutputThread;
+    if (vout == NULL)
+        return NO;
+    const BOOL on = var_Type(vout, MACLC_SPLIT_COMPARE_VAR) != 0
+        && var_GetBool(vout, MACLC_SPLIT_COMPARE_VAR);
+    vout_Release(vout);
+    return on;
+}
+
+- (void)updateCompareAndStatsButtons
+{
+    if (_compareButton == nil)
+        return;
+    _compareButton.hidden = _playerController.currentMediaIsAudioOnly;
+    _statsButton.hidden = _playerController.currentMediaIsAudioOnly;
+    [MacLCDesign performAnimated:^{
+        self->_compareButton.animator.contentTintColor =
+            [self isComparing] ? MacLCDesign.accent : MacLCDesign.primaryLabel;
+        self->_statsButton.animator.contentTintColor =
+            MacLCStatsOverlayView.isShown ? MacLCDesign.accent : MacLCDesign.primaryLabel;
+    }];
+}
+
+/* Left half as decoded, right half with SDR to HDR, upscaling and frame
+ * interpolation applied. */
+- (IBAction)toggleCompare:(id)sender
+{
+    [VLCMain.sharedInstance.mainMenu toggleSplitCompare:sender];
+    [self updateCompareAndStatsButtons];
+}
+
+- (IBAction)toggleStats:(id)sender
+{
+    [NSNotificationCenter.defaultCenter postNotificationName:MacLCStatsOverlayToggleNotification
+                                                      object:((NSView *)self.bottomBarView).window];
+}
+
+- (void)statsOrCompareChanged:(NSNotification *)notification
+{
+    /* The overlay is shown once the video view has handled the toggle. */
+    dispatch_async(dispatch_get_main_queue(), ^{ [self updateCompareAndStatsButtons]; });
+}
+
 - (void)upscalingChanged:(NSNotification *)notification
+
 {
     [self updateUpscaleButton];
 }
@@ -324,8 +417,8 @@
     _upscaleBadge = badge;
     [self styleBadge:_upscaleButton
            withTitle:badge
-              filled:output != nil
-              dimmed:enabled && output == nil];
+              filled:enabled
+              dimmed:NO];
     _upscaleButton.toolTip = [NSString stringWithFormat:@"%@ %@", MacLCUpscaling.statusText,
         enabled ? _NS("Click for the settings, or hold Option and click to switch it off.")
                 : _NS("Click for the settings, or hold Option and click to switch it on.")];
@@ -392,6 +485,7 @@
     [self updateHdrButton];
     [self updateFrameRateButton];
     [self updateUpscaleButton];
+    [self updateCompareAndStatsButtons];
 }
 
 - (void)floatOnTopChanged:(NSNotification *)notification
@@ -490,19 +584,51 @@
             filled:(BOOL)filled
             dimmed:(BOOL)dimmed
 {
-    NSColor * const color = dimmed ? MacLCDesign.tertiaryLabel : MacLCDesign.primaryLabel;
+    /* On reads at a glance: the accent fill and white text of a switched-on
+     * control. Off is an outline; unavailable is a faint outline. */
+    NSColor * const textColor = filled ? NSColor.whiteColor
+                              : dimmed ? MacLCDesign.tertiaryLabel : MacLCDesign.primaryLabel;
     button.attributedTitle =
         [[NSAttributedString alloc] initWithString:title
-                                        attributes:[MacLCDesign badgeTextAttributesWithColor:color]];
+                                        attributes:[MacLCDesign badgeTextAttributesWithColor:textColor]];
     button.wantsLayer = YES;
-    button.layer.cornerRadius = 4.0;
-    button.layer.borderWidth = 1.0;
+    CALayer * const layer = button.layer;
+    layer.cornerRadius = 5.0;
+    layer.borderWidth = 1.0;
+
+    __block CGColorRef border = NULL, fill = NULL;
     [button.effectiveAppearance performAsCurrentDrawingAppearance:^{
-        button.layer.borderColor = color.CGColor;
-        button.layer.backgroundColor =
-            filled ? [MacLCDesign.primaryLabel colorWithAlphaComponent:0.14].CGColor
-                   : NSColor.clearColor.CGColor;
+        border = filled ? MacLCDesign.accent.CGColor
+               : (dimmed ? MacLCDesign.tertiaryLabel : MacLCDesign.primaryLabel).CGColor;
+        fill = filled ? MacLCDesign.accent.CGColor : NSColor.clearColor.CGColor;
+        CGColorRetain(border);
+        CGColorRetain(fill);
     }];
+
+    const BOOL wasFilled = layer.backgroundColor != NULL && CGColorGetAlpha(layer.backgroundColor) > 0.5;
+    const BOOL changed = wasFilled != filled && button.window != nil;
+    if (changed && !MacLCDesign.reducedMotion) {
+        CABasicAnimation * const fade = [CABasicAnimation animationWithKeyPath:@"backgroundColor"];
+        fade.fromValue = (__bridge id)(layer.presentationLayer.backgroundColor ?: layer.backgroundColor);
+        fade.toValue = (__bridge id)fill;
+        fade.duration = 0.25;
+        [layer addAnimation:fade forKey:@"badgeFill"];
+
+        CASpringAnimation * const pop = [CASpringAnimation animationWithKeyPath:@"transform"];
+        pop.fromValue = [NSValue valueWithCATransform3D:[MacLCDesign centeredScale:(filled ? 0.86 : 1.08) forLayer:layer]];
+        pop.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+        pop.damping = 12.0;
+        pop.stiffness = 300.0;
+        pop.duration = pop.settlingDuration;
+        [layer addAnimation:pop forKey:@"badgePop"];
+    }
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    layer.borderColor = border;
+    layer.backgroundColor = fill;
+    [CATransaction commit];
+    CGColorRelease(border);
+    CGColorRelease(fill);
 }
 
 - (void)styleHdrBadgeWithTitle:(NSString *)title filled:(BOOL)filled dimmed:(BOOL)dimmed
@@ -623,21 +749,26 @@
     self.frameRateButton.hidden = NO;
 
     const BOOL enabled = MacLCFrameInterpolation.isEnabled;
-    const unsigned source = _playerController.selectedVideoTrack.videoFrameRate;
+    /* Declared by the file, else measured while it plays. */
+    const unsigned source = MacLCPlaybackMetrics.sharedMetrics.sourceFrameRate;
     const unsigned output =
         [MacLCFrameInterpolation outputFrameRateForSourceFrameRate:source];
     const BOOL worthwhile = output > 0;
 
     self.frameRateButton.enabled = YES;
-    self.frameRateButton.state =
-        (enabled && worthwhile) ? NSControlStateValueOn : NSControlStateValueOff;
+    self.frameRateButton.state = enabled ? NSControlStateValueOn : NSControlStateValueOff;
 
-    NSString * const title = (enabled && worthwhile)
-        ? [NSString stringWithFormat:@"%u", output] : @"FPS";
+    /* On shows the rate really reaching the screen once it is measured. */
+    const double shown = MacLCPlaybackMetrics.sharedMetrics.displayedFrameRate;
+    NSString *title = @"FPS";
+    if (enabled && shown > source + 2.0)
+        title = [NSString stringWithFormat:@"%.0f", shown];
+    else if (enabled && worthwhile)
+        title = [NSString stringWithFormat:@"%u", output];
     [self styleBadge:self.frameRateButton
            withTitle:title
-              filled:(enabled && worthwhile)
-              dimmed:!worthwhile];
+              filled:enabled
+              dimmed:!enabled && source != 0 && !worthwhile];
 
     if (source == 0) {
         self.frameRateButton.toolTip =

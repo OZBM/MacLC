@@ -58,6 +58,7 @@
 
 #import "hdr/MacLCHDRCardView.h"
 #import "theme/MacLCGlassView.h"
+#import "windows/video/MacLCStatsOverlay.h"
 #import "theme/MacLCDesign.h"
 #import "theme/MacLCOSDView.h"
 #import "hdr/MacLCHDRController.h"
@@ -156,6 +157,10 @@ static const CGFloat VLCMainVideoTopButtonGap = 14.0;
         [notificationCenter addObserver:self
                                selector:@selector(playerCurrentMediaItemChanged:)
                                    name:VLCPlayerCurrentMediaItemChanged
+                                 object:nil];
+        [notificationCenter addObserver:self
+                               selector:@selector(toggleStatsOverlay:)
+                                   name:MacLCStatsOverlayToggleNotification
                                  object:nil];
         [notificationCenter addObserver:self
                                selector:@selector(playerCurrentItemTrackListChanged:)
@@ -360,6 +365,14 @@ static const CGFloat VLCMainVideoTopButtonGap = 14.0;
     }
 }
 
+/* Stats for Nerds, below the title bar of the window whose bar asked. */
+- (void)toggleStatsOverlay:(NSNotification *)notification
+{
+    if (notification.object != nil && notification.object != self.view.window)
+        return;
+    [MacLCStatsOverlayView toggleInView:self.view topInset:56.0];
+}
+
 /* Liquid Glass for everything that floats over the picture (macOS 26; a HUD
  * material with a hairline edge elsewhere or under Reduce Transparency):
  * the controls capsule at the bottom, a pill behind the central transport
@@ -380,6 +393,10 @@ static const CGFloat VLCMainVideoTopButtonGap = 14.0;
                         positioned:NSWindowBelow
                         relativeTo:self.bottomBarView.subviews.firstObject];
     [barGlass applyConstraintsToFillSuperview];
+    /* The bar's controls go inside the glass, so the glass answers presses
+     * (macOS 27 interactive glass) instead of lying inert behind them. */
+    [barGlass adoptSubviewsOfView:self.bottomBarView];
+    barGlass.interactive = YES;
 
     NSView * const container = self.centralControlsStackView.superview;
     if (container != nil) {

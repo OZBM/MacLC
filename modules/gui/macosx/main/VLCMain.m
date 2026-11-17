@@ -31,6 +31,7 @@
 #endif
 
 #import "main/VLCMain.h"
+#import "windows/video/MacLCStatsOverlay.h"
 
 #include <stdlib.h>                                      /* malloc(), free() */
 #include <string.h>
@@ -605,6 +606,12 @@ static VLCMain *sharedInstance = nil;
                 }
                 NSLog(@"LAYOUTDUMP menu %@: %@", top.submenu.title, [titles componentsJoinedByString:@", "]);
             }
+        });
+    }
+    /* MACLC_DEBUG_STATS=1 opens Stats for Nerds 5 s after launch. */
+    if (getenv("MACLC_DEBUG_STATS") != NULL) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [NSNotificationCenter.defaultCenter postNotificationName:MacLCStatsOverlayToggleNotification object:nil];
         });
     }
     /* MACLC_DEBUG_SNAPSHOT=<prefix> draws every visible MacLC window at least

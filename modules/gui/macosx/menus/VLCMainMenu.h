@@ -298,4 +298,7 @@
 - (IBAction)showMainWindow:(id)sender;
 - (IBAction)showPlayQueue:(id)sender;
 
+/// Video > Compare Before and After, also on the player bar.
+- (IBAction)toggleSplitCompare:(id)sender;
+
 @end

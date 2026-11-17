@@ -74,6 +74,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, getter=isInteractive) BOOL interactive;
 
 /**
+ * Moves every other subview of `host` into `contentView`, keeping the
+ * constraints that place them (a constraint to `host` itself now points to
+ * `contentView`). The glass must already fill `host`. Use it to make a bar
+ * laid out in a nib sit inside its glass, so the glass can be interactive.
+ */
+- (void)adoptSubviewsOfView:(NSView *)host;
+
+/**
  * Lays a glass capsule under an existing control, in the same superview,
  * `outset` points around it; it follows the control's frame and visibility,
  * so the caller's layout does not change. Nil when the view has no superview.

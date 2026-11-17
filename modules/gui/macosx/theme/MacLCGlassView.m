@@ -326,4 +326,59 @@ static void MacLCGlassifyButtons(NSView *view)
     MacLCGlassifyButtons(content);
 }
 
+static BOOL MacLCItemIsInside(id item, NSArray<NSView *> *views)
+{
+    if ([item isKindOfClass:NSLayoutGuide.class])
+        item = ((NSLayoutGuide *)item).owningView;
+    if (![item isKindOfClass:NSView.class])
+        return NO;
+    for (NSView * const view in views)
+        if ([(NSView *)item isDescendantOf:view])
+            return YES;
+    return NO;
+}
+
+- (void)adoptSubviewsOfView:(NSView *)host
+{
+    NSMutableArray<NSView *> * const moving = [NSMutableArray array];
+    for (NSView * const view in host.subviews)
+        if (view != self)
+            [moving addObject:view];
+    if (moving.count == 0)
+        return;
+
+    /* Constraints held by host or above that place the moving views: kept
+     * strongly here, since removing a view drops (and frees) them. */
+    NSMutableArray<NSLayoutConstraint *> * const kept = [NSMutableArray array];
+    NSMutableArray<NSLayoutConstraint *> * const rewritten = [NSMutableArray array];
+    for (NSView *holder = host; holder != nil; holder = holder.superview) {
+        for (NSLayoutConstraint * const c in holder.constraints) {
+            if (!MacLCItemIsInside(c.firstItem, moving) && !MacLCItemIsInside(c.secondItem, moving))
+                continue;
+            if (c.firstItem == host || c.secondItem == host) {
+                NSLayoutConstraint * const copy =
+                    [NSLayoutConstraint constraintWithItem:c.firstItem == host ? _contentView : c.firstItem
+                                                 attribute:c.firstAttribute
+                                                 relatedBy:c.relation
+                                                    toItem:c.secondItem == host ? _contentView : c.secondItem
+                                                 attribute:c.secondAttribute
+                                                multiplier:c.multiplier
+                                                  constant:c.constant];
+                copy.priority = c.priority;
+                copy.identifier = c.identifier;
+                [rewritten addObject:copy];
+            } else {
+                [kept addObject:c];
+            }
+        }
+    }
+    [NSLayoutConstraint deactivateConstraints:kept];
+    for (NSView * const view in moving) {
+        [view removeFromSuperview];
+        [_contentView addSubview:view];
+    }
+    [NSLayoutConstraint activateConstraints:kept];
+    [NSLayoutConstraint activateConstraints:rewritten];
+}
+
 @end

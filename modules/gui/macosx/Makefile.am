@@ -822,6 +822,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/windows/video/VLCFullVideoViewWindow.m \
 	gui/macosx/windows/video/VLCMainVideoViewAudioMediaDecorativeView.h \
 	gui/macosx/windows/video/VLCMainVideoViewAudioMediaDecorativeView.m \
+	gui/macosx/windows/video/MacLCStatsOverlay.h \
+	gui/macosx/windows/video/MacLCStatsOverlay.m \
 	gui/macosx/windows/video/VLCMainVideoViewController.h \
 	gui/macosx/windows/video/VLCMainVideoViewController.m \
 	gui/macosx/windows/video/VLCMainVideoViewOverlayView.h \
