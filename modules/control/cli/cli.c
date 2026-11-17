@@ -906,7 +906,7 @@ static int Activate( vlc_object_t *p_this )
         }
 
         if (bind(i_socket, (struct sockaddr *)&addr, sizeof (addr))
-         || listen(i_socket, 1))
+         || listen(i_socket, SOMAXCONN))
         {
             msg_Warn (p_intf, "can't listen on socket: %s",
                       vlc_strerror_c(errno));
