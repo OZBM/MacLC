@@ -102,7 +102,7 @@
 			buildPhases = (
 				4D1C00000000000000000801 /* Sources */,
 				4D1C00000000000000000501 /* Frameworks */,
-				4D1C00000000000000000802 /* Deploy into build/MacLC.app */,
+				4D1C00000000000000000802 /* Deploy into MACLC_APP */,
 			);
 			buildRules = (
 			);
@@ -178,7 +178,7 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		4D1C00000000000000000802 /* Deploy into build/MacLC.app */ = {
+		4D1C00000000000000000802 /* Deploy into MACLC_APP */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -186,12 +186,12 @@
 			);
 			inputPaths = (
 			);
-			name = "Deploy into build/MacLC.app";
+			name = "Deploy into MACLC_APP";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nAPP=\"$MACLC_BUILD/MacLC.app/Contents\"\nif [ ! -x \"$APP/MacOS/MacLC\" ]; then\n    echo \"error: $MACLC_BUILD/MacLC.app is missing: build the MacLC-Package scheme first\"\n    exit 1\nfi\ndst=\"$APP/Frameworks/plugins/$FULL_PRODUCT_NAME\"\n# Copy then rename: overwriting a signed Mach-O in place gets the next launch killed.\ncp \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME\" \"$dst.new.$$\"\n# Xcode signs the product after this phase; dyld needs a signature now.\ncodesign --force --sign - \"$dst.new.$$\"\nmv -f \"$dst.new.$$\" \"$dst\"\n# Interface Builder edits: let make compile the xibs, then copy the nibs.\nnibs=$(cd \"$MACLC_ROOT/modules\" && ls gui/macosx/UI/*.xib | sed 's/xib$/nib/')\nmake -C \"$MACLC_BUILD/modules\" $nibs\nrsync -a --include='*.nib' --include='*/' --exclude='*' \"$MACLC_BUILD/modules/gui/macosx/UI/\" \"$APP/Resources/Base.lproj/\"\nVLC_LIB_PATH=\"$APP/Frameworks\" \"$MACLC_BUILD/bin/vlc-cache-gen\" \"$APP/Frameworks/plugins\"\n";
+			shellScript = "set -eu\nAPP=\"$MACLC_APP/Contents\"\nif [ ! -x \"$APP/MacOS/MacLC\" ]; then\n    echo \"error: $MACLC_APP is missing: build the MacLC-Package scheme first\"\n    exit 1\nfi\ndst=\"$APP/Frameworks/plugins/$FULL_PRODUCT_NAME\"\n# Copy then rename: overwriting a signed Mach-O in place gets the next launch killed.\ncp \"$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME\" \"$dst.new.$$\"\n# Xcode signs the product after this phase; dyld needs a signature now.\ncodesign --force --sign - \"$dst.new.$$\"\nmv -f \"$dst.new.$$\" \"$dst\"\n# Interface Builder edits: let make compile the xibs, then copy the nibs\n# (make writes into MACLC_BUILD: only for its own bundle).\nif [ \"$MACLC_APP\" = \"$MACLC_BUILD/MacLC.app\" ]; then\n    nibs=$(cd \"$MACLC_ROOT/modules\" && ls gui/macosx/UI/*.xib | sed 's/xib$/nib/')\n    make -C \"$MACLC_BUILD/modules\" $nibs\n    rsync -a --include='*.nib' --include='*/' --exclude='*' \"$MACLC_BUILD/modules/gui/macosx/UI/\" \"$APP/Resources/Base.lproj/\"\nfi\nVLC_LIB_PATH=\"$APP/Frameworks\" \"$MACLC_BUILD/bin/vlc-cache-gen\" \"$APP/Frameworks/plugins\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */

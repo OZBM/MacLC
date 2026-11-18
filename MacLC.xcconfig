@@ -12,6 +12,11 @@
 
 MACLC_ROOT = $(SRCROOT)
 MACLC_BUILD = $(MACLC_ROOT)/build
+// The bundle the plugin is deployed into. A worktree builds against the main
+// checkout's MACLC_BUILD and deploys into a copy of its bundle, e.g.
+// xcodebuild ... MACLC_BUILD=<main>/build MACLC_APP=<copy>/MacLC.app
+// (nibs are only compiled and copied when deploying into MACLC_BUILD's bundle).
+MACLC_APP = $(MACLC_BUILD)/MacLC.app
 
 SDKROOT = macosx
 // The newest target Xcode 27.2 accepts; configure --with-macosx-version-min,
@@ -40,6 +45,20 @@ ALWAYS_SEARCH_USER_PATHS = NO
 CLANG_ENABLE_MODULES = NO
 HEADER_SEARCH_PATHS = $(MACLC_BUILD)/modules $(MACLC_ROOT)/modules $(MACLC_BUILD) $(MACLC_ROOT)/modules/access $(MACLC_ROOT)/modules/codec $(MACLC_ROOT)/include $(MACLC_BUILD)/include /opt/homebrew/opt/jpeg-turbo/include /opt/homebrew/opt/libpng/include $(MACLC_ROOT)/compat/stdbit $(MACLC_ROOT)/modules/gui/macosx
 GCC_PREPROCESSOR_DEFINITIONS = HAVE_CONFIG_H MODULE_STRING=\"macosx\" VLC_DYNAMIC_PLUGIN _INTL_REDIRECT_MACROS
+
+// Swift in the plugin (mirrored by the swiftc rule in modules/gui/macosx/Makefile.am).
+// Swift sees the Objective-C listed in the bridging header; Objective-C imports
+// "MacLC-Swift.h" for the @objc Swift API. Interface code runs on the main
+// actor, as Xcode 27.2 sets up new app targets, in the Swift 6 language mode.
+SWIFT_VERSION = 6.0
+SWIFT_OBJC_BRIDGING_HEADER = modules/gui/macosx/MacLC-Bridging-Header.h
+SWIFT_OBJC_INTERFACE_HEADER_NAME = MacLC-Swift.h
+SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
+SWIFT_APPROACHABLE_CONCURRENCY = YES
+SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES
+SWIFT_COMPILATION_MODE = wholemodule
+SWIFT_OPTIMIZATION_LEVEL = -O
+SWIFT_OPTIMIZATION_LEVEL[config=Debug] = -Onone
 
 CLANG_ENABLE_OBJC_ARC = YES
 GCC_ENABLE_OBJC_EXCEPTIONS = YES
