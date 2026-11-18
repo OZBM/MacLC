@@ -23,3 +23,23 @@ typedef struct AudioChannelLayout AudioChannelLayout;
 int
 channel_layout_MapFromVLC(audio_output_t *p_aout, const audio_sample_format_t *fmt,
                           AudioChannelLayout **inlayoutp, size_t *inlayout_size);
+
+/**
+ * Maps a VLC format to a CoreAudio layout, preferring a standard layout tag.
+ *
+ * AVSampleBufferAudioRenderer only spatialises content whose format
+ * description carries one of Apple's standard layouts; with
+ * kAudioChannelLayoutTag_UseChannelDescriptions the stream plays as plain
+ * multichannel audio and the system's spatial renderer is not engaged.
+ *
+ * \param order receives the VLC channel order the chosen layout expects
+ *              (WG4 order when no standard tag matches). The samples must be
+ *              reordered with aout_CheckChannelReorder() before being handed
+ *              to the renderer when that order differs from the input.
+ */
+int
+channel_layout_MapSpatialFromVLC(audio_output_t *p_aout,
+                                 const audio_sample_format_t *fmt,
+                                 AudioChannelLayout **inlayoutp,
+                                 size_t *inlayout_size,
+                                 uint32_t order[AOUT_CHAN_MAX]);

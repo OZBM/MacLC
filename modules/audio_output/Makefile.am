@@ -36,7 +36,11 @@ aout_PLUGINS += libjack_plugin.la
 endif
 
 libavsamplebuffer_plugin_la_SOURCES = audio_output/apple/avsamplebuffer.m \
-	audio_output/apple/channel_layout.c
+	audio_output/apple/channel_layout.c \
+	audio_output/apple/eac3_dec3.c
+if HAVE_OSX
+libavsamplebuffer_plugin_la_SOURCES += audio_output/apple/atmos_prime.m
+endif
 if HAVE_IOS
 libavsamplebuffer_plugin_la_SOURCES += audio_output/apple/avaudiosession_common.m
 endif
@@ -50,7 +54,8 @@ if HAVE_WATCHOS
 libavsamplebuffer_plugin_la_SOURCES += audio_output/apple/avaudiosession_common.m
 endif
 libavsamplebuffer_plugin_la_LDFLAGS = $(AM_LDFLAGS) \
-	-Wl,-framework,CoreMedia,-framework,Foundation,-framework,AVFoundation
+	-Wl,-framework,CoreMedia,-framework,Foundation,-framework,AVFoundation \
+	-Wl,-framework,CoreAudio
 libavsamplebuffer_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-arc
 
 libauhal_plugin_la_SOURCES = audio_output/apple/auhal.c \
