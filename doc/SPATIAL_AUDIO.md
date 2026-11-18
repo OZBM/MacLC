@@ -28,12 +28,19 @@ is MacLC's supported build. No Meson changes are required.
 
 ## Testing
 
-`test/spatial_audio.sh` generates its own media with ffmpeg and asserts the
-passthrough path, the decode-to-PCM toggle and PCM spatial layout tags:
+`test/spatial_audio.sh` generates its own media (ffmpeg plus the small
+`test/generate_silent_joc.c` bitstream generator) and asserts JOC/Atmos
+passthrough, plain E-AC-3 passthrough, the decode-to-PCM toggle and PCM
+spatial layout tags. It requires `ffmpeg`, a C compiler and `gtimeout` or
+`timeout`, and skips (`exit 77`) when `APP` is not set, so `make check` can
+list it safely:
 
 ```
 APP=/path/to/MacLC.app/Contents/MacOS/MacLC sh test/spatial_audio.sh
 ```
+
+This is a log-path smoke test; it verifies signalling and format selection,
+not audible spatial rendering on a specific output device.
 
 ## Licensing / attribution
 

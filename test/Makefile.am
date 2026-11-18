@@ -134,7 +134,8 @@ endif
 
 check_SCRIPTS = \
 	modules/lua/telnet.sh \
-	check_POTFILES.sh
+	check_POTFILES.sh \
+	spatial_audio.sh
 
 # Disabled tests:
 EXTRA_PROGRAMS = \
@@ -150,7 +151,7 @@ EXTRA_DIST = \
 	samples/meta.mp3 \
 	samples/subitems \
 	samples/slaves \
-	spatial_audio.sh \
+	generate_silent_joc.c \
 	$(check_SCRIPTS)
 
 check_HEADERS = libvlc/test.h libvlc/media_utils.h libvlc/media_player.h
