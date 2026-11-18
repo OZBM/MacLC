@@ -92,7 +92,8 @@ CLEANFILES += $(libmacosx_plugin_la_METAL_AIR_FILES) $(libmacosx_plugin_la_METAL
 
 endif
 
-libmacosx_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-exceptions -fobjc-arc -I$(srcdir)/gui/macosx
+# -Igui/macosx: MacLC-Swift.h, generated below.
+libmacosx_plugin_la_OBJCFLAGS = $(AM_OBJCFLAGS) -fobjc-exceptions -fobjc-arc -I$(srcdir)/gui/macosx -Igui/macosx
 libmacosx_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(gui_RPATH) \
 	-Wl,-framework,AVKit \
 	-Wl,-framework,AVFoundation \
@@ -117,6 +118,45 @@ libmacosx_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(gui_RPATH) \
 if HAVE_SPARKLE
 libmacosx_plugin_la_LDFLAGS += -Wl,-framework,Sparkle
 endif
+
+# Swift, with the settings of MacLC.xcconfig. Automake knows no Swift: one
+# whole-module swiftc run compiles every file below into one object and
+# writes MacLC-Swift.h, the @objc API that Objective-C files import. Swift
+# sees the Objective-C headers listed in MacLC-Bridging-Header.h. libtool links
+# the plain object with a portability warning (harmless on Darwin); the Swift
+# runtime comes from the OS (-L/usr/lib/swift resolves in the SDK).
+SWIFTC = xcrun swiftc
+swift_verbose = $(swift_verbose_$(V))
+swift_verbose_ = $(swift_verbose__$(AM_DEFAULT_VERBOSITY))
+swift_verbose_0 = @echo "  SWIFTC  " $@;
+swift_verbose__0 = $(swift_verbose_0)
+
+libmacosx_plugin_la_SWIFT_srcs = \
+	gui/macosx/addons/watch/MacLCWatchShelves.swift
+# The bridging header and every header it imports (for rebuilds).
+libmacosx_plugin_la_SWIFT_deps = \
+	gui/macosx/MacLC-Bridging-Header.h \
+	gui/macosx/addons/MacLCAddons.h \
+	gui/macosx/addons/watch/MacLCWatchComponents.h
+
+gui/macosx/MacLC-Swift.h: $(libmacosx_plugin_la_SWIFT_srcs) $(libmacosx_plugin_la_SWIFT_deps)
+	$(AM_V_at)$(MKDIR_P) gui/macosx
+	$(swift_verbose)$(SWIFTC) -c -g -O -wmo -parse-as-library -module-name macosx_plugin \
+	  -target arm64-apple-macos27.2 -swift-version 6 -default-isolation MainActor \
+	  -enable-upcoming-feature MemberImportVisibility \
+	  -enable-upcoming-feature InferIsolatedConformances \
+	  -enable-upcoming-feature NonisolatedNonsendingByDefault \
+	  -import-objc-header $(srcdir)/gui/macosx/MacLC-Bridging-Header.h \
+	  -Xcc -I$(srcdir)/gui/macosx \
+	  -emit-objc-header-path $@ -o gui/macosx/MacLCSwift.o \
+	  $$(for f in $(libmacosx_plugin_la_SWIFT_srcs); do echo "$(srcdir)/$$f"; done)
+
+gui/macosx/MacLCSwift.o: gui/macosx/MacLC-Swift.h
+
+libmacosx_plugin_la_LIBADD = gui/macosx/MacLCSwift.o
+libmacosx_plugin_la_LDFLAGS += -Wl,-L/usr/lib/swift
+EXTRA_DIST += $(libmacosx_plugin_la_SWIFT_srcs) gui/macosx/MacLC-Bridging-Header.h
+CLEANFILES += gui/macosx/MacLCSwift.o
 
 libmacosx_plugin_la_SOURCES = \
 	gui/macosx/coreinteraction/VLCHotkeysController.h \
@@ -897,7 +937,7 @@ libmacosx_plugin_la_SOURCES += $(libmacosx_plugin_la_XIB_SOURCES)
 
 if ENABLE_MACOSX_UI
 gui_PLUGINS += libmacosx_plugin.la
-BUILT_SOURCES += $(libmacosx_plugin_la_XIB_SOURCES:.xib=.nib)
+BUILT_SOURCES += $(libmacosx_plugin_la_XIB_SOURCES:.xib=.nib) gui/macosx/MacLC-Swift.h
 endif
 
 libmacosx_plugin_la_RES = \
