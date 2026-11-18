@@ -85,8 +85,21 @@ final class WatchShelf: Identifiable {
     }
 }
 
+/// Whether the page or a shelf is moving. Posters do not lift then: a lift is
+/// a SwiftUI animation, computed on the main thread for every frame, and its
+/// text is drawn again at each scale; content moving under a resting pointer
+/// lifts one poster after another, and those redraws held scrolling at 60 Hz
+/// (measured 2026-11-18: half the main thread waited on the render server).
+@Observable
+final class ScrollActivity {
+    var page = false
+    var shelves = Set<String>()
+    var isScrolling: Bool { page || !shelves.isEmpty }
+}
+
 final class WatchShelvesModel {
     let shelves: [WatchShelf]
+    let scrolling = ScrollActivity()
     let localize: (String) -> String
     let openItem: (MacLCAddonItem) -> Void
     let seeAll: (MacLCAddonTitleCatalog, String?, String) -> Void
@@ -214,6 +227,7 @@ struct WatchShelvesPage: View {
                 }
             }
         }
+        .onScrollPhaseChange { _, phase in model.scrolling.page = phase.isScrolling }
     }
 }
 
@@ -252,11 +266,13 @@ struct ShelfRow: View {
                 LazyHStack(alignment: .top, spacing: itemSpacing) {
                     if let items = shelf.items {
                         ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                            PosterCell(item: item, rank: shelf.ranked ? index + 1 : 0, open: model.openItem)
+                            PosterCell(item: item, rank: shelf.ranked ? index + 1 : 0,
+                                       scrolling: model.scrolling, open: model.openItem)
                         }
                     } else {
                         ForEach(0..<8, id: \.self) { _ in
-                            PosterCell(item: nil, rank: shelf.ranked ? -1 : 0, open: model.openItem)
+                            PosterCell(item: nil, rank: shelf.ranked ? -1 : 0,
+                                       scrolling: model.scrolling, open: model.openItem)
                         }
                     }
                 }
@@ -268,6 +284,14 @@ struct ShelfRow: View {
             // A flick settles on a poster's leading edge, never between two.
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition($position)
+            .onScrollPhaseChange { _, phase in
+                if phase.isScrolling {
+                    model.scrolling.shelves.insert(shelf.id)
+                } else {
+                    model.scrolling.shelves.remove(shelf.id)
+                }
+            }
+            .onDisappear { model.scrolling.shelves.remove(shelf.id) }
             .onScrollGeometryChange(for: CGRect.self) { scroll in
                 CGRect(x: scroll.contentOffset.x + scroll.contentInsets.leading,
                        y: scroll.contentSize.width + scroll.contentInsets.leading + scroll.contentInsets.trailing,
@@ -438,6 +462,7 @@ private struct PosterCell: View {
     let item: MacLCAddonItem?
     /// 0: unranked; < 0: placeholder in a ranked shelf (rank column empty).
     let rank: Int
+    let scrolling: ScrollActivity
     let open: (MacLCAddonItem) -> Void
 
     @State private var artwork = PosterArtwork()
@@ -446,6 +471,8 @@ private struct PosterCell: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        // Only a hovered cell reads (and so observes) the scroll activity.
+        let lifted = hovered && !scrolling.isScrolling
         ZStack(alignment: .topLeading) {
             if rank > 0 {
                 Text("\(rank)")
@@ -457,7 +484,7 @@ private struct PosterCell: View {
                     .accessibilityHidden(true)
             }
             VStack(alignment: .leading, spacing: 0) {
-                poster
+                poster(lifted: lifted)
                 // A space keeps the line's height for placeholders.
                 Text(item?.name ?? " ")
                     .font(.body.weight(.medium))
@@ -489,7 +516,7 @@ private struct PosterCell: View {
         }
     }
 
-    private var poster: some View {
+    private func poster(lifted: Bool) -> some View {
         let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         return ZStack(alignment: .topLeading) {
             shape.fill(Color(nsColor: .quaternarySystemFill))
@@ -517,9 +544,11 @@ private struct PosterCell: View {
         .frame(width: posterSize.width, height: posterSize.height)
         .clipShape(shape)
         .overlay(shape.strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1))
-        .scaleEffect(hovered && !reduceMotion ? 1.05 : 1)
-        .shadow(color: .black.opacity(hovered ? 0.3 : 0), radius: hovered ? 14 : 0, y: hovered ? 6 : 0)
-        .animation(reduceMotion ? nil : .interpolatingSpring(mass: 1, stiffness: 260, damping: 15), value: hovered)
+        .scaleEffect(lifted && !reduceMotion ? 1.05 : 1)
+        .shadow(color: .black.opacity(lifted ? 0.3 : 0), radius: lifted ? 14 : 0, y: lifted ? 6 : 0)
+        // A scroll that starts under the pointer drops the lift at once.
+        .animation(reduceMotion || (hovered && !lifted) ? nil
+                   : .interpolatingSpring(mass: 1, stiffness: 260, damping: 15), value: lifted)
     }
 
     /// Landscape and square art is fitted rather than cropped.
