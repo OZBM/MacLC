@@ -452,8 +452,9 @@ NSUserInterfaceItemIdentifier const MacLCWatchContinueItemIdentifier = @"MacLCWa
         playView.layer.cornerRadius = 22.0;
         playView.layer.masksToBounds = YES;
         playView.alphaValue = 0.0;
+        /* In the card only while it shows (-setPlayGlyphShown:): AppKit's glass
+         * renders again on every frame of a scroll, even when transparent. */
         _playGlyphView = playView;
-        [_cardContainerView addSubview:_playGlyphView];
 
         NSImageView * const playIcon = [[NSImageView alloc] initWithFrame:NSZeroRect];
         playIcon.translatesAutoresizingMaskIntoConstraints = NO;
@@ -556,8 +557,6 @@ NSUserInterfaceItemIdentifier const MacLCWatchContinueItemIdentifier = @"MacLCWa
             [_progressBar.bottomAnchor constraintEqualToAnchor:_cardContainerView.bottomAnchor],
             [_progressBar.heightAnchor constraintEqualToConstant:4.0],
 
-            [_playGlyphView.centerXAnchor constraintEqualToAnchor:_cardContainerView.centerXAnchor],
-            [_playGlyphView.centerYAnchor constraintEqualToAnchor:_cardContainerView.centerYAnchor],
             [_playGlyphView.widthAnchor constraintEqualToConstant:44.0],
             [_playGlyphView.heightAnchor constraintEqualToConstant:44.0],
 
@@ -685,6 +684,7 @@ NSUserInterfaceItemIdentifier const MacLCWatchContinueItemIdentifier = @"MacLCWa
         layer.shadowRadius = 14.0;
         layer.shadowOffset = CGSizeMake(0.0, -6.0);
         layer.shadowOpacity = targetOpacity;
+        [self setPlayGlyphShown:hovered];
         _playGlyphView.alphaValue = controlsAlpha;
         _optionsButton.alphaValue = controlsAlpha;
         [CATransaction commit];
@@ -720,12 +720,32 @@ NSUserInterfaceItemIdentifier const MacLCWatchContinueItemIdentifier = @"MacLCWa
     [layer addAnimation:transformAnim forKey:@"hoverTransform"];
     [layer addAnimation:shadowAnim forKey:@"hoverShadow"];
 
+    if (hovered)
+        [self setPlayGlyphShown:YES];
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext *ctx) {
         ctx.duration = MacLCDesign.motionQuickDuration;
         ctx.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
         self->_playGlyphView.animator.alphaValue = controlsAlpha;
         self->_optionsButton.animator.alphaValue = controlsAlpha;
+    } completionHandler:^{
+        if (!self->_isHovered)
+            [self setPlayGlyphShown:NO];
     }];
+}
+
+- (void)setPlayGlyphShown:(BOOL)shown
+{
+    if (shown == (_playGlyphView.superview != nil))
+        return;
+    if (!shown) {
+        [_playGlyphView removeFromSuperview];
+        return;
+    }
+    [_cardContainerView addSubview:_playGlyphView positioned:NSWindowBelow relativeTo:_optionsButton];
+    [NSLayoutConstraint activateConstraints:@[
+        [_playGlyphView.centerXAnchor constraintEqualToAnchor:_cardContainerView.centerXAnchor],
+        [_playGlyphView.centerYAnchor constraintEqualToAnchor:_cardContainerView.centerYAnchor],
+    ]];
 }
 
 /* The picture, the glass play glyph and the labels are decoration: the card
@@ -998,23 +1018,9 @@ NSUserInterfaceItemIdentifier const MacLCWatchContinueItemIdentifier = @"MacLCWa
 + (NSCollectionLayoutSection *)continueShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment
 {
     const CGFloat itemWidth = 300.0;
-    const CGFloat itemHeight = [MacLCWatchContinueItem heightForWidth:itemWidth];
-
-    NSCollectionLayoutSize * const itemSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
-
-    NSCollectionLayoutSize * const groupSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutGroup * const group =
-        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
-
-    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
-    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
-    section.interGroupSpacing = 20.0;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(12.0, 40.0, 36.0, 40.0);
+    NSCollectionLayoutSection * const section =
+        [self shelfSectionWithItemSize:NSMakeSize(itemWidth, [MacLCWatchContinueItem heightForWidth:itemWidth])
+                               spacing:20.0];
     section.boundarySupplementaryItems = @[[self headerSupplementaryItem]];
     return section;
 }

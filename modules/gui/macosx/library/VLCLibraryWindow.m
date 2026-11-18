@@ -22,6 +22,8 @@
 
 #import "VLCLibraryWindow.h"
 
+#import <objc/message.h>
+
 #import <vlc_common.h>
 #import <vlc_configuration.h>
 #import <vlc_media_library.h>
@@ -95,6 +97,7 @@
 #import "views/VLCDragDropView.h"
 #import "views/VLCImageView.h"
 #import "views/VLCLoadingOverlayView.h"
+#import "views/MacLCNestedScrollRouter.h"
 #import "views/VLCNoResultsLabel.h"
 #import "views/VLCPlaybackEndViewController.h"
 #import "views/VLCRoundedCornerTextField.h"
@@ -129,6 +132,9 @@ NSString * const VLCLibraryWindowEmbeddedVideoPlaybackActiveKey = @"embeddedVide
     NSView *_acquiredVideoView;
     libvlc_int_t *_libvlc;
     NSWindowTitleVisibility _titleVisibilityBeforeVideo;
+    MacLCNestedScrollRouter *_nestedScrollRouter;
+    NSHashTable<NSScrollView *> *_liveScrollViews;
+    BOOL _appCursorRectsSuspended;
 }
 
 @property NSTimer *searchInputTimer;
@@ -181,6 +187,66 @@ static int ShowController(vlc_object_t * __unused p_this,
 @implementation VLCLibraryWindow
 
 @synthesize libraryTargetView = _libraryTargetView;
+
+/* A trackpad gesture over a shelf goes whole to the shelf or to its page. */
+- (void)sendEvent:(NSEvent *)event
+{
+    if (event.type == NSEventTypeScrollWheel) {
+        if (_nestedScrollRouter == nil)
+            _nestedScrollRouter = [[MacLCNestedScrollRouter alloc] init];
+        if ([_nestedScrollRouter routeScrollEvent:event inWindow:self])
+            return;
+    } else if (_appCursorRectsSuspended && _liveScrollViews.allObjects.count == 0) {
+        /* A scroll view went away during its scroll, so no end came. */
+        [self setAppCursorRectsSuspended:NO];
+    }
+    [super sendEvent:event];
+}
+
+/* While content moves under the pointer, AppKit works out the cursor again
+ * on every frame and sets it. With a customised pointer (Accessibility >
+ * Display > Pointer) each set rebuilds the cursor images and waits for the
+ * window server: measured 2026-11-18, more than half of the main thread's
+ * time while scrolling, which held scrolling at 60 Hz on a 120 Hz display.
+ * Cursor rects are off for the length of a scroll; the cursor keeps its shape.
+ * The window's go off too: AppKit rebuilds them for every control that moves.
+ * shortcut: -[NSApplication disableCursorRects] is not public (NSWindow's still
+ * sets the arrow on every frame); if it goes away, scrolling is as before. */
+- (void)setAppCursorRectsSuspended:(BOOL)suspended
+{
+    if (suspended == _appCursorRectsSuspended)
+        return;
+    /* AppKit counts these: an enable without its disable raises. */
+    SEL const selector = suspended ? @selector(disableCursorRects) : @selector(enableCursorRects);
+    if (![NSApp respondsToSelector:selector])
+        return;
+    ((void (*)(id, SEL))objc_msgSend)(NSApp, selector);
+    if (suspended)
+        [self disableCursorRects];
+    else
+        [self enableCursorRects];
+    _appCursorRectsSuspended = suspended;
+}
+
+- (void)liveScrollWillStart:(NSNotification *)notification
+{
+    NSScrollView * const scrollView = notification.object;
+    if (scrollView.window != self)
+        return;
+    if (_liveScrollViews == nil)
+        _liveScrollViews = [NSHashTable weakObjectsHashTable];
+    [_liveScrollViews addObject:scrollView];
+    [self setAppCursorRectsSuspended:YES];
+}
+
+- (void)liveScrollDidEnd:(NSNotification *)notification
+{
+    if (![_liveScrollViews containsObject:notification.object])
+        return;
+    [_liveScrollViews removeObject:notification.object];
+    if (_liveScrollViews.allObjects.count == 0)
+        [self setAppCursorRectsSuspended:NO];
+}
 
 - (void)awakeFromNib
 {
@@ -248,6 +314,14 @@ static int ShowController(vlc_object_t * __unused p_this,
                            selector:@selector(playerTrackSelectionChanged:)
                                name:VLCPlayerTrackSelectionChanged
                              object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(liveScrollWillStart:)
+                               name:NSScrollViewWillStartLiveScrollNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(liveScrollDidEnd:)
+                               name:NSScrollViewDidEndLiveScrollNotification
+                             object:nil];
 
     [self setViewForSelectedSegment];
     [self setupLoadingOverlayView];
@@ -276,6 +350,7 @@ static int ShowController(vlc_object_t * __unused p_this,
 - (void)dealloc
 {
     [NSNotificationCenter.defaultCenter removeObserver:self];
+    [self setAppCursorRectsSuspended:NO];
     if (_libvlc != NULL) {
         var_DelCallback(_libvlc, "intf-toggle-fscontrol", ShowFullscreenController, (__bridge void *)self);
         var_DelCallback(_libvlc, "intf-show", ShowController, (__bridge void *)self);

@@ -122,19 +122,24 @@ static CGFloat MacLCItemHeight(MacLCArtworkShape shape, CGFloat width, BOOL hasS
 {
     const MacLCShapeMetrics metrics = MacLCMetricsForShape(shape);
     const CGFloat itemHeight = MacLCItemHeight(shape, metrics.shelfWidth, hasSubtitle);
+    /* Room for a hovered card to grow into. AppKit's scroll view for the
+     * shelf clips at the group's edges, not the section's, so the room is
+     * part of the group. */
+    const CGFloat headroom = 8.0;
 
     NSCollectionLayoutSize * const size =
         [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:metrics.shelfWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight + 2.0 * headroom]];
     NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:size];
+    item.contentInsets = NSDirectionalEdgeInsetsMake(headroom, 0.0, headroom, 0.0);
     NSCollectionLayoutGroup * const group = [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:size
                                                                                          subitems:@[item]];
 
     NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
     section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuous;
     section.interGroupSpacing = MacLCLayoutColumnSpacing;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(8.0, MacLCLayoutHorizontalInset,
-                                                        24.0, MacLCLayoutHorizontalInset);
+    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCLayoutHorizontalInset,
+                                                        24.0 - headroom, MacLCLayoutHorizontalInset);
     section.boundarySupplementaryItems = @[[self headerItemWithSubtitle:NO]];
     return section;
 }

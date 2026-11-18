@@ -975,7 +975,9 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
         scrollerHeight = [NSScroller scrollerWidthForControlSize:NSControlSizeRegular
                                                    scrollerStyle:NSScrollerStyleLegacy];
     }
-    return epHeight + 36.0 + scrollerHeight;
+    /* The shelf's headroom above the cards, then the section's 36 pt below
+     * them: any less and the episodes would scroll up and down inside. */
+    return epHeight + MacLCWatchLayout.shelfHeadroom + 36.0 + scrollerHeight;
 }
 
 - (void)preferredScrollerStyleDidChange:(NSNotification *)notification
@@ -1031,10 +1033,13 @@ static NSString *MacLCFormatRuntime(NSString * _Nullable raw)
         _similarCollapsedConstraint,
         [title.topAnchor constraintEqualToAnchor:_similarContainerView.topAnchor constant:36.0],
         [title.leadingAnchor constraintEqualToAnchor:_similarContainerView.leadingAnchor constant:40.0],
-        [scrollView.topAnchor constraintEqualToAnchor:title.bottomAnchor constant:MacLCDesign.spacingM],
+        /* The row keeps the shelf's headroom above and below the posters. */
+        [scrollView.topAnchor constraintEqualToAnchor:title.bottomAnchor
+                                             constant:MacLCDesign.spacingM - MacLCWatchLayout.shelfHeadroom],
         [scrollView.leadingAnchor constraintEqualToAnchor:_similarContainerView.leadingAnchor],
         [scrollView.trailingAnchor constraintEqualToAnchor:_similarContainerView.trailingAnchor],
-        [scrollView.heightAnchor constraintEqualToConstant:[MacLCWatchLayout posterItemHeightForWidth:168.0]],
+        [scrollView.heightAnchor constraintEqualToConstant:[MacLCWatchLayout posterItemHeightForWidth:168.0]
+                                                          + 2.0 * MacLCWatchLayout.shelfHeadroom],
         contentBottom,
     ]];
 }

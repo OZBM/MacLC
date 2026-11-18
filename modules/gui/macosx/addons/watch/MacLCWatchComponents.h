@@ -63,6 +63,13 @@ extern NSString * const MacLCWatchHeaderElementKind;
 /// (wider than the library's 24: Apple TV aligns shelves on its hero text),
 /// 20 between items, 36 between sections.
 @interface MacLCWatchLayout : NSObject
+/// Room kept above and below a shelf's items for a hovered card to grow
+/// into. AppKit's scroll view for a shelf clips at the edges of the items'
+/// row, so the room is part of the row and of the height the shelf needs.
++ (CGFloat)shelfHeadroom;
+/// A row of items of one size scrolling horizontally, spacing apart, with
+/// the Watch insets and shelfHeadroom above and below the items; no header.
++ (NSCollectionLayoutSection *)shelfSectionWithItemSize:(NSSize)itemSize spacing:(CGFloat)spacing;
 /// One row of 2:3 posters scrolling horizontally (orthogonal scrolling,
 /// NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary:
 /// a flick settles on a poster's leading edge, never between two), poster

@@ -738,6 +738,8 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/views/VLCLinearProgressIndicator.m \
 	gui/macosx/views/VLCLoadingOverlayView.h \
 	gui/macosx/views/VLCLoadingOverlayView.m \
+	gui/macosx/views/MacLCNestedScrollRouter.h \
+	gui/macosx/views/MacLCNestedScrollRouter.m \
 	gui/macosx/views/VLCMediaItemCollectionViewItem.h \
 	gui/macosx/views/VLCMediaItemCollectionViewItem.m \
 	gui/macosx/views/VLCNoResultsLabel.h \

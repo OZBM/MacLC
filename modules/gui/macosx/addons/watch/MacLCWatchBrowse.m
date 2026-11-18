@@ -436,6 +436,14 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     NSPoint _savedBrowseScrollPoint;
 
     NSView *_emptyStateContainer;
+
+    /* Scroll views of this page in a live scroll, and a rebuild held until
+     * they stop. */
+    NSHashTable<NSScrollView *> *_liveScrollViews;
+    BOOL _rebuildHeld;
+    BOOL _heldRebuildAnimated;
+    /* Poster addresses already asked of the image cache ahead of time. */
+    NSMutableSet<NSURL *> *_warmedPosterURLs;
 }
 
 @property (nonatomic, weak) MacLCWatchSectionViewController *section;
@@ -594,6 +602,14 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(preferredScrollerStyleDidChange:)
                                                  name:NSPreferredScrollerStyleDidChangeNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(liveScrollWillStart:)
+                                                 name:NSScrollViewWillStartLiveScrollNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(liveScrollDidEnd:)
+                                                 name:NSScrollViewDidEndLiveScrollNotification
                                                object:nil];
 
     static dispatch_once_t refreshOnce;
@@ -985,7 +1001,7 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     }
 
     if (self.section.mediaType != nil && _topCatalog != nil && _selectedServiceCode == nil) {
-        [self prefetchGenreShelvesNearSection:0];
+        [self prefetchGenreShelves];
     }
 }
 
@@ -1278,15 +1294,15 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
 
 #pragma mark - Prefetching & Genres
 
-- (void)prefetchGenreShelvesNearSection:(NSInteger)sectionIndex
+/* Every genre shelf loads with the page rather than as it nears the visible
+ * area, so that by the time it scrolls into view it has its titles. */
+- (void)prefetchGenreShelves
 {
     if (self.section.mediaType == nil || !_topCatalog || _selectedServiceCode != nil) {
         return;
     }
 
-    const NSInteger maxSection = sectionIndex + 2;
-    for (NSInteger s = sectionIndex; s <= maxSection && s < (NSInteger)_activeSections.count; s++) {
-        NSString *secID = _activeSections[s];
+    for (NSString *secID in [_activeSections copy]) {
         if (![secID containsString:@"popular_genre_"]) {
             continue;
         }
@@ -1369,6 +1385,12 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     if (_isSearching) {
         return;
     }
+    if (_liveScrollViews.allObjects.count > 0) {
+        _heldRebuildAnimated = (_rebuildHeld && _heldRebuildAnimated) || animated;
+        _rebuildHeld = YES;
+        return;
+    }
+    _rebuildHeld = NO;
 
     NSDiffableDataSourceSnapshot<NSString *, NSString *> *snapshot = [[NSDiffableDataSourceSnapshot alloc] init];
     [_activeSections removeAllObjects];
@@ -1763,6 +1785,74 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     BOOL reduceMotion = NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
     BOOL animate = animated && !reduceMotion && self.view.window.isVisible;
     [_dataSource applySnapshot:snapshot animatingDifferences:animate];
+    [self warmPostersAhead];
+}
+
+#pragma mark - Loading Ahead
+
+/* A snapshot lays the whole page out again, and shelves that arrive during a
+ * scroll would do it on the frames of that scroll: they wait for it to end. */
+- (void)liveScrollWillStart:(NSNotification *)notification
+{
+    NSScrollView * const scrollView = notification.object;
+    if (![scrollView isDescendantOf:self.view])
+        return;
+    if (_liveScrollViews == nil)
+        _liveScrollViews = [NSHashTable weakObjectsHashTable];
+    [_liveScrollViews addObject:scrollView];
+}
+
+- (void)liveScrollDidEnd:(NSNotification *)notification
+{
+    if (![_liveScrollViews containsObject:notification.object])
+        return;
+    [_liveScrollViews removeObject:notification.object];
+    if (_liveScrollViews.allObjects.count > 0)
+        return;
+    if (_rebuildHeld)
+        [self rebuildBrowseSnapshotAnimated:_heldRebuildAnimated];
+    else
+        [self warmPostersAhead];
+}
+
+/* The posters of the shelves from the first visible one to ten below it are
+ * decoded ahead, first ten of each, at the size the cells draw them: cells
+ * then scroll in with their picture instead of drawing again when it comes. */
+- (void)warmPostersAhead
+{
+    static const NSInteger shelvesAhead = 10;
+    static const NSUInteger postersPerShelf = 10;
+
+    NSInteger first = NSIntegerMax;
+    for (NSIndexPath *indexPath in _collectionView.indexPathsForVisibleItems)
+        first = MIN(first, indexPath.section);
+    if (first == NSIntegerMax)
+        first = 0;
+
+    if (_warmedPosterURLs == nil)
+        _warmedPosterURLs = [NSMutableSet set];
+    const CGFloat scale = self.view.window.backingScaleFactor > 0.0 ? self.view.window.backingScaleFactor : 2.0;
+    NSDiffableDataSourceSnapshot<NSString *, NSString *> * const snapshot = _dataSource.snapshot;
+    NSArray<NSString *> * const sections = snapshot.sectionIdentifiers;
+    for (NSInteger s = first; s < (NSInteger)sections.count && s <= first + shelvesAhead; s++) {
+        NSUInteger warmed = 0;
+        for (NSString *itemID in [snapshot itemIdentifiersInSectionWithIdentifier:sections[s]]) {
+            NSURL * const url = _itemsByID[itemID].posterURL;
+            if (url == nil)
+                continue;
+            if (++warmed > postersPerShelf)
+                break;
+            if ([_warmedPosterURLs containsObject:url])
+                continue;
+            [_warmedPosterURLs addObject:url];
+            /* Same size and scale as MacLCWatchPosterItem, so the same cache entry. */
+            [MacLCWatchImageCache.sharedCache imageForURL:url
+                                                pointSize:NSMakeSize(168.0, 252.0)
+                                                    scale:scale
+                                                  request:NULL
+                                               completion:^(NSImage *__unused image) {}];
+        }
+    }
 }
 
 #pragma mark - Shelf Bounds & Paging Updates
@@ -2250,7 +2340,6 @@ willDisplaySupplementaryView:(NSView *)view
             NSString *sectionID = _activeSections[indexPath.section];
             [self updateHeaderPagingStateForSectionID:sectionID];
         }
-        [self prefetchGenreShelvesNearSection:indexPath.section];
     }
 }
 
@@ -2304,8 +2393,6 @@ forRepresentedObjectAtIndexPath:(NSIndexPath *)indexPath
             }
         }
     }
-
-    [self prefetchGenreShelvesNearSection:indexPath.section];
 }
 
 @end

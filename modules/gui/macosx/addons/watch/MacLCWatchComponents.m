@@ -281,8 +281,10 @@ NSString *MacLCWatchFactsLine(NSString *type,
 NSString * const MacLCWatchHeaderElementKind = @"MacLCWatchHeaderElementKind";
 
 static const CGFloat MacLCWatchHorizontalInset = 40.0;
-/* Room above a shelf for a hovered card: it grows 5 % about its centre and
- * casts a shadow, and the shelf's own scroll view clips at its top edge. */
+/* Room above and below a shelf's items for a hovered card: it grows 5 %
+ * about its centre and casts a shadow. AppKit's scroll view for the shelf
+ * clips at the edges of the section's group, not of the section, so the
+ * room is part of the group (+shelfSectionWithItemSize:spacing:). */
 static const CGFloat MacLCWatchHoverHeadroom = 12.0;
 static const CGFloat MacLCWatchItemSpacing = 20.0;
 static const CGFloat MacLCWatchSectionSpacing = 36.0;
@@ -295,6 +297,30 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
 }
 
 @implementation MacLCWatchLayout
+
++ (CGFloat)shelfHeadroom
+{
+    return MacLCWatchHoverHeadroom;
+}
+
++ (NSCollectionLayoutSection *)shelfSectionWithItemSize:(NSSize)itemSize spacing:(CGFloat)spacing
+{
+    NSCollectionLayoutSize * const size =
+        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemSize.width]
+                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemSize.height + 2.0 * MacLCWatchHoverHeadroom]];
+    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:size];
+    item.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, 0.0, MacLCWatchHoverHeadroom, 0.0);
+    NSCollectionLayoutGroup * const group =
+        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:size subitems:@[item]];
+
+    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
+    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
+    section.interGroupSpacing = spacing;
+    section.contentInsets = NSDirectionalEdgeInsetsMake(0.0, MacLCWatchHorizontalInset,
+                                                        MacLCWatchSectionSpacing - MacLCWatchHoverHeadroom,
+                                                        MacLCWatchHorizontalInset);
+    return section;
+}
 
 + (NSCollectionLayoutBoundarySupplementaryItem *)headerSupplementaryItemWithSubtitle:(BOOL)hasSubtitle
 {
@@ -338,24 +364,9 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
 + (NSCollectionLayoutSection *)posterShelfSectionWithItemWidth:(CGFloat)itemWidth
 {
     /* The poster is 168 wide in both shelves; a ranked item adds its rank. */
-    const CGFloat itemHeight = [self posterItemHeightForWidth:168.0];
-
-    NSCollectionLayoutSize * const itemSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
-
-    NSCollectionLayoutSize * const groupSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutGroup * const group =
-        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
-
-    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
-    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
-    section.interGroupSpacing = MacLCWatchItemSpacing;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
-                                                        MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
+    NSCollectionLayoutSection * const section =
+        [self shelfSectionWithItemSize:NSMakeSize(itemWidth, [self posterItemHeightForWidth:168.0])
+                               spacing:MacLCWatchItemSpacing];
     section.boundarySupplementaryItems = @[[self headerSupplementaryItem]];
     return section;
 }
@@ -403,24 +414,9 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
 + (NSCollectionLayoutSection *)episodeShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment
 {
     const CGFloat itemWidth = 300.0;
-    const CGFloat itemHeight = [MacLCWatchEpisodeItem heightForWidth:itemWidth];
-
-    NSCollectionLayoutSize * const itemSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
-
-    NSCollectionLayoutSize * const groupSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutGroup * const group =
-        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
-
-    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
-    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
-    section.interGroupSpacing = MacLCWatchItemSpacing;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
-                                                        MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
+    NSCollectionLayoutSection * const section =
+        [self shelfSectionWithItemSize:NSMakeSize(itemWidth, [MacLCWatchEpisodeItem heightForWidth:itemWidth])
+                               spacing:MacLCWatchItemSpacing];
     section.boundarySupplementaryItems = @[[self headerSupplementaryItem]];
     return section;
 }
@@ -441,50 +437,16 @@ static CGFloat __unused MacLCWatchShelfScrollerAllowance(void)
 
 + (NSCollectionLayoutSection *)collectionShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment
 {
-    const CGFloat itemWidth = 340.0;
-    const CGFloat itemHeight = 216.0;
-
-    NSCollectionLayoutSize * const itemSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
-
-    NSCollectionLayoutSize * const groupSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutGroup * const group =
-        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
-
-    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
-    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
-    section.interGroupSpacing = MacLCWatchItemSpacing;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
-                                                        MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
+    NSCollectionLayoutSection * const section =
+        [self shelfSectionWithItemSize:NSMakeSize(340.0, 216.0) spacing:MacLCWatchItemSpacing];
     section.boundarySupplementaryItems = @[[self headerSupplementaryItemWithSubtitle:YES]];
     return section;
 }
 
 + (NSCollectionLayoutSection *)genreShelfSectionWithEnvironment:(id<NSCollectionLayoutEnvironment>)environment
 {
-    const CGFloat itemWidth = 196.0;
-    const CGFloat itemHeight = 110.0;
-
-    NSCollectionLayoutSize * const itemSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutItem * const item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
-
-    NSCollectionLayoutSize * const groupSize =
-        [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension absoluteDimension:itemWidth]
-                                       heightDimension:[NSCollectionLayoutDimension absoluteDimension:itemHeight]];
-    NSCollectionLayoutGroup * const group =
-        [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
-
-    NSCollectionLayoutSection * const section = [NSCollectionLayoutSection sectionWithGroup:group];
-    section.orthogonalScrollingBehavior = NSCollectionLayoutSectionOrthogonalScrollingBehaviorContinuousGroupLeadingBoundary;
-    section.interGroupSpacing = 16.0;
-    section.contentInsets = NSDirectionalEdgeInsetsMake(MacLCWatchHoverHeadroom, MacLCWatchHorizontalInset,
-                                                        MacLCWatchSectionSpacing, MacLCWatchHorizontalInset);
+    NSCollectionLayoutSection * const section =
+        [self shelfSectionWithItemSize:NSMakeSize(196.0, 110.0) spacing:16.0];
     section.boundarySupplementaryItems = @[[self headerSupplementaryItemWithSubtitle:NO]];
     return section;
 }

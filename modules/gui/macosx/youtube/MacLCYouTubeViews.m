@@ -496,7 +496,7 @@ static void StyleGlassCircleButton(NSButton *button, CGFloat size)
     }
 
     const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
-        ? CATransform3DMakeScale(1.03, 1.03, 1.0)
+        ? [MacLCDesign centeredScale:1.03 forLayer:_thumbnailWrapperView.layer]
         : CATransform3DIdentity;
     // A finger cannot hover, so on a touch screen the button stays visible.
     const CGFloat targetAlpha = (hovered || NSScreen.touchInterfaceEnabled) ? 1.0 : 0.0;
@@ -1384,7 +1384,7 @@ static void StyleGlassCircleButton(NSButton *button, CGFloat size)
     }
 
     const CATransform3D targetTransform = (hovered && !MacLCDesign.reducedMotion)
-        ? CATransform3DMakeScale(1.03, 1.03, 1.0)
+        ? [MacLCDesign centeredScale:1.03 forLayer:_leadingWrapperView.layer]
         : CATransform3DIdentity;
     // A finger cannot hover, so on a touch screen the button stays visible.
     const CGFloat targetAlpha = ((hovered || NSScreen.touchInterfaceEnabled) && self.item.result.kind == MacLCYouTubeResultKindVideo) ? 1.0 : 0.0;
