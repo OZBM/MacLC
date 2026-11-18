@@ -1316,10 +1316,10 @@ Open(vlc_object_t *obj)
 
 #if TARGET_OS_OSX
         /* Register Apple's Atmos decoder here, at output creation, rather
-         * than in start()/play() so the one-shot priming wait never delays
-         * the playback start path. Registration is a side effect of creating
-         * an AVPlayer item with an E-AC-3 JOC stream; observed to work on
-         * macOS 27.2 (26B123) with AirPods 3. No documented API exists. */
+         * than in start()/play() so nothing extra happens on the playback
+         * start path. Registration is a side effect of creating an AVPlayer
+         * item with an E-AC-3 JOC stream; observed to work on macOS 27.2
+         * (26B123) with AirPods 3. No documented API exists. */
         atmos_prime_Begin();
 #endif
 

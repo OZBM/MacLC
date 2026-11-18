@@ -243,12 +243,12 @@ atmos_prime_Begin(void)
 
         /* AVPlayer registers the process's Atmos decoder as a side effect of
          * creating an item. Nothing has to play, and the registration holds
-         * after the player is gone. Keep the player alive briefly, then drop
-         * it synchronously: a delayed dispatch block would call back into
-         * this plugin after it may have been unloaded. */
+         * after the player is gone. Earlier versions held the player for
+         * 300 ms, but that delayed output creation and caused a quit hang;
+         * registration appears to happen synchronously on the tested macOS
+         * version (27.2, 26B123, AirPods 3). */
         AVPlayer *player = [[AVPlayer alloc] initWithURL:[NSURL fileURLWithPath:path]];
         player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
-        usleep(300000);
 
         unlink(path.fileSystemRepresentation);
     });
