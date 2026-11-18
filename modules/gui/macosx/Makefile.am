@@ -132,12 +132,24 @@ swift_verbose_0 = @echo "  SWIFTC  " $@;
 swift_verbose__0 = $(swift_verbose_0)
 
 libmacosx_plugin_la_SWIFT_srcs = \
+	gui/macosx/addons/watch/MacLCWatchBrowsePage.swift \
+	gui/macosx/addons/watch/MacLCWatchCards.swift \
 	gui/macosx/addons/watch/MacLCWatchShelves.swift
 # The bridging header and every header it imports (for rebuilds).
 libmacosx_plugin_la_SWIFT_deps = \
 	gui/macosx/MacLC-Bridging-Header.h \
 	gui/macosx/addons/MacLCAddons.h \
-	gui/macosx/addons/watch/MacLCWatchComponents.h
+	gui/macosx/addons/watch/MacLCExplainer.h \
+	gui/macosx/addons/watch/MacLCWatchComponents.h \
+	gui/macosx/addons/watch/MacLCWatchDiscovery.h \
+	gui/macosx/addons/watch/MacLCWatchDiscoveryViews.h \
+	gui/macosx/addons/watch/MacLCWatchLibrary.h \
+	gui/macosx/addons/watch/MacLCWatchLibraryViews.h \
+	gui/macosx/addons/watch/MacLCWatchSections.h \
+	gui/macosx/addons/watch/MacLCWatchLibrarySections.h \
+	gui/macosx/medialib/components/MacLCEmptyStateView.h \
+	gui/macosx/medialib/sections/MacLCLibrarySectionViewController.h \
+	gui/macosx/medialib/MacLCLibraryTypes.h
 
 gui/macosx/MacLC-Swift.h: $(libmacosx_plugin_la_SWIFT_srcs) $(libmacosx_plugin_la_SWIFT_deps)
 	$(AM_V_at)$(MKDIR_P) gui/macosx

@@ -27,4 +27,12 @@
 #import <Cocoa/Cocoa.h>
 
 #import "addons/MacLCAddons.h"
+#import "addons/watch/MacLCExplainer.h"
 #import "addons/watch/MacLCWatchComponents.h"
+#import "addons/watch/MacLCWatchDiscovery.h"
+#import "addons/watch/MacLCWatchDiscoveryViews.h"
+#import "addons/watch/MacLCWatchLibrary.h"
+#import "addons/watch/MacLCWatchLibraryViews.h"
+#import "addons/watch/MacLCWatchSections.h"
+#import "addons/watch/MacLCWatchLibrarySections.h"
+#import "medialib/components/MacLCEmptyStateView.h"

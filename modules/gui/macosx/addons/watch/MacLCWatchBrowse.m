@@ -230,23 +230,18 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
 
 - (NSViewController *)makeRootViewControllerForViewMode:(MacLCLibraryViewMode)viewMode
 {
-    /* Pilot: the poster shelves in SwiftUI (MacLCWatchShelves.swift). */
-    if (MacLCWatchShelvesHost.isEnabled) {
-        __weak typeof(self) weakSelf = self;
-        return [MacLCWatchShelvesHost controllerWithMediaType:_mediaType
-                                                     catalogs:SectionCatalogs(_mediaType)
-                                                     localize:^NSString *(NSString *string) {
+    /* The same page in SwiftUI (MacLCWatchBrowsePage.swift). */
+    if (MacLCWatchBrowseHostController.isEnabled) {
+        NSString * _Nullable const mediaType = _mediaType;
+        return [[MacLCWatchBrowseHostController alloc] initWithSection:self
+                                                              localize:^NSString *(NSString *string) {
             return _NS(string.UTF8String);
-        } openItem:^(MacLCAddonItem *item) {
-            [weakSelf showDetailForItem:item showStreams:NO];
-        } seeAll:^(MacLCAddonTitleCatalog *catalog, NSString * _Nullable genre, NSString *title) {
-            __strong typeof(weakSelf) strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            [strongSelf pushViewController:[[MacLCWatchCatalogViewController alloc] initWithSection:strongSelf
-                                                                                            catalog:catalog
-                                                                                              genre:genre
-                                                                                              title:title]];
+        } catalogs:^NSArray<MacLCAddonTitleCatalog *> *{
+            return SectionCatalogs(mediaType);
+        } errorMessage:^NSString *(NSError * _Nullable error) {
+            return ErrorMessageForError(error, nil);
+        } openAddons:^{
+            [MacLCLibraryRouter showSegmentType:VLCLibraryWatchAddonsSegmentType];
         }];
     }
     return [[MacLCWatchBrowseViewController alloc] initWithSection:self];
@@ -300,17 +295,22 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     NSViewController * const top = self.topViewController;
     if ([top isKindOfClass:MacLCWatchDetailViewController.class])
         return YES;
-    return top == self.rootViewController
-        && [top isKindOfClass:MacLCWatchBrowseViewController.class]
+    if (top != self.rootViewController)
+        return NO;
+    if ([top isKindOfClass:MacLCWatchBrowseHostController.class])
+        return [(MacLCWatchBrowseHostController *)top showsPictureAtTop];
+    return [top isKindOfClass:MacLCWatchBrowseViewController.class]
         && [(MacLCWatchBrowseViewController *)top showsPictureAtTop];
 }
 
 - (void)debugOpenFirstFeaturedShowingStreams:(BOOL)showStreams
 {
     NSViewController *root = self.rootViewController;
-    if (![root isKindOfClass:[MacLCWatchBrowseViewController class]]) {
+    if (![root isKindOfClass:[MacLCWatchBrowseViewController class]] &&
+        ![root isKindOfClass:[MacLCWatchBrowseHostController class]]) {
         return;
     }
+    /* Both answer featuredItems and featuredItemsLoadedHandler. */
     MacLCWatchBrowseViewController *browseVC = (MacLCWatchBrowseViewController *)root;
     if (browseVC.featuredItems.count > 0) {
         [self showDetailForItem:browseVC.featuredItems.firstObject showStreams:showStreams];
@@ -320,7 +320,8 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
             __strong typeof(weakSelf) strongSelf = weakSelf;
             if (!strongSelf) return;
             NSViewController *currentRoot = strongSelf.rootViewController;
-            if ([currentRoot isKindOfClass:[MacLCWatchBrowseViewController class]]) {
+            if ([currentRoot isKindOfClass:[MacLCWatchBrowseViewController class]] ||
+                [currentRoot isKindOfClass:[MacLCWatchBrowseHostController class]]) {
                 MacLCWatchBrowseViewController *b = (MacLCWatchBrowseViewController *)currentRoot;
                 if (b.featuredItems.count > 0) {
                     [strongSelf showDetailForItem:b.featuredItems.firstObject showStreams:showStreams];
