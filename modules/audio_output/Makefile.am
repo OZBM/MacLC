@@ -35,6 +35,11 @@ if HAVE_JACK
 aout_PLUGINS += libjack_plugin.la
 endif
 
+noinst_HEADERS += \
+	audio_output/apple/channel_layout.h \
+	audio_output/apple/eac3_dec3.h \
+	audio_output/apple/atmos_prime.h
+
 libavsamplebuffer_plugin_la_SOURCES = audio_output/apple/avsamplebuffer.m \
 	audio_output/apple/channel_layout.c \
 	audio_output/apple/eac3_dec3.c

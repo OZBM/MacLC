@@ -83,6 +83,7 @@ EXTRA_DIST = \
 	translations.txt \
 	demo.sh \
 	doc_helper.sh \
+	SPATIAL_AUDIO.md \
 	ldoc-config.ld \
 	$(NULL)
 
