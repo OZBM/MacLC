@@ -37,6 +37,8 @@
 #import "extensions/NSString+Helpers.h"
 #import "medialib/shell/MacLCLibraryRouter.h"
 
+#import "MacLC-Swift.h"
+
 static NSString * const MacLCWatchHeroItemIdentifier = @"watch_hero_item";
 static NSString * const MacLCWatchServiceBarItemIdentifier = @"watch_service_bar_item";
 static NSString * const MacLCWatchCollectionHeaderItemIdentifier = @"watch_collection_header_item";
@@ -77,6 +79,23 @@ static NSString *UpperSingularTypeName(NSString *type)
 static NSString *CatalogKey(MacLCAddonTitleCatalog *cat)
 {
     return [NSString stringWithFormat:@"%@_%@_%@", cat.addon.identifier ?: @"", cat.type ?: @"", cat.identifier ?: @""];
+}
+
+/* The title catalogs a section shows, in order: those of its type (all for
+ * Home), except the services add-on's, which the services bar scopes to. */
+static NSArray<MacLCAddonTitleCatalog *> *SectionCatalogs(NSString * _Nullable mediaType)
+{
+    NSMutableArray<MacLCAddonTitleCatalog *> * const catalogs = [NSMutableArray array];
+    MacLCAddon * const servicesAddon = [MacLCWatchDiscovery sharedDiscovery].servicesAddon;
+    for (MacLCAddonTitleCatalog *cat in MacLCAddonStore.sharedStore.titleCatalogs) {
+        if (mediaType != nil && ![cat.type isEqualToString:mediaType])
+            continue;
+        if ((servicesAddon && [cat.addon.identifier isEqualToString:servicesAddon.identifier]) ||
+            [cat.addon.identifier isEqualToString:@"pw.ers.netflix-catalog"])
+            continue;
+        [catalogs addObject:cat];
+    }
+    return catalogs;
 }
 
 static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unused serviceName)
@@ -211,6 +230,25 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
 
 - (NSViewController *)makeRootViewControllerForViewMode:(MacLCLibraryViewMode)viewMode
 {
+    /* Pilot: the poster shelves in SwiftUI (MacLCWatchShelves.swift). */
+    if (MacLCWatchShelvesHost.isEnabled) {
+        __weak typeof(self) weakSelf = self;
+        return [MacLCWatchShelvesHost controllerWithMediaType:_mediaType
+                                                     catalogs:SectionCatalogs(_mediaType)
+                                                     localize:^NSString *(NSString *string) {
+            return _NS(string.UTF8String);
+        } openItem:^(MacLCAddonItem *item) {
+            [weakSelf showDetailForItem:item showStreams:NO];
+        } seeAll:^(MacLCAddonTitleCatalog *catalog, NSString * _Nullable genre, NSString *title) {
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            [strongSelf pushViewController:[[MacLCWatchCatalogViewController alloc] initWithSection:strongSelf
+                                                                                            catalog:catalog
+                                                                                              genre:genre
+                                                                                              title:title]];
+        }];
+    }
     return [[MacLCWatchBrowseViewController alloc] initWithSection:self];
 }
 
@@ -923,17 +961,7 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     [_searchRequest cancel];
     _searchRequest = nil;
 
-    _matchingCatalogs = [NSMutableArray array];
-    MacLCAddon *servicesAddon = [MacLCWatchDiscovery sharedDiscovery].servicesAddon;
-    for (MacLCAddonTitleCatalog *cat in MacLCAddonStore.sharedStore.titleCatalogs) {
-        if (!self.section.mediaType || [cat.type isEqualToString:self.section.mediaType]) {
-            if ((servicesAddon && [cat.addon.identifier isEqualToString:servicesAddon.identifier]) ||
-                [cat.addon.identifier isEqualToString:@"pw.ers.netflix-catalog"]) {
-                continue;
-            }
-            [_matchingCatalogs addObject:cat];
-        }
-    }
+    _matchingCatalogs = [SectionCatalogs(self.section.mediaType) mutableCopy];
 
     if (_matchingCatalogs.count == 0) {
         [_scrollView.refreshController endRefreshing];
