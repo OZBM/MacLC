@@ -35,4 +35,3 @@
 #import "addons/watch/MacLCWatchLibraryViews.h"
 #import "addons/watch/MacLCWatchSections.h"
 #import "addons/watch/MacLCWatchLibrarySections.h"
-#import "medialib/components/MacLCEmptyStateView.h"

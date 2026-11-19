@@ -134,6 +134,7 @@ swift_verbose__0 = $(swift_verbose_0)
 libmacosx_plugin_la_SWIFT_srcs = \
 	gui/macosx/addons/watch/MacLCWatchBrowsePage.swift \
 	gui/macosx/addons/watch/MacLCWatchCards.swift \
+	gui/macosx/addons/watch/MacLCWatchHero.swift \
 	gui/macosx/addons/watch/MacLCWatchShelves.swift
 # The bridging header and every header it imports (for rebuilds).
 libmacosx_plugin_la_SWIFT_deps = \
@@ -147,7 +148,6 @@ libmacosx_plugin_la_SWIFT_deps = \
 	gui/macosx/addons/watch/MacLCWatchLibraryViews.h \
 	gui/macosx/addons/watch/MacLCWatchSections.h \
 	gui/macosx/addons/watch/MacLCWatchLibrarySections.h \
-	gui/macosx/medialib/components/MacLCEmptyStateView.h \
 	gui/macosx/medialib/sections/MacLCLibrarySectionViewController.h \
 	gui/macosx/medialib/MacLCLibraryTypes.h
 
@@ -162,6 +162,9 @@ gui/macosx/MacLC-Swift.h: $(libmacosx_plugin_la_SWIFT_srcs) $(libmacosx_plugin_l
 	  -Xcc -I$(srcdir)/gui/macosx \
 	  -emit-objc-header-path $@ -o gui/macosx/MacLCSwift.o \
 	  $$(for f in $(libmacosx_plugin_la_SWIFT_srcs); do echo "$(srcdir)/$$f"; done)
+# swiftc leaves an unchanged header alone, which kept this rule out of date
+# (Swift compiled again on every make).
+	$(AM_V_at)touch $@
 
 gui/macosx/MacLCSwift.o: gui/macosx/MacLC-Swift.h
 

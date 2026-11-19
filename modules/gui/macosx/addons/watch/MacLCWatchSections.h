@@ -149,6 +149,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// position.
 /// Activating a poster calls section showDetailForItem:showStreams:NO; the
 /// carousel's Details too, its Play with showStreams:YES.
+/// With MACLC_SWIFTUI_WATCH=1 the section's root is the SwiftUI version of
+/// this page instead (MacLCWatchBrowseHostController, MacLCWatchBrowsePage.swift).
 @interface MacLCWatchBrowseViewController : NSViewController
 - (instancetype)initWithSection:(MacLCWatchSectionViewController *)section;
 - (void)applySearchString:(NSString *)searchString;

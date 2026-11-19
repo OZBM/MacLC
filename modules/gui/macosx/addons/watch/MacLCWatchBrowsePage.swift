@@ -21,9 +21,10 @@
 /* MacLCWatchBrowseViewController (MacLCWatchBrowse.m) in SwiftUI, behind
  * MACLC_SWIFTUI_WATCH=1: the same page, sections, data and behaviour (see the
  * contract in MacLCWatchSections.h; where it and MacLCWatchBrowse.m differ,
- * this follows the code). The carousel is the AppKit MacLCWatchHeroView,
- * hosted; everything else is SwiftUI. Rows: MacLCWatchShelves.swift; cards
- * and the services bar: MacLCWatchCards.swift.
+ * this follows the code). All SwiftUI except the explainer's info button
+ * (MacLCExplainer, hosted) and the menus built by MacLCWatchActions. Rows:
+ * MacLCWatchShelves.swift; cards and the services bar: MacLCWatchCards.swift;
+ * the carousel: MacLCWatchHero.swift.
  * Rules from the pilot (2026-11-18): no SwiftUI animation while a scroll view
  * moves, plain button styles, lazy stacks, per-row @Observable models, scroll
  * geometry mapped to small values, pictures from MacLCWatchImageCache. */
@@ -72,6 +73,11 @@ final class WatchBrowseHostController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // A pushed page takes this view out of the window: the carousel stops.
+        model.isOnScreen = { [weak self] in
+            guard let window = self?.view.window else { return false }
+            return window.isVisible && window.occlusionState.contains(.visible)
+        }
         model.start()
     }
 
@@ -154,6 +160,11 @@ final class WatchBrowseModel {
 
     @ObservationIgnored let scrolling = ScrollActivity()
     @ObservationIgnored let marks = WatchMarks()
+    @ObservationIgnored let hero = WatchHeroModel()
+    /// The page's view is in a visible window (set by the host controller).
+    @ObservationIgnored var isOnScreen: () -> Bool = { false }
+    /// Changes with each set of search results, so they start at the top.
+    private(set) var searchSerial = 0
     @ObservationIgnored private(set) var showsPictureAtTop = false
     @ObservationIgnored var featuredItemsLoadedHandler: (() -> Void)? {
         didSet { fireFeaturedLoadedHandler() }
@@ -183,7 +194,6 @@ final class WatchBrowseModel {
     @ObservationIgnored private var resolveRequests: [MacLCAddonRequest] = []
     @ObservationIgnored private var warmedURLs = Set<URL>()
     @ObservationIgnored private var hasFiredFeaturedLoadedHandler = false
-    @ObservationIgnored private var heroViewStorage: MacLCWatchHeroView?
     @ObservationIgnored private var servicesSheet: MacLCWatchServicesSheetController?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     /// Pull to refresh, on the page's scroll view (WatchRefreshHook).
@@ -244,6 +254,13 @@ final class WatchBrowseModel {
             MainActor.assumeIsolated { self?.libraryDidChange(changed) }
         })
         scrolling.onIdle = { [weak self] in self?.scrollingDidEnd() }
+        hero.play = { [weak self] item in self?.open(item, showStreams: true) }
+        hero.details = { [weak self] item in self?.open(item, showStreams: false) }
+        hero.isVisible = { [weak self] in
+            guard let self else { return false }
+            return isOnScreen() && searchGroups == nil && emptyState == nil
+        }
+        hero.isScrolling = { [weak self] in self?.scrolling.isScrolling ?? false }
 
         if !Self.manifestsRefreshed {
             Self.manifestsRefreshed = true
@@ -300,7 +317,9 @@ final class WatchBrowseModel {
         rebuildRows()
 
         for catalog in catalogs {
-            let request = MacLCAddonStore.shared.fetchTitleCatalog(catalog, genre: nil, skip: 0) {
+            // A filter chosen on the shelf stays chosen.
+            let genre = catalogGenre[catalogKey(catalog)]
+            let request = MacLCAddonStore.shared.fetchTitleCatalog(catalog, genre: genre, skip: 0) {
                 [weak self] items, error in
                 self?.catalogLoaded(catalog, items: items, error: error)
             }
@@ -406,17 +425,6 @@ final class WatchBrowseModel {
 
     // MARK: Carousel
 
-    var heroView: MacLCWatchHeroView {
-        if let view = heroViewStorage {
-            return view
-        }
-        let view = MacLCWatchHeroView(frame: NSRect(x: 0, y: 0, width: 800, height: 420))
-        view.detailsHandler = { [weak self] item in self?.open(item, showStreams: false) }
-        view.playHandler = { [weak self] item in self?.open(item, showStreams: true) }
-        heroViewStorage = view
-        return view
-    }
-
     private func updateFeatured() {
         var items: [MacLCAddonItem] = []
         var eyebrows: [String] = []
@@ -442,10 +450,8 @@ final class WatchBrowseModel {
         }
         if items != featured {
             featured = items
-            heroView.items = items
-            heroView.eyebrows = eyebrows
-            heroView.setScrollOffset(pageOffset)
         }
+        hero.set(items: items, eyebrows: eyebrows)
         updatePictureAtTop()
         fireFeaturedLoadedHandler()
     }
@@ -881,6 +887,7 @@ final class WatchBrowseModel {
                                                button: nil, prominent: false, action: nil))
             } else {
                 showEmptyState(nil)
+                searchSerial += 1
                 searchGroups = results
             }
         }
@@ -931,20 +938,17 @@ final class WatchBrowseModel {
 
     // MARK: Scrolling
 
-    func pageMetricsChanged(heroHeight: CGFloat, safeTop: CGFloat) {
+    func pageMetricsChanged(width: CGFloat, heroHeight: CGFloat, safeTop: CGFloat) {
         self.heroHeight = heroHeight
         self.safeTop = safeTop
+        hero.resize(CGSize(width: width, height: heroHeight))
         updatePictureAtTop()
     }
 
-    /// Every frame of a page scroll: the carousel's parallax and stretch, and
-    /// whether the window title may show.
+    /// Every frame of a page scroll: whether the window title may show (the
+    /// carousel's parallax runs in its own visualEffect).
     func pageScrolled(_ offset: CGFloat) {
-        let wasOverHero = pageOffset < heroHeight
         pageOffset = offset
-        if !featured.isEmpty, offset < heroHeight || wasOverHero {
-            heroViewStorage?.setScrollOffset(offset)
-        }
         updatePictureAtTop()
     }
 
@@ -1001,6 +1005,7 @@ final class WatchCollectionState {
 // MARK: - Page
 
 private nonisolated struct PageMetrics: Equatable {
+    var width: CGFloat = 800
     var height: CGFloat = 800
     var safeTop: CGFloat = 0
 }
@@ -1012,10 +1017,10 @@ struct WatchBrowsePage: View {
     @State private var metrics = PageMetrics()
     @FocusState private var focus: WatchFocus?
 
-    /// MacLCWatchHeroView heightForAvailableHeight: of the page's height
-    /// (the scroll view's, as AppKit's collection view sees it).
+    /// The carousel's height for the page's (the scroll view's, as AppKit's
+    /// collection view sees it).
     private var heroHeight: CGFloat {
-        MacLCWatchHeroView.height(forAvailableHeight: metrics.height + metrics.safeTop)
+        WatchHeroModel.height(forAvailableHeight: metrics.height + metrics.safeTop)
     }
 
     var body: some View {
@@ -1027,18 +1032,17 @@ struct WatchBrowsePage: View {
                 .accessibilityHidden(browseHidden)
             if let groups = model.searchGroups, model.emptyState == nil {
                 WatchSearchResults(groups: groups, model: model, focus: $focus)
+                    .id(model.searchSerial)
             }
             if let state = model.emptyState {
                 WatchEmptyStateView(state: state, model: model)
-                    .id(state)
-                    .frame(maxWidth: 420)
             }
         }
         .onGeometryChange(for: PageMetrics.self) { proxy in
-            PageMetrics(height: proxy.size.height, safeTop: proxy.safeAreaInsets.top)
+            PageMetrics(width: proxy.size.width, height: proxy.size.height, safeTop: proxy.safeAreaInsets.top)
         } action: { value in
             metrics = value
-            model.pageMetricsChanged(heroHeight: heroHeight, safeTop: value.safeTop)
+            model.pageMetricsChanged(width: value.width, heroHeight: heroHeight, safeTop: value.safeTop)
         }
     }
 
@@ -1047,8 +1051,8 @@ struct WatchBrowsePage: View {
         return ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
                 if showsHero {
-                    WatchHero(view: model.heroView)
-                        .frame(height: heroHeight)
+                    WatchHeroView(hero: model.hero, height: heroHeight, localize: model.localize,
+                                  scrolling: model.scrolling)
                 }
                 WatchServicesBar(model: model)
                     .padding(.horizontal, sideInset)
@@ -1088,21 +1092,6 @@ struct WatchBrowsePage: View {
     }
 }
 
-/// The AppKit carousel, kept by the model so its state outlives the view.
-private struct WatchHero: NSViewRepresentable {
-    let view: MacLCWatchHeroView
-
-    func makeNSView(context: Context) -> MacLCWatchHeroView {
-        view
-    }
-
-    func updateNSView(_ nsView: MacLCWatchHeroView, context: Context) {}
-
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: MacLCWatchHeroView, context: Context) -> CGSize? {
-        CGSize(width: proposal.width ?? 800, height: proposal.height ?? 420)
-    }
-}
-
 /// Finds the page's scroll view once in a window and gives it the pull to
 /// refresh controller.
 private struct WatchRefreshHook: NSViewRepresentable {
@@ -1128,32 +1117,54 @@ private struct WatchRefreshHook: NSViewRepresentable {
     func updateNSView(_ nsView: HookView, context: Context) {}
 }
 
-/// MacLCEmptyStateView, as AppKit shows it: centred, at most 420 wide.
-private struct WatchEmptyStateView: NSViewRepresentable {
+/// MacLCEmptyStateView: centred, at most 420 wide: the symbol (48 pt, light,
+/// tertiary), 16 pt, the title (title2, semibold), 6 pt, the message (body,
+/// secondary), 20 pt, the button (glass and prominent when recommended).
+/// VoiceOver: a group "title. message".
+private struct WatchEmptyStateView: View {
     let state: WatchEmptyState
     let model: WatchBrowseModel
 
-    func makeNSView(context: Context) -> MacLCEmptyStateView {
-        let view = MacLCEmptyStateView.emptyState(withSymbolName: state.symbol, title: state.title, message: state.message)
-        if let title = state.button, let action = state.action {
-            view.addButton(withTitle: title, prominent: state.prominent) { [weak model] in
-                switch action {
-                case .openAddons: model?.openAddons()
-                case .retry: model?.retry()
+    var body: some View {
+        VStack(spacing: 0) {
+            Image(systemName: state.symbol)
+                .font(.system(size: 48, weight: .light))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+            Text(state.title)
+                .font(.title2.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .padding(.top, 16)
+            if let message = state.message {
+                Text(message)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 6)
+            }
+            if let title = state.button, let action = state.action {
+                Group {
+                    if state.prominent {
+                        Button(title) { perform(action) }
+                            .buttonStyle(.glassProminent)
+                    } else {
+                        Button(title) { perform(action) }
+                    }
                 }
+                .padding(.top, 20)
             }
         }
-        return view
+        .frame(maxWidth: 420)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel([state.title, state.message ?? ""].filter { !$0.isEmpty }.joined(separator: ". "))
     }
 
-    func updateNSView(_ nsView: MacLCEmptyStateView, context: Context) {}
-
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: MacLCEmptyStateView, context: Context) -> CGSize? {
-        let width = min(proposal.width ?? 420, 420)
-        let constraint = nsView.widthAnchor.constraint(equalToConstant: width)
-        constraint.isActive = true
-        defer { constraint.isActive = false }
-        return CGSize(width: width, height: nsView.fittingSize.height)
+    private func perform(_ action: WatchEmptyState.Action) {
+        switch action {
+        case .openAddons: model.openAddons()
+        case .retry: model.retry()
+        }
     }
 }
 
@@ -1207,6 +1218,8 @@ private struct WatchSearchResults: View {
         .scrollIndicators(.never)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .onScrollPhaseChange { _, phase in model.scrolling.setPage(phase.isScrolling) }
+        // Cleared while still moving: the page must not stay "scrolling".
+        .onDisappear { model.scrolling.setPage(false) }
         .onMoveCommand { direction in
             guard let current = focus.wrappedValue, current.row.hasPrefix("search_"),
                   let group = groups.first(where: { "search_\($0.id)" == current.row }) else { return }

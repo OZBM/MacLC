@@ -653,6 +653,8 @@ struct PosterCell: View {
         .accessibilityAction {
             if let item { model.open(item) }
         }
+        // Loading placeholders are not buttons yet.
+        .accessibilityHidden(item == nil)
     }
 
     private func poster(lifted: Bool, marks: TitleMarks?) -> some View {

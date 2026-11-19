@@ -47,11 +47,25 @@ struct WatchServicesBar: View {
                     ServiceCapsule(title: model.localize("Add Your Streaming Services…"), symbol: "plus.circle",
                                    selected: false, model: model) { model.chooseServices() }
                 } else {
-                    ServiceCapsule(title: model.localize("All"), symbol: nil, selected: selected == nil,
-                                   model: model) { model.selectService(nil) }
-                    ForEach(services, id: \.code) { service in
-                        ServiceCapsule(title: service.name, symbol: nil, selected: selected == service.code,
-                                       model: model) { model.selectService(service.code) }
+                    HStack(spacing: 8) {
+                        ServiceCapsule(title: model.localize("All"), symbol: nil, selected: selected == nil,
+                                       model: model) { model.selectService(nil) }
+                        ForEach(services, id: \.code) { service in
+                            ServiceCapsule(title: service.name, symbol: nil, selected: selected == service.code,
+                                           model: model) { model.selectService(service.code) }
+                        }
+                    }
+                    // VoiceOver: a radio group, as AppKit's bar.
+                    .accessibilityRepresentation {
+                        Picker(model.localize("Streaming service"),
+                               selection: Binding<String?>(get: { selected },
+                                                           set: { @MainActor code in model.selectService(code) })) {
+                            Text(model.localize("All")).tag(String?.none)
+                            ForEach(services, id: \.code) { service in
+                                Text(service.name).tag(Optional(service.code))
+                            }
+                        }
+                        .pickerStyle(.radioGroup)
                     }
                     ServiceCapsule(title: model.localize("Choose Services…"), symbol: "slider.horizontal.3",
                                    selected: false, model: model) { model.chooseServices() }
@@ -68,9 +82,10 @@ struct WatchServicesBar: View {
         .focusEffectDisabled()
         .onMoveCommand { direction in
             guard let index = codes.firstIndex(of: selected) else { return }
+            // Wraps around at both ends, as AppKit's bar.
             switch direction {
-            case .left where index > 0: model.selectService(codes[index - 1])
-            case .right where index + 1 < codes.count: model.selectService(codes[index + 1])
+            case .left: model.selectService(codes[index > 0 ? index - 1 : codes.count - 1])
+            case .right: model.selectService(codes[(index + 1) % codes.count])
             default: break
             }
         }
@@ -161,6 +176,9 @@ struct ContinueCard: View {
         .onTapGesture { model.resume(entry) }
         .onAppear {
             artwork.show(entry.item.backgroundURL ?? entry.item.posterURL, size: Self.size, scale: displayScale)
+        }
+        .onChange(of: entry.item.backgroundURL ?? entry.item.posterURL) { _, url in
+            artwork.show(url, size: Self.size, scale: displayScale)
         }
         .onDisappear { artwork.stop() }
         .contextMenu {
