@@ -207,7 +207,7 @@ Une seule fenêtre, une barre latérale et un champ de recherche. Chaque ligne d
   <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="Télécharger MacLC" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
 </p>
 
-1. Téléchargez `maclc-1.8.dmg` (57,7 Mo) depuis [la dernière version](https://github.com/OZBM/MacLC/releases/latest).
+1. Téléchargez `maclc-1.9.dmg` (57,7 Mo) depuis [la dernière version](https://github.com/OZBM/MacLC/releases/latest).
 2. Ouvrez l'image disque et glissez **MacLC** dans **Applications**.
 3. Ouvrez MacLC. La première fois, macOS bloque l'ouverture : cliquez sur **Terminé**, puis ouvrez **Réglages Système › Confidentialité et sécurité**, descendez jusqu'à **Sécurité** et cliquez sur **Ouvrir quand même** à côté du message « L'ouverture de MacLC a été bloquée pour protéger votre Mac ». Confirmez avec Touch ID ou votre mot de passe. Vous ne le faites qu'une seule fois par version.
 
@@ -223,10 +223,10 @@ Plutôt que **Ouvrir quand même**, vous pouvez retirer l'attribut « téléchar
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-Vérifiez que votre copie est identique à celle publiée (la valeur attendue figure sur la page de la version ; pour la 1.8, c'est `aaf25223c9ac1b89c2942b86b4162e7d9bd692f8bffe92625b0ee2060784ffa2`) :
+Vérifiez que votre copie est identique à celle publiée (la valeur attendue figure sur la page de la version ; pour la 1.9, c'est `bcad431f7b0d8886d0bd5fe348c2b946174ee325e86ef3dc8a654ed0d0146ddb`) :
 
 ```bash
-shasum -a 256 ~/Downloads/maclc-1.8.dmg
+shasum -a 256 ~/Downloads/maclc-1.9.dmg
 ```
 
 Si macOS indique un jour que MacLC « est endommagé et ne peut pas être ouvert », le téléchargement est incomplet : supprimez-le et téléchargez-le de nouveau. Ne contournez pas ce message.
@@ -386,7 +386,7 @@ Configurez en plaçant d'abord `build-deps/prefix/lib/pkgconfig` et `build-deps/
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
-  <img src=".github/readme/releases-light.svg" width="100%" alt="Chronologie : dix versions, de la 1.0 le 22 septembre 2026 à la 1.8 le 17 novembre 2026.">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="Chronologie : onze versions, de la 1.0 le 22 septembre 2026 à la 1.9 le 19 novembre 2026.">
 </picture>
 
 Les changements de chaque version figurent dans [Releases](https://github.com/OZBM/MacLC/releases). Pour être prévenu de la prochaine, cliquez sur le bouton **Watch** de GitHub en haut de cette page, puis sur **Custom › Releases**.

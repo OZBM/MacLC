@@ -207,7 +207,7 @@ MacLC 不附带任何电影、剧集或流媒体源。扩展插件均为第三�
   <a href="https://github.com/OZBM/MacLC/releases/latest"><img alt="下载 MacLC" src="https://img.shields.io/github/v/release/OZBM/MacLC?display_name=tag&label=Download&style=for-the-badge&logo=apple&logoColor=white&color=e8640c"></a>
 </p>
 
-1. 从[最新发布页面](https://github.com/OZBM/MacLC/releases/latest)下载 `maclc-1.8.dmg`（57.7 MB）。
+1. 从[最新发布页面](https://github.com/OZBM/MacLC/releases/latest)下载 `maclc-1.9.dmg`（58.1 MB）。
 2. 打开它，将 **MacLC** 拖入**应用程序**。
 3. 打开 MacLC。首次打开时 macOS 会拦截：点击**完成**，然后打开**系统设置 › 隐私与安全性**，滚动到**安全性**，点击“已阻止使用 MacLC”旁边的**仍要打开**，再用 Touch ID 或密码确认。每个版本只需操作这一次。
 
@@ -223,10 +223,10 @@ MacLC 不附带任何电影、剧集或流媒体源。扩展插件均为第三�
 xattr -dr com.apple.quarantine /Applications/MacLC.app
 ```
 
-核对你下载的文件与发布版本完全一致（预期值见发布页面；1.8 版本为 `aaf25223c9ac1b89c2942b86b4162e7d9bd692f8bffe92625b0ee2060784ffa2`）：
+核对你下载的文件与发布版本完全一致（预期值见发布页面；1.9 版本为 `bcad431f7b0d8886d0bd5fe348c2b946174ee325e86ef3dc8a654ed0d0146ddb`）：
 
 ```bash
-shasum -a 256 ~/Downloads/maclc-1.8.dmg
+shasum -a 256 ~/Downloads/maclc-1.9.dmg
 ```
 
 如果 macOS 提示 MacLC“已损坏，无法打开”，说明下载不完整：请将其删除并重新下载，切勿绕过该提示。
@@ -386,7 +386,7 @@ extras/package/macosx/make-release.sh --samples ~/Movies/maclc-samples
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme/releases-dark.svg">
-  <img src=".github/readme/releases-light.svg" width="100%" alt="时间线：从 2026 年 9 月 22 日的 1.0 到 2026 年 11 月 17 日的 1.8，共十个版本。">
+  <img src=".github/readme/releases-light.svg" width="100%" alt="时间线：从 2026 年 9 月 22 日的 1.0 到 2026 年 11 月 19 日的 1.9，共十一个版本。">
 </picture>
 
 每个版本的更新内容见 [Releases](https://github.com/OZBM/MacLC/releases)。若想获知下一版本的消息，请点击本页顶部的 GitHub **Watch** 按钮，然后选择 **Custom › Releases**。

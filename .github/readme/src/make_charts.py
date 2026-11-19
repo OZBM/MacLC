@@ -126,13 +126,14 @@ def timeline_chart(t):
            ("1.5", date(2026, 11, 1), "Xcode, macOS 27"),
            ("1.6", date(2026, 11, 2), "upscaling, compare"),
            ("1.7", date(2026, 11, 17), "Liquid Glass, add-ons"),
-           ("1.8", date(2026, 11, 17), "stats for nerds, motion")]
+           ("1.8", date(2026, 11, 17), "stats for nerds, motion"),
+           ("1.9", date(2026, 11, 19), "SwiftUI Watch")]
     latest = rel[-1][0]
     W, H = 960, 290
     L, R, Yt = 76, 930, 182
     d0, d1 = date(2026, 9, 20), date(2026, 11, 19)
     X = lambda d: L + (d - d0).days / (d1 - d0).days * (R - L)
-    out = [text(24, 40, "10 releases in 8 weeks", 22, t["ink"], weight=600),
+    out = [text(24, 40, "11 releases in 8 weeks", 22, t["ink"], weight=600),
            text(24, 64, "Every version since the first beta, with what it brought.", 14, t["ink2"])]
     out.append(f'<line x1="{L}" y1="{Yt}" x2="{R}" y2="{Yt}" stroke="{t["track"]}" stroke-width="2"/>')
     for m, lab in ((date(2026, 10, 1), "Oct"), (date(2026, 11, 1), "Nov")):
@@ -143,7 +144,7 @@ def timeline_chart(t):
     # label rows chosen by hand so nothing collides: (row, anchor, dx); row <0 above the axis, >0 below
     slots = {"1.0": (-1, "end", 4), "1.1": (1, "start", -6), "1.1.1": (-2, "start", 4), "1.2": (-1, "middle", 0),
              "1.3": (1, "start", -6), "1.4": (-1, "start", -6), "1.5": (-1, "end", 6), "1.6": (1, "end", 10),
-             "1.7": (-1, "end", 6), "1.8": (1, "end", 10)}
+             "1.7": (-1, "end", 6), "1.8": (1, "end", 10), "1.9": (-2, "end", 6)}
     for v, d, what in rel:
         x = X(d)
         row, anchor, dx = slots[v]
@@ -159,7 +160,7 @@ def timeline_chart(t):
         else:
             out.append(text(lx, base, v, 15, t["ink"], anchor, 600))
             out.append(text(lx, base + 17, what, 12, t["ink2"], anchor))
-    return svg(W, H, "\n".join(out), "Timeline: MacLC 1.0 on 22 September 2026 to 1.8 on 17 November 2026, ten releases (1.7 and 1.8 on the same day).")
+    return svg(W, H, "\n".join(out), "Timeline: MacLC 1.0 on 22 September 2026 to 1.9 on 19 November 2026, eleven releases (1.7 and 1.8 on the same day).")
 
 
 def motion_demo(t):
