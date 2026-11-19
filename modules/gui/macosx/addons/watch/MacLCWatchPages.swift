@@ -238,6 +238,8 @@ struct WatchCatalogPage: View {
                 }
                 .scrollIndicators(.never)
                 .onScrollPhaseChange { _, phase in model.scrolling.setPage(phase.isScrolling) }
+                // Cleared while still moving: the page must not stay "scrolling".
+                .onDisappear { model.scrolling.setPage(false) }
             }
             .opacity(failed ? 0 : 1)
             .allowsHitTesting(!failed)
@@ -331,6 +333,7 @@ struct WatchCollectionPage: View {
             }
             .scrollIndicators(.never)
             .onScrollPhaseChange { _, phase in model.scrolling.setPage(phase.isScrolling) }
+            .onDisappear { model.scrolling.setPage(false) }
         }
         .overlay {
             if model.items?.isEmpty == true {

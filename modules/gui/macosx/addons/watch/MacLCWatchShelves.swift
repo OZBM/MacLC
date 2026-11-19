@@ -338,7 +338,7 @@ struct WatchShelf<Header: View, Cells: View>: View {
     @State private var geometry = ShelfGeometry()
     @State private var paging = PagingState()
     /// The leading inset the snapping counts from (changes with the sidebar).
-    @State private var snapInset: CGFloat = 0
+    @State private var snapInset: CGFloat = sideInset
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// What a page step snaps to (MacLCWatchBrowse.m itemPitchForSectionID:).

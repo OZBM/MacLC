@@ -531,6 +531,8 @@ struct WatchDetailPage: View {
             // The picture goes under the toolbar, as on the Apple TV app.
             .ignoresSafeArea(.container, edges: .top)
             .onScrollPhaseChange { _, phase in model.scrolling.setPage(phase.isScrolling) }
+            // Cleared while still moving: the page must not stay "scrolling".
+            .onDisappear { model.scrolling.setPage(false) }
             .onMoveCommand { direction in
                 // Along the episodes or More Like This; Tab goes between them.
                 guard let current = focus else { return }
@@ -577,7 +579,8 @@ struct WatchDetailPage: View {
                 // the episodes, one per season, each starting at its first.
                 let videos = model.episodes
                 let count = videos.isEmpty && !model.metaAnswered ? 4 : videos.count
-                WatchShelf(id: "episodes", itemWidth: EpisodeCard.size.width, spacing: itemSpacing,
+                let shelf = model.metaAnswered ? "season \(model.season)" : "loading"
+                WatchShelf(id: shelf, itemWidth: EpisodeCard.size.width, spacing: itemSpacing,
                            scrolling: model.scrolling) { _, _ in
                     EmptyView()
                 } cells: { reveal in
@@ -591,7 +594,7 @@ struct WatchDetailPage: View {
                             }
                     }
                 }
-                .id(model.metaAnswered ? "season \(model.season)" : "loading")
+                .id(shelf)
                 // 12 pt under the pop-up, 36 under the cards (headroom included).
                 .padding(.top, 12)
                 .padding(.bottom, sectionSpacing - hoverHeadroom)
