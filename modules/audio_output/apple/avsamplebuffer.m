@@ -778,6 +778,7 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
     bool have_independent = false;
     bool have_eac3 = false;
     unsigned num_dep_sub = 0;
+    unsigned dep_channels = 0;
     uint16_t chan_loc = 0;
     size_t offset = 0;
 
@@ -813,6 +814,7 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
             else if (frame.strmtyp == 1)
             {
                 ++num_dep_sub;
+                dep_channels += frame.channels;
                 if (frame.has_chanmap)
                 {
                     /* The 16-bit channel map is MSB-first; the dec3 chan_loc
@@ -849,14 +851,28 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
     info.num_dep_sub = num_dep_sub;
     info.chan_loc = chan_loc;
     if (num_dep_sub > 0)
-        info.channels = 8;
+    {
+        info.channels += dep_channels;
+        if (info.channels > 8)
+            info.channels = 8;
+    }
 
     if (info.rate == 0 || info.frames_per_packet == 0
      || info.channels < 1 || info.channels > 8)
         return NO;
 
+    /* Use the whole access unit (bed + dependent object substream) when
+     * deriving the cookie's maximum data rate; the first frame alone
+     * under-reports JOC streams. */
+    uint64_t max_bitrate = 0;
+    if (info.frames_per_packet != 0)
+        max_bitrate = (uint64_t) block->i_buffer * 8 * info.rate
+                    / (1536u * info.frames_per_packet);
+    if (max_bitrate > UINT_MAX)
+        max_bitrate = UINT_MAX;
+
     uint8_t dec3[64];
-    const size_t dec3_size = eac3_BuildDec3(&info, 0,
+    const size_t dec3_size = eac3_BuildDec3(&info, (unsigned int) max_bitrate,
                                             dec3, sizeof(dec3));
     if (dec3_size == 0)
         return NO;
@@ -982,24 +998,27 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
     else
         aout_DeviceReport(_aout, "0");
 
-    AudioObjectPropertyAddress devices = {
-        .mSelector = kAudioHardwarePropertyDevices,
-        .mScope = kAudioObjectPropertyScopeGlobal,
-        .mElement = kAudioObjectPropertyElementMain,
-    };
-    if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, &devices,
-                                       DeviceListChanged,
-                                       (__bridge void *) self) == noErr)
-        _listeningDevices = YES;
+    if (!_listeningDevices)
+    {
+        AudioObjectPropertyAddress devices = {
+            .mSelector = kAudioHardwarePropertyDevices,
+            .mScope = kAudioObjectPropertyScopeGlobal,
+            .mElement = kAudioObjectPropertyElementMain,
+        };
+        if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, &devices,
+                                           DeviceListChanged,
+                                           (__bridge void *) self) == noErr)
+            _listeningDevices = YES;
 
-    AudioObjectPropertyAddress defdev = {
-        .mSelector = kAudioHardwarePropertyDefaultOutputDevice,
-        .mScope = kAudioObjectPropertyScopeGlobal,
-        .mElement = kAudioObjectPropertyElementMain,
-    };
-    AudioObjectAddPropertyListener(kAudioObjectSystemObject, &defdev,
-                                   DefaultDeviceChanged,
-                                   (__bridge void *) self);
+        AudioObjectPropertyAddress defdev = {
+            .mSelector = kAudioHardwarePropertyDefaultOutputDevice,
+            .mScope = kAudioObjectPropertyScopeGlobal,
+            .mElement = kAudioObjectPropertyElementMain,
+        };
+        AudioObjectAddPropertyListener(kAudioObjectSystemObject, &defdev,
+                                       DefaultDeviceChanged,
+                                       (__bridge void *) self);
+    }
 #endif
 
 #if !TARGET_OS_WATCH
@@ -1206,6 +1225,9 @@ customBlock_Free(void *refcon, void *doomedMemoryBlock, size_t sizeInBytes)
 
     return YES;
 error:
+#if TARGET_OS_OSX
+    [self stopDeviceListener];
+#endif
     if (_fmtDesc != NULL)
     {
         CFRelease(_fmtDesc);

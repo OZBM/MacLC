@@ -319,6 +319,7 @@ channel_layout_MapSpatialFromVLC(audio_output_t *p_aout,
             return VLC_ENOMEM;
 
         inlayout->mChannelLayoutTag = tag;
+        inlayout->mChannelBitmap = 0;
         inlayout->mNumberChannelDescriptions = 0;
         *inlayoutp = inlayout;
         *inlayout_size = sizeof(*inlayout);

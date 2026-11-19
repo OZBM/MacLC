@@ -48,6 +48,8 @@ The `dec3` bitstream construction follows published E-AC-3 (ETSI TS 102 366)
 and Dolby specifications; no third-party source code is copied. The Atmos
 priming helper generates its own silent E-AC-3 JOC stream and uses public
 AVFoundation APIs; it was observed to work on macOS 27.2 (26B123) with
-AirPods 3. No documented API exists for registering the system decoder.
+AirPods 3. The player and its small temporary asset are kept alive for the
+process lifetime because AVURLAsset loads asynchronously. No documented API
+exists for registering the system decoder.
 
 Dolby, Dolby Atmos and Dolby Digital Plus are trademarks of Dolby Laboratories.

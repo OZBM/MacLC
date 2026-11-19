@@ -33,7 +33,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <unistd.h> /* getpid */
 
 /* The silent stream is generated here rather than shipped as an asset. Every
  * bit comes from ETSI TS 102 366 (E-AC-3) and TS 103 420 (object audio); the
@@ -227,6 +227,10 @@ atmos_generate_silent_stream(NSMutableData *out)
 }
 
 static dispatch_once_t s_prime_once;
+/* Keep the player and its temporary asset alive for the process lifetime.
+ * AVURLAsset loads tracks asynchronously; releasing the player and unlinking
+ * the file at output creation could remove it before registration completes. */
+static AVPlayer *s_primePlayer;
 
 void
 atmos_prime_Begin(void)
@@ -242,15 +246,15 @@ atmos_prime_Begin(void)
             return;
 
         /* AVPlayer registers the process's Atmos decoder as a side effect of
-         * creating an item. Nothing has to play, and the registration holds
-         * after the player is gone. Earlier versions held the player for
-         * 300 ms, but that delayed output creation and caused a quit hang;
-         * registration appears to happen synchronously on the tested macOS
-         * version (27.2, 26B123, AirPods 3). */
-        AVPlayer *player = [[AVPlayer alloc] initWithURL:[NSURL fileURLWithPath:path]];
-        player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
-
-        unlink(path.fileSystemRepresentation);
+         * creating an item. Nothing has to play. Keep both the player and the
+         * generated file alive for the process lifetime: AVURLAsset loads
+         * asynchronously, and a previous version that released the player and
+         * unlinked the file immediately caused a quit hang (the 300 ms hold
+         * that avoided it delayed output creation and is not used here).
+         * Observed working on macOS 27.2 (26B123) with AirPods 3; no documented
+         * API exists for this registration. */
+        s_primePlayer = [[AVPlayer alloc] initWithURL:[NSURL fileURLWithPath:path]];
+        s_primePlayer.actionAtItemEnd = AVPlayerActionAtItemEndNone;
     });
 }
 

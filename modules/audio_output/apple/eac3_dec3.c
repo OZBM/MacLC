@@ -150,7 +150,8 @@ eac3_ParseFrame(const uint8_t *data, size_t size, eac3_info_t *info)
         static const unsigned rates[] = { 48000, 44100, 32000 };
 
         info->is_ac3 = true;
-        info->rate = rates[fscod];
+        /* AC-3 bsid 9/10 halves/quarters the sample rate (ETSI TS 102 366). */
+        info->rate = rates[fscod] >> (bsid > 8 ? bsid - 8 : 0);
         info->channels = (acmod == 0 || acmod == 2 ? 2u :
                           acmod == 1 ? 1u :
                           acmod == 3 || acmod == 4 ? 3u :
