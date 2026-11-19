@@ -285,6 +285,16 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
     if (!item) {
         return;
     }
+    /* The same page in SwiftUI (MacLCWatchDetailPage.swift). */
+    if (MacLCWatchBrowseHostController.isEnabled) {
+        [self pushViewController:[[MacLCWatchDetailHostController alloc] initWithItem:item
+                                                                         showStreams:showStreams
+                                                                             section:self
+                                                                            localize:^NSString *(NSString *string) {
+            return _NS(string.UTF8String);
+        }]];
+        return;
+    }
     MacLCWatchDetailViewController *detailVC = [[MacLCWatchDetailViewController alloc] initWithItem:item showStreams:showStreams];
     detailVC.section = self;
     [self pushViewController:detailVC];
@@ -293,7 +303,8 @@ static NSString *ErrorMessageForError(NSError * _Nullable error, NSString *__unu
 - (BOOL)showsPictureUnderToolbar
 {
     NSViewController * const top = self.topViewController;
-    if ([top isKindOfClass:MacLCWatchDetailViewController.class])
+    if ([top isKindOfClass:MacLCWatchDetailViewController.class] ||
+        [top isKindOfClass:MacLCWatchDetailHostController.class])
         return YES;
     if (top != self.rootViewController)
         return NO;

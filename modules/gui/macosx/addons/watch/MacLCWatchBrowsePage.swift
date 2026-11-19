@@ -194,6 +194,7 @@ final class WatchBrowseModel {
     @ObservationIgnored private var resolveRequests: [MacLCAddonRequest] = []
     @ObservationIgnored private var warmedURLs = Set<URL>()
     @ObservationIgnored private var hasFiredFeaturedLoadedHandler = false
+    @ObservationIgnored private var debugPageOpened = false
     @ObservationIgnored private var servicesSheet: MacLCWatchServicesSheetController?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     /// Pull to refresh, on the page's scroll view (WatchRefreshHook).
@@ -357,6 +358,7 @@ final class WatchBrowseModel {
             }
         }
         rebuildRows()
+        openDebugPageIfAsked()
     }
 
     /// Every genre shelf loads with the page rather than as it nears the
@@ -808,14 +810,30 @@ final class WatchBrowseModel {
         section?.showDetail(for: item, showStreams: showStreams)
     }
 
+    /// See All and the collection pages in SwiftUI (MacLCWatchPages.swift).
     func seeAll(_ catalog: MacLCAddonTitleCatalog, genre: String?, title: String) {
         guard let section else { return }
-        section.push(MacLCWatchCatalogViewController(section: section, catalog: catalog, genre: genre, title: title))
+        section.push(WatchCatalogModel.controller(section: section, catalog: catalog, genre: genre, title: title,
+                                                  localize: localize, errorMessage: errorMessage))
     }
 
     func open(_ collection: MacLCWatchCollection) {
         guard let section else { return }
-        section.push(MacLCWatchCollectionViewController(section: section, collection: collection))
+        section.push(WatchCollectionModel.controller(section: section, collection: collection, localize: localize))
+    }
+
+    /// Developer hook for headless checks: MACLC_DEBUG_WATCH_PAGE=seeall or
+    /// collection pushes the first See All or collection page once a catalog
+    /// has loaded.
+    private func openDebugPageIfAsked() {
+        guard !debugPageOpened, let page = ProcessInfo.processInfo.environment["MACLC_DEBUG_WATCH_PAGE"] else { return }
+        if page == "seeall", let row = rows.first(where: { $0.seeAll != nil && $0.items?.isEmpty == false }) {
+            debugPageOpened = true
+            row.seeAll?()
+        } else if page == "collection", let collection = rows.first(where: { $0.kind == .edit })?.collections.first {
+            debugPageOpened = true
+            open(collection)
+        }
     }
 
     func openGenre(_ genre: String) {
@@ -991,6 +1009,8 @@ final class WatchBrowseModel {
     }
 }
 
+extension WatchBrowseModel: WatchPageModel {}
+
 /// A collection's titles once resolved (nil before), for its cards.
 @Observable
 final class WatchCollectionState {
@@ -1035,7 +1055,12 @@ struct WatchBrowsePage: View {
                     .id(model.searchSerial)
             }
             if let state = model.emptyState {
-                WatchEmptyStateView(state: state, model: model)
+                WatchEmptyStateView(state: state) { action in
+                    switch action {
+                    case .openAddons: model.openAddons()
+                    case .retry: model.retry()
+                    }
+                }
             }
         }
         .onGeometryChange(for: PageMetrics.self) { proxy in
@@ -1120,10 +1145,10 @@ private struct WatchRefreshHook: NSViewRepresentable {
 /// MacLCEmptyStateView: centred, at most 420 wide: the symbol (48 pt, light,
 /// tertiary), 16 pt, the title (title2, semibold), 6 pt, the message (body,
 /// secondary), 20 pt, the button (glass and prominent when recommended).
-/// VoiceOver: a group "title. message".
-private struct WatchEmptyStateView: View {
+/// VoiceOver: a group "title. message". The button calls perform.
+struct WatchEmptyStateView: View {
     let state: WatchEmptyState
-    let model: WatchBrowseModel
+    let perform: (WatchEmptyState.Action) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1159,82 +1184,34 @@ private struct WatchEmptyStateView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel([state.title, state.message ?? ""].filter { !$0.isEmpty }.joined(separator: ". "))
     }
-
-    private func perform(_ action: WatchEmptyState.Action) {
-        switch action {
-        case .openAddons: model.openAddons()
-        case .retry: model.retry()
-        }
-    }
 }
 
 // MARK: - Search results
 
-/// Results headed per catalog, each a poster grid: as many columns as fit at
-/// 150-200 wide, 20 apart, 32 between rows (MacLCWatchLayout
-/// posterGridSectionWithEnvironment:hasHeader:YES).
+/// Results headed per catalog, each a poster grid (WatchPosterGrid,
+/// MacLCWatchLayout posterGridSectionWithEnvironment:hasHeader:YES).
 private struct WatchSearchResults: View {
     let groups: [WatchSearchGroup]
     let model: WatchBrowseModel
     var focus: FocusState<WatchFocus?>.Binding
 
-    @State private var width: CGFloat = 800
-
-    private var grid: (columns: Int, itemWidth: CGFloat) {
-        let available = max(width - 2 * sideInset, 150)
-        var columns = max(1, Int((available + itemSpacing) / (150 + itemSpacing)))
-        var itemWidth = (available - CGFloat(columns - 1) * itemSpacing) / CGFloat(columns)
-        while itemWidth > 200 {
-            columns += 1
-            itemWidth = (available - CGFloat(columns - 1) * itemSpacing) / CGFloat(columns)
-        }
-        return (columns, itemWidth.rounded(.down))
-    }
-
     var body: some View {
-        let grid = self.grid
-        ScrollView(.vertical) {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(groups) { group in
-                    ShelfHeader(title: group.title, subtitle: group.subtitle, topic: nil, filter: nil,
-                                model: model, seeAll: nil, paging: nil, page: { _ in }, chooseFilter: { _ in })
-                        .padding(.horizontal, sideInset)
-                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(grid.itemWidth), spacing: itemSpacing,
-                                                                 alignment: .top), count: grid.columns),
-                              alignment: .leading, spacing: 32) {
-                        ForEach(Array(group.items.enumerated()), id: \.offset) { index, item in
-                            PosterCell(item: item, rank: 0, width: grid.itemWidth, model: model)
-                                .watchCell(WatchFocus(row: "search_\(group.id)", index: index), focus: focus) {
-                                    model.open(item)
-                                }
-                        }
+        GeometryReader { proxy in
+            ScrollView(.vertical) {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(groups) { group in
+                        ShelfHeader(title: group.title, subtitle: group.subtitle, topic: nil, filter: nil,
+                                    model: model, seeAll: nil, paging: nil, page: { _ in }, chooseFilter: { _ in })
+                            .padding(.horizontal, sideInset)
+                        WatchPosterGrid(items: group.items, row: "search_\(group.id)", width: proxy.size.width,
+                                        model: model, focus: focus)
                     }
-                    .padding(.top, 16)
-                    .padding(.horizontal, sideInset)
-                    .padding(.bottom, sectionSpacing)
                 }
             }
+            .scrollIndicators(.never)
+            .onScrollPhaseChange { _, phase in model.scrolling.setPage(phase.isScrolling) }
         }
-        .scrollIndicators(.never)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-        .onScrollPhaseChange { _, phase in model.scrolling.setPage(phase.isScrolling) }
         // Cleared while still moving: the page must not stay "scrolling".
         .onDisappear { model.scrolling.setPage(false) }
-        .onMoveCommand { direction in
-            guard let current = focus.wrappedValue, current.row.hasPrefix("search_"),
-                  let group = groups.first(where: { "search_\($0.id)" == current.row }) else { return }
-            let step: Int
-            switch direction {
-            case .left: step = -1
-            case .right: step = 1
-            case .up: step = -grid.columns
-            case .down: step = grid.columns
-            @unknown default: step = 0
-            }
-            let index = current.index + step
-            if group.items.indices.contains(index) {
-                focus.wrappedValue = WatchFocus(row: current.row, index: index)
-            }
-        }
     }
 }

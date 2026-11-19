@@ -168,6 +168,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// pages of the catalog appended as the last row comes into view (skip =
 /// items so far) while the add-on keeps answering with new titles (stop on
 /// an empty page or a page of titles already shown).
+/// With MACLC_SWIFTUI_WATCH=1 the SwiftUI browse page pushes the SwiftUI
+/// version of this page and of the collection page instead
+/// (MacLCWatchPages.swift).
 @interface MacLCWatchCatalogViewController : NSViewController
 - (instancetype)initWithSection:(MacLCWatchSectionViewController *)section
                         catalog:(MacLCAddonTitleCatalog *)catalog
@@ -221,11 +224,24 @@ NS_ASSUME_NONNULL_BEGIN
 /// Streams: Play (or an episode card) opens "Choose a Version", the sheet
 /// MacLCStreamPickerController (addons/watch/MacLCStreamPicker.h) on the
 /// window, for the item and the episode. The old popover is gone.
+/// With MACLC_SWIFTUI_WATCH=1 showDetailForItem:showStreams: pushes the
+/// SwiftUI version instead (MacLCWatchDetailHostController,
+/// MacLCWatchDetailPage.swift).
 @interface MacLCWatchDetailViewController : NSViewController
 - (instancetype)initWithItem:(MacLCAddonItem *)item showStreams:(BOOL)showStreams;
 @property (readonly) MacLCAddonItem *item;
 /// The section it is pushed on; "More Like This" pushes the next page there.
 @property (nonatomic, weak, nullable) MacLCWatchSectionViewController *section;
 @end
+
+/// "1 h 41 min" from what add-ons write ("1h 41m", "101 min", "2h"); any
+/// other text unchanged. The title page's details line and About grid.
+NSString *MacLCFormatRuntime(NSString * _Nullable raw);
+
+/// Plays a title's trailer (the meta's YouTube id or address), resolved as
+/// the YouTube section does and named "<name> — Trailer"; when it cannot, an
+/// alert on window. done runs once it played or failed.
+void MacLCWatchPlayTrailer(NSString *trailer, NSString *name, NSWindow * _Nullable window,
+                           void (^ _Nullable done)(void));
 
 NS_ASSUME_NONNULL_END

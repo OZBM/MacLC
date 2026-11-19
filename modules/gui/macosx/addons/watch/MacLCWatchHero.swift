@@ -197,6 +197,27 @@ private nonisolated struct BottomEdgeClip: Shape {
     }
 }
 
+/// The scrims of the carousel and the title page's header. Top: window
+/// background 55 % → 0 over 88 pt under the toolbar; leading: black 45 % → 0
+/// over 55 % of the width; bottom: black 0 → 70 % over the lower 60 %. White
+/// text reads on any picture.
+struct WatchPictureScrims: View {
+    var body: some View {
+        ZStack(alignment: .top) {
+            LinearGradient(colors: [.black.opacity(0.45), .clear], startPoint: .leading,
+                           endPoint: UnitPoint(x: 0.55, y: 0.5))
+            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: UnitPoint(x: 0.5, y: 0.4),
+                           endPoint: .bottom)
+            LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.55),
+                                    Color(nsColor: .windowBackgroundColor).opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 88)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 /// The view (MacLCWatchHeroView's contract): the picture aspect-filled, the
 /// scrims, bottom-leading the eyebrow, logo or title, facts, description and
 /// Play / Details; the dots bottom-centre, the chevrons on hover.
@@ -213,7 +234,7 @@ struct WatchHeroView: View {
         let item = hero.current
         ZStack(alignment: .bottomLeading) {
             picture
-            scrims
+            WatchPictureScrims()
             if let item {
                 text(item)
                     .id(hero.index)
@@ -274,24 +295,6 @@ struct WatchHeroView: View {
                 .scaleEffect(offset < 0 && height > 0 ? 1 + -offset / height : 1, anchor: .bottom)
         }
         .clipShape(BottomEdgeClip())
-        .accessibilityHidden(true)
-    }
-
-    /// Top: window background 55 % → 0 over 88 pt under the toolbar; leading:
-    /// black 45 % → 0 over 55 % of the width; bottom: black 0 → 70 % over the
-    /// lower 60 %. White text reads on any picture.
-    private var scrims: some View {
-        ZStack(alignment: .top) {
-            LinearGradient(colors: [.black.opacity(0.45), .clear], startPoint: .leading,
-                           endPoint: UnitPoint(x: 0.55, y: 0.5))
-            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: UnitPoint(x: 0.5, y: 0.4),
-                           endPoint: .bottom)
-            LinearGradient(colors: [Color(nsColor: .windowBackgroundColor).opacity(0.55),
-                                    Color(nsColor: .windowBackgroundColor).opacity(0)],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 88)
-        }
-        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 

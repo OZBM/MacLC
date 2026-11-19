@@ -343,27 +343,33 @@ struct CollectionCard: View {
         .accessibilityAction { model.open(collection) }
     }
 
-    /// "16 Films", "12 Shows", "14 Titles".
     private var countText: String {
-        let format: String
-        switch collection.mediaType {
-        case "movie": format = "%lu Films"
-        case "series": format = "%lu Shows"
-        default: format = "%lu Titles"
-        }
-        return String(format: model.localize(format), collection.entries.count)
+        collectionCountText(collection, localize: model.localize)
     }
 }
 
-/// A poster of the fan: 82 × 123, corner radius 6, a soft shadow;
-/// quaternary fill until its collection resolves.
-private struct FanPoster: View {
+/// "16 Films", "12 Shows", "14 Titles".
+func collectionCountText(_ collection: MacLCWatchCollection, localize: (String) -> String) -> String {
+    let format: String
+    switch collection.mediaType {
+    case "movie": format = "%lu Films"
+    case "series": format = "%lu Shows"
+    default: format = "%lu Titles"
+    }
+    return String(format: localize(format), collection.entries.count)
+}
+
+/// A poster of a fan: 82 × 123 on the card (110 × 165 in the collection
+/// page's header), corner radius 6, a soft shadow; quaternary fill until its
+/// collection resolves.
+struct FanPoster: View {
     let item: MacLCAddonItem?
+    var size = CGSize(width: 82, height: 123)
+    var shadowRadius: CGFloat = 8
+    var shadowY: CGFloat = 3
 
     @State private var artwork = PosterArtwork()
     @Environment(\.displayScale) private var displayScale
-
-    private static let size = CGSize(width: 82, height: 123)
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -375,11 +381,11 @@ private struct FanPoster: View {
                     .aspectRatio(contentMode: .fill)
             }
         }
-        .frame(width: Self.size.width, height: Self.size.height)
+        .frame(width: size.width, height: size.height)
         .clipShape(shape)
-        .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
-        .onAppear { artwork.show(item?.posterURL, size: Self.size, scale: displayScale) }
-        .onChange(of: item?.posterURL) { _, url in artwork.show(url, size: Self.size, scale: displayScale) }
+        .shadow(color: .black.opacity(0.25), radius: shadowRadius, y: shadowY)
+        .onAppear { artwork.show(item?.posterURL, size: size, scale: displayScale) }
+        .onChange(of: item?.posterURL) { _, url in artwork.show(url, size: size, scale: displayScale) }
         .onDisappear { artwork.stop() }
     }
 }

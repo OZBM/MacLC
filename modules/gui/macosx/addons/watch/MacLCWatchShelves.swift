@@ -21,8 +21,9 @@
 /* The horizontal rows of the SwiftUI Watch page (MacLCWatchBrowsePage.swift):
  * one row view for every kind (posters, Top 10, Continue Watching, The Edit,
  * genre tiles) with MacLCWatchShelfHeaderView's header, paging and keyboard;
- * the poster cell (MacLCWatchPosterItem, with MacLCWatchLibraryViews' marks);
- * the per-title marks; the actions menu (MacLCWatchActions) in SwiftUI. */
+ * the shelf under them, which the title page's shelves use too; the poster
+ * cell (MacLCWatchPosterItem, with MacLCWatchLibraryViews' marks); the
+ * per-title marks; the actions menu (MacLCWatchActions) in SwiftUI. */
 
 import AppKit
 import Observation
@@ -36,6 +37,19 @@ let sectionSpacing: CGFloat = 36
 /// Room above and below the items for a hovered one to grow into.
 let hoverHeadroom: CGFloat = 12
 let rankColumnWidth: CGFloat = 52
+
+/// What cells and headers need from the page they are on: the browse page
+/// (WatchBrowseModel) and the pages it pushes (MacLCWatchPages.swift,
+/// MacLCWatchDetailPage.swift).
+protocol WatchPageModel: AnyObject {
+    /// vlc_gettext, from Objective-C.
+    var localize: (String) -> String { get }
+    /// Whether a scroll view of the page moves (no hover lift then).
+    var scrolling: ScrollActivity { get }
+    var marks: WatchMarks { get }
+    /// Pushes the title page on the section.
+    func open(_ item: MacLCAddonItem, showStreams: Bool)
+}
 
 // MARK: - Row model
 
@@ -220,6 +234,22 @@ private final class ShelfGeometry {
     var leadingInset: CGFloat = sideInset
 }
 
+/// A flick ends on the item edge nearest where it would stop. SwiftUI also
+/// asks on every layout change (no velocity), and at rest it proposes x = the
+/// leading inset, not the content offset (measured, macOS 27.2): .viewAligned
+/// rounded that to the next item and shelves at rest moved 60 pt, their first
+/// item under the floating sidebar. So: flicks only, counted from rest.
+private nonisolated struct ShelfSnap: ScrollTargetBehavior {
+    let pitch: CGFloat
+    let leadingInset: CGFloat
+
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        guard context.velocity.dx != 0 else { return }
+        let scrolled = target.rect.minX - leadingInset
+        target.rect.origin.x = (scrolled / pitch).rounded() * pitch + leadingInset
+    }
+}
+
 /// What a shelf's paging needs from its scroll geometry: containerSize
 /// already leaves out the insets (the 40 pt margins and, under the floating
 /// sidebar, its width), which contentOffset counts from.
@@ -235,60 +265,26 @@ struct PagingState: Equatable {
     var canForward = false
 }
 
-/// A horizontal row: MacLCWatchShelfHeaderView then the items, scrolling
-/// without scroller, a flick settling on an item's leading edge.
+/// A horizontal row: MacLCWatchShelfHeaderView then the items (WatchShelf).
 struct WatchShelfRow: View {
     let row: WatchRow
     let model: WatchBrowseModel
     var focus: FocusState<WatchFocus?>.Binding
 
-    @State private var position = ScrollPosition(edge: .leading)
-    @State private var geometry = ShelfGeometry()
-    @State private var paging = PagingState()
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        WatchShelf(id: row.id, itemWidth: row.kind.itemWidth, spacing: row.kind.spacing,
+                   scrolling: model.scrolling, scrolled: { row.scrolled = $0 }) { paging, page in
             ShelfHeader(title: row.title, subtitle: row.subtitle, topic: row.explainerTopic, filter: row.filter,
                         model: model, seeAll: row.seeAll, paging: paging, page: page,
                         chooseFilter: { model.chooseFilter($0, of: row) })
                 .padding(.horizontal, sideInset)
-            ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: row.kind.spacing) {
-                    cells
-                }
-                .scrollTargetLayout()
-                .padding(.vertical, hoverHeadroom)
-            }
-            .scrollIndicators(.never)
-            .contentMargins(.horizontal, sideInset, for: .scrollContent)
-            // A flick settles on an item's leading edge, never between two.
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition($position)
-            .onScrollPhaseChange { _, phase in
-                model.scrolling.setShelf(row.id, scrolling: phase.isScrolling)
-            }
-            .onDisappear { model.scrolling.setShelf(row.id, scrolling: false) }
-            .onScrollGeometryChange(for: ShelfScroll.self) { scroll in
-                ShelfScroll(offset: scroll.contentOffset.x, leadingInset: scroll.contentInsets.leading,
-                            contentWidth: scroll.contentSize.width, visibleWidth: scroll.containerSize.width)
-            } action: { _, value in
-                geometry.scrolled = value.offset + value.leadingInset
-                geometry.maxScroll = max(0, value.contentWidth - value.visibleWidth)
-                geometry.visibleWidth = value.visibleWidth
-                geometry.leadingInset = value.leadingInset
-                row.scrolled = geometry.scrolled
-                let state = PagingState(canBack: geometry.scrolled > 1,
-                                        canForward: geometry.scrolled < geometry.maxScroll - 1)
-                if state != paging {
-                    paging = state
-                }
-            }
+        } cells: { reveal in
+            cells(reveal)
         }
         .padding(.bottom, sectionSpacing - hoverHeadroom)
     }
 
-    @ViewBuilder private var cells: some View {
+    @ViewBuilder private func cells(_ reveal: @escaping (Int) -> Void) -> some View {
         switch row.kind {
         case .posters, .ranked:
             // One ForEach for placeholders and titles: placeholder i becomes
@@ -322,12 +318,76 @@ struct WatchShelfRow: View {
             }
         }
     }
+}
+
+/// Items of one width scrolling sideways without scroller, a flick settling
+/// on an item's leading edge, hover headroom above and below; the header
+/// (EmptyView for none) gets the paging state and the page action, cells
+/// get reveal(index), called when the item at index takes the focus.
+struct WatchShelf<Header: View, Cells: View>: View {
+    let id: String
+    let itemWidth: CGFloat
+    let spacing: CGFloat
+    let scrolling: ScrollActivity
+    /// How far it is scrolled, on every scroll frame.
+    var scrolled: (CGFloat) -> Void = { _ in }
+    @ViewBuilder let header: (PagingState, @escaping (Int) -> Void) -> Header
+    @ViewBuilder let cells: (@escaping (Int) -> Void) -> Cells
+
+    @State private var position = ScrollPosition(edge: .leading)
+    @State private var geometry = ShelfGeometry()
+    @State private var paging = PagingState()
+    /// The leading inset the snapping counts from (changes with the sidebar).
+    @State private var snapInset: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// What a page step snaps to (MacLCWatchBrowse.m itemPitchForSectionID:).
+    private var pitch: CGFloat { itemWidth + spacing }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header(paging, page)
+            ScrollView(.horizontal) {
+                LazyHStack(alignment: .top, spacing: spacing) {
+                    cells(reveal)
+                }
+                .scrollTargetLayout()
+                .padding(.vertical, hoverHeadroom)
+            }
+            .scrollIndicators(.never)
+            .contentMargins(.horizontal, sideInset, for: .scrollContent)
+            // A flick settles on an item's leading edge, never between two.
+            .scrollTargetBehavior(ShelfSnap(pitch: pitch, leadingInset: snapInset))
+            .scrollPosition($position)
+            .onScrollPhaseChange { _, phase in
+                scrolling.setShelf(id, scrolling: phase.isScrolling)
+            }
+            .onDisappear { scrolling.setShelf(id, scrolling: false) }
+            .onScrollGeometryChange(for: ShelfScroll.self) { scroll in
+                ShelfScroll(offset: scroll.contentOffset.x, leadingInset: scroll.contentInsets.leading,
+                            contentWidth: scroll.contentSize.width, visibleWidth: scroll.containerSize.width)
+            } action: { _, value in
+                geometry.scrolled = value.offset + value.leadingInset
+                geometry.maxScroll = max(0, value.contentWidth - value.visibleWidth)
+                geometry.visibleWidth = value.visibleWidth
+                geometry.leadingInset = value.leadingInset
+                if value.leadingInset != snapInset {
+                    snapInset = value.leadingInset
+                }
+                scrolled(geometry.scrolled)
+                let state = PagingState(canBack: geometry.scrolled > 1,
+                                        canForward: geometry.scrolled < geometry.maxScroll - 1)
+                if state != paging {
+                    paging = state
+                }
+            }
+        }
+    }
 
     /// A page is the visible width less one item, so the last one stays partly
     /// in view; it ends on an item's leading edge (MacLCWatchShelfScrolling
     /// scrollShelf:direction:itemPitch:).
     private func page(_ direction: Int) {
-        let pitch = row.kind.pitch
         // AppKit's visible width counts the 40 pt margins.
         let step = max(pitch, geometry.visibleWidth + 2 * sideInset - pitch)
         var target = geometry.scrolled + CGFloat(direction) * step
@@ -337,8 +397,8 @@ struct WatchShelfRow: View {
 
     /// The arrow keys moved the focus to an item: bring it fully into view.
     private func reveal(_ index: Int) {
-        let start = CGFloat(index) * row.kind.pitch
-        let end = start + row.kind.itemWidth
+        let start = CGFloat(index) * pitch
+        let end = start + itemWidth
         if start < geometry.scrolled {
             scroll(to: start, animation: .easeOut(duration: 0.2))
         } else if end > geometry.scrolled + geometry.visibleWidth {
@@ -408,7 +468,7 @@ struct ShelfHeader: View {
     let subtitle: String?
     let topic: MacLCExplainerTopic?
     let filter: WatchRowFilter?
-    let model: WatchBrowseModel
+    let model: any WatchPageModel
     let seeAll: (() -> Void)?
     /// nil: no paging buttons (search results).
     let paging: PagingState?
@@ -593,7 +653,7 @@ struct PosterCell: View {
     /// 0: unranked; < 0: placeholder in a ranked shelf (rank column empty).
     let rank: Int
     let width: CGFloat
-    let model: WatchBrowseModel
+    let model: any WatchPageModel
     var onFocus: () -> Void = {}
 
     @State private var artwork = PosterArtwork()
@@ -636,7 +696,7 @@ struct PosterCell: View {
         .onHover { hovered = $0 }
         .pointerStyle(.link)
         .onTapGesture {
-            if let item { model.open(item) }
+            if let item { model.open(item, showStreams: false) }
         }
         .onAppear { artwork.show(item?.posterURL, size: size, scale: displayScale) }
         .onChange(of: item?.posterURL) { _, url in artwork.show(url, size: size, scale: displayScale) }
@@ -651,7 +711,7 @@ struct PosterCell: View {
         .accessibilityValue(marks.map { accessibilityValue($0) } ?? "")
         .accessibilityAddTraits(.isButton)
         .accessibilityAction {
-            if let item { model.open(item) }
+            if let item { model.open(item, showStreams: false) }
         }
         // Loading placeholders are not buttons yet.
         .accessibilityHidden(item == nil)
@@ -788,7 +848,7 @@ struct WatchedBadge: View {
 private struct FavoriteHeart: View {
     let item: MacLCAddonItem
     let favorite: Bool
-    let model: WatchBrowseModel
+    let model: any WatchPageModel
 
     var body: some View {
         Button {
@@ -810,13 +870,15 @@ private struct FavoriteHeart: View {
 
 /// MacLCWatchActions menuForItem:video:inHistory:NO as a SwiftUI context
 /// menu, built when it opens (so it shows the title's current state);
-/// details adds "Show Details" after a separator, as the resume cards do.
+/// video: an episode's menu; details adds "Show Details" after a separator,
+/// as the resume cards do.
 struct WatchActionsMenu: View {
     let item: MacLCAddonItem
+    var video: MacLCAddonVideo?
     var details: (title: String, action: () -> Void)?
 
     var body: some View {
-        let menu = MacLCWatchActions.menu(for: item, video: nil, inHistory: false)
+        let menu = MacLCWatchActions.menu(for: item, video: video, inHistory: false)
         ForEach(Array(menu.items.enumerated()), id: \.offset) { _, entry in
             if entry.isSeparatorItem {
                 Divider()
