@@ -288,6 +288,9 @@ struct WatchHeroView: View {
                 }
             }
             .clipped()
+            // Under the floating sidebar, as AppKit's NSBackgroundExtensionView
+            // and the title page's header.
+            .backgroundExtensionEffect()
             .visualEffect { content, proxy in
             let offset = still ? 0 : -proxy.frame(in: .scrollView(axis: .vertical)).minY
             return content
